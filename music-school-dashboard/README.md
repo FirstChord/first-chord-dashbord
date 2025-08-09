@@ -1,6 +1,80 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🎵 First Chord Music School Dashboard
 
-## Getting Started
+A modern, interactive dashboard for music tutors to manage students and view live lesson notes from MyMusicStaff (MMS). Built with Next.js and featuring seamless integration with music education platforms.
+
+## ✨ Features
+
+- **Live Lesson Notes** - Real-time integration with MyMusicStaff API
+- **Automatic Token Management** - Seamless authentication with token interceptor
+- **Student Management** - View and manage your students with real MMS data
+- **Multi-Platform Integration** - Links to Soundslice, Theta Music, and parent portals
+- **Offline Support** - Cached lesson notes when internet is unavailable
+- **Setup Wizard** - Easy configuration for external services
+- **Real-time Status** - Visual indicators for live vs cached data
+
+## 🚀 Quick Setup (5 minutes)
+
+### Requirements
+
+- **Node.js** (version 18 or higher) - [Download here](https://nodejs.org/)
+- **Git** (usually pre-installed on macOS)
+- **Terminal access**
+
+### Installation Steps
+
+1. **Clone the repository:**
+
+```bash
+git clone https://github.com/FirstChord/first-chord-dashbord.git
+cd first-chord-dashbord/music-school-dashboard
+```
+
+2. **Install dependencies:**
+
+```bash
+npm install
+```
+
+3. **Start the dashboard:**
+
+```bash
+npm run dev
+```
+
+4. **Open in browser:**
+
+- Go to [http://localhost:3000](http://localhost:3000)
+- Select "Finn" as tutor
+- Done! 🎵
+
+## 🔥 Live MMS Integration
+
+For real-time lesson notes from MyMusicStaff:
+
+1. **Open MyMusicStaff** in another browser tab
+2. **Log in normally** - the dashboard automatically captures fresh tokens
+3. **Return to dashboard** - you'll see live lesson notes instantly!
+
+The token interceptor works automatically - no manual setup required.
+
+## 📊 What's Included
+
+- **Student Dashboard** - View all your students at a glance
+- **Lesson Notes Panel** - Latest notes from MMS with attendance info
+- **Quick Links** - Direct access to Soundslice, Theta Music, parent portals
+- **Authentication Status** - Real-time connection indicators
+- **Local Database** - SQLite database auto-creates from student data
+
+## 🎯 Perfect for Music Schools
+
+This dashboard is designed specifically for music tutors who use:
+
+- **MyMusicStaff** for lesson management
+- **Soundslice** for sheet music
+- **Theta Music** for theory training
+- Multiple students across different instruments
+
+## 🛠️ Development
 
 First, run the development server:
 
