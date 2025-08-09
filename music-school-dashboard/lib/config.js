@@ -75,9 +75,10 @@ export const serviceAuth = {
 
 export const generateUrls = {
 
-  soundslice: (studentUsername) => 
-
-    `https://www.soundslice.com/courses/12954/`,
+  soundslice: (student) => {
+    const courseId = student.soundslice_course || '12954';
+    return `https://www.soundslice.com/courses/${courseId}/`;
+  },
 
   
 

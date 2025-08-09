@@ -98,14 +98,14 @@ export default function Dashboard() {
   if (!tutor) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full">
-          <h1 className="text-2xl font-bold mb-6 text-center">Select Your Profile</h1>
-          <div className="space-y-3">
-            {['Finn', 'John', 'Mike', 'Emma'].map(tutorName => (
+        <div className="bg-white p-12 rounded-xl shadow-lg max-w-4xl w-full mx-8">
+          <h1 className="text-2xl font-bold mb-8 text-center">Select Your Profile</h1>
+          <div className="grid grid-cols-3 gap-8">
+            {['Arion', 'Dean', 'Eléna', 'Eve', 'Fennella', 'Finn', 'Jungyoun', 'Kim', 'Patrick', 'Robbie', 'Stef', 'Tom'].map(tutorName => (
               <button
                 key={tutorName}
                 onClick={() => setTutor(tutorName)}
-                className="w-full p-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                className="px-8 py-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-center font-medium text-xl min-h-[60px] min-w-[140px] flex items-center justify-center"
               >
                 {tutorName}
               </button>
