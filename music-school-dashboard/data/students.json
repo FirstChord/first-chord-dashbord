@@ -1,0 +1,40 @@
+{
+  "students": [
+    {
+      "name": "Stella Cook",
+      "mms_id": "sdt_x48LJT",
+      "soundslice_username": "emma-thompson-328",
+      "theta_id": "theta_emma_001",
+      "parent_email": "thompson.family@email.com",
+      "current_tutor": "Finn",
+      "sample_note": "Emma did well with scales in C and G major. Struggled with bar 15-16 of Moonlight Sonata. Practice hands separately this week, focus on left hand rhythm."
+    },
+    {
+      "name": "James Chen",
+      "mms_id": "sdt_k92MNP",
+      "soundslice_username": "james-chen-145",
+      "theta_id": "theta_james_002",
+      "parent_email": "chen.parents@email.com",
+      "current_tutor": "Finn",
+      "sample_note": "James mastered the chord progression for 'Let It Be'. Ready to move to the bridge section. Reminder to practice transitions between F and C chords."
+    },
+    {
+      "name": "Lucy Williams",
+      "mms_id": "sdt_p75QRS",
+      "soundslice_username": "lucy-w-892",
+      "theta_id": "theta_lucy_003",
+      "parent_email": "williams.fam@email.com",
+      "current_tutor": "John",
+      "sample_note": "Lucy showing great improvement in sight reading. Completed Grade 2 pieces. Start Grade 3 book next week. Keep practicing note identification games on Theta."
+    },
+    {
+      "name": "Oliver Smith",
+      "mms_id": "sdt_w83TUV",
+      "soundslice_username": "oli-smith-421",
+      "theta_id": "theta_oliver_004",
+      "parent_email": "smith.oliver.parents@email.com",
+      "current_tutor": "Mike",
+      "sample_note": "Oliver learned intro to 'Wonderwall'. Work on strumming pattern - down down up up down up. Use metronome at 60bpm to start."
+    }
+  ]
+}
