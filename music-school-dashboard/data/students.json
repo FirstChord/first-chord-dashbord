@@ -1,292 +1,272 @@
-{
-  "students": [
-    {
-      "name": "Alex Chang",
-      "mms_id": "sdt_gwyQJr",
-      "soundslice_username": "alex-chang-4370",
-      "soundslice_course": "4370",
-      "theta_id": "theta_alex_001",
-      "parent_email": "chang.family@email.com",
-      "current_tutor": "Finn",
-      "sample_note": "Recent lesson notes will appear from MMS when live integration is active."
-    },
-    {
-      "name": "Archie Toner",
-      "mms_id": "sdt_BDHKJs",
-      "soundslice_username": "archie-toner-13888",
-      "soundslice_course": "13888",
-      "theta_id": "theta_archie_002",
-      "parent_email": "toner.family@email.com",
-      "current_tutor": "Finn",
-      "sample_note": "Recent lesson notes will appear from MMS when live integration is active."
-    },
-    {
-      "name": "Aria Thomson",
-      "mms_id": "sdt_K3h1JJ",
-      "soundslice_username": "aria-thomson-4360",
-      "soundslice_course": "4360",
-      "theta_id": "theta_aria_003",
-      "parent_email": "thomson.family@email.com",
-      "current_tutor": "Finn",
-      "sample_note": "Recent lesson notes will appear from MMS when live integration is active."
-    },
-    {
-      "name": "Arnav Rekhate",
-      "mms_id": "sdt_BDHFJM",
-      "soundslice_username": "arnav-rekhate-14033",
-      "soundslice_course": "14033",
-      "theta_id": "theta_arnav_004",
-      "parent_email": "rekhate.family@email.com",
-      "current_tutor": "Finn",
-      "sample_note": "Recent lesson notes will appear from MMS when live integration is active."
-    },
-    {
-      "name": "Calan Clacherty",
-      "mms_id": "sdt_BpDPJZ",
-      "soundslice_username": "calan-clacherty-6917",
-      "soundslice_course": "6917",
-      "theta_id": "theta_calan_005",
-      "parent_email": "clacherty.family@email.com",
-      "current_tutor": "Finn",
-      "sample_note": "Recent lesson notes will appear from MMS when live integration is active."
-    },
-    {
-      "name": "Claire McGinniss",
-      "mms_id": "sdt_BDHJJF",
-      "soundslice_username": "claire-mcginniss-8101",
-      "soundslice_course": "8101",
-      "theta_id": "theta_claire_006",
-      "parent_email": "mcginniss.family@email.com",
-      "current_tutor": "Finn",
-      "sample_note": "Recent lesson notes will appear from MMS when live integration is active."
-    },
-    {
-      "name": "Eilidh Su Strachan",
-      "mms_id": "sdt_Kv59Jb",
-      "soundslice_username": "eilidh-strachan-7458",
-      "soundslice_course": "7458",
-      "theta_id": "theta_eilidh_007",
-      "parent_email": "strachan.family@email.com",
-      "current_tutor": "Finn",
-      "sample_note": "Recent lesson notes will appear from MMS when live integration is active."
-    },
-    {
-      "name": "Finlay Cackett",
-      "mms_id": "sdt_cZDlJQ",
-      "soundslice_username": "finlay-cackett-16374",
-      "soundslice_course": "16374",
-      "theta_id": "theta_finlay_008",
-      "parent_email": "cackett.family@email.com",
-      "current_tutor": "Finn",
-      "sample_note": "Recent lesson notes will appear from MMS when live integration is active."
-    },
-    {
-      "name": "Hudson Woodford",
-      "mms_id": "sdt_K9psJ9",
-      "soundslice_username": "hudson-woodford-4446",
-      "soundslice_course": "4446",
-      "theta_id": "theta_hudson_009",
-      "parent_email": "woodford.family@email.com",
-      "current_tutor": "Finn",
-      "sample_note": "Recent lesson notes will appear from MMS when live integration is active."
-    },
-    {
-      "name": "Jo Vardy",
-      "mms_id": "sdt_2slYJ7",
-      "soundslice_username": "jo-vardy-11672",
-      "soundslice_course": "11672",
-      "theta_id": "theta_jo_010",
-      "parent_email": "vardy.family@email.com",
-      "current_tutor": "Finn",
-      "sample_note": "Recent lesson notes will appear from MMS when live integration is active."
-    },
-    {
-      "name": "Joel Adler",
-      "mms_id": "sdt_K9pNJt",
-      "soundslice_username": "joel-adler-4353",
-      "soundslice_course": "4353",
-      "theta_id": "theta_joel_011",
-      "parent_email": "adler.family@email.com",
-      "current_tutor": "Finn",
-      "sample_note": "Recent lesson notes will appear from MMS when live integration is active."
-    },
-    {
-      "name": "Jose Santi Dad",
-      "mms_id": "sdt_N0zrJ8",
-      "soundslice_username": "jose-santi-9866",
-      "soundslice_course": "9866",
-      "theta_id": "theta_jose_012",
-      "parent_email": "santi.family@email.com",
-      "current_tutor": "Finn",
-      "sample_note": "Recent lesson notes will appear from MMS when live integration is active."
-    },
-    {
-      "name": "Laith Lombard",
-      "mms_id": "sdt_Kq3XJP",
-      "soundslice_username": "laith-lombard-4363",
-      "soundslice_course": "4363",
-      "theta_id": "theta_laith_013",
-      "parent_email": "lombard.family@email.com",
-      "current_tutor": "Finn",
-      "sample_note": "Recent lesson notes will appear from MMS when live integration is active."
-    },
-    {
-      "name": "Leonardo Matassoni",
-      "mms_id": "sdt_KKfGJ0",
-      "soundslice_username": "leonardo-matassoni-4410",
-      "soundslice_course": "4410",
-      "theta_id": "theta_leonardo_014",
-      "parent_email": "matassoni.family@email.com",
-      "current_tutor": "Finn",
-      "sample_note": "Recent lesson notes will appear from MMS when live integration is active."
-    },
-    {
-      "name": "Mathilde Thallon",
-      "mms_id": "sdt_H6CvJv",
-      "soundslice_username": "mathilde-thallon-9009",
-      "soundslice_course": "9009",
-      "theta_id": "theta_mathilde_015",
-      "parent_email": "thallon.family@email.com",
-      "current_tutor": "Finn",
-      "sample_note": "Recent lesson notes will appear from MMS when live integration is active."
-    },
-    {
-      "name": "Nathan Ward",
-      "mms_id": "sdt_gWXHJN",
-      "soundslice_username": "nathan-ward-4405",
-      "soundslice_course": "4405",
-      "theta_id": "theta_nathan_016",
-      "parent_email": "ward.family@email.com",
-      "current_tutor": "Finn",
-      "sample_note": "Recent lesson notes will appear from MMS when live integration is active."
-    },
-    {
-      "name": "Norman Boyle",
-      "mms_id": "sdt_yLvlJx",
-      "soundslice_username": "norman-boyle-13639",
-      "soundslice_course": "13639",
-      "theta_id": "theta_norman_017",
-      "parent_email": "boyle.family@email.com",
-      "current_tutor": "Finn",
-      "sample_note": "Recent lesson notes will appear from MMS when live integration is active."
-    },
-    {
-      "name": "Pablo Cunningham",
-      "mms_id": "sdt_Kq3RJW",
-      "soundslice_username": "pablo-cunningham-4366",
-      "soundslice_course": "4366",
-      "theta_id": "theta_pablo_018",
-      "parent_email": "cunningham.family@email.com",
-      "current_tutor": "Finn",
-      "sample_note": "Recent lesson notes will appear from MMS when live integration is active."
-    },
-    {
-      "name": "Peadar Chew",
-      "mms_id": "sdt_Q2ntJX",
-      "soundslice_username": "peadar-chew-15601",
-      "soundslice_course": "15601",
-      "theta_id": "theta_peadar_019",
-      "parent_email": "chew.family@email.com",
-      "current_tutor": "Finn",
-      "sample_note": "Recent lesson notes will appear from MMS when live integration is active."
-    },
-    {
-      "name": "Quin Cooper",
-      "mms_id": "sdt_K9pMJg",
-      "soundslice_username": "quin-cooper-4361",
-      "soundslice_course": "4361",
-      "theta_id": "theta_quin_020",
-      "parent_email": "cooper.family@email.com",
-      "current_tutor": "Finn",
-      "sample_note": "Recent lesson notes will appear from MMS when live integration is active."
-    },
-    {
-      "name": "Rose Drew",
-      "mms_id": "sdt_BDsRJ9",
-      "soundslice_username": "rose-drew-6753",
-      "soundslice_course": "6753",
-      "theta_id": "theta_rose_021",
-      "parent_email": "drew.family@email.com",
-      "current_tutor": "Finn",
-      "sample_note": "Recent lesson notes will appear from MMS when live integration is active."
-    },
-    {
-      "name": "Rosemary Forbes",
-      "mms_id": "sdt_Kq2TJR",
-      "soundslice_username": "rosemary-forbes-4367",
-      "soundslice_course": "4367",
-      "theta_id": "theta_rosemary_022",
-      "parent_email": "forbes.family@email.com",
-      "current_tutor": "Finn",
-      "sample_note": "Recent lesson notes will appear from MMS when live integration is active."
-    },
-    {
-      "name": "Saketh Pamidimarry",
-      "mms_id": "sdt_yLv3J7",
-      "soundslice_username": "saketh-pamidimarry-11720",
-      "soundslice_course": "11720",
-      "theta_id": "theta_saketh_023",
-      "parent_email": "pamidimarry.family@email.com",
-      "current_tutor": "Finn",
-      "sample_note": "Recent lesson notes will appear from MMS when live integration is active."
-    },
-    {
-      "name": "Santi Freeth",
-      "mms_id": "sdt_Kv5XJL",
-      "soundslice_username": "santi-freeth-4857",
-      "soundslice_course": "4857",
-      "theta_id": "theta_santi_024",
-      "parent_email": "freeth.family@email.com",
-      "current_tutor": "Finn",
-      "sample_note": "Recent lesson notes will appear from MMS when live integration is active."
-    },
-    {
-      "name": "Saul Pert",
-      "mms_id": "sdt_30TGJh",
-      "soundslice_username": "saul-pert-11502",
-      "soundslice_course": "11502",
-      "theta_id": "theta_saul_025",
-      "parent_email": "pert.family@email.com",
-      "current_tutor": "Finn",
-      "sample_note": "Recent lesson notes will appear from MMS when live integration is active."
-    },
-    {
-      "name": "Simone De Maio",
-      "mms_id": "sdt_KKfZJC",
-      "soundslice_username": "simone-demaio-4411",
-      "soundslice_course": "4411",
-      "theta_id": "theta_simone_026",
-      "parent_email": "demaio.family@email.com",
-      "current_tutor": "Finn",
-      "sample_note": "Recent lesson notes will appear from MMS when live integration is active."
-    },
-    {
-      "name": "Stella Cook",
-      "mms_id": "sdt_x48LJT",
-      "soundslice_username": "stella-cook-12954",
-      "soundslice_course": "12954",
-      "theta_id": "theta_stella_027",
-      "parent_email": "cook.family@email.com",
-      "current_tutor": "Finn",
-      "sample_note": "Recent lesson notes will appear from MMS when live integration is active."
-    },
-    {
-      "name": "Lucy Williams",
-      "mms_id": "sdt_p75QRS",
-      "soundslice_username": "lucy-w-892",
-      "theta_id": "theta_lucy_003",
-      "parent_email": "williams.fam@email.com",
-      "current_tutor": "Tom",
-      "sample_note": "Lucy showing great improvement in sight reading. Completed Grade 2 pieces. Start Grade 3 book next week. Keep practicing note identification games on Theta."
-    },
-    {
-      "name": "Oliver Smith",
-      "mms_id": "sdt_w83TUV",
-      "soundslice_username": "oli-smith-421",
-      "theta_id": "theta_oliver_004",
-      "parent_email": "smith.oliver.parents@email.com",
-      "current_tutor": "Arion",
-      "sample_note": "Oliver learned intro to 'Wonderwall'. Work on strumming pattern - down down up up down up. Use metronome at 60bpm to start."
-    }
-  ]
-}
+[
+  {
+    "name": "Mabel",
+    "mms_id": "42030",
+    "soundslice_course": "764849",
+    "soundslice_username": "",
+    "theta_id": "",
+    "parent_email": "",
+    "current_tutor": "Finn",
+    "instrument": "Acoustic Guitar"
+  },
+  {
+    "name": "Hamzah",
+    "mms_id": "42014",
+    "soundslice_course": "764849",
+    "soundslice_username": "",
+    "theta_id": "",
+    "parent_email": "",
+    "current_tutor": "Finn",
+    "instrument": "Acoustic Guitar"
+  },
+  {
+    "name": "Ralph",
+    "mms_id": "42075",
+    "soundslice_course": "764849",
+    "soundslice_username": "",
+    "theta_id": "",
+    "parent_email": "",
+    "current_tutor": "Finn",
+    "instrument": "Acoustic Guitar"
+  },
+  {
+    "name": "Evan",
+    "mms_id": "42008",
+    "soundslice_course": "764849",
+    "soundslice_username": "",
+    "theta_id": "",
+    "parent_email": "",
+    "current_tutor": "Finn",
+    "instrument": "Acoustic Guitar"
+  },
+  {
+    "name": "Isaac",
+    "mms_id": "41966",
+    "soundslice_course": "764849",
+    "soundslice_username": "",
+    "theta_id": "",
+    "parent_email": "",
+    "current_tutor": "Finn",
+    "instrument": "Acoustic Guitar"
+  },
+  {
+    "name": "Pablo",
+    "mms_id": "42021",
+    "soundslice_course": "764849",
+    "soundslice_username": "",
+    "theta_id": "",
+    "parent_email": "",
+    "current_tutor": "Finn",
+    "instrument": "Acoustic Guitar"
+  },
+  {
+    "name": "Rayaan",
+    "mms_id": "42028",
+    "soundslice_course": "764849",
+    "soundslice_username": "",
+    "theta_id": "",
+    "parent_email": "",
+    "current_tutor": "Finn",
+    "instrument": "Acoustic Guitar"
+  },
+  {
+    "name": "Luca",
+    "mms_id": "42090",
+    "soundslice_course": "764849",
+    "soundslice_username": "",
+    "theta_id": "",
+    "parent_email": "",
+    "current_tutor": "Finn",
+    "instrument": "Acoustic Guitar"
+  },
+  {
+    "name": "Benji",
+    "mms_id": "42007",
+    "soundslice_course": "764849",
+    "soundslice_username": "",
+    "theta_id": "",
+    "parent_email": "",
+    "current_tutor": "Finn",
+    "instrument": "Acoustic Guitar"
+  },
+  {
+    "name": "Charlie",
+    "mms_id": "42053",
+    "soundslice_course": "764849",
+    "soundslice_username": "",
+    "theta_id": "",
+    "parent_email": "",
+    "current_tutor": "Finn",
+    "instrument": "Acoustic Guitar"
+  },
+  {
+    "name": "James",
+    "mms_id": "42009",
+    "soundslice_course": "764849",
+    "soundslice_username": "",
+    "theta_id": "",
+    "parent_email": "",
+    "current_tutor": "Finn",
+    "instrument": "Acoustic Guitar"
+  },
+  {
+    "name": "Alfie",
+    "mms_id": "42013",
+    "soundslice_course": "764849",
+    "soundslice_username": "",
+    "theta_id": "",
+    "parent_email": "",
+    "current_tutor": "Finn",
+    "instrument": "Acoustic Guitar"
+  },
+  {
+    "name": "Dylan",
+    "mms_id": "42043",
+    "soundslice_course": "764849",
+    "soundslice_username": "",
+    "theta_id": "",
+    "parent_email": "",
+    "current_tutor": "Finn",
+    "instrument": "Acoustic Guitar"
+  },
+  {
+    "name": "Elliot",
+    "mms_id": "42036",
+    "soundslice_course": "764849",
+    "soundslice_username": "",
+    "theta_id": "",
+    "parent_email": "",
+    "current_tutor": "Finn",
+    "instrument": "Acoustic Guitar"
+  },
+  {
+    "name": "Soren",
+    "mms_id": "42111",
+    "soundslice_course": "764849",
+    "soundslice_username": "",
+    "theta_id": "",
+    "parent_email": "",
+    "current_tutor": "Finn",
+    "instrument": "Acoustic Guitar"
+  },
+  {
+    "name": "Ben",
+    "mms_id": "42020",
+    "soundslice_course": "764849",
+    "soundslice_username": "",
+    "theta_id": "",
+    "parent_email": "",
+    "current_tutor": "Finn",
+    "instrument": "Acoustic Guitar"
+  },
+  {
+    "name": "Nico",
+    "mms_id": "42127",
+    "soundslice_course": "764849",
+    "soundslice_username": "",
+    "theta_id": "",
+    "parent_email": "",
+    "current_tutor": "Finn",
+    "instrument": "Acoustic Guitar"
+  },
+  {
+    "name": "Ali",
+    "mms_id": "42122",
+    "soundslice_course": "764849",
+    "soundslice_username": "",
+    "theta_id": "",
+    "parent_email": "",
+    "current_tutor": "Finn",
+    "instrument": "Acoustic Guitar"
+  },
+  {
+    "name": "Oscar",
+    "mms_id": "42032",
+    "soundslice_course": "764849",
+    "soundslice_username": "",
+    "theta_id": "",
+    "parent_email": "",
+    "current_tutor": "Finn",
+    "instrument": "Acoustic Guitar"
+  },
+  {
+    "name": "Theo",
+    "mms_id": "42010",
+    "soundslice_course": "764849",
+    "soundslice_username": "",
+    "theta_id": "",
+    "parent_email": "",
+    "current_tutor": "Finn",
+    "instrument": "Acoustic Guitar"
+  },
+  {
+    "name": "Sebastian",
+    "mms_id": "42002",
+    "soundslice_course": "764849",
+    "soundslice_username": "",
+    "theta_id": "",
+    "parent_email": "",
+    "current_tutor": "Finn",
+    "instrument": "Acoustic Guitar"
+  },
+  {
+    "name": "Finlay",
+    "mms_id": "42044",
+    "soundslice_course": "764849",
+    "soundslice_username": "",
+    "theta_id": "",
+    "parent_email": "",
+    "current_tutor": "Finn",
+    "instrument": "Electric Guitar"
+  },
+  {
+    "name": "Norman",
+    "mms_id": "42017",
+    "soundslice_course": "764849",
+    "soundslice_username": "",
+    "theta_id": "",
+    "parent_email": "",
+    "current_tutor": "Finn",
+    "instrument": "Bass"
+  },
+  {
+    "name": "Mathilde",
+    "mms_id": "42125",
+    "soundslice_course": "764849",
+    "soundslice_username": "",
+    "theta_id": "",
+    "parent_email": "",
+    "current_tutor": "Finn",
+    "instrument": "Bass"
+  },
+  {
+    "name": "Leo",
+    "mms_id": "42033",
+    "soundslice_course": "764849",
+    "soundslice_username": "",
+    "theta_id": "",
+    "parent_email": "",
+    "current_tutor": "Finn",
+    "instrument": "Acoustic Guitar"
+  },
+  {
+    "name": "Will",
+    "mms_id": "42112",
+    "soundslice_course": "764849",
+    "soundslice_username": "",
+    "theta_id": "",
+    "parent_email": "",
+    "current_tutor": "Finn",
+    "instrument": "Acoustic Guitar"
+  },
+  {
+    "name": "Arthur",
+    "mms_id": "42076",
+    "soundslice_course": "764849",
+    "soundslice_username": "",
+    "theta_id": "",
+    "parent_email": "",
+    "current_tutor": "Finn",
+    "instrument": "Acoustic Guitar"
+  }
+]

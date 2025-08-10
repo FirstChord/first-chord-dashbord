@@ -10,6 +10,9 @@ export default function StudentCard({ student, onClick, isSelected }) {
     >
       <h3 className="font-semibold text-lg">{student.name}</h3>
       <p className="text-sm text-gray-600">Tutor: {student.current_tutor}</p>
+      {student.instrument && (
+        <p className="text-sm text-blue-600 font-medium">{student.instrument}</p>
+      )}
     </button>
   );
 }

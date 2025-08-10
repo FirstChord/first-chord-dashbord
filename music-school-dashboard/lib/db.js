@@ -13,9 +13,11 @@ db.exec(`
     name TEXT NOT NULL,
     mms_id TEXT UNIQUE,
     soundslice_username TEXT,
+    soundslice_course TEXT,
     theta_id TEXT,
     parent_email TEXT,
     current_tutor TEXT,
+    instrument TEXT,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -46,8 +48,8 @@ if (count.count === 0) {
   );
   
   const insertStudent = db.prepare(`
-    INSERT INTO students (name, mms_id, soundslice_username, theta_id, parent_email, current_tutor)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO students (name, mms_id, soundslice_username, soundslice_course, theta_id, parent_email, current_tutor, instrument)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `);
   
   const insertNote = db.prepare(`
@@ -65,14 +67,16 @@ if (count.count === 0) {
   });
   
   // Insert students and sample notes
-  dummyData.students.forEach((student, index) => {
+  dummyData.forEach((student, index) => {
     insertStudent.run(
       student.name,
       student.mms_id,
       student.soundslice_username,
+      student.soundslice_course,
       student.theta_id,
       student.parent_email,
-      student.current_tutor
+      student.current_tutor,
+      student.instrument
     );
     
     // Add sample previous note
