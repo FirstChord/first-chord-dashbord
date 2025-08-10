@@ -225,21 +225,75 @@ class MMSClient {
   async getStudentsForTeacher(teacherId = 'tch_QhxJJ') {
     console.log(`Fetching students for teacher ID: ${teacherId}`);
     
-    // First get all students
-    const allStudentsResult = await this.getStudents();
-    if (!allStudentsResult.success) {
-      return allStudentsResult;
+    // Try to use a more targeted search that includes teacher assignments
+    const endpoint = '/search/students';
+    const queryParams = new URLSearchParams({
+      offset: '0',
+      limit: '500',
+      fields: 'Family,StudentGroups,BillingProfiles,NextEventDate,AccessStatus',
+      orderby: 'FullName',
+      // Add filter for active students only
+      'filter[IsActive]': 'true'
+    });
+
+    const result = await this.fetchFromMMS(`${endpoint}?${queryParams}`, 'POST');
+    
+    if (result.success && result.data && result.data.ItemSubset) {
+      console.log(`Found ${result.data.ItemSubset.length} active students, filtering for teacher assignments...`);
+      
+      // Filter students that have active assignments with this teacher
+      const studentsForTeacher = result.data.ItemSubset.filter(student => {
+        // Check if student has StudentGroups (lesson assignments)
+        if (student.StudentGroups && student.StudentGroups.length > 0) {
+          return student.StudentGroups.some(group => {
+            return group.TeacherID === teacherId && 
+                   group.IsActive && 
+                   (!group.EndDate || new Date(group.EndDate) > new Date());
+          });
+        }
+        return false;
+      }).map(student => {
+        // Find the teacher's group to get instrument/subject
+        const teacherGroup = student.StudentGroups.find(group => 
+          group.TeacherID === teacherId && group.IsActive
+        );
+        
+        return {
+          name: student.FullName || `${student.FirstName} ${student.LastName}`.trim(),
+          mms_id: student.ID,
+          first_name: student.FirstName,
+          last_name: student.LastName,
+          email: student.EmailAddress || '',
+          current_tutor: 'Finn Le Marinel',
+          soundslice_course: '764849', // Default course
+          soundslice_username: '',
+          theta_id: '',
+          parent_email: '',
+          instrument: teacherGroup?.Subject || 'Guitar',
+          status: 'Active',
+          family_id: student.FamilyID,
+          next_event_date: student.NextEventDate,
+          profile_picture_url: student.ProfileThumbnailURL,
+          lesson_group_id: teacherGroup?.ID,
+          is_active: true
+        };
+      });
+
+      console.log(`Filtered to ${studentsForTeacher.length} students assigned to teacher`);
+
+      return {
+        success: true,
+        students: studentsForTeacher,
+        total: studentsForTeacher.length,
+        teacherId: teacherId,
+        filtered: true
+      };
     }
 
-    // Then filter by checking lesson assignments or use a different endpoint
-    // For now, we'll return all students and let the UI handle filtering
-    // In a real implementation, we'd need to check each student's lesson assignments
-    
-    return {
-      success: true,
-      students: allStudentsResult.students,
-      total: allStudentsResult.students.length,
-      teacherId: teacherId
+    return { 
+      success: false, 
+      students: [],
+      message: 'Could not fetch students from MMS'
     };
   }
 }
