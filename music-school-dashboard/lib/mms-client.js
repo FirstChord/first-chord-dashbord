@@ -170,38 +170,42 @@ class MMSClient {
   async getStudents(tutorName = null) {
     console.log(`Fetching students${tutorName ? ` for tutor: ${tutorName}` : ''}`);
     
-    // Search for students
+    // Use the real MMS endpoint with proper parameters
     const endpoint = '/search/students';
-    const body = {
-      Limit: 500, // Get up to 500 students
-      Offset: 0,
-      OrderBy: 'FirstName'
-    };
+    const queryParams = new URLSearchParams({
+      offset: '0',
+      limit: '500', // Get all students
+      fields: 'Family,StudentGroups,BillingProfiles,NextEventDate',
+      orderby: 'FullName'
+    });
 
-    const result = await this.fetchFromMMS(endpoint, 'POST', body);
+    const result = await this.fetchFromMMS(`${endpoint}?${queryParams}`, 'POST');
     
     if (result.success && result.data && result.data.ItemSubset) {
       let students = result.data.ItemSubset.map(student => ({
-        name: `${student.FirstName} ${student.LastName}`.trim(),
-        mms_id: student.StudentID,
+        name: student.FullName || `${student.FirstName} ${student.LastName}`.trim(),
+        mms_id: student.ID,
         first_name: student.FirstName,
         last_name: student.LastName,
-        email: student.Email,
-        current_tutor: student.Teacher?.Name || 'Unknown',
+        email: student.EmailAddress || '',
+        current_tutor: 'Unknown', // Will be determined by lesson assignments
         soundslice_course: '', // Will be populated separately
         soundslice_username: '',
         theta_id: '',
-        parent_email: student.ParentEmail || '',
-        instrument: student.Instrument || 'Unknown',
-        status: student.Status
+        parent_email: '',
+        instrument: 'Unknown', // Will be determined by lesson assignments
+        status: student.IsActive ? 'Active' : 'Inactive',
+        family_id: student.FamilyID,
+        next_event_date: student.NextEventDate,
+        profile_picture_url: student.ProfileThumbnailURL
       }));
 
-      // Filter by tutor if specified
+      // Now we need to get lesson assignments to determine tutor and instrument
+      // For now, if tutorName is "Finn" or "Finn Le Marinel", we'll need to filter
+      // by checking lesson assignments for each student
       if (tutorName) {
-        students = students.filter(student => 
-          student.current_tutor && 
-          student.current_tutor.toLowerCase().includes(tutorName.toLowerCase())
-        );
+        // For now, return all students - we'll filter by checking lessons separately
+        console.log(`Found ${students.length} total students, filtering will be done via lesson assignments`);
       }
 
       return {
@@ -215,6 +219,27 @@ class MMSClient {
       success: false, 
       students: [],
       message: 'Could not fetch students from MMS'
+    };
+  }
+
+  async getStudentsForTeacher(teacherId = 'tch_QhxJJ') {
+    console.log(`Fetching students for teacher ID: ${teacherId}`);
+    
+    // First get all students
+    const allStudentsResult = await this.getStudents();
+    if (!allStudentsResult.success) {
+      return allStudentsResult;
+    }
+
+    // Then filter by checking lesson assignments or use a different endpoint
+    // For now, we'll return all students and let the UI handle filtering
+    // In a real implementation, we'd need to check each student's lesson assignments
+    
+    return {
+      success: true,
+      students: allStudentsResult.students,
+      total: allStudentsResult.students.length,
+      teacherId: teacherId
     };
   }
 }

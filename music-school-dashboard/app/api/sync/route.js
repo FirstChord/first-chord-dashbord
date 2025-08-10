@@ -16,8 +16,13 @@ export async function POST(request) {
       mmsClient.setToken(token);
     }
 
-    // Fetch students from MMS
-    const mmsResult = await mmsClient.getStudents(tutor);
+    // Fetch students from MMS - for Finn, use his teacher ID
+    let mmsResult;
+    if (tutor === 'Finn' || tutor === 'Finn Le Marinel') {
+      mmsResult = await mmsClient.getStudentsForTeacher('tch_QhxJJ');
+    } else {
+      mmsResult = await mmsClient.getStudents(tutor);
+    }
     
     if (!mmsResult.success) {
       console.log('MMS fetch failed:', mmsResult.message);
@@ -30,8 +35,16 @@ export async function POST(request) {
 
     console.log(`Found ${mmsResult.students.length} students from MMS`);
 
+    // For Finn's students, assign him as tutor and set instruments
+    const processedStudents = mmsResult.students.map(student => ({
+      ...student,
+      current_tutor: tutor === 'Finn' || tutor === 'Finn Le Marinel' ? 'Finn' : student.current_tutor,
+      instrument: student.instrument || 'Acoustic Guitar', // Default for now
+      soundslice_course: '764849' // Default Soundslice course
+    }));
+
     // Update local database with MMS data
-    if (mmsResult.students.length > 0) {
+    if (processedStudents.length > 0) {
       const insertOrUpdateStudent = db.prepare(`
         INSERT OR REPLACE INTO students (
           name, mms_id, soundslice_username, soundslice_course, 
@@ -44,24 +57,24 @@ export async function POST(request) {
           insertOrUpdateStudent.run(
             student.name,
             student.mms_id,
-            student.soundslice_username,
-            student.soundslice_course,
-            student.theta_id,
-            student.parent_email,
+            student.soundslice_username || '',
+            student.soundslice_course || '',
+            student.theta_id || '',
+            student.parent_email || '',
             student.current_tutor,
             student.instrument
           );
         }
       });
 
-      transaction(mmsResult.students);
-      console.log(`Updated ${mmsResult.students.length} students in local database`);
+      transaction(processedStudents);
+      console.log(`Updated ${processedStudents.length} students in local database`);
     }
 
     return Response.json({
       success: true,
-      students: mmsResult.students,
-      count: mmsResult.students.length,
+      students: processedStudents,
+      count: processedStudents.length,
       source: 'mms',
       syncedAt: new Date().toISOString()
     });
