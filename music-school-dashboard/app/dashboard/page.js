@@ -6,7 +6,7 @@ import NotesPanel from '@/components/NotesPanel';
 import QuickLinks from '@/components/QuickLinks';
 import SetupWizard from '@/components/SetupWizard';
 import AuthStatus from '@/components/AuthStatus';
-import { Users, Clock, Search } from 'lucide-react';
+import { Users, Clock, Search, RefreshCw } from 'lucide-react';
 import { generateUrls } from '@/lib/config';
 
 // Token interceptor - automatically captures fresh MMS tokens
@@ -49,13 +49,64 @@ export default function Dashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showSetupWizard, setShowSetupWizard] = useState(false);
   const [tokenStatus, setTokenStatus] = useState('checking');
+  const [syncStatus, setSyncStatus] = useState('idle'); // idle, syncing, success, error
+  const [lastSyncTime, setLastSyncTime] = useState(null);
+
+  // Sync students from MMS
+  const syncStudentsFromMMS = async (forcedTutor = null) => {
+    const targetTutor = forcedTutor || tutor;
+    if (!targetTutor) return;
+
+    setSyncStatus('syncing');
+    console.log('🔄 Syncing students from MMS...');
+
+    try {
+      const token = getWorkingToken();
+      const response = await fetch('/api/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        },
+        body: JSON.stringify({ 
+          tutor: targetTutor,
+          forceSync: true 
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.success && data.source === 'mms') {
+        setStudents(data.students);
+        setSyncStatus('success');
+        setLastSyncTime(new Date());
+        console.log(`✅ Synced ${data.count} students from MMS`);
+        
+        // Show success message briefly
+        setTimeout(() => setSyncStatus('idle'), 3000);
+      } else {
+        setSyncStatus('error');
+        console.log('❌ MMS sync failed, using local data');
+        
+        // Fallback to local data
+        fetch(`/api/students?tutor=${targetTutor}`)
+          .then(res => res.json())
+          .then(data => setStudents(data.students));
+          
+        setTimeout(() => setSyncStatus('idle'), 5000);
+      }
+    } catch (error) {
+      console.error('Sync error:', error);
+      setSyncStatus('error');
+      setTimeout(() => setSyncStatus('idle'), 5000);
+    }
+  };
 
   // Fetch students when tutor is selected
   useEffect(() => {
     if (tutor) {
-      fetch(`/api/students?tutor=${tutor}`)
-        .then(res => res.json())
-        .then(data => setStudents(data.students));
+      // Try MMS sync first, fallback to local
+      syncStudentsFromMMS(tutor);
     }
   }, [tutor]);
 
@@ -146,6 +197,46 @@ export default function Dashboard() {
                  'Checking...'}
               </span>
             </div>
+            
+            {/* MMS Sync Button */}
+            <button
+              onClick={() => syncStudentsFromMMS()}
+              disabled={syncStatus === 'syncing'}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                syncStatus === 'syncing' ? 'bg-blue-100 text-blue-600 cursor-not-allowed' :
+                syncStatus === 'success' ? 'bg-green-100 text-green-700' :
+                syncStatus === 'error' ? 'bg-red-100 text-red-700' :
+                'bg-blue-500 text-white hover:bg-blue-600'
+              }`}
+            >
+              {syncStatus === 'syncing' ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                  Syncing...
+                </>
+              ) : syncStatus === 'success' ? (
+                <>
+                  <div className="w-4 h-4 text-green-600">✓</div>
+                  Synced
+                </>
+              ) : syncStatus === 'error' ? (
+                <>
+                  <div className="w-4 h-4 text-red-600">⚠</div>
+                  Retry
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-4 h-4" />
+                  Sync MMS
+                </>
+              )}
+            </button>
+            
+            {lastSyncTime && (
+              <div className="text-xs text-gray-500">
+                Last sync: {lastSyncTime.toLocaleTimeString()}
+              </div>
+            )}
             <div className="flex items-center gap-2 text-gray-600">
               <Clock className="w-5 h-5" />
               <span>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</span>

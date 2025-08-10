@@ -166,6 +166,57 @@ class MMSClient {
 
     return { success: false, lessons: [] };
   }
+
+  async getStudents(tutorName = null) {
+    console.log(`Fetching students${tutorName ? ` for tutor: ${tutorName}` : ''}`);
+    
+    // Search for students
+    const endpoint = '/search/students';
+    const body = {
+      Limit: 500, // Get up to 500 students
+      Offset: 0,
+      OrderBy: 'FirstName'
+    };
+
+    const result = await this.fetchFromMMS(endpoint, 'POST', body);
+    
+    if (result.success && result.data && result.data.ItemSubset) {
+      let students = result.data.ItemSubset.map(student => ({
+        name: `${student.FirstName} ${student.LastName}`.trim(),
+        mms_id: student.StudentID,
+        first_name: student.FirstName,
+        last_name: student.LastName,
+        email: student.Email,
+        current_tutor: student.Teacher?.Name || 'Unknown',
+        soundslice_course: '', // Will be populated separately
+        soundslice_username: '',
+        theta_id: '',
+        parent_email: student.ParentEmail || '',
+        instrument: student.Instrument || 'Unknown',
+        status: student.Status
+      }));
+
+      // Filter by tutor if specified
+      if (tutorName) {
+        students = students.filter(student => 
+          student.current_tutor && 
+          student.current_tutor.toLowerCase().includes(tutorName.toLowerCase())
+        );
+      }
+
+      return {
+        success: true,
+        students: students,
+        total: students.length
+      };
+    }
+
+    return { 
+      success: false, 
+      students: [],
+      message: 'Could not fetch students from MMS'
+    };
+  }
 }
 
 export default new MMSClient();
