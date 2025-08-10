@@ -225,68 +225,63 @@ class MMSClient {
   async getStudentsForTeacher(teacherId = 'tch_QhxJJ') {
     console.log(`Fetching students for teacher ID: ${teacherId}`);
     
-    // Try to use a more targeted search that includes teacher assignments
+    // Temporarily get all active students - we'll filter by teacher later
     const endpoint = '/search/students';
     const queryParams = new URLSearchParams({
       offset: '0',
-      limit: '500',
+      limit: '100', // Reasonable limit for testing
       fields: 'Family,StudentGroups,BillingProfiles,NextEventDate,AccessStatus',
-      orderby: 'FullName',
-      // Add filter for active students only
-      'filter[IsActive]': 'true'
+      orderby: 'FullName'
     });
 
     const result = await this.fetchFromMMS(`${endpoint}?${queryParams}`, 'POST');
     
     if (result.success && result.data && result.data.ItemSubset) {
-      console.log(`Found ${result.data.ItemSubset.length} active students, filtering for teacher assignments...`);
+      console.log(`Found ${result.data.ItemSubset.length} students from MMS`);
       
-      // Filter students that have active assignments with this teacher
-      const studentsForTeacher = result.data.ItemSubset.filter(student => {
-        // Check if student has StudentGroups (lesson assignments)
-        if (student.StudentGroups && student.StudentGroups.length > 0) {
-          return student.StudentGroups.some(group => {
-            return group.TeacherID === teacherId && 
-                   group.IsActive && 
-                   (!group.EndDate || new Date(group.EndDate) > new Date());
-          });
-        }
-        return false;
-      }).map(student => {
-        // Find the teacher's group to get instrument/subject
-        const teacherGroup = student.StudentGroups.find(group => 
-          group.TeacherID === teacherId && group.IsActive
-        );
-        
-        return {
-          name: student.FullName || `${student.FirstName} ${student.LastName}`.trim(),
-          mms_id: student.ID,
-          first_name: student.FirstName,
-          last_name: student.LastName,
-          email: student.EmailAddress || '',
-          current_tutor: 'Finn Le Marinel',
-          soundslice_course: '764849', // Default course
-          soundslice_username: '',
-          theta_id: '',
-          parent_email: '',
-          instrument: teacherGroup?.Subject || 'Guitar',
-          status: 'Active',
-          family_id: student.FamilyID,
-          next_event_date: student.NextEventDate,
-          profile_picture_url: student.ProfileThumbnailURL,
-          lesson_group_id: teacherGroup?.ID,
-          is_active: true
-        };
-      });
+      // Map all active students for now - remove teacher filtering temporarily
+      const allActiveStudents = result.data.ItemSubset
+        .filter(student => {
+          // Only filter by Active status for now
+          return student.Active === true || student.Status === "Active";
+        })
+        .map(student => {
+          console.log(`Student: ${student.Name || student.FullName}, Active: ${student.Active}, Status: ${student.Status}`);
+          
+          return {
+            name: student.Name || student.FullName || `${student.FirstName} ${student.LastName}`.trim(),
+            mms_id: student.ID,
+            first_name: student.FirstName,
+            last_name: student.LastName,
+            email: student.EmailAddress || '',
+            current_tutor: 'Finn Le Marinel', // Default for now
+            soundslice_course: '764849', // Default course
+            soundslice_username: '',
+            theta_id: '',
+            parent_email: '',
+            instrument: 'Guitar', // Default for now
+            status: 'Active',
+            family_id: student.FamilyID,
+            next_event_date: student.NextEventDate,
+            profile_picture_url: student.ProfileThumbnailURL,
+            is_active: true,
+            // Debug info
+            debug_active: student.Active,
+            debug_status: student.Status,
+            debug_student_groups: student.StudentGroups ? student.StudentGroups.length : 0
+          };
+        });
 
-      console.log(`Filtered to ${studentsForTeacher.length} students assigned to teacher`);
+      console.log(`Filtered to ${allActiveStudents.length} active students`);
+      console.log('Sample student data:', allActiveStudents[0]);
 
       return {
         success: true,
-        students: studentsForTeacher,
-        total: studentsForTeacher.length,
+        students: allActiveStudents,
+        total: allActiveStudents.length,
         teacherId: teacherId,
-        filtered: true
+        filtered: false, // Indicate we're not filtering by teacher yet
+        debug: true
       };
     }
 
