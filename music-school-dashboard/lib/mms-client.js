@@ -225,11 +225,11 @@ class MMSClient {
   async getStudentsForTeacher(teacherId = 'tch_QhxJJ') {
     console.log(`Fetching students for teacher ID: ${teacherId}`);
     
-    // Temporarily get all active students - we'll filter by teacher later
+    // Get all active students with higher limit
     const endpoint = '/search/students';
     const queryParams = new URLSearchParams({
       offset: '0',
-      limit: '100', // Reasonable limit for testing
+      limit: '500', // Much higher limit to get all students
       fields: 'Family,StudentGroups,BillingProfiles,NextEventDate,AccessStatus',
       orderby: 'FullName'
     });
@@ -239,15 +239,13 @@ class MMSClient {
     if (result.success && result.data && result.data.ItemSubset) {
       console.log(`Found ${result.data.ItemSubset.length} students from MMS`);
       
-      // Map all active students for now - remove teacher filtering temporarily
+      // Map all active students
       const allActiveStudents = result.data.ItemSubset
         .filter(student => {
-          // Only filter by Active status for now
+          // Only filter by Active status
           return student.Active === true || student.Status === "Active";
         })
         .map(student => {
-          console.log(`Student: ${student.Name || student.FullName}, Active: ${student.Active}, Status: ${student.Status}`);
-          
           return {
             name: student.Name || student.FullName || `${student.FirstName} ${student.LastName}`.trim(),
             mms_id: student.ID,
@@ -272,15 +270,16 @@ class MMSClient {
           };
         });
 
-      console.log(`Filtered to ${allActiveStudents.length} active students`);
-      console.log('Sample student data:', allActiveStudents[0]);
+      console.log(`Found ${allActiveStudents.length} active students (A-Z)`);
+      console.log('First few students:', allActiveStudents.slice(0, 3).map(s => s.name));
+      console.log('Last few students:', allActiveStudents.slice(-3).map(s => s.name));
 
       return {
         success: true,
         students: allActiveStudents,
         total: allActiveStudents.length,
         teacherId: teacherId,
-        filtered: false, // Indicate we're not filtering by teacher yet
+        filtered: false, // Not filtering by teacher yet
         debug: true
       };
     }

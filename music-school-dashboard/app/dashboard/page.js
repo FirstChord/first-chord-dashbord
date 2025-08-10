@@ -51,6 +51,8 @@ export default function Dashboard() {
   const [tokenStatus, setTokenStatus] = useState('checking');
   const [syncStatus, setSyncStatus] = useState('idle'); // idle, syncing, success, error
   const [lastSyncTime, setLastSyncTime] = useState(null);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedStudentIds, setSelectedStudentIds] = useState(new Set());
 
   // Sync students from MMS
   const syncStudentsFromMMS = async (forcedTutor = null) => {
@@ -82,6 +84,11 @@ export default function Dashboard() {
         setLastSyncTime(new Date());
         console.log(`✅ Synced ${data.count} students from MMS`);
         
+        // Enable selection mode if we got lots of students
+        if (data.count > 50) {
+          setSelectionMode(true);
+        }
+        
         // Show success message briefly
         setTimeout(() => setSyncStatus('idle'), 3000);
       } else {
@@ -99,6 +106,51 @@ export default function Dashboard() {
       console.error('Sync error:', error);
       setSyncStatus('error');
       setTimeout(() => setSyncStatus('idle'), 5000);
+    }
+  };
+
+  // Toggle student selection
+  const toggleStudentSelection = (studentId) => {
+    const newSelected = new Set(selectedStudentIds);
+    if (newSelected.has(studentId)) {
+      newSelected.delete(studentId);
+    } else {
+      newSelected.add(studentId);
+    }
+    setSelectedStudentIds(newSelected);
+  };
+
+  // Save selected students as "Finn's students"
+  const saveSelectedStudents = async () => {
+    const selectedStudents = students.filter(s => selectedStudentIds.has(s.mms_id));
+    
+    // Update the selected students to have Finn as tutor
+    const updatedStudents = selectedStudents.map(student => ({
+      ...student,
+      current_tutor: 'Finn'
+    }));
+
+    try {
+      // Update local database with selected students
+      const response = await fetch('/api/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          students: updatedStudents,
+          action: 'save_selection'
+        })
+      });
+
+      if (response.ok) {
+        setStudents(updatedStudents);
+        setSelectionMode(false);
+        setSelectedStudentIds(new Set());
+        console.log(`✅ Saved ${updatedStudents.length} students as Finn's students`);
+      }
+    } catch (error) {
+      console.error('Error saving students:', error);
     }
   };
 
@@ -231,6 +283,30 @@ export default function Dashboard() {
                 </>
               )}
             </button>
+
+            {/* Selection Mode Toggle */}
+            {students.length > 0 && (
+              <button
+                onClick={() => setSelectionMode(!selectionMode)}
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  selectionMode 
+                    ? 'bg-orange-100 text-orange-700' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {selectionMode ? '✓ Selecting' : '📋 Select Mine'}
+              </button>
+            )}
+
+            {/* Save Selection Button */}
+            {selectionMode && selectedStudentIds.size > 0 && (
+              <button
+                onClick={saveSelectedStudents}
+                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm font-medium"
+              >
+                Save {selectedStudentIds.size} Students
+              </button>
+            )}
             
             {lastSyncTime && (
               <div className="text-xs text-gray-500">
@@ -279,8 +355,22 @@ export default function Dashboard() {
           <div className="p-4">
             <div className="flex items-center gap-2 mb-4 text-gray-600">
               <Users className="w-5 h-5" />
-              <span className="font-medium">Your Students ({filteredStudents.length})</span>
+              <span className="font-medium">
+                {selectionMode ? `All Students (${filteredStudents.length})` : `Your Students (${filteredStudents.length})`}
+              </span>
+              {selectionMode && selectedStudentIds.size > 0 && (
+                <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">
+                  {selectedStudentIds.size} selected
+                </span>
+              )}
             </div>
+            {selectionMode && (
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-700">
+                  🎯 <strong>Selection Mode:</strong> Check the boxes to mark which students are yours, then click "Save" to update your roster.
+                </p>
+              </div>
+            )}
             <div className="space-y-3">
               {filteredStudents.map(student => (
                 <StudentCard
@@ -288,6 +378,9 @@ export default function Dashboard() {
                   student={student}
                   onClick={setSelectedStudent}
                   isSelected={selectedStudent?.mms_id === student.mms_id}
+                  showCheckbox={selectionMode}
+                  isChecked={selectedStudentIds.has(student.mms_id)}
+                  onToggleCheck={toggleStudentSelection}
                 />
               ))}
             </div>
