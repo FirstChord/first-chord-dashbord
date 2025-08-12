@@ -84,9 +84,12 @@ export default function Dashboard() {
         setLastSyncTime(new Date());
         console.log(`✅ Synced ${data.count} students from MMS`);
         
-        // Enable selection mode if we got lots of students
-        if (data.count > 50) {
+        // Don't enable selection mode for teacher-filtered results from MMS
+        // Only enable it if we get unfiltered data that needs manual selection
+        if (data.count > 50 && !data.filtered) {
           setSelectionMode(true);
+        } else {
+          setSelectionMode(false); // Make sure selection mode is off for teacher-filtered data
         }
         
         // Show success message briefly

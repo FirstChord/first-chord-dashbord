@@ -1,4 +1,4 @@
-import db from '@/lib/db';
+import { initializeDatabase, getStudentByMmsId, upsertLessonNote, getLatestLessonNote } from '@/lib/vercel-db';
 import mmsClient from '@/lib/mms-client';
 
 export async function GET(request, { params }) {
@@ -10,8 +10,11 @@ export async function GET(request, { params }) {
   console.log('Token from URL:', token ? 'Present' : 'Not provided');
   
   try {
-    // Get student info from local database
-    const student = db.prepare('SELECT * FROM students WHERE mms_id = ?').get(studentId);
+    // Initialize database
+    await initializeDatabase();
+    
+    // Get student info from database
+    const student = await getStudentByMmsId(studentId);
     
     if (!student) {
       return Response.json({ error: 'Student not found' }, { status: 404 });
@@ -32,13 +35,7 @@ export async function GET(request, { params }) {
       console.log('Got fresh notes from MMS!');
       // Cache the successful fetch
       if (mmsNotes.notes && mmsNotes.notes !== 'Student was absent from the last lesson') {
-        const stmt = db.prepare(`
-          INSERT OR REPLACE INTO lesson_notes 
-          (student_id, lesson_date, notes, tutor_name)
-          VALUES (?, ?, ?, ?)
-        `);
-        
-        stmt.run(
+        await upsertLessonNote(
           student.id,
           mmsNotes.date,
           mmsNotes.notes,
@@ -60,12 +57,7 @@ export async function GET(request, { params }) {
 
     console.log('Falling back to cached notes');
     // Fallback to cached notes
-    const cachedNotes = db.prepare(`
-      SELECT * FROM lesson_notes 
-      WHERE student_id = ? 
-      ORDER BY lesson_date DESC 
-      LIMIT 1
-    `).get(student.id);
+    const cachedNotes = await getLatestLessonNote(student.id);
     
     return Response.json({ 
       student,

@@ -63,7 +63,7 @@ The token interceptor works automatically - no manual setup required.
 - **Lesson Notes Panel** - Latest notes from MMS with attendance info
 - **Quick Links** - Direct access to Soundslice, Theta Music, parent portals
 - **Authentication Status** - Real-time connection indicators
-- **Local Database** - SQLite database auto-creates from student data
+- **Cloud Database** - Vercel Postgres database for reliable cloud storage
 
 ## 🎯 Perfect for Music Schools
 

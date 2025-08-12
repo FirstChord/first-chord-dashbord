@@ -76,8 +76,12 @@ export const serviceAuth = {
 export const generateUrls = {
 
   soundslice: (student) => {
-    const courseId = student.soundslice_course || '12954';
-    return `https://www.soundslice.com/courses/${courseId}/`;
+    const course = student.soundslice_course || '12954';
+    // Check if it's already a full URL or just a course ID
+    if (course.startsWith('http')) {
+      return course;
+    }
+    return `https://www.soundslice.com/courses/${course}/`;
   },
 
   
@@ -96,11 +100,16 @@ export const generateUrls = {
 
 // Smart URL generator that handles authentication state
 export const generateSmartUrls = {
-  soundslice: (student) => ({
-    url: `https://www.soundslice.com/courses/12954/`,
-    requiresAuth: false, // Assumes already logged in
-    instruction: 'Access course materials'
-  }),
+  soundslice: (student) => {
+    const course = student.soundslice_course || '12954';
+    // Check if it's already a full URL or just a course ID
+    const url = course.startsWith('http') ? course : `https://www.soundslice.com/courses/${course}/`;
+    return {
+      url: url,
+      requiresAuth: false, // Assumes already logged in
+      instruction: 'Access course materials'
+    };
+  },
   
   myMusicStaff: (student, tutorName) => ({
     url: `https://app.mymusicstaff.com/Teacher/v2/en/students/details?id=${student.mms_id}#AttendanceNotes`,

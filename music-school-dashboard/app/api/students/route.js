@@ -1,4 +1,4 @@
-import db from '@/lib/db';
+import { initializeDatabase, getStudentsByTutor, getAllStudents } from '@/lib/vercel-db';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -8,13 +8,16 @@ export async function GET(request) {
   console.log('Requested tutor:', JSON.stringify(tutor));
   
   try {
+    // Initialize database
+    await initializeDatabase();
+    
     let students;
     if (tutor) {
       console.log('Querying for tutor:', tutor);
-      students = db.prepare('SELECT * FROM students WHERE current_tutor = ?').all(tutor);
+      students = await getStudentsByTutor(tutor);
       console.log('Found students:', students.length);
     } else {
-      students = db.prepare('SELECT * FROM students').all();
+      students = await getAllStudents();
     }
     
     return Response.json({ students });

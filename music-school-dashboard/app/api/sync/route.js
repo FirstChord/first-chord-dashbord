@@ -1,5 +1,5 @@
 import mmsClient from '@/lib/mms-client';
-import db from '@/lib/db';
+import { initializeDatabase, upsertStudent, getStudentsByMmsIds, getStudentsByTutor, getAllStudents } from '@/lib/vercel-db';
 
 export async function POST(request) {
   try {
@@ -9,6 +9,9 @@ export async function POST(request) {
     console.log('Tutor:', tutor);
     console.log('Force sync:', forceSync);
 
+    // Initialize database (creates table if it doesn't exist)
+    await initializeDatabase();
+
     // Check if we have a valid token
     const authHeader = request.headers.get('authorization');
     if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -16,13 +19,8 @@ export async function POST(request) {
       mmsClient.setToken(token);
     }
 
-    // Fetch students from MMS - for Finn, use his teacher ID
-    let mmsResult;
-    if (tutor === 'Finn' || tutor === 'Finn Le Marinel') {
-      mmsResult = await mmsClient.getStudentsForTeacher('tch_QhxJJ');
-    } else {
-      mmsResult = await mmsClient.getStudents(tutor);
-    }
+    // Fetch students from MMS using tutor name for automatic teacher ID lookup
+    const mmsResult = await mmsClient.getStudentsForTeacher(tutor);
     
     if (!mmsResult.success) {
       console.log('MMS fetch failed:', mmsResult.message);
@@ -33,51 +31,51 @@ export async function POST(request) {
       });
     }
 
-    console.log(`Found ${mmsResult.students.length} students from MMS`);
+    console.log(`Found ${mmsResult.students.length} students for ${tutor} from MMS`);
 
-    // For Finn's students, assign him as tutor and set instruments
-    const processedStudents = mmsResult.students.map(student => ({
-      ...student,
-      current_tutor: tutor === 'Finn' || tutor === 'Finn Le Marinel' ? 'Finn' : student.current_tutor,
-      instrument: student.instrument || 'Acoustic Guitar', // Default for now
-      soundslice_course: '764849' // Default Soundslice course
-    }));
+    // Students are already processed with correct tutor assignment
+    const processedStudents = mmsResult.students;
 
-    // Update local database with MMS data
+    // Update database with MMS data
     if (processedStudents.length > 0) {
-      const insertOrUpdateStudent = db.prepare(`
-        INSERT OR REPLACE INTO students (
-          name, mms_id, soundslice_username, soundslice_course, 
-          theta_id, parent_email, current_tutor, instrument, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-      `);
+      // Upsert each student (insert or update while preserving custom Soundslice courses)
+      for (const student of processedStudents) {
+        await upsertStudent({
+          name: student.name,
+          mms_id: student.mms_id,
+          soundslice_username: student.soundslice_username || '',
+          soundslice_course: student.soundslice_course || null, // Will preserve existing if null
+          theta_id: student.theta_id || '',
+          parent_email: student.parent_email || '',
+          current_tutor: student.current_tutor,
+          instrument: student.instrument
+        });
+      }
 
-      const transaction = db.transaction((students) => {
-        for (const student of students) {
-          insertOrUpdateStudent.run(
-            student.name,
-            student.mms_id,
-            student.soundslice_username || '',
-            student.soundslice_course || '',
-            student.theta_id || '',
-            student.parent_email || '',
-            student.current_tutor,
-            student.instrument
-          );
-        }
+      console.log(`Updated ${processedStudents.length} students in database`);
+      
+      // Read back the updated students from database to get preserved soundslice_course values
+      const mmsIds = processedStudents.map(s => s.mms_id);
+      const updatedStudentsFromDB = await getStudentsByMmsIds(mmsIds);
+      console.log(`Retrieved ${updatedStudentsFromDB.length} updated students from database`);
+      
+      return Response.json({
+        success: true,
+        students: updatedStudentsFromDB,
+        count: updatedStudentsFromDB.length,
+        source: 'mms',
+        filtered: mmsResult.filtered || false, // Pass through the filtered flag from MMS client
+        syncedAt: new Date().toISOString()
       });
-
-      transaction(processedStudents);
-      console.log(`Updated ${processedStudents.length} students in local database`);
+    } else {
+      return Response.json({
+        success: true,
+        students: [],
+        count: 0,
+        source: 'mms',
+        syncedAt: new Date().toISOString()
+      });
     }
-
-    return Response.json({
-      success: true,
-      students: processedStudents,
-      count: processedStudents.length,
-      source: 'mms',
-      syncedAt: new Date().toISOString()
-    });
 
   } catch (error) {
     console.error('Sync error:', error);
@@ -94,12 +92,15 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const tutor = searchParams.get('tutor');
     
-    // Just return current local data without syncing
+    // Initialize database
+    await initializeDatabase();
+    
+    // Just return current data without syncing
     let students;
     if (tutor) {
-      students = db.prepare('SELECT * FROM students WHERE current_tutor = ? ORDER BY name').all(tutor);
+      students = await getStudentsByTutor(tutor);
     } else {
-      students = db.prepare('SELECT * FROM students ORDER BY name').all();
+      students = await getAllStudents();
     }
 
     return Response.json({
