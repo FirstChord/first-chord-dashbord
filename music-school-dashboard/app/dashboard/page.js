@@ -11,10 +11,17 @@ import { generateUrls } from '@/lib/config';
 
 // Token interceptor - automatically captures fresh MMS tokens
 let capturedToken = null;
-const fallbackToken = "mms api key";
+const fallbackToken = "eyJhbGciOiJodHRwOi8vd3d3LnczLm9yZy8yMDAxLzA0L3htbGRzaWctbW9yZSNobWFjLXNoYTI1NiIsInR5cCI6IkpXVCJ9.eyJJbXBlcnNvbmF0aW5nIjpmYWxzZSwiUHJvZmlsZU1vZGUiOiJUZWFjaGVyIiwiU2Nob29sSUQiOiJzY2hfRng1SlEiLCJOYW1lIjoiRmlubiBMZSBNYXJpbmVsIiwiQXV0aFRva2VuIjoidGNoX1FoeEpKLlR2ODJwTlM2MzhsTm0xbzBVZW9ydWZ1eW8rZUcrNTA4cXNmVHZyYVMxQzg9IiwiUHJvZmlsZUlEIjoidGNoX1FoeEpKIiwiRmlyc3ROYW1lIjoiRmlubiIsIkxhc3ROYW1lIjoiTGUgTWFyaW5lbCIsIlNjaG9vbE5hbWUiOiJGaXJzdCBDaG9yZCBNdXNpYyBTY2hvb2wiLCJFbWFpbEFkZHJlc3MiOiJtdXNpY2xlc3NvbnNAZmlyc3RjaG9yZC5jby51ayIsIkludGVyY29tQ29tcGFueUlEIjoiUy0zODUzNCIsIkludGVyY29tVXNlcklEIjoiVC03ODk0OSIsIkVsZXZpb1VzZXJIYXNoIjoiYTNjMzZiYTY5MzJhMWE2OGQzMGM1MGRiZmI3ZDk2YjFlM2Q3MmM0NmY3ZTA5ZTIyNDQzZmRlMTZmNjQ0YWM2MCIsImlhdCI6MTc1NTA3OTA2MywiZXhwIjoxNzU4OTY3MDYzfQ.epCkF3DVzCcADEB7z6XS-P6ZtWDZZ-w7a99PPLIS4bA";
 
 function getWorkingToken() {
-  return capturedToken || sessionStorage.getItem('mms_token') || fallbackToken;
+  const token = capturedToken || sessionStorage.getItem('mms_token') || fallbackToken;
+  console.log('🔍 Token check:', {
+    capturedToken: capturedToken ? 'Present' : 'None',
+    sessionToken: sessionStorage.getItem('mms_token') ? 'Present' : 'None',
+    fallbackToken: 'Present',
+    usingToken: token ? 'Valid' : 'None'
+  });
+  return token;
 }
 
 // Set up token interceptor when component loads

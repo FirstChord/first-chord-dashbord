@@ -1,5 +1,11 @@
 import mmsClient from '@/lib/mms-client';
-import { initializeDatabase, upsertStudent, getStudentsByMmsIds, getStudentsByTutor, getAllStudents } from '@/lib/vercel-db';
+import { getAllStudents, getStudentsByTutor, upsertStudent } from '@/lib/db';
+import Database from 'better-sqlite3';
+import path from 'path';
+
+// Initialize database connection for clearing assignments
+const dbPath = path.join(process.cwd(), 'data', 'school.db');
+const db = new Database(dbPath);
 
 export async function POST(request) {
   try {
@@ -8,9 +14,6 @@ export async function POST(request) {
     console.log('=== MMS Student Sync Started ===');
     console.log('Tutor:', tutor);
     console.log('Force sync:', forceSync);
-
-    // Initialize database (creates table if it doesn't exist)
-    await initializeDatabase();
 
     // Check if we have a valid token
     const authHeader = request.headers.get('authorization');
@@ -38,7 +41,16 @@ export async function POST(request) {
 
     // Update database with MMS data
     if (processedStudents.length > 0) {
-      // Upsert each student (insert or update while preserving custom Soundslice courses)
+      // First, clear this tutor's assignments to handle students who are no longer assigned
+      const clearStmt = db.prepare(`
+        UPDATE students 
+        SET current_tutor = NULL 
+        WHERE current_tutor = ?
+      `);
+      clearStmt.run(tutor);
+      console.log(`Cleared existing assignments for ${tutor}`);
+
+      // Then upsert each student (insert or update while preserving custom Soundslice courses)
       for (const student of processedStudents) {
         await upsertStudent({
           name: student.name,
@@ -55,8 +67,7 @@ export async function POST(request) {
       console.log(`Updated ${processedStudents.length} students in database`);
       
       // Read back the updated students from database to get preserved soundslice_course values
-      const mmsIds = processedStudents.map(s => s.mms_id);
-      const updatedStudentsFromDB = await getStudentsByMmsIds(mmsIds);
+      const updatedStudentsFromDB = getStudentsByTutor(tutor);
       console.log(`Retrieved ${updatedStudentsFromDB.length} updated students from database`);
       
       return Response.json({
@@ -92,15 +103,12 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const tutor = searchParams.get('tutor');
     
-    // Initialize database
-    await initializeDatabase();
-    
     // Just return current data without syncing
     let students;
     if (tutor) {
-      students = await getStudentsByTutor(tutor);
+      students = getStudentsByTutor(tutor);
     } else {
-      students = await getAllStudents();
+      students = getAllStudents();
     }
 
     return Response.json({

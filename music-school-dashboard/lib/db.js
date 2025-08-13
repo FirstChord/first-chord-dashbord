@@ -89,4 +89,71 @@ if (count.count === 0) {
   });
 }
 
+// Export database functions
+export function getAllStudents() {
+  const students = db.prepare('SELECT * FROM students ORDER BY name').all();
+  return students;
+}
+
+export function getStudentsByTutor(tutorName) {
+  const students = db.prepare('SELECT * FROM students WHERE current_tutor = ? ORDER BY name').all(tutorName);
+  return students;
+}
+
+export function getStudentByMmsId(mmsId) {
+  const student = db.prepare('SELECT * FROM students WHERE mms_id = ?').get(mmsId);
+  return student;
+}
+
+export function upsertStudent(studentData) {
+  const { name, mms_id, soundslice_username, soundslice_course, theta_id, parent_email, current_tutor, instrument } = studentData;
+  
+  // Check if student exists
+  const existing = db.prepare('SELECT id, soundslice_course FROM students WHERE mms_id = ?').get(mms_id);
+  
+  if (existing) {
+    // Update existing student, preserving soundslice_course if new value is null
+    const updateStmt = db.prepare(`
+      UPDATE students 
+      SET name = ?, 
+          soundslice_username = ?, 
+          soundslice_course = COALESCE(?, soundslice_course),
+          theta_id = ?, 
+          parent_email = ?, 
+          current_tutor = ?, 
+          instrument = ?,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE mms_id = ?
+    `);
+    updateStmt.run(name, soundslice_username, soundslice_course, theta_id, parent_email, current_tutor, instrument, mms_id);
+    return existing.id;
+  } else {
+    // Insert new student
+    const insertStmt = db.prepare(`
+      INSERT INTO students (name, mms_id, soundslice_username, soundslice_course, theta_id, parent_email, current_tutor, instrument)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    const result = insertStmt.run(name, mms_id, soundslice_username, soundslice_course, theta_id, parent_email, current_tutor, instrument);
+    return result.lastInsertRowid;
+  }
+}
+
+export function upsertLessonNote(studentId, lessonDate, notes, tutorName) {
+  const stmt = db.prepare(`
+    INSERT INTO lesson_notes (student_id, lesson_date, notes, tutor_name)
+    VALUES (?, ?, ?, ?)
+  `);
+  return stmt.run(studentId, lessonDate, notes, tutorName);
+}
+
+export function getLatestLessonNote(studentId) {
+  const note = db.prepare(`
+    SELECT * FROM lesson_notes 
+    WHERE student_id = ? 
+    ORDER BY lesson_date DESC 
+    LIMIT 1
+  `).get(studentId);
+  return note;
+}
+
 export default db;

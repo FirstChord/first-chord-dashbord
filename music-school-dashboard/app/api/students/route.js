@@ -1,4 +1,4 @@
-import { initializeDatabase, getStudentsByTutor, getAllStudents } from '@/lib/vercel-db';
+import { getAllStudents, getStudentsByTutor } from '@/lib/db';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -8,9 +8,6 @@ export async function GET(request) {
   console.log('Requested tutor:', JSON.stringify(tutor));
   
   try {
-    // Initialize database
-    await initializeDatabase();
-    
     let students;
     if (tutor) {
       console.log('Querying for tutor:', tutor);

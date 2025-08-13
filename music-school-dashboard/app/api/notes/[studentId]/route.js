@@ -1,4 +1,4 @@
-import { initializeDatabase, getStudentByMmsId, upsertLessonNote, getLatestLessonNote } from '@/lib/vercel-db';
+import { getStudentByMmsId, upsertLessonNote, getLatestLessonNote } from '@/lib/db';
 import mmsClient from '@/lib/mms-client';
 
 export async function GET(request, { params }) {
@@ -10,9 +10,6 @@ export async function GET(request, { params }) {
   console.log('Token from URL:', token ? 'Present' : 'Not provided');
   
   try {
-    // Initialize database
-    await initializeDatabase();
-    
     // Get student info from database
     const student = await getStudentByMmsId(studentId);
     
