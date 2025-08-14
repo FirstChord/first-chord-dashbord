@@ -1,11 +1,7 @@
 import mmsClient from '@/lib/mms-client';
-import { getAllStudents, getStudentsByTutor, upsertStudent } from '@/lib/db';
-import Database from 'better-sqlite3';
-import path from 'path';
+import { PrismaClient } from '@prisma/client';
 
-// Initialize database connection for clearing assignments
-const dbPath = path.join(process.cwd(), 'data', 'school.db');
-const db = new Database(dbPath);
+const prisma = new PrismaClient();
 
 export async function POST(request) {
   try {
