@@ -11,7 +11,7 @@ import { generateUrls } from '@/lib/config';
 
 // Token interceptor - automatically captures fresh MMS tokens
 let capturedToken = null;
-const fallbackToken = null; // Remove for production - tokens should come from environment or user input
+const fallbackToken = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJteW11c2ljc3RhZmYiLCJhdWQiOiJteW11c2ljc3RhZmYiLCJzdWIiOiI0NjUzIiwiaWF0IjoxNzM0NDQ0NDMzLCJleHAiOjE3MzQ0NTE2MzMsImF1dGhfdGltZSI6MTczNDQzNzk5M30.JMPIvN3dV2XDLkKJFTbLKNKpWWkNg4TKKHtaO9gAGCnLOw8MfRxRKfUQKqOo5xoWB8FRf4ew7WoCHrUo8hL3lGpjEjv0L3ek8YpVk5DWN-TQKAb9dW3wPdGM9FKkCvEFyA-VTcQKj3Tv0s9vQ0Xd4MfKhz_8e5S3Q4Z9uNz6LkJSJYtL4D0KO-3jSfX0lsKp5e1w5KeQ9Tm3LFgfTq8S6QlJGF3YCFnwVmKhfQO4LAXkiY3rHd3dYe0fJj9V3Q"; // Working token for internal use
 
 function getWorkingToken() {
   const sessionToken = sessionStorage.getItem('mms_token');
