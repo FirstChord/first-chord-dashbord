@@ -7,10 +7,9 @@
   },
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "DATABASE_URL=${DATABASE_URL:-\"postgresql://dummy:dummy@localhost:5432/dummy\"} prisma generate && next build",
+    "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "postinstall": "DATABASE_URL=${DATABASE_URL:-\"postgresql://dummy:dummy@localhost:5432/dummy\"} prisma generate"
+    "lint": "next lint"
   },
   "dependencies": {
     "@prisma/client": "^6.14.0",
