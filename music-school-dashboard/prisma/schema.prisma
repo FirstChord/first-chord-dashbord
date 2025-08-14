@@ -1,0 +1,40 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model lesson_notes {
+  id          Int       @id @default(autoincrement())
+  student_id  Int?
+  lesson_date DateTime?
+  notes       String?
+  tutor_name  String?
+  created_at  DateTime? @default(now())
+  students    students? @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model students {
+  id                  Int            @id @default(autoincrement())
+  name                String
+  mms_id              String?        @unique(map: "sqlite_autoindex_students_1")
+  soundslice_username String?
+  soundslice_course   String?
+  theta_id            String?
+  parent_email        String?
+  current_tutor       String?
+  instrument          String?
+  updated_at          DateTime?      @default(now())
+  lesson_notes        lesson_notes[]
+}
+
+model tutors {
+  id    Int     @id @default(autoincrement())
+  name  String  @unique(map: "sqlite_autoindex_tutors_1")
+  email String?
+  color String? @default("#3B82F6")
+}
