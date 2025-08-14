@@ -9,61 +9,6 @@ import AuthStatus from '@/components/AuthStatus';
 import { Users, Clock, Search, RefreshCw } from 'lucide-react';
 import { generateUrls } from '@/lib/config';
 
-// Token setup component
-const TokenSetup = () => {
-  const [token, setToken] = useState('');
-  const [loading, setLoading] = useState(false);
-  
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    
-    try {
-      const res = await fetch('/api/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token })
-      });
-      
-      if (res.ok) {
-        window.location.reload();
-      } else {
-        alert('Failed to set token');
-      }
-    } catch (error) {
-      alert('Error setting token');
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  return (
-    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-      <h3 className="text-lg font-medium text-yellow-800 mb-2">MMS Token Required</h3>
-      <p className="text-sm text-yellow-700 mb-4">
-        Please enter your MyMusicStaff API token to access live data.
-      </p>
-      <form onSubmit={handleSubmit} className="flex gap-3">
-        <input
-          type="password"
-          placeholder="Paste MMS token here"
-          value={token}
-          onChange={(e) => setToken(e.target.value)}
-          className="flex-1 px-3 py-2 border border-yellow-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
-          required
-        />
-        <button 
-          type="submit" 
-          disabled={loading}
-          className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:opacity-50"
-        >
-          {loading ? 'Setting...' : 'Set Token'}
-        </button>
-      </form>
-    </div>
-  );
-};
-
 export default function DashboardClient() {
   const [tutor, setTutor] = useState('');
   const [students, setStudents] = useState([]);
@@ -78,7 +23,7 @@ export default function DashboardClient() {
   const [lastSyncTime, setLastSyncTime] = useState(null);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedStudentIds, setSelectedStudentIds] = useState(new Set());
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(true); // Always authenticated with hardcoded token
 
   // Check authentication status on load
   useEffect(() => {
@@ -264,13 +209,6 @@ export default function DashboardClient() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Show token setup if not authenticated */}
-      {!isAuthenticated && (
-        <div className="p-6">
-          <TokenSetup />
-        </div>
-      )}
-
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="px-6 py-4 flex justify-between items-center">
