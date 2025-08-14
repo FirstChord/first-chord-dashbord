@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import StudentCard from '@/components/StudentCard';
 import NotesPanel from '@/components/NotesPanel';
 import QuickLinks from '@/components/QuickLinks';
-import SetupWizard from '@/components/SetupWizard';
 import AuthStatus from '@/components/AuthStatus';
 import { Users, Clock, Search, RefreshCw } from 'lucide-react';
 import { generateUrls } from '@/lib/config';
@@ -17,7 +16,6 @@ export default function DashboardClient() {
   const [notesSource, setNotesSource] = useState(null);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [showSetupWizard, setShowSetupWizard] = useState(false);
   const [tokenStatus, setTokenStatus] = useState('checking');
   const [syncStatus, setSyncStatus] = useState('idle'); // idle, syncing, success, error
   const [lastSyncTime, setLastSyncTime] = useState(null);
@@ -235,12 +233,6 @@ export default function DashboardClient() {
               <span>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</span>
             </div>
             <button
-              onClick={() => setShowSetupWizard(true)}
-              className="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200"
-            >
-              ⚙️ Run Setup Wizard
-            </button>
-            <button
               onClick={() => {
                 setTutor('');
                 setSelectedStudent(null);
@@ -343,14 +335,6 @@ export default function DashboardClient() {
           )}
         </main>
       </div>
-
-      {/* Setup Wizard Modal */}
-      {showSetupWizard && (
-        <SetupWizard 
-          tutorName={tutor}
-          onComplete={() => setShowSetupWizard(false)}
-        />
-      )}
     </div>
   );
 }
