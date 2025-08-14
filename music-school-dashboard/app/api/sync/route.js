@@ -9,7 +9,33 @@ const db = new Database(dbPath);
 
 export async function POST(request) {
   try {
-    const { tutor, forceSync = false } = await request.json();
+    const { tutor, forceSync = false, action, students } = await request.json();
+    
+    // Handle manual student selection save
+    if (action === 'save_selection' && students) {
+      console.log('=== Manual Student Selection Save ===');
+      console.log('Students to save:', students.length);
+      
+      for (const student of students) {
+        await upsertStudent({
+          name: student.name,
+          mms_id: student.mms_id,
+          soundslice_username: student.soundslice_username || '',
+          soundslice_course: student.soundslice_url || student.soundslice_course || null,
+          theta_id: student.theta_id || '',
+          parent_email: student.parent_email || '',
+          current_tutor: student.current_tutor,
+          instrument: student.instrument || ''
+        });
+      }
+      
+      console.log(`Saved ${students.length} students manually`);
+      return Response.json({
+        success: true,
+        message: `Successfully saved ${students.length} students`,
+        count: students.length
+      });
+    }
     
     console.log('=== MMS Student Sync Started ===');
     console.log('Tutor:', tutor);
@@ -17,19 +43,29 @@ export async function POST(request) {
 
     // Check if we have a valid token
     const authHeader = request.headers.get('authorization');
+    console.log('Auth header present:', authHeader ? 'Yes' : 'No');
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.replace('Bearer ', '');
+      console.log('Token received, length:', token.length);
       mmsClient.setToken(token);
     }
 
     // Fetch students from MMS using tutor name for automatic teacher ID lookup
+    console.log('Calling mmsClient.getStudentsForTeacher with tutor:', tutor);
     const mmsResult = await mmsClient.getStudentsForTeacher(tutor);
     
+    console.log('MMS result:', { 
+      success: mmsResult.success, 
+      message: mmsResult.message, 
+      error: mmsResult.error,
+      studentsCount: mmsResult.students?.length || 0 
+    });
+    
     if (!mmsResult.success) {
-      console.log('MMS fetch failed:', mmsResult.message);
+      console.log('MMS fetch failed:', mmsResult.message || mmsResult.error);
       return Response.json({ 
         success: false, 
-        message: mmsResult.message || 'Failed to fetch from MMS',
+        message: mmsResult.message || mmsResult.error || 'Failed to fetch from MMS',
         source: 'local'
       });
     }

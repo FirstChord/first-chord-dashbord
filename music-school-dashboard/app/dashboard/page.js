@@ -11,15 +11,20 @@ import { generateUrls } from '@/lib/config';
 
 // Token interceptor - automatically captures fresh MMS tokens
 let capturedToken = null;
-const fallbackToken = "eyJhbGciOiJodHRwOi8vd3d3LnczLm9yZy8yMDAxLzA0L3htbGRzaWctbW9yZSNobWFjLXNoYTI1NiIsInR5cCI6IkpXVCJ9.eyJJbXBlcnNvbmF0aW5nIjpmYWxzZSwiUHJvZmlsZU1vZGUiOiJUZWFjaGVyIiwiU2Nob29sSUQiOiJzY2hfRng1SlEiLCJOYW1lIjoiRmlubiBMZSBNYXJpbmVsIiwiQXV0aFRva2VuIjoidGNoX1FoeEpKLlR2ODJwTlM2MzhsTm0xbzBVZW9ydWZ1eW8rZUcrNTA4cXNmVHZyYVMxQzg9IiwiUHJvZmlsZUlEIjoidGNoX1FoeEpKIiwiRmlyc3ROYW1lIjoiRmlubiIsIkxhc3ROYW1lIjoiTGUgTWFyaW5lbCIsIlNjaG9vbE5hbWUiOiJGaXJzdCBDaG9yZCBNdXNpYyBTY2hvb2wiLCJFbWFpbEFkZHJlc3MiOiJtdXNpY2xlc3NvbnNAZmlyc3RjaG9yZC5jby51ayIsIkludGVyY29tQ29tcGFueUlEIjoiUy0zODUzNCIsIkludGVyY29tVXNlcklEIjoiVC03ODk0OSIsIkVsZXZpb1VzZXJIYXNoIjoiYTNjMzZiYTY5MzJhMWE2OGQzMGM1MGRiZmI3ZDk2YjFlM2Q3MmM0NmY3ZTA5ZTIyNDQzZmRlMTZmNjQ0YWM2MCIsImlhdCI6MTc1NTA3OTA2MywiZXhwIjoxNzU4OTY3MDYzfQ.epCkF3DVzCcADEB7z6XS-P6ZtWDZZ-w7a99PPLIS4bA";
+const fallbackToken = null; // Remove for production - tokens should come from environment or user input
 
 function getWorkingToken() {
-  const token = capturedToken || sessionStorage.getItem('mms_token') || fallbackToken;
+  const sessionToken = sessionStorage.getItem('mms_token');
+  const localToken = localStorage.getItem('mms_token');
+  const token = capturedToken || sessionToken || localToken || fallbackToken;
+  
   console.log('🔍 Token check:', {
     capturedToken: capturedToken ? 'Present' : 'None',
-    sessionToken: sessionStorage.getItem('mms_token') ? 'Present' : 'None',
+    sessionToken: sessionToken ? `Present (${sessionToken.substring(0, 20)}...)` : 'None',
+    localToken: localToken ? `Present (${localToken.substring(0, 20)}...)` : 'None',
     fallbackToken: 'Present',
-    usingToken: token ? 'Valid' : 'None'
+    usingToken: token ? `Valid (${token.substring(0, 20)}...)` : 'None',
+    storageAvailable: typeof Storage !== 'undefined'
   });
   return token;
 }
@@ -28,22 +33,46 @@ function getWorkingToken() {
 if (typeof window !== 'undefined' && !window.mmsInterceptorInstalled) {
   const originalFetch = window.fetch;
   window.fetch = function(...args) {
+    // Debug all fetch calls
+    console.log('🌐 Fetch intercepted:', args[0]);
+    
     if (args[0] && typeof args[0] === 'string' && args[0].includes('api.mymusicstaff.com')) {
+      console.log('🎯 MMS API call detected!', args[0]);
       const options = args[1] || {};
       const authHeader = options.headers?.['Authorization'] || options.headers?.['authorization'];
+      console.log('📝 Auth header:', authHeader ? 'Present' : 'Missing');
+      
       if (authHeader && authHeader.startsWith('Bearer ')) {
         const newToken = authHeader.replace('Bearer ', '');
+        console.log('🔍 Token extracted:', newToken.substring(0, 20) + '...');
+        
         if (newToken !== capturedToken) {
           capturedToken = newToken;
           sessionStorage.setItem('mms_token', newToken);
-          console.log('🎯 Fresh MMS token captured automatically!');
+          localStorage.setItem('mms_token', newToken);
+          console.log('🎯 Fresh MMS token captured and stored for cross-tab access!');
+          console.log('💾 Stored in localStorage:', localStorage.getItem('mms_token') ? 'Success' : 'Failed');
+        } else {
+          console.log('🔄 Token already captured (same as current)');
         }
       }
     }
     return originalFetch.apply(this, args);
   };
+  
+  // Listen for storage events from other tabs (like MMS tab)
+  window.addEventListener('storage', function(e) {
+    console.log('📡 Storage event detected:', e.key, e.newValue ? 'Token received' : 'Token cleared');
+    if (e.key === 'mms_token' && e.newValue) {
+      capturedToken = e.newValue;
+      console.log('🔄 Token updated from another tab (MMS)!');
+    }
+  });
+  
   window.mmsInterceptorInstalled = true;
-  console.log('🔧 MMS token interceptor installed');
+  console.log('🔧 Cross-tab MMS token interceptor installed');
+  console.log('🌍 Current domain:', window.location.hostname);
+  console.log('🔗 Will intercept calls to: api.mymusicstaff.com');
 }
 
 export default function Dashboard() {
@@ -292,6 +321,55 @@ export default function Dashboard() {
                   Sync MMS
                 </>
               )}
+            </button>
+
+            {/* Debug Token Button */}
+            <button
+              onClick={() => {
+                console.log('🔧 Manual token debug:');
+                console.log('Raw localStorage:', localStorage.getItem('mms_token'));
+                console.log('Raw sessionStorage:', sessionStorage.getItem('mms_token'));
+                console.log('Captured token:', capturedToken);
+                const token = getWorkingToken();
+                console.log('Final working token:', token ? token.substring(0, 50) + '...' : 'None');
+              }}
+              className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm"
+            >
+              🔧 Test Token
+            </button>
+
+            {/* Clear Test Token Button */}
+            <button
+              onClick={() => {
+                localStorage.removeItem('mms_token');
+                sessionStorage.removeItem('mms_token');
+                capturedToken = null;
+                console.log('🧹 Cleared all test tokens - will use fallback token');
+                // Trigger a re-sync to test with fallback token
+                syncStudentsFromMMS();
+              }}
+              className="px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 text-sm"
+            >
+              🧹 Clear Test
+            </button>
+
+            {/* Manual Token Input */}
+            <button
+              onClick={() => {
+                const token = prompt('Paste a fresh MMS token here:');
+                if (token && token.trim()) {
+                  const cleanToken = token.trim();
+                  capturedToken = cleanToken;
+                  sessionStorage.setItem('mms_token', cleanToken);
+                  localStorage.setItem('mms_token', cleanToken);
+                  console.log('✅ Fresh token manually added!');
+                  // Trigger sync to test
+                  syncStudentsFromMMS();
+                }
+              }}
+              className="px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 text-sm"
+            >
+              📝 Add Token
             </button>
 
             {/* Selection Mode Toggle */}
