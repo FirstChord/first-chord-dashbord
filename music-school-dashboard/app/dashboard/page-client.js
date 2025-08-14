@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import StudentCard from '@/components/StudentCard';
 import NotesPanel from '@/components/NotesPanel';
 import QuickLinks from '@/components/QuickLinks';
@@ -334,6 +335,18 @@ export default function DashboardClient() {
             </div>
           )}
         </main>
+      </div>
+
+      {/* First Chord Logo - Bottom Right Corner */}
+      <div className="fixed bottom-4 right-4 z-10">
+        <Image
+          src="/first-chord-banner.png"
+          alt="First Chord Music School - Explore Music Together"
+          width={200}
+          height={120}
+          className="rounded-lg shadow-lg opacity-90 hover:opacity-100 transition-opacity duration-300"
+          priority={false}
+        />
       </div>
     </div>
   );
