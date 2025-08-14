@@ -2,6 +2,16 @@ import { ExternalLink, Music, Brain, FileText } from 'lucide-react';
 import { generateSmartUrls } from '@/lib/config';
 
 export default function QuickLinks({ student }) {
+  // Early return if no student is provided
+  if (!student) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
+        <p className="text-gray-500">Select a student to view quick links</p>
+      </div>
+    );
+  }
+
   const smartUrls = {
     soundslice: generateSmartUrls.soundslice(student),
     thetaMusic: generateSmartUrls.thetaMusic(student),

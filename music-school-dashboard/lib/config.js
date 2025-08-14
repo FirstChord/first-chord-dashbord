@@ -101,6 +101,13 @@ export const generateUrls = {
 // Smart URL generator that handles authentication state
 export const generateSmartUrls = {
   soundslice: (student) => {
+    if (!student) {
+      return {
+        url: 'https://www.soundslice.com/courses/12954/',
+        requiresAuth: false,
+        instruction: 'Access course materials'
+      };
+    }
     const course = student.soundslice_course || '12954';
     // Check if it's already a full URL or just a course ID
     const url = course.startsWith('http') ? course : `https://www.soundslice.com/courses/${course}/`;
@@ -111,19 +118,37 @@ export const generateSmartUrls = {
     };
   },
   
-  myMusicStaff: (student, tutorName) => ({
-    url: `https://app.mymusicstaff.com/Teacher/v2/en/students/details?id=${student.mms_id}#AttendanceNotes`,
-    requiresAuth: false, // Assumes tutor logged in
-    instruction: 'Go to attendance & notes'
-  }),
+  myMusicStaff: (student, tutorName) => {
+    if (!student) {
+      return {
+        url: 'https://app.mymusicstaff.com/',
+        requiresAuth: true,
+        instruction: 'Login to view student details'
+      };
+    }
+    return {
+      url: `https://app.mymusicstaff.com/Teacher/v2/en/students/details?id=${student.mms_id}#AttendanceNotes`,
+      requiresAuth: false, // Assumes tutor logged in
+      instruction: 'Go to attendance & notes'
+    };
+  },
   
-  thetaMusic: (student) => ({
-    url: `https://trainer.thetamusic.com/login`,
-    requiresAuth: true,
-    credentials: {
-      username: student.theta_username || student.parent_email,
-      passwordHint: 'Check Bitwarden'
-    },
-    instruction: 'Password manager will auto-fill'
-  })
+  thetaMusic: (student) => {
+    if (!student) {
+      return {
+        url: 'https://trainer.thetamusic.com/login',
+        requiresAuth: true,
+        instruction: 'Login to access training materials'
+      };
+    }
+    return {
+      url: `https://trainer.thetamusic.com/login`,
+      requiresAuth: true,
+      credentials: {
+        username: student.theta_username || student.parent_email,
+        passwordHint: 'Check Bitwarden'
+      },
+      instruction: 'Password manager will auto-fill'
+    };
+  }
 };

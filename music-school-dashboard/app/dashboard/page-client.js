@@ -64,7 +64,7 @@ const TokenSetup = () => {
   );
 };
 
-export default function Dashboard() {
+export default function DashboardClient() {
   const [tutor, setTutor] = useState('');
   const [students, setStudents] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -117,7 +117,7 @@ export default function Dashboard() {
       const data = await response.json();
       
       if (data.success && data.source === 'mms') {
-        setStudents(data.students);
+        setStudents(data.students || []);
         setSyncStatus('success');
         setLastSyncTime(new Date());
         console.log(`✅ Synced ${data.count} students from MMS`);
@@ -139,7 +139,7 @@ export default function Dashboard() {
         // Fallback to local data
         fetch(`/api/students?tutor=${targetTutor}`)
           .then(res => res.json())
-          .then(data => setStudents(data.students));
+          .then(data => setStudents(data.students || []));
           
         setTimeout(() => setSyncStatus('idle'), 5000);
       }
@@ -211,17 +211,17 @@ export default function Dashboard() {
       fetch(`/api/notes/${selectedStudent.mms_id}`)
         .then(res => res.json())
         .then(data => {
-          setLastNotes(data.lastNotes);
+          setLastNotes(data.notes);
           setNotesSource(data.source);
           setLoading(false);
           
           // Update token status based on response
-          if (data.source === 'live') {
+          if (data.success) {
             setTokenStatus('active');
-            console.log('✅ Using live MMS data');
+            console.log('✅ Using live MMS notes data');
           } else {
             setTokenStatus('inactive');
-            console.log('⚠️ Using cached notes.');
+            console.log('⚠️ Failed to fetch notes from MMS.');
           }
         })
         .catch(error => {
@@ -233,9 +233,12 @@ export default function Dashboard() {
   }, [selectedStudent]);
 
   // Filter students by search
-  const filteredStudents = students.filter(student =>
+  const filteredStudents = (students || []).filter(student =>
     student.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Debug logging
+  console.log('🔍 Dashboard state:', { tutor, tutorLength: tutor.length, tutorType: typeof tutor, isEmpty: !tutor });
 
   // If no tutor selected, show tutor selection
   if (!tutor) {

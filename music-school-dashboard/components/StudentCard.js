@@ -29,6 +29,17 @@ export default function StudentCard({ student, onClick, isSelected, showCheckbox
       {student.instrument && (
         <p className="text-sm text-blue-600 font-medium">{student.instrument}</p>
       )}
+      {student.soundslice_course && (
+        <a 
+          href={student.soundslice_course} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="text-xs text-green-600 hover:text-green-800 underline block mt-1"
+        >
+          📚 Soundslice Course
+        </a>
+      )}
       {showCheckbox && (
         <p className="text-xs text-gray-500 mt-1">Click checkbox to mark as your student</p>
       )}

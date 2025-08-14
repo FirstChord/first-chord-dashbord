@@ -11,8 +11,7 @@ export async function POST(request) {
     }
     
     // Store token in httpOnly cookie (secure in production)
-    const cookieStore = await cookies()
-    cookieStore.set('mms-token', token, {
+    cookies().set('mms-token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
@@ -27,8 +26,7 @@ export async function POST(request) {
 
 // Get current token
 export async function GET() {
-  const cookieStore = await cookies()
-  const token = cookieStore.get('mms-token')
+  const token = cookies().get('mms-token')
   const defaultToken = process.env.MMS_DEFAULT_TOKEN
   
   // Check if we have either a stored token or default token

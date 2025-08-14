@@ -1,7 +1,7 @@
-import { getStudentByMmsId, upsertLessonNote, getLatestLessonNote } from '@/lib/db';
 import mmsClient from '@/lib/mms-client';
 
-export async function GET(request, { params }) {
+// BYPASS DATABASE - GET NOTES DIRECTLY FROM MMS
+export async function POST(request, { params }) {
   const { studentId } = await params;
   const { searchParams } = new URL(request.url);
   const token = searchParams.get('token');
@@ -10,61 +10,73 @@ export async function GET(request, { params }) {
   console.log('Token from URL:', token ? 'Present' : 'Not provided');
   
   try {
-    // Get student info from database
-    const student = await getStudentByMmsId(studentId);
+    // Get notes directly from MMS
+    console.log('Fetching notes from MMS for student:', studentId);
+    const notesResult = await mmsClient.getStudentNotes(studentId);
     
-    if (!student) {
-      return Response.json({ error: 'Student not found' }, { status: 404 });
-    }
-
-    // Set token if provided
-    if (token) {
-      console.log('Setting token in MMS client');
-      mmsClient.setToken(token);
-    }
-
-    console.log('Attempting to fetch from MMS API...');
-    // Try to get fresh notes from MMS API
-    const mmsNotes = await mmsClient.getStudentNotes(studentId);
-    console.log('MMS API result:', mmsNotes.success ? 'Success' : 'Failed');
-    
-    if (mmsNotes.success) {
-      console.log('Got fresh notes from MMS!');
-      // Cache the successful fetch
-      if (mmsNotes.notes && mmsNotes.notes !== 'Student was absent from the last lesson') {
-        await upsertLessonNote(
-          student.id,
-          mmsNotes.date,
-          mmsNotes.notes,
-          mmsNotes.tutor
-        );
-      }
-
-      return Response.json({ 
-        student,
-        lastNotes: {
-          notes: mmsNotes.notes,
-          lesson_date: mmsNotes.date,
-          tutor_name: mmsNotes.tutor,
-          attendance: mmsNotes.attendanceStatus,
-          source: 'live'
-        }
+    if (notesResult.success) {
+      return Response.json({
+        success: true,
+        notes: notesResult.notes || [],
+        count: notesResult.notes ? notesResult.notes.length : 0
+      });
+    } else {
+      return Response.json({
+        success: false,
+        notes: [],
+        count: 0,
+        message: notesResult.message || 'Failed to fetch notes'
       });
     }
-
-    console.log('Falling back to cached notes');
-    // Fallback to cached notes
-    const cachedNotes = await getLatestLessonNote(student.id);
-    
-    return Response.json({ 
-      student,
-      lastNotes: cachedNotes,
-      source: 'cache',
-      fallbackUrl: mmsNotes.fallbackUrl
-    });
     
   } catch (error) {
-    console.error('Error fetching notes:', error);
-    return Response.json({ error: error.message }, { status: 500 });
+    console.error('Notes API error:', error);
+    return Response.json({
+      success: false,
+      notes: [],
+      count: 0,
+      message: error.message
+    }, { status: 500 });
+  }
+}
+
+export async function GET(request, { params }) {
+  const { studentId } = await params;
+  
+  console.log(`=== Get Notes API called for student: ${studentId} ===`);
+  
+  try {
+    // Get notes directly from MMS
+    const notesResult = await mmsClient.getStudentNotes(studentId);
+    
+    if (notesResult.success) {
+      // Transform the MMS data format to match what NotesPanel expects
+      const transformedNotes = {
+        lesson_date: notesResult.date,
+        notes: notesResult.notes,
+        tutor_name: notesResult.tutor,
+        attendance: notesResult.attendanceStatus
+      };
+      
+      return Response.json({
+        success: true,
+        notes: transformedNotes,
+        source: 'mms'
+      });
+    } else {
+      return Response.json({
+        success: false,
+        notes: null,
+        message: notesResult.message || 'Failed to fetch notes'
+      });
+    }
+    
+  } catch (error) {
+    console.error('Get Notes API error:', error);
+    return Response.json({
+      success: false,
+      notes: null,
+      message: error.message
+    }, { status: 500 });
   }
 }

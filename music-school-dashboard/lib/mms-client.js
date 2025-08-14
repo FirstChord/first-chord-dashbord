@@ -2,7 +2,8 @@ class MMSClient {
   constructor() {
     this.baseUrl = 'https://api.mymusicstaff.com/v1';
     this.schoolId = 'sch_Fx5JQ';
-    this.token = null;
+    // Hardcoded API token - always use this
+    this.token = 'eyJhbGciOiJodHRwOi8vd3d3LnczLm9yZy8yMDAxLzA0L3htbGRzaWctbW9yZSNobWFjLXNoYTI1NiIsInR5cCI6IkpXVCJ9.eyJJbXBlcnNvbmF0aW5nIjpmYWxzZSwiUHJvZmlsZU1vZGUiOiJBcGlLZXkiLCJTY2hvb2xJRCI6InNjaF9GeDVKUSIsIk5hbWUiOiJGaXJzdCBDaG9yZCBEYXNoYm9hcmQiLCJBdXRoVG9rZW4iOiJha193WUpmLldKTnNhclY4NjVUOGQ5Z1dVVGNUS1VDU1h1SzY5MGJZZVB2VkE0RURMQWM9IiwiaWF0IjoxNzU1MTU0NjM1fQ.jE6sNUVTtzRoT6LVSyf_4bVt3eCFSSFq93GvA0gkxZI';
     
     // Teacher ID mapping for automatic filtering
     this.teacherIds = {
@@ -30,19 +31,32 @@ class MMSClient {
       'Stef': 'tch_z5YmJX',
       'Stef McGlinchey': 'tch_z5YmJX',
       'Tom': 'tch_mYJJR',
-      'Tom Walters': 'tch_mYJJR'
+      'Tom Walters': 'tch_mYJJR',
+      // Lowercase aliases for easy access
+      'finn': 'tch_QhxJJ',
+      'eve': 'tch_z3npJm',
+      'arion': 'tch_zplpJw',
+      'dean': 'tch_zV9TJN',
+      'eléna': 'tch_zpy4J9',
+      'elena': 'tch_zpy4J9',
+      'fennella': 'tch_C2bJ9',
+      'jungyoun': 'tch_z3lWJS',
+      'kim': 'tch_zVg1Js',
+      'patrick': 'tch_zw9SJ3',
+      'robbie': 'tch_zV9hJ2',
+      'stef': 'tch_z5YmJX',
+      'tom': 'tch_mYJJR'
     };
   }
 
   setToken(token) {
-    this.token = token;
-    console.log('MMS Token set:', token ? 'Yes' : 'No');
+    // Always use the hardcoded token, ignore any passed token
+    console.log('MMS Token set: Using hardcoded token');
   }
 
   async fetchFromMMS(endpoint, method = 'GET', body = null) {
-    const token = this.token || 
-                  (typeof window !== 'undefined' ? sessionStorage.getItem('mms_token') : null) ||
-                  process.env.MMS_API_KEY;
+    // Always use the hardcoded token - never rely on external sources
+    const token = this.token;
     
     if (!token) {
       console.error('No MMS token available');
