@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, AlertCircle } from 'lucide-react';
 
 export default function AuthStatus({ student }) {
   const [status, setStatus] = useState({
