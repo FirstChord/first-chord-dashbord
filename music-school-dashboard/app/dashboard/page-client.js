@@ -90,7 +90,7 @@ export default function DashboardClient() {
       // Try MMS sync first, fallback to local
       syncStudentsFromMMS(tutor);
     }
-  }, [tutor, syncStudentsFromMMS]);
+  }, [tutor]); // Removed syncStudentsFromMMS from dependencies to prevent infinite loop
 
   // Fetch notes when student is selected
   useEffect(() => {
