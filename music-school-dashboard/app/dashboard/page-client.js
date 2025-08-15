@@ -20,18 +20,18 @@ export default function DashboardClient() {
   const [tokenStatus, setTokenStatus] = useState('checking');
   const [syncStatus, setSyncStatus] = useState('idle'); // idle, syncing, success, error
   const [lastSyncTime, setLastSyncTime] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(true); // Always authenticated with hardcoded token
+  // const [isAuthenticated, setIsAuthenticated] = useState(true); // Always authenticated with hardcoded token
 
   // Check authentication status on load
   useEffect(() => {
     fetch('/api/token')
       .then(res => res.json())
       .then(data => {
-        setIsAuthenticated(data.authenticated);
+        // setIsAuthenticated(data.authenticated);
         setTokenStatus(data.authenticated ? 'active' : 'inactive');
       })
       .catch(() => {
-        setIsAuthenticated(false);
+        // setIsAuthenticated(false);
         setTokenStatus('error');
       });
   }, []);
@@ -98,7 +98,7 @@ export default function DashboardClient() {
       // Try MMS sync first, fallback to local
       syncStudentsFromMMS(tutor);
     }
-  }, [tutor]);
+  }, [tutor, syncStudentsFromMMS]);
 
   // Fetch notes when student is selected
   useEffect(() => {

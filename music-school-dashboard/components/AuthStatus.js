@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { AlertCircle, CheckCircle, XCircle } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
 
-export default function AuthStatus({ student, tutorName }) {
+export default function AuthStatus({ student }) {
   const [status, setStatus] = useState({
     soundslice: 'checking',
     myMusicStaff: 'checking',
