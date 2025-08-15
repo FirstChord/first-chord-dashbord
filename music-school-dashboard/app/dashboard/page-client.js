@@ -342,8 +342,8 @@ export default function DashboardClient() {
         <Image
           src="/first-chord-banner.png"
           alt="First Chord Music School - Explore Music Together"
-          width={150}
-          height={85}
+          width={225}
+          height={127}
           className="rounded-lg shadow-lg opacity-90 hover:opacity-100 transition-opacity duration-300"
           priority={false}
         />
