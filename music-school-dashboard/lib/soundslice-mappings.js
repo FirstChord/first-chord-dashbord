@@ -124,7 +124,40 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_BDHdJ4': 'https://www.soundslice.com/courses/4303/', // Thomas Ward
   'sdt_BDHFJM': 'https://www.soundslice.com/courses/14033/', // Arnav Rekhate
   'sdt_KKfZJC': 'https://www.soundslice.com/courses/4411/', // Simone De Maio
-  'sdt_Q2ntJX': 'https://www.soundslice.com/courses/15601/' // Chew Paedar
+  'sdt_Q2ntJX': 'https://www.soundslice.com/courses/15601/', // Chew Paedar
+  
+  // Fennella's students
+  'sdt_cqlKJm': 'https://www.soundslice.com/courses/16884/', // Charles Moriarty
+  'sdt_cz6ZJz': 'https://www.soundslice.com/courses/16885/', // James Holden
+  'sdt_cB0YJd': 'https://www.soundslice.com/courses/16886/', // Tormad MacRobert
+  'sdt_HWVBJL': 'https://www.soundslice.com/courses/16887/', // Alize Ekdi
+  'sdt_H5ysJM': 'https://www.soundslice.com/courses/16888/', // Beau Cassidy
+  'sdt_Mg2kJz': 'https://www.soundslice.com/courses/16889/', // Anna Kennedy
+  'sdt_H5yHJQ': 'https://www.soundslice.com/courses/16890/', // Charlie Gillespie
+  'sdt_QpGPJv': 'https://www.soundslice.com/courses/16883/', // Alexander Murray
+  'sdt_ybcdJ7': 'https://www.soundslice.com/courses/16891/', // Elizabeth MacKenzie
+  'sdt_HVbNJk': 'https://www.soundslice.com/courses/16895/', // Melania R
+  'sdt_v9m8JT': 'https://www.soundslice.com/courses/16896/', // Eliza Dem
+  'sdt_QPqsJC': 'https://www.soundslice.com/courses/16897/', // Natalie Wong
+  'sdt_39hsJY': 'https://www.soundslice.com/courses/16898/', // Chiara Cavanna
+  'sdt_QKcMJS': 'https://www.soundslice.com/courses/16899/', // Jenny O'Donnell
+  'sdt_BtxmJ4': 'https://www.soundslice.com/courses/16900/', // Carol Turner
+  'sdt_QNVYJ4': 'https://www.soundslice.com/courses/16901/', // Nico Murdoch
+  'sdt_ccgQJ8': 'https://www.soundslice.com/courses/16902/', // Paisley Hewitt
+  'sdt_cfGhJh': 'https://www.soundslice.com/courses/16903/', // Sian Malyin
+  'sdt_ckzHJS': 'https://www.soundslice.com/courses/16904/', // Georgia Charalampous
+  'sdt_6FRsJF': 'https://www.soundslice.com/courses/16906/', // Claire Lindsay
+  'sdt_c8fFJ3': 'https://www.soundslice.com/courses/16907/', // Emma Snaraite
+  
+  // Jungyoun's students
+  'sdt_c794J5': 'https://www.soundslice.com/courses/16908/', // Mateo Alonso
+  'sdt_NSmFJh': 'https://www.soundslice.com/courses/16909/', // Alessandro Matassoni
+  'sdt_NXNKJJ': 'https://www.soundslice.com/courses/16910/', // Eva Lindsay
+  'sdt_D9rnJT': 'https://www.soundslice.com/courses/16911/', // Rohan Nazir
+  'sdt_DdZxJQ': 'https://www.soundslice.com/courses/16880/', // Sumer Rami
+  'sdt_N0z0Jq': 'https://www.soundslice.com/courses/16912/', // Tomasso Fossati
+  'sdt_NSmyJ3': 'https://www.soundslice.com/courses/16913/', // Zia Permall
+  'sdt_2grxJL': 'https://www.soundslice.com/courses/16914/' // Ryan Ofee
 };
 
 // Function to get Soundslice course for a student
