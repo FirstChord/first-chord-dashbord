@@ -20,13 +20,13 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_QbBNJq': 'https://www.soundslice.com/courses/15543/', // Caroline Bingley
   
   // Robbie's students
-  'sdt_3fqfJ4': 'https://www.soundslice.com/courses/11356/', // Jessica Birch
-  'sdt_3LnGJ4': 'https://www.soundslice.com/courses/8669/', // Isaac Coull
-  'sdt_36GFJS': 'https://www.soundslice.com/courses/12071/', // Alexander Duncan
-  'sdt_36F7JV': 'https://www.soundslice.com/courses/8864/', // Mason Foster
-  'sdt_36F6JL': 'https://www.soundslice.com/courses/8619/', // Amy Foster
-  'sdt_36ZRJ2': 'https://www.soundslice.com/courses/8670/', // Holly Hendry
-  'sdt_MPM6JG': 'https://www.soundslice.com/courses/16396/', // Blake Nicol
+  'sdt_3ZZwJ2': 'https://www.soundslice.com/courses/11356/', // Ailsa Hoebe
+  'sdt_w6TSJX': 'https://www.soundslice.com/courses/8669/', // Arjun Darshini
+  'sdt_2s8CJk': 'https://www.soundslice.com/courses/12071/', // Charlie Mcdougall
+  'sdt_vrbPJL': 'https://www.soundslice.com/courses/8864/', // Fox Slocombe
+  'sdt_vgjdJv': 'https://www.soundslice.com/courses/8619/', // Niamh Gallagher
+  'sdt_w6T7Jd': 'https://www.soundslice.com/courses/8670/', // Vaila Donaghey
+  'sdt_c7hKJ8': 'https://www.soundslice.com/courses/16396/', // Emiliano Squillino
   
   // Stef's students
   'sdt_NSmPJr': 'https://www.soundslice.com/courses/10024/', // Ava Garcia Bree
