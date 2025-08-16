@@ -136,13 +136,87 @@ export const generateSmartUrls = {
   thetaMusic: (student) => {
     if (!student) {
       return {
-        url: 'https://trainer.thetamusic.com/login',
+        url: 'https://trainer.thetamusic.com/en/user/login',
         requiresAuth: true,
         instruction: 'Login to access training materials'
       };
     }
+    
+    // Finn's students with Theta Music credentials
+    const thetaCredentials = {
+      'sdt_cZDlJQ': 'Finnlayfc',    // Finlay Cackett
+      'sdt_gwyQJr': 'alexfirstchord',       // Alex Chang
+      'sdt_KwbvJG': 'alisterfc',    // Alister McGhee
+      'sdt_Kwb2J0': 'anjifc',       // Anji Goddard
+      'sdt_BDHKJs': 'archiefc',     // Archie Toner
+      'sdt_K3h1JJ': 'ariafc',       // Aria Thomson
+      'sdt_BpDPJZ': 'calanfc',      // Calan Clacherty
+      'sdt_KwbMJR': 'carolynfc',    // Carolyn Hilliard
+      'sdt_BDHJJF': 'clairefc',     // Claire McGinness
+      'sdt_Kv59Jb': 'eilidhfc',     // Eilidh Qiu
+      'sdt_K9psJ9': 'hudsonfc',     // Hudson Woodford
+      'sdt_2slYJ7': 'jofc',         // Jo Vardy
+      'sdt_K9pNJt': 'joelfc',       // Joel Adler
+      'sdt_N0zrJ8': 'josefc',       // Jose Santi Dad
+      'sdt_Kv5QJh': 'katrinafc',    // Katrina Caldwell
+      'sdt_Kq3XJP': 'laithfc',      // Laith Lombard
+      'sdt_KKfGJ0': 'leonardofc',   // Leonardo Matassoni
+      'sdt_H6CvJv': 'mathildefc',   // Mathilde thallon
+      'sdt_gWXHJN': 'nathanfc',     // Nathan Ward
+      'sdt_yLvlJx': 'normanfc',     // Norman Boyle
+      'sdt_Kq3RJW': 'pablofc',      // Pablo Cunningham
+      'sdt_K9pMJg': 'quinfc',       // Quin Cooper
+      'sdt_BDsRJ9': 'rosefc',       // Rose Drew
+      'sdt_Kq2TJR': 'rosemaryfc',   // Rosemary Forbes
+      'sdt_yLv3J7': 'sakethfc',     // Saketh Pamidimarry
+      'sdt_Kv5XJL': 'santifc',      // Santi Freeth
+      'sdt_x48LJT': 'stellafc',     // Stella Cook
+      'sdt_BDHdJ4': 'thomasfc',     // Thomas Ward
+      'sdt_BDHFJM': 'arnavfc',      // Arnav Rekhate
+      'sdt_KKfZJC': 'simonefc',     // Simone De Maio
+      'sdt_Q2ntJX': 'peadarfc',     // Paedar Chew
+      
+      // Dean's students with Theta Music credentials
+      'sdt_BMt3JD': 'adamfc',       // Adam Rami
+      'sdt_Hf36Jh': 'arianafc',     // Ariana Honeybunn
+      'sdt_yHtZJ8': 'danielfc',     // Daniel Murray
+      'sdt_BDHTJN': 'danielafc',    // Daniela Alvarez
+      'sdt_3nKZJB': 'dylanfc',      // Dylan Cook
+      'sdt_QnkRJT': 'adafc',        // Ada Neocleous
+      'sdt_3TTwJV': 'emiliafc',     // Emilia Douglas
+      'sdt_HrdXJK': 'gilfc',        // Gil Wallace
+      'sdt_2sjZJs': 'harrisonfc',   // Harrison Aitken
+      'sdt_svMqJy': 'lolafc',       // Lola McGarry Panunzio
+      'sdt_2lJMJl': 'mohammedfc',   // Mohammed Abdelrahman
+      'sdt_BlyZJD': 'rachaelfc',    // Rachael Hill
+      'sdt_2lJyJj': 'rayanfc',      // Rayan Abdelrahman
+      'sdt_vHS3JK': 'sandyfc',      // Sandy Morgan
+      'sdt_vLG0JL': 'sonnyfc',      // Sonny H
+      'sdt_sfbtJ5': 'stellafc',     // Stella Hart
+      'sdt_Fq8ZJ1': 'yahyafc',      // Yahya Faraj
+      'sdt_NxMZJz': 'zaynfc',       // Zayn Speirs
+      'sdt_cYDxJM': 'jamesfc',      // James Taylor
+      'sdt_csfBJd': 'charlottefc',  // Charlotte Lawrie
+      'sdt_cfbyJQ': 'harryfc'       // Harry Wallace
+    };
+
+    const credential = thetaCredentials[student.mms_id];
+    
+    if (credential) {
+      return {
+        url: 'https://trainer.thetamusic.com/en/user/login',
+        requiresAuth: false,
+        autoLogin: true,
+        credentials: {
+          username: credential,
+          password: credential
+        },
+        instruction: 'Auto-fill enabled - credentials will be filled automatically'
+      };
+    }
+
     return {
-      url: `https://trainer.thetamusic.com/login`,
+      url: 'https://trainer.thetamusic.com/en/user/login',
       requiresAuth: true,
       credentials: {
         username: student.theta_username || student.parent_email,
