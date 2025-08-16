@@ -8,6 +8,7 @@ import QuickLinks from '@/components/QuickLinks';
 import AuthStatus from '@/components/AuthStatus';
 import { Users, Clock, Search, RefreshCw } from 'lucide-react';
 import { generateUrls } from '@/lib/config';
+import { cache } from '@/lib/cache';
 
 export default function DashboardClient() {
   const [tutor, setTutor] = useState('');
@@ -37,12 +38,26 @@ export default function DashboardClient() {
   }, []);
 
   // Sync students from MMS
-  const syncStudentsFromMMS = async (forcedTutor = null) => {
+  const syncStudentsFromMMS = async (forcedTutor = null, forceSync = false) => {
     const targetTutor = forcedTutor || tutor;
     if (!targetTutor) return;
 
     setSyncStatus('syncing');
-    console.log('🔄 Syncing students from MMS...');
+    
+    // Check cache first (unless force sync is requested)
+    if (!forceSync) {
+      const cachedStudents = cache.getStudents(targetTutor);
+      if (cachedStudents) {
+        setStudents(cachedStudents);
+        setSyncStatus('success');
+        setLastSyncTime(new Date());
+        console.log(`📦 Using cached data for ${targetTutor} (${cachedStudents.length} students)`);
+        setTimeout(() => setSyncStatus('idle'), 2000);
+        return;
+      }
+    }
+
+    console.log(`🔄 ${forceSync ? 'Force syncing' : 'Syncing'} students from MMS...`);
 
     try {
       const response = await fetch('/api/sync', {
@@ -62,6 +77,10 @@ export default function DashboardClient() {
         setStudents(data.students || []);
         setSyncStatus('success');
         setLastSyncTime(new Date());
+        
+        // Cache the fresh data
+        cache.setStudents(targetTutor, data.students || []);
+        
         console.log(`✅ Synced ${data.count} students from MMS`);
         
         // Show success message briefly
@@ -87,8 +106,11 @@ export default function DashboardClient() {
   // Fetch students when tutor is selected
   useEffect(() => {
     if (tutor) {
-      // Try MMS sync first, fallback to local
-      syncStudentsFromMMS(tutor);
+      // Debug: Show cache info
+      console.log('🔍 Cache info:', cache.getInfo());
+      
+      // Try cache first, then MMS sync, then fallback to local
+      syncStudentsFromMMS(tutor, false); // false = allow cache usage
     }
   }, [tutor]); // Removed syncStudentsFromMMS from dependencies to prevent infinite loop
 
@@ -126,8 +148,8 @@ export default function DashboardClient() {
     student.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Debug logging
-  console.log('🔍 Dashboard state:', { tutor, tutorLength: tutor.length, tutorType: typeof tutor, isEmpty: !tutor });
+  // Debug logging (only when needed)
+  // console.log('🔍 Dashboard state:', { tutor, tutorLength: tutor.length, tutorType: typeof tutor, isEmpty: !tutor });
 
   // If no tutor selected, show tutor selection
   if (!tutor) {
@@ -184,7 +206,7 @@ export default function DashboardClient() {
             
             {/* MMS Sync Button */}
             <button
-              onClick={() => syncStudentsFromMMS()}
+              onClick={() => syncStudentsFromMMS(null, true)} // true = force sync, bypass cache
               disabled={syncStatus === 'syncing'}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 syncStatus === 'syncing' ? 'bg-blue-100 text-blue-600 cursor-not-allowed' :

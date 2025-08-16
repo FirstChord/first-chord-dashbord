@@ -81,6 +81,11 @@ npm run dev
 # 3. Build test
 npm run build
 
+# 🚨 CRITICAL RULE: ALWAYS TEST MANUALLY BEFORE COMMITS/DEPLOYS
+# - Test all functionality that was changed
+# - Verify no regressions in existing features
+# - Get user approval before proceeding
+
 # 4. Commit changes (use git add . to avoid macOS permission issues)
 git add .
 git commit -m "Descriptive commit message"

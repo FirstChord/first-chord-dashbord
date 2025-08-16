@@ -6,6 +6,7 @@ import NotesPanel from '@/components/NotesPanel';
 import QuickLinks from '@/components/QuickLinks';
 import SetupWizard from '@/components/SetupWizard';
 import AuthStatus from '@/components/AuthStatus';
+import { cache } from '@/lib/cache';
 import { Users, Clock, Search, RefreshCw } from 'lucide-react';
 
 export default function Dashboard({ initialData }) {
@@ -42,11 +43,25 @@ export default function Dashboard({ initialData }) {
     }
   }, [initialData]);
 
-  const syncStudentsFromMMS = async (targetTutor) => {
+  const syncStudentsFromMMS = async (targetTutor, forceSync = false) => {
     if (!targetTutor) return;
 
     setSyncStatus('syncing');
-    console.log('🔄 Syncing students from MMS...');
+    
+    // Check cache first (unless force sync is requested)
+    if (!forceSync) {
+      const cachedStudents = cache.getStudents(targetTutor);
+      if (cachedStudents) {
+        setStudents(cachedStudents);
+        setSyncStatus('success');
+        setLastSyncTime(new Date());
+        console.log(`📦 Using cached data for ${targetTutor} (${cachedStudents.length} students)`);
+        setTimeout(() => setSyncStatus('idle'), 2000);
+        return;
+      }
+    }
+
+    console.log(`🔄 ${forceSync ? 'Force syncing' : 'Syncing'} students from MMS...`);
 
     try {
       const response = await fetch('/api/sync', {
@@ -66,6 +81,10 @@ export default function Dashboard({ initialData }) {
         setStudents(data.students);
         setSyncStatus('success');
         setLastSyncTime(new Date());
+        
+        // Cache the fresh data
+        cache.setStudents(targetTutor, data.students);
+        
         console.log(`✅ Synced ${data.count} students from MMS`);
         
         // Don't enable selection mode for teacher-filtered results from MMS
@@ -118,8 +137,11 @@ export default function Dashboard({ initialData }) {
   // Fetch students when tutor is selected
   useEffect(() => {
     if (tutor) {
-      // Try MMS sync first, fallback to local
-      syncStudentsFromMMS(tutor);
+      // Debug: Show cache info
+      console.log('🔍 Cache info:', cache.getInfo());
+      
+      // Try cache first, then MMS sync, then fallback to local
+      syncStudentsFromMMS(tutor, false); // false = allow cache usage
     }
   }, [tutor]);
 
@@ -172,7 +194,7 @@ export default function Dashboard({ initialData }) {
 
   const refreshData = () => {
     if (tutor) {
-      syncStudentsFromMMS(tutor);
+      syncStudentsFromMMS(tutor, true); // true = force sync, bypass cache
     } else {
       // Refresh all students data
       window.location.reload();
