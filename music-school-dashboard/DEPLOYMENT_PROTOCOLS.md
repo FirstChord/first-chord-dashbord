@@ -81,7 +81,7 @@ npm run dev
 # 3. Build test
 npm run build
 
-# 4. Commit changes
+# 4. Commit changes (use git add . to avoid macOS permission issues)
 git add .
 git commit -m "Descriptive commit message"
 
@@ -90,6 +90,14 @@ git push
 
 # 6. Deploy (follow Railway protocol above)
 ```
+
+### Git Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| Permission warnings on macOS | Use `git add .` instead of `git add -A` |
+| "could not open directory" warnings | These are harmless macOS permission messages, ignore them |
+| Commit fails | Check `git status` first, then use `git add .` |
 
 ## 🎯 Student Management Protocols
 
