@@ -96,6 +96,22 @@ git push
 # 6. Deploy (follow Railway protocol above)
 ```
 
+### Development Server Management
+
+After making significant changes to configuration files (especially `/lib/config.js` or `/lib/mms-client.js`), restart the development server:
+
+```bash
+# Kill current server (Ctrl+C or kill command)
+# Then restart:
+npm run dev
+```
+
+**When to restart the server:**
+- After adding new tutor credentials in `config.js`
+- After modifying instrument overrides
+- When experiencing internal server errors
+- After significant configuration changes
+
 ### Git Troubleshooting
 
 | Issue | Solution |
@@ -106,9 +122,47 @@ git push
 
 ## 🎯 Student Management Protocols
 
+### Adding New Tutors with Theta Music Integration
+
+When adding students for a new tutor with Theta Music accounts:
+
+**Step 1: Gather Required Information**
+- Student surname and first name
+- Student MMS ID (format: `sdt_XXXXX`)
+- Theta Music username (typically `[firstname]fc`)
+- Student instrument (Piano, Guitar, Voice, etc.)
+- Soundslice course URLs (if applicable)
+
+**Step 2: Update Configuration Files**
+
+1. **Add Theta Music Credentials** in `/lib/config.js`:
+   ```javascript
+   // [TutorName]'s students with Theta Music credentials
+   'sdt_ABC123': 'studentfc',    // Student Name
+   'sdt_DEF456': 'anotherstudentfc',    // Another Student
+   ```
+
+2. **Add Instrument Overrides** in `/lib/config.js`:
+   ```javascript
+   // [TutorName]'s students with correct instruments
+   'sdt_ABC123': 'Piano',        // Student Name
+   'sdt_DEF456': 'Guitar',       // Another Student
+   'sdt_GHI789': 'Voice',        // Voice Student
+   'sdt_JKL012': 'Piano / Voice', // Multi-instrument
+   ```
+
+**Step 3: Test and Deploy**
+- Restart development server: `npm run dev`
+- Test locally at http://localhost:3000/dashboard
+- Select the tutor from dropdown
+- Verify students show with correct instruments
+- Test Theta Music buttons for credential display
+- Run `npm run build` to test build
+- Follow deployment protocols
+
 ### Adding New Students to Theta Music
 
-When adding students for a new tutor:
+When adding students for an existing tutor:
 
 1. **Get student information:**
    - Surname, First Name
@@ -125,10 +179,28 @@ When adding students for a new tutor:
    - Test locally with `npm run dev`
    - Follow deployment protocol above
 
+### Important Notes & Troubleshooting
+
+**Common Issues:**
+- **Duplicate MMS IDs**: If multiple students have the same MMS ID, only the first will work. Comment out duplicates and note they need unique IDs.
+- **Internal Server Errors**: Always restart dev server after config changes using `npm run dev`
+- **Missing Instruments**: Students without instrument overrides will default to "Guitar"
+- **Case Sensitivity**: Theta Music usernames are case-sensitive
+
+**Supported Instruments:**
+- `Piano`, `Guitar`, `Voice`, `Bass`, `Drums`, `Piano / Voice`, etc.
+
+**Current Tutors with Theta Music Integration:**
+- **Finn**: 28 students (Piano, Guitar, Bass, Voice)
+- **Dean**: 18 students (Piano, Guitar, Voice)  
+- **Fennella**: 27 students (Piano, Voice)
+- **Patrick**: 9 students (Piano, Guitar)
+
 ### Student Data Format
-```
-Surname	First Name	Theta Username	MMS ID
-Example	Student	    studentfc	    sdt_ABC123
+
+```text
+Surname    First Name    Theta Username    MMS ID        Instrument
+Example    Student       studentfc         sdt_ABC123    Piano
 ```
 
 ## 🏗️ Project Structure

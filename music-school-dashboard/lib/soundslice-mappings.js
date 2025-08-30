@@ -60,15 +60,15 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_cfbyJQ': 'https://www.soundslice.com/courses/16205/', // Harry Wallace
   
   // Patrick's students
-  'sdt_QSzJJ2': '', // Aras Korkmaz - No course yet
-  'sdt_Q39JJ9': '', // Kushal Avvaru - No course yet
+  'sdt_QSzJJ2': 'https://www.soundslice.com/courses/17067/', // Aras Korkmaz
+  'sdt_Q39JJ9': 'https://www.soundslice.com/courses/15467/', // Kushal Avvaru
   'sdt_Qcm1JR': 'https://www.soundslice.com/courses/15468/', // Canan Dogan
-  'sdt_QfWBJx': 'https://www.soundslice.com/courses/11536/', // Eddie Roarty
+  'sdt_QfWBJx': 'https://www.soundslice.com/courses/15555/', // Eddie Roarty
   'sdt_cJDjJj': 'https://www.soundslice.com/courses/15666/', // Suzanne Boyle
   'sdt_QP01Jp': 'https://www.soundslice.com/courses/15556/', // Yarah Love
   'sdt_cqlvJb': 'https://www.soundslice.com/courses/15985/', // Shridhana Sathiyanarayanan
   'sdt_cYvdJp': 'https://www.soundslice.com/courses/16041/', // Noah Hegde
-  'sdt_c44QJk': '', // TIa Mustafayeva - No course yet
+  'sdt_c44QJk': 'https://www.soundslice.com/courses/16042/', // Tia Mustafayeva
   
   // Tom's students
   'sdt_BtxmJ4': 'https://www.soundslice.com/courses/6979/', // Carol Turner
@@ -157,7 +157,8 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_DdZxJQ': 'https://www.soundslice.com/courses/16880/', // Sumer Rami
   'sdt_N0z0Jq': 'https://www.soundslice.com/courses/16912/', // Tomasso Fossati
   'sdt_NSmyJ3': 'https://www.soundslice.com/courses/16913/', // Zia Permall
-  'sdt_2grxJL': 'https://www.soundslice.com/courses/16914/' // Ryan Ofee
+  'sdt_2grxJL': 'https://www.soundslice.com/courses/16914/', // Ryan Ofee
+  'sdt_638hJ9': 'https://www.soundslice.com/courses/17068/' // Vanessa V
 };
 
 // Function to get Soundslice course for a student

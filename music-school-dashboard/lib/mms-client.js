@@ -1,3 +1,5 @@
+import { instrumentOverrides } from './config.js';
+
 class MMSClient {
   constructor() {
     this.baseUrl = 'https://api.mymusicstaff.com/v1';
@@ -396,18 +398,23 @@ class MMSClient {
         let teacherGroup = null;
         let instrument = 'Guitar'; // Default
         
-        // Try to get from StudentGroups first
-        if (student.StudentGroups && student.StudentGroups.length > 0) {
-          teacherGroup = student.StudentGroups.find(group => 
-            group.TeacherID === teacherId && group.IsActive
-          );
-          instrument = teacherGroup?.Subject || 'Guitar';
-        } else if (student.BillingProfiles && student.BillingProfiles.length > 0) {
-          // Fallback to BillingProfiles
-          const teacherProfile = student.BillingProfiles.find(profile => 
-            profile.TeacherID === teacherId
-          );
-          instrument = teacherProfile?.Subject || 'Guitar'; // BillingProfiles might not have Subject
+        // Check for instrument override first
+        if (instrumentOverrides[student.ID]) {
+          instrument = instrumentOverrides[student.ID];
+        } else {
+          // Try to get from StudentGroups first
+          if (student.StudentGroups && student.StudentGroups.length > 0) {
+            teacherGroup = student.StudentGroups.find(group => 
+              group.TeacherID === teacherId && group.IsActive
+            );
+            instrument = teacherGroup?.Subject || 'Guitar';
+          } else if (student.BillingProfiles && student.BillingProfiles.length > 0) {
+            // Fallback to BillingProfiles
+            const teacherProfile = student.BillingProfiles.find(profile => 
+              profile.TeacherID === teacherId
+            );
+            instrument = teacherProfile?.Subject || 'Guitar'; // BillingProfiles might not have Subject
+          }
         }
         
         return {

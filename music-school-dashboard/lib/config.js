@@ -197,7 +197,120 @@ export const generateSmartUrls = {
       'sdt_NxMZJz': 'zaynfc',       // Zayn Speirs
       'sdt_cYDxJM': 'jamesfc',      // James Taylor
       'sdt_csfBJd': 'charlottefc',  // Charlotte Lawrie
-      'sdt_cfbyJQ': 'harryfc'       // Harry Wallace
+      'sdt_cfbyJQ': 'harryfc',      // Harry Wallace
+      
+      // TODO: Add Theta Music credentials for other tutors' students when ready
+      // Following the pattern: 'mms_id': '[firstname]fc' for both username and password
+      
+      // Eve's students - Add when Theta Music accounts are created
+      // 'sdt_XXXXX': '[firstname]fc',
+      
+      // Arion's students - Add when Theta Music accounts are created  
+      // 'sdt_XXXXX': '[firstname]fc',
+      
+      // Eléna's students - Add when Theta Music accounts are created
+      // 'sdt_XXXXX': '[firstname]fc',
+      
+      // Fennella's students with Theta Music credentials
+      'sdt_ySKCJy': 'dylanfc',      // Dylan Lyall
+      'sdt_v1lcJ0': 'maxfc',        // Max Toner
+      'sdt_MdD4JB': 'falloufc',     // Fallou Ndiaye
+      'sdt_cqlKJm': 'charlesfc',    // Charles Moriarty
+      'sdt_cz6ZJz': 'jamesfc',      // James Holden
+      'sdt_cB0YJd': 'tormadfc',     // Tormad MacRobert
+      'sdt_HWVBJL': 'alizefc',      // Alize Ekdi
+      'sdt_y0SPJJ': 'zoefc',        // Zoe Bannatyne
+      'sdt_H5ysJM': 'beaufc',       // Beau Cassidy
+      'sdt_Mg2kJz': 'annafc',       // Anna Kennedy
+      'sdt_H5yHJQ': 'charliefc',    // Charlie Gillespie
+      'sdt_QpGPJv': 'alexanderfc',  // Alexander Murray
+      'sdt_ybcdJ7': 'elizabethfc',  // Elizabeth MacKenzie (Note: duplicate ID - using first occurrence)
+      // 'sdt_ybcdJ7': 'elliotfc',  // Elliot - DUPLICATE ID, needs unique MMS ID
+      // 'sdt_ybcdJ7': 'léofc',     // Léo TERHZAZ - DUPLICATE ID, needs unique MMS ID
+      // 'sdt_ybcdJ7': 'yarahfc',   // Yarah Love - DUPLICATE ID, needs unique MMS ID
+      'sdt_HVbNJk': 'melaniafc',    // Melania R
+      'sdt_v9m8JT': 'elizafc',      // Eliza Dem
+      'sdt_QPqsJC': 'nataliefc',    // Natalie Wong
+      'sdt_39hsJY': 'chiarafc',     // Chiara Cavanna
+      'sdt_QKcMJS': 'jennyfc',      // Jenny O'Donnell
+      'sdt_BtxmJ4': 'carolfc',      // Carol Turner
+      'sdt_QNVYJ4': 'nicofc',       // Nico Murdoch
+      'sdt_ccgQJ8': 'paisleyfc',    // Paisley Hewitt
+      'sdt_cfGhJh': 'sianfc',       // Sian Malyin
+      'sdt_ckzHJS': 'georgiafc',    // Georgia Charalampous (Note: duplicate ID - using first occurrence)
+      // 'sdt_ckzHJS': 'thomasfc',  // Thomas McGrath - DUPLICATE ID, needs unique MMS ID
+      'sdt_6FRsJF': 'clairefc',     // Claire Lindsay
+      'sdt_c8fFJ3': 'emmafc',       // Emma Snaraite
+      'sdt_6Zd7J3': 'niamhfc',      // Niamh McCrudden
+      'sdt_6nhSJM': 'giorgiofc',    // Giorgio O'Neil
+      
+      // Jungyoun's students with Theta Music credentials
+      'sdt_c794J5': 'mateofc',      // Mateo Alonso
+      'sdt_NSmFJh': 'alessandrofc', // Alessandro Matassoni
+      'sdt_NXNKJJ': 'evafc',        // Eva Lindsay
+      'sdt_D9rnJT': 'rohanfc',      // Rohan Nazir
+      'sdt_DdZxJQ': 'sumerfc',      // Sumer Rami
+      'sdt_N0z0Jq': 'tomassofc',    // Tomasso Fossati
+      'sdt_NSmyJ3': 'ziafc',        // Zia Permall
+      'sdt_2grxJL': 'ryanfc',       // Ryan Ofee
+      'sdt_638hJ9': 'vanessafc',    // Vanessa V
+      
+      // Kim's students - Add when Theta Music accounts are created
+      // 'sdt_XXXXX': '[firstname]fc',
+      
+      // Patrick's students with Theta Music credentials
+      'sdt_QSzJJ2': 'arasfc',       // Aras Korkmaz
+      'sdt_Q39JJ9': 'kushalfc',     // Kushal Avvaru
+      'sdt_Qcm1JR': 'cananfc',      // Canan Dogan
+      'sdt_QfWBJx': 'eddiefc',      // Eddie Roarty
+      'sdt_cJDjJj': 'suzannefc',    // Suzanne Boyle
+      'sdt_QP01Jp': 'yarahfc',      // Yarah Love
+      'sdt_cqlvJb': 'shridhanafc',  // Shridhana Sathiyanarayanan
+      'sdt_cYvdJp': 'noahfc',       // Noah Hegde
+      'sdt_c44QJk': 'tiafc',        // Tia Mustafayeva
+      
+      // Robbie's students - Add when Theta Music accounts are created
+      // 'sdt_XXXXX': '[firstname]fc',
+      
+      // Stef's students - Add when Theta Music accounts are created
+      // 'sdt_XXXXX': '[firstname]fc',
+      
+      // Tom's students - Add when Theta Music accounts are created
+      // 'sdt_XXXXX': '[firstname]fc'
+    };
+
+    // Instrument overrides - specify correct instruments for students
+    const instrumentOverrides = {
+      // Fennella's students with correct instruments
+      'sdt_ySKCJy': 'Voice',        // Dylan Lyall
+      'sdt_v1lcJ0': 'Piano',        // Max Toner
+      'sdt_MdD4JB': 'Piano',        // Fallou Ndiaye
+      'sdt_cqlKJm': 'Piano',        // Charles Moriarty
+      'sdt_cz6ZJz': 'Piano',        // James Holden
+      'sdt_cB0YJd': 'Piano',        // Tormad MacRobert
+      'sdt_HWVBJL': 'Piano',        // Alize Ekdi
+      'sdt_y0SPJJ': 'Piano',        // Zoe Bannatyne
+      'sdt_H5ysJM': 'Voice',        // Beau Cassidy
+      'sdt_Mg2kJz': 'Piano',        // Anna Kennedy
+      'sdt_H5yHJQ': 'Piano',        // Charlie Gillespie
+      'sdt_QpGPJv': 'Piano',        // Alexander Murray
+      'sdt_ybcdJ7': 'Piano',        // Elizabeth MacKenzie (first occurrence)
+      // Note: Elliot (Piano), Léo (Voice), Yarah (Piano) need unique IDs
+      'sdt_HVbNJk': 'Piano / Voice', // Melania R
+      'sdt_v9m8JT': 'Voice',        // Eliza Dem
+      'sdt_QPqsJC': 'Piano',        // Natalie Wong
+      'sdt_39hsJY': 'Piano',        // Chiara Cavanna
+      'sdt_QKcMJS': 'Voice',        // Jenny O'Donnell
+      'sdt_BtxmJ4': 'Voice',        // Carol Turner
+      'sdt_QNVYJ4': 'Voice',        // Nico Murdoch
+      'sdt_ccgQJ8': 'Piano',        // Paisley Hewitt
+      'sdt_cfGhJh': 'Voice',        // Sian Malyin
+      'sdt_ckzHJS': 'Voice',        // Georgia Charalampous (first occurrence)
+      // Note: Thomas (Piano) needs unique ID
+      'sdt_6FRsJF': 'Piano',        // Claire Lindsay
+      'sdt_c8fFJ3': 'Piano',        // Emma Snaraite
+      'sdt_6Zd7J3': 'Piano',        // Niamh McCrudden
+      'sdt_6nhSJM': 'Piano'         // Giorgio O'Neil
     };
 
     const credential = thetaCredentials[student.mms_id];
@@ -225,4 +338,60 @@ export const generateSmartUrls = {
       instruction: 'Password manager will auto-fill'
     };
   }
+};
+
+// Export instrument overrides for use in MMS client
+export const instrumentOverrides = {
+  // Fennella's students with correct instruments
+  'sdt_ySKCJy': 'Voice',        // Dylan Lyall
+  'sdt_v1lcJ0': 'Piano',        // Max Toner
+  'sdt_MdD4JB': 'Piano',        // Fallou Ndiaye
+  'sdt_cqlKJm': 'Piano',        // Charles Moriarty
+  'sdt_cz6ZJz': 'Piano',        // James Holden
+  'sdt_cB0YJd': 'Piano',        // Tormad MacRobert
+  'sdt_HWVBJL': 'Piano',        // Alize Ekdi
+  'sdt_y0SPJJ': 'Piano',        // Zoe Bannatyne
+  'sdt_H5ysJM': 'Voice',        // Beau Cassidy
+  'sdt_Mg2kJz': 'Piano',        // Anna Kennedy
+  'sdt_H5yHJQ': 'Piano',        // Charlie Gillespie
+  'sdt_QpGPJv': 'Piano',        // Alexander Murray
+  'sdt_ybcdJ7': 'Piano',        // Elizabeth MacKenzie (first occurrence)
+  // Note: Elliot (Piano), Léo (Voice), Yarah (Piano) need unique IDs
+  'sdt_HVbNJk': 'Piano / Voice', // Melania R
+  'sdt_v9m8JT': 'Voice',        // Eliza Dem
+  'sdt_QPqsJC': 'Piano',        // Natalie Wong
+  'sdt_39hsJY': 'Piano',        // Chiara Cavanna
+  'sdt_QKcMJS': 'Voice',        // Jenny O'Donnell
+  'sdt_BtxmJ4': 'Voice',        // Carol Turner
+  'sdt_QNVYJ4': 'Voice',        // Nico Murdoch
+  'sdt_ccgQJ8': 'Piano',        // Paisley Hewitt
+  'sdt_cfGhJh': 'Voice',        // Sian Malyin
+  'sdt_ckzHJS': 'Voice',        // Georgia Charalampous (first occurrence)
+  // Note: Thomas (Piano) needs unique ID
+  'sdt_6FRsJF': 'Piano',        // Claire Lindsay
+  'sdt_c8fFJ3': 'Piano',        // Emma Snaraite
+  'sdt_6Zd7J3': 'Piano',        // Niamh McCrudden
+  'sdt_6nhSJM': 'Piano',        // Giorgio O'Neil
+  
+  // Patrick's students with correct instruments
+  'sdt_QSzJJ2': 'Piano',        // Aras Korkmaz
+  'sdt_Q39JJ9': 'Guitar',       // Kushal Avvaru
+  'sdt_Qcm1JR': 'Guitar',       // Canan Dogan
+  'sdt_QfWBJx': 'Guitar',       // Eddie Roarty
+  'sdt_cJDjJj': 'Guitar',       // Suzanne Boyle
+  'sdt_QP01Jp': 'Guitar',       // Yarah Love
+  'sdt_cqlvJb': 'Piano',        // Shridhana Sathiyanarayanan
+  'sdt_cYvdJp': 'Guitar',       // Noah Hegde
+  'sdt_c44QJk': 'Guitar',       // Tia Mustafayeva
+  
+  // Jungyoun's students with correct instruments (all Piano)
+  'sdt_c794J5': 'Piano',        // Mateo Alonso
+  'sdt_NSmFJh': 'Piano',        // Alessandro Matassoni
+  'sdt_NXNKJJ': 'Piano',        // Eva Lindsay
+  'sdt_D9rnJT': 'Piano',        // Rohan Nazir
+  'sdt_DdZxJQ': 'Piano',        // Sumer Rami
+  'sdt_N0z0Jq': 'Piano',        // Tomasso Fossati
+  'sdt_NSmyJ3': 'Piano',        // Zia Permall
+  'sdt_2grxJL': 'Piano',        // Ryan Ofee
+  'sdt_638hJ9': 'Piano'         // Vanessa V
 };
