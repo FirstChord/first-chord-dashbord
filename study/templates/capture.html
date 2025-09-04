@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Capture Session - Tutor Me{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h1><i class="bi bi-plus-circle"></i> Capture Study Session</h1>
+    <p class="text-muted">Paste your TutorMe transcript to save it for flashcard generation.</p>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="topic" class="form-label">Topic *</label>
+                        <input type="text" class="form-control" id="topic" name="topic" 
+                               placeholder="e.g., algebra.quadratic" required>
+                        <div class="form-text">Use dot notation: algebra.quadratic, calculus.derivatives</div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="source" class="form-label">Source</label>
+                            <input type="text" class="form-control" id="source" name="source" 
+                                   value="TutorMe" placeholder="TutorMe">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="tags" class="form-label">Tags</label>
+                            <input type="text" class="form-control" id="tags" name="tags" 
+                                   placeholder="math,algebra,quadratic">
+                            <div class="form-text">Comma-separated tags</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <input type="text" class="form-control" id="notes" name="notes" 
+                               placeholder="Any additional notes about this session">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="transcript" class="form-label">Transcript *</label>
+                        <textarea class="form-control" id="transcript" name="transcript" rows="12" 
+                                  placeholder="Paste your TutorMe conversation here..." required></textarea>
+                        <div class="form-text">
+                            Paste the entire conversation, including both your questions and the tutor's responses.
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save"></i> Capture Session
+                        </button>
+                        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Back to Dashboard
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-lightbulb"></i> Tips</h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success me-2"></i>
+                        Copy the entire conversation from TutorMe
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success me-2"></i>
+                        Include both questions and answers
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success me-2"></i>
+                        Use descriptive topics for organization
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success me-2"></i>
+                        Add relevant tags for filtering
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-info-circle"></i> Example Format</h6>
+            </div>
+            <div class="card-body">
+                <small class="text-muted">
+                    <strong>User:</strong> What is the quadratic formula?<br><br>
+                    <strong>Tutor:</strong> The quadratic formula is x = (-b ± √(b²-4ac))/2a...<br><br>
+                    <strong>User:</strong> Can you show an example?<br><br>
+                    <strong>Tutor:</strong> Sure! Let's solve x² - 5x + 6 = 0...
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

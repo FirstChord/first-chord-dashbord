@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}Review Cards - Tutor Me{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1><i class="bi bi-eye"></i> Review Cards</h1>
+        <p class="text-muted">Review and approve the {{ cards|length }} generated flashcards</p>
+    </div>
+    <div>
+        <button id="approveBtn" class="btn btn-success me-2">
+            <i class="bi bi-check-lg"></i> Approve All Cards
+        </button>
+        <button id="directImportBtn" class="btn btn-primary me-2" style="display: none;">
+            <i class="bi bi-lightning-fill"></i> Import to Anki Now
+        </button>
+        <a href="{{ url_for('extract_cards') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
+    </div>
+</div>
+
+<div id="cardsContainer">
+    {% for card in cards %}
+        <div class="card mb-3 card-preview" data-card-id="{{ card.id }}">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="badge bg-primary me-2">{{ card.type.title() }}</span>
+                    <span class="badge bg-secondary me-2">{{ card.difficulty.title() }}</span>
+                    {% for tag in card.tags %}
+                        <span class="badge bg-info me-1">{{ tag }}</span>
+                    {% endfor %}
+                </div>
+                <small class="text-muted">{{ card.deck }}</small>
+            </div>
+            <div class="card-body">
+                {% if card.type == 'cloze' %}
+                    <div class="mb-2">
+                        <strong>Cloze Text:</strong>
+                        <div class="mt-1 p-2 bg-light rounded">
+                            {{ card.cloze_text }}
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <strong>Front:</strong>
+                            <div class="mt-1 p-2 bg-light rounded">
+                                {{ card.front }}
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <strong>Back:</strong>
+                            <div class="mt-1 p-2 bg-light rounded">
+                                {{ card.back }}
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+                
+                {% if card.extra %}
+                    <div class="mt-2">
+                        <strong>Extra:</strong>
+                        <div class="mt-1 p-2 bg-light rounded">
+                            {{ card.extra }}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    {% endfor %}
+</div>
+
+<div id="statusAlert" class="alert" style="display: none;" role="alert"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Check if Anki is running on page load
+fetch('/check-anki')
+    .then(response => response.json())
+    .then(data => {
+        if (data.anki_running) {
+            document.getElementById('directImportBtn').style.display = 'inline-block';
+        }
+    });
+
+document.getElementById('approveBtn').addEventListener('click', function() {
+    const btn = this;
+    const originalText = btn.innerHTML;
+    
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Approving...';
+    btn.disabled = true;
+    
+    fetch('/lint', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            filename: '{{ filename }}'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        const alert = document.getElementById('statusAlert');
+        if (data.success) {
+            alert.className = 'alert alert-success';
+            alert.innerHTML = '<i class="bi bi-check-circle"></i> ' + data.message;
+            alert.style.display = 'block';
+            
+            // Show direct import button
+            document.getElementById('directImportBtn').style.display = 'inline-block';
+            
+        } else {
+            alert.className = 'alert alert-danger';
+            alert.innerHTML = '<i class="bi bi-exclamation-triangle"></i> ' + data.message;
+            alert.style.display = 'block';
+        }
+    })
+    .catch(error => {
+        const alert = document.getElementById('statusAlert');
+        alert.className = 'alert alert-danger';
+        alert.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Error approving cards: ' + error.message;
+        alert.style.display = 'block';
+    })
+    .finally(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    });
+});
+
+document.getElementById('directImportBtn').addEventListener('click', function() {
+    const btn = this;
+    const originalText = btn.innerHTML;
+    
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Importing to Anki...';
+    btn.disabled = true;
+    
+    fetch('/import-to-anki', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            filename: '{{ filename }}',
+            deck: 'Masters::Math'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        const alert = document.getElementById('statusAlert');
+        if (data.success) {
+            alert.className = 'alert alert-success';
+            alert.innerHTML = '<i class="bi bi-check-circle"></i> ' + data.message;
+            alert.style.display = 'block';
+        } else {
+            alert.className = 'alert alert-danger';
+            alert.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Error: ' + data.error;
+            alert.style.display = 'block';
+        }
+    })
+    .catch(error => {
+        const alert = document.getElementById('statusAlert');
+        alert.className = 'alert alert-danger';
+        alert.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Error importing to Anki: ' + error.message;
+        alert.style.display = 'block';
+    })
+    .finally(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    });
+});
+</script>
+{% endblock %}

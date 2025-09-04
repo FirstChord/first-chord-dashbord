@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Export to Anki - Tutor Me{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h1><i class="bi bi-download"></i> Export to Anki</h1>
+    <p class="text-muted">Export your approved flashcards to a CSV file for Anki import.</p>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="deck" class="form-label">Target Deck</label>
+                        <input type="text" class="form-control" id="deck" name="deck" 
+                               value="Masters::Math" placeholder="Masters::Math">
+                        <div class="form-text">Use :: for deck hierarchy (e.g., Masters::Math::Algebra)</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="since_date" class="form-label">Since Date (Optional)</label>
+                        <input type="date" class="form-control" id="since_date" name="since_date">
+                        <div class="form-text">Only export cards created after this date</div>
+                    </div>
+                    
+                    <div class="alert alert-info" role="alert">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Export Format:</strong> Creates a CSV file compatible with Anki import. 
+                        Reverse cards will create two entries (front→back and back→front).
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-download"></i> Export to CSV
+                        </button>
+                        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Back to Dashboard
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-question-circle"></i> How to Import</h6>
+            </div>
+            <div class="card-body">
+                <ol class="small">
+                    <li class="mb-2">Open Anki on your computer</li>
+                    <li class="mb-2">Go to <strong>File → Import</strong></li>
+                    <li class="mb-2">Select the exported CSV file</li>
+                    <li class="mb-2">Choose your note type and deck</li>
+                    <li class="mb-2">Map the columns correctly</li>
+                    <li class="mb-2">Click <strong>Import</strong></li>
+                </ol>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-gear"></i> CSV Format</h6>
+            </div>
+            <div class="card-body">
+                <div class="small">
+                    <strong>Columns:</strong>
+                    <ul class="list-unstyled mt-2">
+                        <li><code>Front</code> - Question/Prompt</li>
+                        <li><code>Back</code> - Answer/Response</li>
+                        <li><code>Type</code> - Card type</li>
+                        <li><code>Deck</code> - Target deck</li>
+                        <li><code>Tags</code> - Space-separated tags</li>
+                        <li><code>Extra</code> - Additional notes</li>
+                        <li><code>Guid</code> - Unique identifier</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

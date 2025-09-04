@@ -1,0 +1,13 @@
+{
+  "default_deck": "Masters::Math",
+  "tag_separator": "space",
+  "max_cards_per_extract": 15,
+  "session_dir": "data/sessions",
+  "cards_dir": "data/cards",
+  "exports_dir": "data/exports",
+  "llm_provider": "gemini",
+  "llm_model": "gpt-4",
+  "openai_api_key_env": "OPENAI_API_KEY",
+  "gemini_model": "gemini-1.5-flash",
+  "gemini_api_key_env": "GEMINI_API_KEY"
+}

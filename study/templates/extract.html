@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}Extract Cards - Tutor Me{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h1><i class="bi bi-magic"></i> Extract Flashcards</h1>
+    <p class="text-muted">Use AI to generate flashcards from your study sessions.</p>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                {% if session_dates %}
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="from_date" class="form-label">Select Session *</label>
+                            <select class="form-select" id="from_date" name="from_date" required>
+                                <option value="">Choose a session date...</option>
+                                {% for date in session_dates %}
+                                    <option value="{{ date }}">{{ date }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Sessions are organized by date</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="max_cards" class="form-label">Maximum Cards</label>
+                            <input type="number" class="form-control" id="max_cards" name="max_cards" 
+                                   value="15" min="1" max="50">
+                            <div class="form-text">AI will generate up to this many flashcards</div>
+                        </div>
+                        
+                        <div class="alert alert-info" role="alert">
+                            <i class="bi bi-info-circle"></i>
+                            <strong>AI Processing:</strong> This will send your session to Gemini AI to generate relevant flashcards focusing on key concepts and definitions.
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-magic"></i> Generate Cards with AI
+                            </button>
+                            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> Back to Dashboard
+                            </a>
+                        </div>
+                    </form>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-journal-x text-muted" style="font-size: 3rem;"></i>
+                        <h4 class="mt-3 text-muted">No Sessions Found</h4>
+                        <p class="text-muted">You need to capture a study session first.</p>
+                        <a href="{{ url_for('capture_session') }}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Capture First Session
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-cpu"></i> AI Features</h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success me-2"></i>
+                        Identifies key concepts automatically
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success me-2"></i>
+                        Creates multiple card types (basic, cloze, reverse)
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success me-2"></i>
+                        Focuses on fundamentals over trivia
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success me-2"></i>
+                        Adds relevant tags automatically
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-graph-up"></i> Card Types</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong class="text-primary">Basic:</strong>
+                    <small class="text-muted d-block">Question → Answer format</small>
+                </div>
+                <div class="mb-3">
+                    <strong class="text-success">Reverse:</strong>
+                    <small class="text-muted d-block">Creates both Q→A and A→Q cards</small>
+                </div>
+                <div>
+                    <strong class="text-info">Cloze:</strong>
+                    <small class="text-muted d-block">Fill-in-the-blank format for formulas</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

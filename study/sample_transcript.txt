@@ -1,0 +1,34 @@
+User: What is the quadratic formula?
+
+Tutor: The quadratic formula is used to solve quadratic equations of the form ax² + bx + c = 0. The formula is:
+
+x = (-b ± √(b² - 4ac)) / (2a)
+
+Where:
+- a, b, and c are coefficients from the quadratic equation
+- The ± symbol means there are usually two solutions
+- The expression under the square root (b² - 4ac) is called the discriminant
+
+User: What does the discriminant tell us?
+
+Tutor: The discriminant (b² - 4ac) tells us about the nature of the solutions:
+- If discriminant > 0: Two distinct real solutions
+- If discriminant = 0: One repeated real solution  
+- If discriminant < 0: No real solutions (two complex solutions)
+
+User: Can you show me an example with x² - 5x + 6 = 0?
+
+Tutor: Sure! For x² - 5x + 6 = 0, we have:
+- a = 1, b = -5, c = 6
+
+First, let's check the discriminant:
+b² - 4ac = (-5)² - 4(1)(6) = 25 - 24 = 1
+
+Since discriminant = 1 > 0, we have two distinct real solutions.
+
+Using the quadratic formula:
+x = (5 ± √1) / (2·1) = (5 ± 1) / 2
+
+So: x = (5+1)/2 = 3 or x = (5-1)/2 = 2
+
+Therefore, x = 2 or x = 3

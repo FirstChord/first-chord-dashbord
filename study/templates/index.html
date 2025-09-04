@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Tutor Me{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-speedometer2"></i> Dashboard</h1>
+    {% if api_key_configured %}
+        <span class="badge bg-success status-badge">
+            <i class="bi bi-check-circle"></i> API Ready
+        </span>
+    {% else %}
+        <span class="badge bg-warning status-badge">
+            <i class="bi bi-exclamation-triangle"></i> API Key Needed
+        </span>
+    {% endif %}
+</div>
+
+{% if not api_key_configured %}
+<div class="alert alert-warning" role="alert">
+    <i class="bi bi-exclamation-triangle"></i> 
+    <strong>Setup Required:</strong> Add your Gemini API key to the <code>.env</code> file to extract flashcards.
+    <br>
+    <small class="text-muted">Get a free key at <a href="https://ai.google.dev" target="_blank">ai.google.dev</a></small>
+</div>
+{% endif %}
+
+<!-- Status Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card card-stats h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-journal-text text-primary mb-2" style="font-size: 2rem;"></i>
+                <h5 class="card-title">{{ status.sessions }}</h5>
+                <p class="card-text text-muted">Sessions</p>
+                <small class="text-muted">Last: {{ status.last_session }}</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card card-stats h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-lightbulb text-warning mb-2" style="font-size: 2rem;"></i>
+                <h5 class="card-title">{{ status.candidate_cards }}</h5>
+                <p class="card-text text-muted">Candidate Cards</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card card-stats h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-check-circle text-success mb-2" style="font-size: 2rem;"></i>
+                <h5 class="card-title">{{ status.approved_cards }}</h5>
+                <p class="card-text text-muted">Approved Cards</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card card-stats h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-download text-info mb-2" style="font-size: 2rem;"></i>
+                <h5 class="card-title">{{ status.exported_cards }}</h5>
+                <p class="card-text text-muted">Exported Cards</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-lightning"></i> Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button id="quickCaptureBtn" class="btn btn-success">
+                        <i class="bi bi-lightning-fill"></i> Quick Capture from Clipboard
+                    </button>
+                    <a href="{{ url_for('capture_session') }}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Manual Capture Session
+                    </a>
+                    {% if status.sessions > 0 %}
+                        <a href="{{ url_for('extract_cards') }}" class="btn btn-outline-primary">
+                            <i class="bi bi-magic"></i> Extract Cards with AI
+                        </a>
+                    {% endif %}
+                    {% if status.approved_cards > 0 %}
+                        <a href="{{ url_for('export_cards') }}" class="btn btn-outline-success">
+                            <i class="bi bi-download"></i> Export to Anki
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Workflow</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <span class="badge bg-primary me-2">1</span>
+                    <span>Paste transcript from TutorMe</span>
+                </div>
+                <div class="d-flex align-items-center mb-2">
+                    <span class="badge bg-primary me-2">2</span>
+                    <span>AI generates flashcards</span>
+                </div>
+                <div class="d-flex align-items-center mb-2">
+                    <span class="badge bg-primary me-2">3</span>
+                    <span>Review and approve cards</span>
+                </div>
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-primary me-2">4</span>
+                    <span>Export to Anki for study</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="quickCaptureAlert" class="alert" style="display: none;" role="alert"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('quickCaptureBtn').addEventListener('click', function() {
+    const btn = this;
+    const originalText = btn.innerHTML;
+    
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Capturing from clipboard...';
+    btn.disabled = true;
+    
+    fetch('/quick-capture', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const alert = document.getElementById('quickCaptureAlert');
+        if (data.success) {
+            alert.className = 'alert alert-success alert-dismissible fade show';
+            alert.innerHTML = `
+                <i class="bi bi-check-circle"></i> <strong>Success!</strong> ${data.message}
+                <br><small>Topic: ${data.topic} | Turns: ${data.turns}</small>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            alert.style.display = 'block';
+            
+            // Refresh page after 3 seconds to show updated stats
+            setTimeout(() => {
+                window.location.reload();
+            }, 3000);
+        } else {
+            alert.className = 'alert alert-warning alert-dismissible fade show';
+            alert.innerHTML = `
+                <i class="bi bi-exclamation-triangle"></i> <strong>Note:</strong> ${data.error}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            alert.style.display = 'block';
+        }
+    })
+    .catch(error => {
+        const alert = document.getElementById('quickCaptureAlert');
+        alert.className = 'alert alert-danger alert-dismissible fade show';
+        alert.innerHTML = `
+            <i class="bi bi-exclamation-triangle"></i> <strong>Error:</strong> ${error.message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        alert.style.display = 'block';
+    })
+    .finally(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    });
+});
+</script>
+{% endblock %}
