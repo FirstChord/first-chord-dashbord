@@ -59,10 +59,16 @@ railway login --browserless    # Login to Railway
 railway status                 # Check project connection
 railway link                   # Link to project/service
 railway up                     # Deploy application
+railway up --verbose           # Deploy with verbose output
 railway domain                 # Get live URL
-railway logs                   # View deployment logs
+railway logs                   # View deployment logs (may timeout - normal)
 railway open                   # Open Railway dashboard
 ```
+
+**Note**: Railway deployments show progress via build logs URL in terminal. The `railway logs` command may timeout but deployment continues running. Look for:
+- "Starting Container"  
+- "✓ Ready in XXXms"
+- Container running on port 8080
 
 ## 🔧 Development Protocols
 
@@ -151,6 +157,13 @@ When adding students for a new tutor with Theta Music accounts:
    'sdt_JKL012': 'Piano / Voice', // Multi-instrument
    ```
 
+3. **Add Soundslice Course URLs** in `/lib/soundslice-mappings.js`:
+   ```javascript
+   // [TutorName]'s students
+   'sdt_ABC123': 'https://www.soundslice.com/courses/12345/', // Student Name
+   'sdt_DEF456': 'https://www.soundslice.com/courses/67890/', // Another Student
+   ```
+
 **Step 3: Test and Deploy**
 - Restart development server: `npm run dev`
 - Test locally at http://localhost:3000/dashboard
@@ -195,6 +208,12 @@ When adding students for an existing tutor:
 - **Dean**: 18 students (Piano, Guitar, Voice)  
 - **Fennella**: 27 students (Piano, Voice)
 - **Patrick**: 9 students (Piano, Guitar)
+- **Jungyoun**: 9 students (Piano)
+
+**Total: 91 students across 5 tutors**
+
+**Remaining Tutors (Placeholders Ready):**
+- Eve, Arion, Eléna, Kim, Robbie, Stef, Tom
 
 ### Student Data Format
 
@@ -206,9 +225,12 @@ Example    Student       studentfc         sdt_ABC123    Piano
 ## 🏗️ Project Structure
 
 ### Key Files
-- `/lib/config.js` - Service configurations and student mappings
-- `/components/QuickLinks.js` - Theta Music modal and credentials
-- `/app/api/students/route.js` - Student data API
+- `/lib/config.js` - Theta Music credentials & instrument overrides
+- `/lib/soundslice-mappings.js` - Soundslice course URL mappings
+- `/lib/mms-client.js` - MyMusicStaff API client with teacher IDs
+- `/components/QuickLinks.js` - Theta Music modal and credentials display
+- `/components/StudentCard.js` - Student cards with instrument display
+- `/app/api/students/route.js` - Student data API endpoint
 - `/app/dashboard/page.js` - Main dashboard page
 
 ### External Services
@@ -237,6 +259,6 @@ Example    Student       studentfc         sdt_ABC123    Piano
 
 ---
 
-**Last Updated**: August 16, 2025  
+**Last Updated**: August 30, 2025  
 **Maintainer**: FirstChord Music School  
-**Version**: 1.0
+**Version**: 2.0

@@ -91,6 +91,9 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_pT5MJz': 'https://www.soundslice.com/courses/6045/', // Sonny Ford
   'sdt_Nt4LJ3': 'https://www.soundslice.com/courses/9135/', // Stella French
   'sdt_QjMGJc': 'https://www.soundslice.com/courses/15453/', // Carla Jurado
+  'sdt_6yvpJb': '', // Les Graham - No course yet
+  'sdt_6PjKJF': '', // Ruaraidh Somerville - No course yet
+  'sdt_6ZrzJq': '', // Icaro Segnini-Hernandez - No course yet
   'sdt_QRdgJG': 'https://www.soundslice.com/courses/15750/', // Mia Davidson
   
   // Finn's students

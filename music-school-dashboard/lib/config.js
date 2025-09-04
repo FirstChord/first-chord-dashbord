@@ -275,8 +275,28 @@ export const generateSmartUrls = {
       // Stef's students - Add when Theta Music accounts are created
       // 'sdt_XXXXX': '[firstname]fc',
       
-      // Tom's students - Add when Theta Music accounts are created
-      // 'sdt_XXXXX': '[firstname]fc'
+      // Tom's students with Theta Music credentials
+      'sdt_BtxmJ4': 'carolfc',          // Carol Turner
+      'sdt_vGjtJ7': 'catfc',            // Cat Macfarlane
+      'sdt_417JJ3': 'charliefc',        // Charlie Norton
+      'sdt_FXKDJS': 'cormacfc',         // Cormac Morton
+      'sdt_gpFVJS': 'dukefc',           // Duke Noramly
+      'sdt_B4zSJc': 'florencefc',       // Florence Bartlett
+      'sdt_slc4Jq': 'harryfc',          // Harry Dafas
+      'sdt_F3FHJs': 'loganfc',          // Logan Wilson
+      'sdt_gDcVJp': 'lucafc',           // Luca Kennedy
+      'sdt_BMtHJs': 'lukefc',           // Luke Moran
+      'sdt_N8lVJ1': 'mohamedfc',        // Mohamed Zayed
+      'sdt_DdxtJZ': 'rosiefc',          // Rosie Ward
+      'sdt_pFYFJT': 'rosie & johnnyfc', // Rosie & Johnny Kinniburgh
+      'sdt_w6TBJ3': 'rowanfc',          // Rowan Moore
+      'sdt_D9ftJB': 'sadiefc',          // Sadie Lowe
+      'sdt_pT5MJz': 'sonnyfc',          // Sonny Ford
+      'sdt_Nt4LJ3': 'stellafc',         // Stella French
+      'sdt_QjMGJc': 'carlafc',          // Carla Jurado
+      'sdt_6yvpJb': 'lesfc',            // Les Graham
+      'sdt_6PjKJF': 'ruaraidhfc',       // Ruaraidh Somerville
+      'sdt_6ZrzJq': 'icarofc'           // Icaro Segnini-Hernandez
     };
 
     // Instrument overrides - specify correct instruments for students
@@ -393,5 +413,28 @@ export const instrumentOverrides = {
   'sdt_N0z0Jq': 'Piano',        // Tomasso Fossati
   'sdt_NSmyJ3': 'Piano',        // Zia Permall
   'sdt_2grxJL': 'Piano',        // Ryan Ofee
-  'sdt_638hJ9': 'Piano'         // Vanessa V
+  'sdt_638hJ9': 'Piano',        // Vanessa V
+  
+  // Tom's students with correct instruments (defaulting to Guitar - update as needed)
+  'sdt_BtxmJ4': 'Guitar',       // Carol Turner
+  'sdt_vGjtJ7': 'Guitar',       // Cat Macfarlane
+  'sdt_417JJ3': 'Guitar',       // Charlie Norton
+  'sdt_FXKDJS': 'Guitar',       // Cormac Morton
+  'sdt_gpFVJS': 'Guitar',       // Duke Noramly
+  'sdt_B4zSJc': 'Guitar',       // Florence Bartlett
+  'sdt_slc4Jq': 'Guitar',       // Harry Dafas
+  'sdt_F3FHJs': 'Guitar',       // Logan Wilson
+  'sdt_gDcVJp': 'Guitar',       // Luca Kennedy
+  'sdt_BMtHJs': 'Guitar',       // Luke Moran
+  'sdt_N8lVJ1': 'Guitar',       // Mohamed Zayed
+  'sdt_DdxtJZ': 'Guitar',       // Rosie Ward
+  'sdt_pFYFJT': 'Guitar',       // Rosie & Johnny Kinniburgh
+  'sdt_w6TBJ3': 'Guitar',       // Rowan Moore
+  'sdt_D9ftJB': 'Guitar',       // Sadie Lowe
+  'sdt_pT5MJz': 'Guitar',       // Sonny Ford
+  'sdt_Nt4LJ3': 'Guitar',       // Stella French
+  'sdt_QjMGJc': 'Guitar',       // Carla Jurado
+  'sdt_6yvpJb': 'Guitar',       // Les Graham
+  'sdt_6PjKJF': 'Guitar',       // Ruaraidh Somerville
+  'sdt_6ZrzJq': 'Guitar'        // Icaro Segnini-Hernandez
 };
