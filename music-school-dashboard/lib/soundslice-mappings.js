@@ -144,7 +144,6 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_QPqsJC': 'https://www.soundslice.com/courses/16897/', // Natalie Wong
   'sdt_39hsJY': 'https://www.soundslice.com/courses/16898/', // Chiara Cavanna
   'sdt_QKcMJS': 'https://www.soundslice.com/courses/16899/', // Jenny O'Donnell
-  'sdt_BtxmJ4': 'https://www.soundslice.com/courses/16900/', // Carol Turner
   'sdt_QNVYJ4': 'https://www.soundslice.com/courses/16901/', // Nico Murdoch
   'sdt_ccgQJ8': 'https://www.soundslice.com/courses/16902/', // Paisley Hewitt
   'sdt_cfGhJh': 'https://www.soundslice.com/courses/16903/', // Sian Malyin
