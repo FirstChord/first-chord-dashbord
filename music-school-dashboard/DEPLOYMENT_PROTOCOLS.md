@@ -181,16 +181,37 @@ When adding students for an existing tutor:
    - Surname, First Name
    - Theta Music username/password
    - MMS ID (from MyMusicStaff)
+   - Instrument (if different from tutor default)
+   - Soundslice course URL (if applicable)
 
-2. **Update configuration:**
+2. **Update configuration files in order:**
+
+   **a) Add Theta Music Credentials** in `/lib/config.js`:
    ```javascript
-   // In /lib/config.js, add to thetaCredentials object:
+   // Find the tutor's section in thetaCredentials object:
    'sdt_MMSID': 'thetausername',    // Student Name
    ```
 
+   **b) Add Instrument Override** in `/lib/config.js`:
+   ```javascript
+   // Find the instrumentOverrides object:
+   'sdt_MMSID': 'Guitar',          // Student Name - use Piano, Guitar, Voice, etc.
+   ```
+
+   **c) Add Soundslice Course URL** in `/lib/soundslice-mappings.js`:
+   ```javascript
+   // Find the tutor's section:
+   'sdt_MMSID': 'https://www.soundslice.com/courses/12345/', // Student Name
+   ```
+
 3. **Test and deploy:**
-   - Test locally with `npm run dev`
-   - Follow deployment protocol above
+   - Restart development server: `npm run dev`
+   - Test locally at http://localhost:3000/dashboard
+   - Select the tutor and verify new student appears with correct instrument
+   - Test Theta Music button for credentials
+   - Test Soundslice link
+   - Run `npm run build` to test build
+   - Follow full deployment protocol
 
 ### Important Notes & Troubleshooting
 

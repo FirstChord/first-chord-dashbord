@@ -296,7 +296,8 @@ export const generateSmartUrls = {
       'sdt_QjMGJc': 'carlafc',          // Carla Jurado
       'sdt_6yvpJb': 'lesfc',            // Les Graham
       'sdt_6PjKJF': 'ruaraidhfc',       // Ruaraidh Somerville
-      'sdt_6ZrzJq': 'icarofc'           // Icaro Segnini-Hernandez
+      'sdt_6ZrzJq': 'icarofc',          // Icaro Segnini-Hernandez
+      'sdt_cZ39Jz': 'anniefc'           // Annie Brown
     };
 
     // Instrument overrides - specify correct instruments for students
@@ -436,5 +437,6 @@ export const instrumentOverrides = {
   'sdt_QjMGJc': 'Guitar',       // Carla Jurado
   'sdt_6yvpJb': 'Guitar',       // Les Graham
   'sdt_6PjKJF': 'Guitar',       // Ruaraidh Somerville
-  'sdt_6ZrzJq': 'Guitar'        // Icaro Segnini-Hernandez
+  'sdt_6ZrzJq': 'Guitar',       // Icaro Segnini-Hernandez
+  'sdt_cZ39Jz': 'Guitar'        // Annie Brown
 };

@@ -94,6 +94,7 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_6yvpJb': 'https://www.soundslice.com/courses/16960/', // Les Graham
   'sdt_6PjKJF': 'https://www.soundslice.com/courses/17041/', // Ruaraidh Somerville
   'sdt_6ZrzJq': 'https://www.soundslice.com/courses/17058/', // Icaro Segnini-Hernandez
+  'sdt_cZ39Jz': 'https://www.soundslice.com/courses/17182/', // Annie Brown
   'sdt_QRdgJG': 'https://www.soundslice.com/courses/15750/', // Mia Davidson
   
   // Finn's students
