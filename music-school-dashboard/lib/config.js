@@ -218,6 +218,11 @@ export const generateSmartUrls = {
       'sdt_HlXyJl': 'sophiafc',         // Sophia Papadakis
       'sdt_yhJTJ0': 'vaidikfc',         // Vaidik Gupta
       
+      // David's students with Theta Music credentials
+      'sdt_BDH9J3': 'ceitdhfc',         // Ceitdh Qui
+      'sdt_MhHLJ0': 'rebeccafc',        // Rebecca Mapata
+      'sdt_pGqXJ9': 'silverrayfc',      // Silver-Ray Noramly
+      
       // Fennella's students with Theta Music credentials
       'sdt_ySKCJy': 'dylanfc',      // Dylan Lyall
       'sdt_v1lcJ0': 'maxfc',        // Max Toner
@@ -455,5 +460,10 @@ export const instrumentOverrides = {
   'sdt_M3RnJG': 'Piano',        // Athena Papadakis
   'sdt_yFzkJ6': 'Piano',        // Irruj Chander
   'sdt_HlXyJl': 'Piano',        // Sophia Papadakis
-  'sdt_yhJTJ0': 'Piano'         // Vaidik Gupta
+  'sdt_yhJTJ0': 'Piano',        // Vaidik Gupta
+  
+  // David's students with correct instruments
+  'sdt_BDH9J3': 'Piano',        // Ceitdh Qui
+  'sdt_MhHLJ0': 'Piano',        // Rebecca Mapata
+  'sdt_pGqXJ9': 'Piano / Guitar' // Silver-Ray Noramly
 };

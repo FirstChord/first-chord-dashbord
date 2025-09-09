@@ -34,6 +34,8 @@ class MMSClient {
       'Stef McGlinchey': 'tch_z5YmJX',
       'Tom': 'tch_mYJJR',
       'Tom Walters': 'tch_mYJJR',
+      'David': 'tch_placeholder_david',
+      'David Husz': 'tch_placeholder_david',
       // Lowercase aliases for easy access
       'finn': 'tch_QhxJJ',
       'eve': 'tch_z3npJm',
@@ -47,7 +49,9 @@ class MMSClient {
       'patrick': 'tch_zw9SJ3',
       'robbie': 'tch_zV9hJ2',
       'stef': 'tch_z5YmJX',
-      'tom': 'tch_mYJJR'
+      'tom': 'tch_mYJJR',
+      'david': 'tch_placeholder_david',
+      'david husz': 'tch_placeholder_david'
     };
   }
 
