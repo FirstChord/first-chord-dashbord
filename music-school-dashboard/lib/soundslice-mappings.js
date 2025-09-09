@@ -36,6 +36,7 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_s2JpJx': 'https://www.soundslice.com/courses/13505/', // Roque Neto
   'sdt_NS6bJW': 'https://www.soundslice.com/courses/10023/', // Tabitha Slocombe
   'sdt_czFfJy': 'https://www.soundslice.com/courses/10023/', // Bonnie Clark
+  'sdt_6llSJ8': 'https://www.soundslice.com/courses/16983/', // Jamie Welsh
   
   // Dean's students
   'sdt_BMt3JD': 'https://www.soundslice.com/courses/7751/', // Rami Adam

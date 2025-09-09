@@ -272,8 +272,14 @@ export const generateSmartUrls = {
       'sdt_2grxJL': 'ryanfc',       // Ryan Ofee
       'sdt_638hJ9': 'vanessafc',    // Vanessa V
       
-      // Kim's students - Add when Theta Music accounts are created
-      // 'sdt_XXXXX': '[firstname]fc',
+      // Kim's students with Theta Music credentials
+      'sdt_BkflJy': 'reubenfc',         // Reuben Barnes
+      'sdt_DfTRJT': 'kensonfc',         // Kin Shing Kenson Li
+      'sdt_HbXMJZ': 'lyrafc',           // Lyra Jackson
+      'sdt_38MBJF': 'markfc',           // Mark Chalmers
+      'sdt_Fq8vJj': 'oscarfc',          // Oscar Wallace
+      'sdt_QcCtJT': 'marcofc',          // Marco Sarconi
+      'sdt_QbBNJq': 'carolinefc',       // Caroline Bingley
       
       // Patrick's students with Theta Music credentials
       'sdt_QSzJJ2': 'arasfc',       // Aras Korkmaz
@@ -286,11 +292,23 @@ export const generateSmartUrls = {
       'sdt_cYvdJp': 'noahfc',       // Noah Hegde
       'sdt_c44QJk': 'tiafc',        // Tia Mustafayeva
       
-      // Robbie's students - Add when Theta Music accounts are created
-      // 'sdt_XXXXX': '[firstname]fc',
+      // Robbie's students with Theta Music credentials
+      'sdt_3ZZwJ2': 'ailsafc',          // Ailsa Hoebe
+      'sdt_w6TSJX': 'arjunfc',          // Arjun Darshini
+      'sdt_2s8CJk': 'charliefc',        // Charlie Mcdougall
+      'sdt_vrbPJL': 'foxfc',            // Fox Slocombe
+      'sdt_vgjdJv': 'niamhfc',          // Niamh Gallagher
+      'sdt_w6T7Jd': 'vailafc',          // Vaila Donaghey
+      'sdt_c7hKJ8': 'emilianofc',       // Emiliano Squillino
       
-      // Stef's students - Add when Theta Music accounts are created
-      // 'sdt_XXXXX': '[firstname]fc',
+      // Stef's students with Theta Music credentials
+      'sdt_NSmPJr': 'avafc',            // Ava Garcia Bree
+      'sdt_NdzdJM': 'elsafc',           // Elsa Thorton
+      'sdt_wwqLJ2': 'jackfc',           // Jack Alexander
+      'sdt_s2JpJx': 'roquefc',          // Roque Neto
+      'sdt_NS6bJW': 'tabithafc',        // Tabitha Slocombe
+      'sdt_czFfJy': 'bonniefc',         // Bonnie Clark
+      'sdt_6llSJ8': 'jamiefc',          // Jamie Welsh
       
       // Tom's students with Theta Music credentials
       'sdt_BtxmJ4': 'carolfc',          // Carol Turner
@@ -478,5 +496,32 @@ export const instrumentOverrides = {
   'sdt_cGPBJ3': 'Guitar',       // Olivia Mcintosh
   'sdt_c8NbJl': 'Guitar',       // Jake Richmond
   'sdt_MPMWJy': 'Guitar',       // Stephen MacDonald
-  'sdt_6n94J7': 'Guitar'        // Matthew Donaldson
+  'sdt_6n94J7': 'Guitar',       // Matthew Donaldson
+  
+  // Kim's students with correct instruments (defaulting to Guitar - update as needed)
+  'sdt_BkflJy': 'Guitar',       // Reuben Barnes
+  'sdt_DfTRJT': 'Guitar',       // Kin Shing Kenson Li
+  'sdt_HbXMJZ': 'Guitar',       // Lyra Jackson
+  'sdt_38MBJF': 'Guitar',       // Mark Chalmers
+  'sdt_Fq8vJj': 'Guitar',       // Oscar Wallace
+  'sdt_QcCtJT': 'Guitar',       // Marco Sarconi
+  'sdt_QbBNJq': 'Guitar',       // Caroline Bingley
+  
+  // Robbie's students with correct instruments (defaulting to Guitar - update as needed)
+  'sdt_3ZZwJ2': 'Guitar',       // Ailsa Hoebe
+  'sdt_w6TSJX': 'Guitar',       // Arjun Darshini
+  'sdt_2s8CJk': 'Guitar',       // Charlie Mcdougall
+  'sdt_vrbPJL': 'Guitar',       // Fox Slocombe
+  'sdt_vgjdJv': 'Guitar',       // Niamh Gallagher
+  'sdt_w6T7Jd': 'Guitar',       // Vaila Donaghey
+  'sdt_c7hKJ8': 'Guitar',       // Emiliano Squillino
+  
+  // Stef's students with correct instruments (defaulting to Guitar - update as needed)
+  'sdt_NSmPJr': 'Guitar',       // Ava Garcia Bree
+  'sdt_NdzdJM': 'Guitar',       // Elsa Thorton
+  'sdt_wwqLJ2': 'Guitar',       // Jack Alexander
+  'sdt_s2JpJx': 'Guitar',       // Roque Neto
+  'sdt_NS6bJW': 'Guitar',       // Tabitha Slocombe
+  'sdt_czFfJy': 'Guitar',       // Bonnie Clark
+  'sdt_6llSJ8': 'Guitar'        // Jamie Welsh
 };
