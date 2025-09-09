@@ -208,8 +208,15 @@ export const generateSmartUrls = {
       // Arion's students - Add when Theta Music accounts are created  
       // 'sdt_XXXXX': '[firstname]fc',
       
-      // Eléna's students - Add when Theta Music accounts are created
-      // 'sdt_XXXXX': '[firstname]fc',
+      // Eléna's students with Theta Music credentials
+      'sdt_vcJPJj': 'katerinafc',       // Katerina Skouras
+      'sdt_Kq3RJW': 'pablofc',          // Pablo Cunningham
+      'sdt_yR33J4': 'aramfc',           // Aram Dogan
+      'sdt_60gYJ7': 'ceciliafc',        // Cecilia Zhuansun
+      'sdt_M3RnJG': 'athenafc',         // Athena Papadakis
+      'sdt_yFzkJ6': 'irrujfc',          // Irruj Chander
+      'sdt_HlXyJl': 'sophiafc',         // Sophia Papadakis
+      'sdt_yhJTJ0': 'vaidikfc',         // Vaidik Gupta
       
       // Fennella's students with Theta Music credentials
       'sdt_ySKCJy': 'dylanfc',      // Dylan Lyall
@@ -438,5 +445,15 @@ export const instrumentOverrides = {
   'sdt_6yvpJb': 'Guitar',       // Les Graham
   'sdt_6PjKJF': 'Guitar',       // Ruaraidh Somerville
   'sdt_6ZrzJq': 'Guitar',       // Icaro Segnini-Hernandez
-  'sdt_cZ39Jz': 'Guitar'        // Annie Brown
+  'sdt_cZ39Jz': 'Guitar',       // Annie Brown
+  
+  // Eléna's students with correct instruments (all Piano)
+  'sdt_vcJPJj': 'Piano',        // Katerina Skouras
+  'sdt_Kq3RJW': 'Piano',        // Pablo Cunningham
+  'sdt_yR33J4': 'Piano',        // Aram Dogan
+  'sdt_60gYJ7': 'Piano',        // Cecilia Zhuansun
+  'sdt_M3RnJG': 'Piano',        // Athena Papadakis
+  'sdt_yFzkJ6': 'Piano',        // Irruj Chander
+  'sdt_HlXyJl': 'Piano',        // Sophia Papadakis
+  'sdt_yhJTJ0': 'Piano'         // Vaidik Gupta
 };
