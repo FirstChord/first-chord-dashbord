@@ -205,8 +205,13 @@ export const generateSmartUrls = {
       // Eve's students - Add when Theta Music accounts are created
       // 'sdt_XXXXX': '[firstname]fc',
       
-      // Arion's students - Add when Theta Music accounts are created  
-      // 'sdt_XXXXX': '[firstname]fc',
+      // Arion's students with Theta Music credentials
+      'sdt_yXFSJf': 'indyfc',           // Indy Norman
+      'sdt_yXFnJm': 'roarfc',           // Roar Norman
+      'sdt_cGPBJ3': 'oliviafc',         // Olivia Mcintosh
+      'sdt_c8NbJl': 'jakefc',           // Jake Richmond
+      'sdt_MPMWJy': 'stephenfc',        // Stephen MacDonald
+      'sdt_6n94J7': 'matthewfc',        // Matthew Donaldson
       
       // Eléna's students with Theta Music credentials
       'sdt_vcJPJj': 'katerinafc',       // Katerina Skouras
@@ -465,5 +470,13 @@ export const instrumentOverrides = {
   // David's students with correct instruments
   'sdt_BDH9J3': 'Piano',        // Ceitdh Qui
   'sdt_MhHLJ0': 'Piano',        // Rebecca Mapata
-  'sdt_pGqXJ9': 'Piano / Guitar' // Silver-Ray Noramly
+  'sdt_pGqXJ9': 'Piano / Guitar', // Silver-Ray Noramly
+  
+  // Arion's students with correct instruments (defaulting to Guitar - update as needed)
+  'sdt_yXFSJf': 'Guitar',       // Indy Norman
+  'sdt_yXFnJm': 'Guitar',       // Roar Norman
+  'sdt_cGPBJ3': 'Guitar',       // Olivia Mcintosh
+  'sdt_c8NbJl': 'Guitar',       // Jake Richmond
+  'sdt_MPMWJy': 'Guitar',       // Stephen MacDonald
+  'sdt_6n94J7': 'Guitar'        // Matthew Donaldson
 };

@@ -8,7 +8,8 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_H6CsJs': 'https://www.soundslice.com/courses/11591/', // Grisha Feigin
   'sdt_cGPBJ3': 'https://www.soundslice.com/courses/16283/', // Olivia Mcintosh
   'sdt_c8NbJl': 'https://www.soundslice.com/courses/16624/', // Jake Richmond
-  'sdt_MPMWJy': '', // Stephen MacDonald - No course yet
+  'sdt_MPMWJy': 'https://www.soundslice.com/courses/17011/', // Stephen MacDonald
+  'sdt_6n94J7': 'https://www.soundslice.com/courses/17042/', // Matthew Donaldson
   
   // Kim's students
   'sdt_BkflJy': 'https://www.soundslice.com/courses/7950/', // Rueben Barnes
