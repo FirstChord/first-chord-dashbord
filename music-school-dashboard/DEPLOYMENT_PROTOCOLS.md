@@ -173,6 +173,45 @@ When adding students for a new tutor with Theta Music accounts:
 - Run `npm run build` to test build
 - Follow deployment protocols
 
+### Adding Completely New Tutors
+
+When adding a brand new tutor to the system:
+
+**Step 1: Gather Required Information**
+- Tutor's full name (e.g., "David Husz")
+- MMS Teacher ID (e.g., `tch_z2j2Jf`) - or use placeholder initially
+- Student information (names, MMS IDs, instruments, Theta credentials, Soundslice URLs)
+
+**Step 2: Update All Required Files**
+
+1. **Add to mms-client.js teacher ID mapping:**
+   ```javascript
+   'NewTutor': 'tch_MMSID',
+   'NewTutor FullName': 'tch_MMSID',
+   'newtutor': 'tch_MMSID'
+   ```
+
+2. **Add students' Theta credentials to config.js**
+3. **Add students' instrument overrides to config.js** 
+4. **Add students' Soundslice URLs to soundslice-mappings.js**
+5. **🚨 CRITICAL: Add tutor to dashboard dropdown in `/app/dashboard/page-client.js`:**
+   ```javascript
+   {['Arion', 'David', 'Dean', ...].map(tutorName => (
+   ```
+
+**Step 3: Test and Deploy**
+- Follow standard deployment protocol
+- **Verify tutor appears in dropdown**
+- **Test student loading and Theta Music buttons**
+
+### Updating Teacher IDs from Placeholder to Real
+
+When you get a real MMS Teacher ID for a tutor:
+
+1. **Update mms-client.js** - Replace placeholder with real ID
+2. **Test locally** - Verify students load from MMS API
+3. **Deploy following standard protocol**
+
 ### Adding New Students to Theta Music
 
 When adding students for an existing tutor:
@@ -230,11 +269,14 @@ When adding students for an existing tutor:
 - **Fennella**: 27 students (Piano, Voice)
 - **Patrick**: 9 students (Piano, Guitar)
 - **Jungyoun**: 9 students (Piano)
+- **Eléna**: 8 students (Piano)
+- **David**: 3 students (Piano, Piano/Guitar)  
+- **Tom**: 24 students (Guitar)
 
-**Total: 91 students across 5 tutors**
+**Total: 126 students across 8 tutors**
 
 **Remaining Tutors (Placeholders Ready):**
-- Eve, Arion, Eléna, Kim, Robbie, Stef, Tom
+- Eve, Arion, Kim, Robbie, Stef
 
 ### Student Data Format
 
@@ -260,17 +302,80 @@ Example    Student       studentfc         sdt_ABC123    Piano
 - **Theta Music** - Educational games platform
 - **Railway** - Hosting platform
 
+## ✅ Post-Deployment Verification Checklist
+
+After every deployment, verify these items work:
+
+**Live Site Verification (https://efficient-sparkle-production.up.railway.app):**
+- [ ] Site loads without errors
+- [ ] All tutors appear in dropdown (13 total: Arion, David, Dean, Eléna, Eve, Fennella, Finn, Jungyoun, Kim, Patrick, Robbie, Stef, Tom)
+- [ ] Select each integrated tutor and verify students load
+- [ ] Test Theta Music button functionality for 2-3 students
+- [ ] Check "Sync MMS" button shows "Live Data" status
+- [ ] Verify instruments display correctly (not all defaulting to "Guitar")
+
+**If Any Verification Fails:**
+- Check Railway build logs for errors
+- Test locally first to isolate issue
+- Review recent git commits for potential issues
+
+## 🔧 Troubleshooting Guide
+
+### Student Loading Issues
+
+| Issue | Likely Cause | Solution |
+|-------|-------------|----------|
+| No students appear for tutor | Wrong/missing teacher ID | Check mms-client.js teacher ID mapping |
+| Students show but no instruments | Missing instrument overrides | Add to config.js instrumentOverrides |
+| "Service: None" in Railway status | Railway not linked | Run `railway link` |
+| Theta Music buttons don't work | Missing credentials | Check config.js thetaCredentials |
+| Build fails during deployment | Syntax error in code | Check build logs, fix syntax |
+
+### Common Error Messages
+
+**"No teacher ID configured for [Tutor]"**
+- Add tutor to mms-client.js teacherIds mapping
+- Use placeholder initially: `'Tutor': 'tch_placeholder_tutorname'`
+
+**"Internal Server Error"**  
+- Restart development server: Kill current process, run `npm run dev`
+- Check for syntax errors in config files
+
+**Students load but instruments all show "Guitar"**
+- Add instrument overrides in config.js instrumentOverrides section
+
+### MMS Teacher ID Management
+
+**Finding Real MMS Teacher IDs:**
+- Pattern: `tch_` + 6-7 alphanumeric characters (e.g., `tch_z2j2Jf`)
+- Always verify ID is unique across all tutors
+- Test locally before deploying
+
+**Updating from Placeholder to Real:**
+1. Update both capitalized and lowercase entries in mms-client.js
+2. Test locally - students should load from live MMS API
+3. Deploy following standard protocol
+
 ## 📝 Maintenance Notes
 
 ### Regular Tasks
-- Monitor Railway deployment logs for errors
+- Monitor Railway deployment logs for errors  
 - Update student credentials as needed
 - Test Theta Music integration periodically
+- Verify MMS API connectivity monthly
+- Update student counts in protocols after major additions
 
 ### Emergency Protocols
-- If site is down: Check Railway dashboard
+- If site is down: Check Railway dashboard and build logs
 - If students can't access Theta: Verify credentials in config.js
-- If API errors: Check MMS API status and keys
+- If API errors: Check MMS API status and authentication tokens
+- If mass student data corruption: Check git history for restore points
+
+### Backup/Recovery
+- All configuration is stored in git repository
+- Railway auto-deploys from git pushes  
+- To rollback: `git revert [commit-hash]` then `railway up`
+- Critical files to backup: config.js, soundslice-mappings.js, mms-client.js
 
 ## 🔗 Important URLs
 
