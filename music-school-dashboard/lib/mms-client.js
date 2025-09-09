@@ -11,8 +11,6 @@ class MMSClient {
     this.teacherIds = {
       'Finn': 'tch_QhxJJ',
       'Finn Le Marinel': 'tch_QhxJJ',
-      'Eve': 'tch_z3npJm',
-      'Eve Brebner': 'tch_z3npJm',
       'Arion': 'tch_zplpJw',
       'Arion Xenos': 'tch_zplpJw',
       // Real teacher IDs from MMS
@@ -38,7 +36,6 @@ class MMSClient {
       'David Husz': 'tch_z2j2Jf',
       // Lowercase aliases for easy access
       'finn': 'tch_QhxJJ',
-      'eve': 'tch_z3npJm',
       'arion': 'tch_zplpJw',
       'dean': 'tch_zV9TJN',
       'eléna': 'tch_zpy4J9',

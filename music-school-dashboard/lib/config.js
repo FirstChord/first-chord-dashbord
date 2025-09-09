@@ -202,8 +202,6 @@ export const generateSmartUrls = {
       // TODO: Add Theta Music credentials for other tutors' students when ready
       // Following the pattern: 'mms_id': '[firstname]fc' for both username and password
       
-      // Eve's students - Add when Theta Music accounts are created
-      // 'sdt_XXXXX': '[firstname]fc',
       
       // Arion's students with Theta Music credentials
       'sdt_yXFSJf': 'indyfc',           // Indy Norman
