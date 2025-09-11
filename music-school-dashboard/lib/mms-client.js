@@ -194,7 +194,7 @@ class MMSClient {
     // Server-side HTML stripping using regex
     if (!html) return '';
     
-    return html
+    let cleaned = html
       .replace(/<[^>]*>/g, '') // Remove HTML tags
       .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
       .replace(/&amp;/g, '&') // Replace &amp; with &
@@ -203,6 +203,31 @@ class MMSClient {
       .replace(/&quot;/g, '"') // Replace &quot; with "
       .replace(/&#39;/g, "'") // Replace &#39; with '
       .trim(); // Remove leading/trailing whitespace
+    
+    // Format square bracket questions as structured headers
+    return this.formatStructuredNotes(cleaned);
+  }
+
+  formatStructuredNotes(text) {
+    if (!text) return '';
+    
+    // First, format square bracket questions as headers
+    let formatted = text.replace(/\[([^\]]+)\]/g, (_, question) => {
+      // Add line breaks before and after, and make it bold using markdown-style formatting
+      return `\n\n**${question.trim()}**\n`;
+    });
+    
+    // Then, format names followed by colons (e.g., "Finn:", "Alex:", "Calan:")
+    // Pattern: Name followed by colon at start of line or after whitespace
+    formatted = formatted.replace(/(\s|^)([A-Z][a-zA-Z]+):\s*/g, (_, whitespace, name) => {
+      // Add line break and make name bold (same size)
+      return `${whitespace}\n***${name}:*** `;
+    });
+    
+    return formatted
+      .replace(/^\n+/, '') // Remove leading newlines
+      .replace(/\n{3,}/g, '\n\n') // Replace multiple newlines with double newlines
+      .trim();
   }
 
   // Get all recent lessons for a student

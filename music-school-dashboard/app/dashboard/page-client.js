@@ -5,8 +5,7 @@ import Image from 'next/image';
 import StudentCard from '@/components/StudentCard';
 import NotesPanel from '@/components/NotesPanel';
 import QuickLinks from '@/components/QuickLinks';
-import AuthStatus from '@/components/AuthStatus';
-import { Users, Clock, Search, RefreshCw } from 'lucide-react';
+import { Users, Clock, Search } from 'lucide-react';
 import { generateUrls } from '@/lib/config';
 import { cache } from '@/lib/cache';
 
@@ -18,41 +17,20 @@ export default function DashboardClient() {
   const [notesSource, setNotesSource] = useState(null);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [tokenStatus, setTokenStatus] = useState('checking');
-  const [syncStatus, setSyncStatus] = useState('idle'); // idle, syncing, success, error
-  const [lastSyncTime, setLastSyncTime] = useState(null);
   // const [isAuthenticated, setIsAuthenticated] = useState(true); // Always authenticated with hardcoded token
 
-  // Check authentication status on load
-  useEffect(() => {
-    fetch('/api/token')
-      .then(res => res.json())
-      .then(data => {
-        // setIsAuthenticated(data.authenticated);
-        setTokenStatus(data.authenticated ? 'active' : 'inactive');
-      })
-      .catch(() => {
-        // setIsAuthenticated(false);
-        setTokenStatus('error');
-      });
-  }, []);
 
   // Sync students from MMS
   const syncStudentsFromMMS = async (forcedTutor = null, forceSync = false) => {
     const targetTutor = forcedTutor || tutor;
     if (!targetTutor) return;
 
-    setSyncStatus('syncing');
-    
     // Check cache first (unless force sync is requested)
     if (!forceSync) {
       const cachedStudents = cache.getStudents(targetTutor);
       if (cachedStudents) {
         setStudents(cachedStudents);
-        setSyncStatus('success');
-        setLastSyncTime(new Date());
         console.log(`📦 Using cached data for ${targetTutor} (${cachedStudents.length} students)`);
-        setTimeout(() => setSyncStatus('idle'), 2000);
         return;
       }
     }
@@ -75,31 +53,21 @@ export default function DashboardClient() {
       
       if (data.success && data.source === 'mms') {
         setStudents(data.students || []);
-        setSyncStatus('success');
-        setLastSyncTime(new Date());
         
         // Cache the fresh data
         cache.setStudents(targetTutor, data.students || []);
         
         console.log(`✅ Synced ${data.count} students from MMS`);
-        
-        // Show success message briefly
-        setTimeout(() => setSyncStatus('idle'), 3000);
       } else {
-        setSyncStatus('error');
         console.log('❌ MMS sync failed, using local data');
         
         // Fallback to local data
         fetch(`/api/students?tutor=${targetTutor}`)
           .then(res => res.json())
           .then(data => setStudents(data.students || []));
-          
-        setTimeout(() => setSyncStatus('idle'), 5000);
       }
     } catch (error) {
       console.error('Sync error:', error);
-      setSyncStatus('error');
-      setTimeout(() => setSyncStatus('idle'), 5000);
     }
   };
 
@@ -126,19 +94,15 @@ export default function DashboardClient() {
           setNotesSource(data.source);
           setLoading(false);
           
-          // Update token status based on response
           if (data.success) {
-            setTokenStatus('active');
             console.log('✅ Using live MMS notes data');
           } else {
-            setTokenStatus('inactive');
             console.log('⚠️ Failed to fetch notes from MMS.');
           }
         })
         .catch(error => {
           console.error('Error fetching notes:', error);
           setLoading(false);
-          setTokenStatus('error');
         });
     }
   }, [selectedStudent]);
@@ -154,15 +118,32 @@ export default function DashboardClient() {
   // If no tutor selected, show tutor selection
   if (!tutor) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white p-12 rounded-xl shadow-lg max-w-4xl w-full mx-8">
+      <div className="min-h-screen bg-gradient-to-t from-green-100 to-blue-100 flex items-center justify-center relative overflow-hidden">
+        {/* Cloud */}
+        <div className="absolute inset-0 pointer-events-none">
+          <Image
+            src="/cloud.png"
+            alt=""
+            width={192}
+            height={128}
+            className="absolute top-16 right-8 opacity-90 transform -rotate-12"
+          />
+        </div>
+        
+        <div className="bg-white p-12 rounded-xl shadow-lg max-w-4xl w-full mx-8 relative z-10">
           <h1 className="text-2xl font-bold mb-8 text-center">Select Your Profile</h1>
           <div className="grid grid-cols-3 gap-8">
             {['Arion', 'David', 'Dean', 'Eléna', 'Fennella', 'Finn', 'Jungyoun', 'Kim', 'Patrick', 'Robbie', 'Stef', 'Tom'].map(tutorName => (
               <button
                 key={tutorName}
                 onClick={() => setTutor(tutorName)}
-                className="px-8 py-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-center font-medium text-xl min-h-[60px] min-w-[140px] flex items-center justify-center"
+                className="px-8 py-4 text-white rounded-lg transition-colors text-center font-medium text-xl min-h-[60px] min-w-[140px] flex items-center justify-center"
+                style={{ 
+                  backgroundColor: '#2F6B3D',
+                  '&:hover': { backgroundColor: '#245230' }
+                }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#245230'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#2F6B3D'}
               >
                 {tutorName}
               </button>
@@ -174,75 +155,26 @@ export default function DashboardClient() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-t from-green-100 to-blue-100 relative overflow-hidden">
+      {/* Cloud */}
+      <div className="absolute inset-0 pointer-events-none">
+        <Image
+          src="/cloud.png"
+          alt=""
+          width={192}
+          height={128}
+          className="absolute top-16 right-8 opacity-90 transform -rotate-12"
+        />
+      </div>
+      
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="px-6 py-4 flex justify-between items-center">
+      <header className="bg-blue-100 shadow-sm border-b border-blue-100/30">
+        <div className="px-6 py-6 flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">Music School Dashboard</h1>
+            <h1 className="text-2xl font-bold text-gray-800 uppercase tracking-wide" style={{ fontFamily: '"Cooper Hewitt", "Nimbus Sans L", "Arial", sans-serif' }}>FIRST CHORD DASHBOARD</h1>
             <p className="text-gray-600">Welcome back, {tutor}!</p>
           </div>
           <div className="flex items-center gap-4">
-            {/* Token Status Indicator */}
-            <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm ${
-              tokenStatus === 'active' ? 'bg-green-100 text-green-700' :
-              tokenStatus === 'inactive' ? 'bg-yellow-100 text-yellow-700' :
-              tokenStatus === 'error' ? 'bg-red-100 text-red-700' :
-              'bg-gray-100 text-gray-700'
-            }`}>
-              <div className={`w-2 h-2 rounded-full ${
-                tokenStatus === 'active' ? 'bg-green-500' :
-                tokenStatus === 'inactive' ? 'bg-yellow-500' :
-                tokenStatus === 'error' ? 'bg-red-500' :
-                'bg-gray-500'
-              }`}></div>
-              <span>
-                {tokenStatus === 'active' ? 'Live Data' :
-                 tokenStatus === 'inactive' ? 'Cached Data' :
-                 tokenStatus === 'error' ? 'Connection Error' :
-                 'Checking...'}
-              </span>
-            </div>
-            
-            {/* MMS Sync Button */}
-            <button
-              onClick={() => syncStudentsFromMMS(null, true)} // true = force sync, bypass cache
-              disabled={syncStatus === 'syncing'}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                syncStatus === 'syncing' ? 'bg-blue-100 text-blue-600 cursor-not-allowed' :
-                syncStatus === 'success' ? 'bg-green-100 text-green-700' :
-                syncStatus === 'error' ? 'bg-red-100 text-red-700' :
-                'bg-blue-500 text-white hover:bg-blue-600'
-              }`}
-            >
-              {syncStatus === 'syncing' ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                  Syncing...
-                </>
-              ) : syncStatus === 'success' ? (
-                <>
-                  <div className="w-4 h-4 text-green-600">✓</div>
-                  Synced
-                </>
-              ) : syncStatus === 'error' ? (
-                <>
-                  <div className="w-4 h-4 text-red-600">⚠</div>
-                  Retry
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="w-4 h-4" />
-                  Sync MMS
-                </>
-              )}
-            </button>
-            
-            {lastSyncTime && (
-              <div className="text-xs text-gray-500">
-                Last sync: {lastSyncTime.toLocaleTimeString()}
-              </div>
-            )}
             <div className="flex items-center gap-2 text-gray-600">
               <Clock className="w-5 h-5" />
               <span>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</span>
@@ -253,7 +185,10 @@ export default function DashboardClient() {
                 setSelectedStudent(null);
                 setLastNotes(null);
               }}
-              className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+              className="px-4 py-2 text-white rounded-lg transition-colors"
+              style={{ backgroundColor: '#2F6B3D' }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#245230'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#2F6B3D'}
             >
               Switch Tutor
             </button>
@@ -263,7 +198,9 @@ export default function DashboardClient() {
 
       <div className="flex h-[calc(100vh-73px)]">
         {/* Student List Sidebar */}
-        <aside className="w-80 bg-white border-r overflow-y-auto">
+        <aside className="w-80 bg-gradient-radial from-yellow-100 via-yellow-50 to-transparent border-r overflow-y-auto" style={{
+          background: 'radial-gradient(ellipse at center, rgba(254, 240, 138, 0.4) 0%, rgba(254, 249, 195, 0.3) 30%, rgba(255, 255, 255, 0.1) 70%, transparent 100%)'
+        }}>
           <div className="p-4 border-b">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -302,9 +239,6 @@ export default function DashboardClient() {
             <div className="p-6 max-w-6xl mx-auto">
               <h2 className="text-3xl font-bold mb-6">{selectedStudent.name}</h2>
               
-              {/* Auth Status */}
-              <AuthStatus student={selectedStudent} tutorName={tutor} />
-              
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Previous Notes */}
                 <div>
@@ -325,20 +259,6 @@ export default function DashboardClient() {
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="mt-8 flex gap-4">
-                <a
-                  href={generateUrls.myMusicStaff(selectedStudent.mms_id)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                >
-                  Open in MyMusicStaff to Add Notes
-                </a>
-                <button className="px-6 py-3 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
-                  Start Lesson Timer
-                </button>
-              </div>
             </div>
           ) : (
             <div className="flex items-center justify-center h-full text-gray-400">
@@ -356,9 +276,9 @@ export default function DashboardClient() {
         <Image
           src="/first-chord-banner.png"
           alt="First Chord Music School - Explore Music Together"
-          width={225}
-          height={127}
-          className="rounded-lg shadow-lg opacity-90 hover:opacity-100 transition-opacity duration-300"
+          width={300}
+          height={169}
+          className="rounded-lg opacity-90 hover:opacity-100 transition-opacity duration-300"
           priority={false}
         />
       </div>

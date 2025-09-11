@@ -11,6 +11,45 @@ export default function NotesPanel({ notes, source }) {
       year: 'numeric'
     });
   };
+
+  const formatNotesText = (text) => {
+    if (!text) return text;
+    
+    // Split text by lines to process each line
+    const lines = text.split('\n');
+    
+    return lines.map((line, index) => {
+      // Check if line contains **bold** text (questions from square brackets)
+      if (line.includes('**') && !line.includes('***')) {
+        // Extract the bold text and make it a proper header
+        const boldText = line.replace(/\*\*(.*?)\*\*/g, '$1').trim();
+        if (boldText) {
+          return (
+            <div key={index} className="font-bold text-gray-800 mt-4 mb-2 text-lg border-b border-gray-200 pb-1">
+              {boldText}
+            </div>
+          );
+        }
+      }
+      
+      // Check if line contains ***name:*** text (names with colons)
+      if (line.includes('***')) {
+        // Process the line to make names bold but keep same text size
+        const processedLine = line.replace(/\*\*\*(.*?)\*\*\*/g, '<strong>$1</strong>');
+        return (
+          <div key={index} className="mb-1 mt-2" dangerouslySetInnerHTML={{ __html: processedLine }} />
+        );
+      }
+      
+      // Regular text line
+      if (line.trim()) {
+        return <div key={index} className="mb-1">{line}</div>;
+      }
+      
+      // Empty line for spacing
+      return <div key={index} className="h-2"></div>;
+    });
+  };
   
   return (
     <div className="bg-yellow-50 p-6 rounded-lg border-2 border-yellow-200">
@@ -33,7 +72,9 @@ export default function NotesPanel({ notes, source }) {
         {notes.attendance === 'Absent' ? (
           <p className="italic text-gray-500">Student was absent</p>
         ) : (
-          <div className="whitespace-pre-wrap">{notes.notes}</div>
+          <div className="whitespace-pre-wrap">
+            {formatNotesText(notes.notes)}
+          </div>
         )}
       </div>
       
