@@ -5,7 +5,6 @@ const SOUNDSLICE_MAPPINGS = {
   // Arion's students
   'sdt_yXFSJf': 'https://www.soundslice.com/courses/14429/', // Indy Norman
   'sdt_yXFnJm': 'https://www.soundslice.com/courses/14428/', // Roar Norman
-  'sdt_H6CsJs': 'https://www.soundslice.com/courses/11591/', // Grisha Feigin
   'sdt_cGPBJ3': 'https://www.soundslice.com/courses/16283/', // Olivia Mcintosh
   'sdt_c8NbJl': 'https://www.soundslice.com/courses/16624/', // Jake Richmond
   'sdt_MPMWJy': 'https://www.soundslice.com/courses/17011/', // Stephen MacDonald
@@ -80,8 +79,6 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_gpFVJS': 'https://www.soundslice.com/courses/4963/', // Duke Noramly
   'sdt_B4zSJc': 'https://www.soundslice.com/courses/7566/', // Florence Bartlett
   'sdt_slc4Jq': 'https://www.soundslice.com/courses/12632/', // Harry Dafas
-  'sdt_yRbrJR': 'https://www.soundslice.com/courses/14024/', // Ismail Yagoub
-  'sdt_pj05JC': 'https://www.soundslice.com/courses/6394/', // Kai Plazalski
   'sdt_F3FHJs': 'https://www.soundslice.com/courses/4975/', // Logan Wilson
   'sdt_gDcVJp': 'https://www.soundslice.com/courses/4831/', // Luca Kennedy
   'sdt_BMtHJs': 'https://www.soundslice.com/courses/7757/', // Luke Moran
@@ -97,7 +94,6 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_6PjKJF': 'https://www.soundslice.com/courses/17041/', // Ruaraidh Somerville
   'sdt_6ZrzJq': 'https://www.soundslice.com/courses/17058/', // Icaro Segnini-Hernandez
   'sdt_cZ39Jz': 'https://www.soundslice.com/courses/17182/', // Annie Brown
-  'sdt_QRdgJG': 'https://www.soundslice.com/courses/15750/', // Mia Davidson
   
   // Finn's students
   'sdt_cZDlJQ': 'https://www.soundslice.com/courses/16374/', // Finlay Cackett
