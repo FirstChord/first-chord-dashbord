@@ -102,7 +102,7 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_Kwb2J0': 'https://www.soundslice.com/courses/4303/', // Anji Goddard
   'sdt_BDHKJs': 'https://www.soundslice.com/courses/13888/', // Archie Toner
   'sdt_K3h1JJ': 'https://www.soundslice.com/courses/12836/', // Aria Thomson
-  'sdt_BpDPJZ': 'https://www.soundslice.com/courses/12836/', // Calan Clacherty
+  'sdt_BpDPJZ': 'https://www.soundslice.com/courses/6917/', // Calan Clacherty
   'sdt_KwbMJR': 'https://www.soundslice.com/courses/4303/', // Carolyn Hilliard
   'sdt_BDHJJF': 'https://www.soundslice.com/courses/8101/', // Claire McGinness
   'sdt_Kv59Jb': 'https://www.soundslice.com/courses/7458/', // Eilidh Qiu

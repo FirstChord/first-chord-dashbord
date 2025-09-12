@@ -195,13 +195,25 @@ class MMSClient {
     if (!html) return '';
     
     let cleaned = html
-      .replace(/<[^>]*>/g, '') // Remove HTML tags
+      // First, convert HTML line breaks to actual line breaks BEFORE removing tags
+      .replace(/<br\s*\/?>/gi, '\n') // Replace <br> and <br/> with line breaks
+      .replace(/<\/p>\s*<p[^>]*>/gi, '\n\n') // Replace </p><p> with double line breaks
+      .replace(/<p[^>]*>/gi, '\n') // Replace opening <p> with line break
+      .replace(/<\/p>/gi, '\n') // Replace closing </p> with line break
+      .replace(/<div[^>]*>/gi, '\n') // Replace opening <div> with line break
+      .replace(/<\/div>/gi, '\n') // Replace closing </div> with line break
+      .replace(/<[^>]*>/g, '') // Remove remaining HTML tags
       .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
       .replace(/&amp;/g, '&') // Replace &amp; with &
       .replace(/&lt;/g, '<') // Replace &lt; with <
       .replace(/&gt;/g, '>') // Replace &gt; with >
       .replace(/&quot;/g, '"') // Replace &quot; with "
       .replace(/&#39;/g, "'") // Replace &#39; with '
+      .replace(/&rsquo;/g, "'") // Replace &rsquo; with '
+      .replace(/&lsquo;/g, "'") // Replace &lsquo; with '
+      .replace(/&rdquo;/g, '"') // Replace &rdquo; with "
+      .replace(/&ldquo;/g, '"') // Replace &ldquo; with "
+      .replace(/\n\s*\n\s*\n/g, '\n\n') // Clean up excessive line breaks
       .trim(); // Remove leading/trailing whitespace
     
     // Format square bracket questions as structured headers
@@ -211,17 +223,21 @@ class MMSClient {
   formatStructuredNotes(text) {
     if (!text) return '';
     
-    // First, format square bracket questions as headers
-    let formatted = text.replace(/\[([^\]]+)\]/g, (_, question) => {
-      // Add line breaks before and after, and make it bold using markdown-style formatting
+    // Clean up line breaks
+    let formatted = text
+      .replace(/\r\n/g, '\n') // Normalize Windows line endings
+      .replace(/\r/g, '\n')   // Normalize Mac line endings
+      .replace(/\n\s*\n\s*\n/g, '\n\n'); // Clean up excessive line breaks
+    
+    // Format square bracket questions as headers
+    formatted = formatted.replace(/\[([^\]]+)\]/g, (_, question) => {
       return `\n\n**${question.trim()}**\n`;
     });
     
-    // Then, format names followed by colons (e.g., "Finn:", "Alex:", "Calan:")
-    // Pattern: Name followed by colon at start of line or after whitespace
-    formatted = formatted.replace(/(\s|^)([A-Z][a-zA-Z]+):\s*/g, (_, whitespace, name) => {
-      // Add line break and make name bold (same size)
-      return `${whitespace}\n***${name}:*** `;
+    // Format names/labels followed by colons at the start of lines
+    // This catches: Teacher:, Alize:, Recap:, Student:, etc.
+    formatted = formatted.replace(/^([A-Z][a-zA-Z]*(?:'[a-z]+)?(?:\s[A-Z][a-zA-Z]*)*?):\s*/gm, (_, name) => {
+      return `***${name}:*** `;
     });
     
     return formatted

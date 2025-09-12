@@ -17,7 +17,23 @@ export default function DashboardClient() {
   const [notesSource, setNotesSource] = useState(null);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
   // const [isAuthenticated, setIsAuthenticated] = useState(true); // Always authenticated with hardcoded token
+
+  // Fun loading messages
+  const loadingMessages = [
+    "The First Chord Dashboard is just taking a sec to learn ancient Greek, bear with it...",
+    "The First Chord Dashboard is choosing between two lovely patterned shirts, please hold...",
+    "The First Chord Dashboard is emotionally processing being a dashboard, please hold...",
+    "The First Chord Dashboard is just round the corner, please hold...",
+    "The First Chord Dashboard is exploring quantum physics, please hold...",
+    "The First Chord Dashboard is just finishing the last of its lunch, please hold...",
+    "The First Chord Dashboard is chatting with Vince, please hold...",
+    "The First Chord Dashboard is pretending to be an ironing board, please hold...",
+    "The First Chord Dashboard is tuning its guitar, please hold...",
+    "The First Chord Dashboard is advising a chicken on road safety, please hold..."
+  ];
 
 
   // Sync students from MMS
@@ -34,6 +50,11 @@ export default function DashboardClient() {
         return;
       }
     }
+
+    // Show fun loading message
+    const randomMessage = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
+    setLoadingMessage(randomMessage);
+    setIsLoading(true);
 
     console.log(`🔄 ${forceSync ? 'Force syncing' : 'Syncing'} students from MMS...`);
 
@@ -68,6 +89,10 @@ export default function DashboardClient() {
       }
     } catch (error) {
       console.error('Sync error:', error);
+    } finally {
+      // Hide loading message
+      setIsLoading(false);
+      setLoadingMessage('');
     }
   };
 
@@ -114,6 +139,69 @@ export default function DashboardClient() {
 
   // Debug logging (only when needed)
   // console.log('🔍 Dashboard state:', { tutor, tutorLength: tutor.length, tutorType: typeof tutor, isEmpty: !tutor });
+
+  // Show loading screen if loading
+  if (isLoading) {
+    return (
+      <>
+        <style jsx>{`
+          .loading-cloud {
+            animation: gentle-float 3s ease-in-out infinite;
+          }
+          
+          .loading-dots::after {
+            content: '';
+            animation: loading-dots 2s linear infinite;
+          }
+          
+          @keyframes gentle-float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+          }
+          
+          @keyframes loading-dots {
+            0% { content: ''; }
+            25% { content: '.'; }
+            50% { content: '..'; }
+            75% { content: '...'; }
+            100% { content: ''; }
+          }
+        `}</style>
+        <div className="min-h-screen bg-gradient-to-t from-green-100 to-blue-100 flex items-center justify-center relative overflow-hidden">
+          {/* Cloud */}
+          <div className="absolute inset-0 pointer-events-none">
+            <Image
+              src="/cloud.png"
+              alt=""
+              width={192}
+              height={128}
+              className="absolute top-16 right-8 opacity-90 transform -rotate-12"
+            />
+          </div>
+          
+          <div className="text-center relative z-10">
+            <div className="mb-8">
+              <div className="inline-flex items-center justify-center w-24 h-24 mb-6">
+                {/* Floating Cloud */}
+                <div className="loading-cloud">
+                  <Image
+                    src="/cloud.png"
+                    alt="Loading cloud"
+                    width={80}
+                    height={53}
+                    className="object-contain opacity-70"
+                  />
+                </div>
+              </div>
+              <h2 className="text-xl font-bold italic text-gray-800 max-w-md mx-auto leading-relaxed loading-dots" style={{ fontFamily: '"Cooper Hewitt", "Nimbus Sans L", "Arial", sans-serif' }}>
+                {loadingMessage.replace(/\.\.\.$/, '')}
+              </h2>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   // If no tutor selected, show tutor selection
   if (!tutor) {
