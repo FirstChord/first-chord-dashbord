@@ -222,11 +222,13 @@ export const generateSmartUrls = {
       'sdt_yhJTJ0': 'vaidikfc',         // Vaidik Gupta
       
       // David's students with Theta Music credentials
-      'sdt_BDH9J3': 'ceitdhfc',         // Ceitdh Qui
       'sdt_MhHLJ0': 'rebeccafc',        // Rebecca Mapata
       'sdt_pGqXJ9': 'silverrayfc',      // Silver-Ray Noramly
+      'sdt_LqT2J4': 'fraserfc',         // Fraser Ord
+      'sdt_L5l5JD': 'dimitrafc',        // Dimitra Ntarmou
       
       // Fennella's students with Theta Music credentials
+      'sdt_BDH9J3': 'ceitdhfc',     // Ceitdh Qui (moved from David)
       'sdt_ySKCJy': 'dylanfc',      // Dylan Lyall
       'sdt_v1lcJ0': 'maxfc',        // Max Toner
       'sdt_MdD4JB': 'falloufc',     // Fallou Ndiaye
@@ -268,7 +270,8 @@ export const generateSmartUrls = {
       'sdt_N0z0Jq': 'tomassofc',    // Tomasso Fossati
       'sdt_NSmyJ3': 'ziafc',        // Zia Permall
       'sdt_2grxJL': 'ryanfc',       // Ryan Ofee
-      'sdt_638hJ9': 'vanessafc',    // Vanessa V
+      'sdt_L5tgJX': 'alexanderfc',  // Alexander Palmer
+      'sdt_6RJkJp': 'omarfc',       // Omar Mukhtar
       
       // Kim's students with Theta Music credentials
       'sdt_BkflJy': 'reubenfc',         // Reuben Barnes
@@ -397,6 +400,7 @@ export const generateSmartUrls = {
 // Export instrument overrides for use in MMS client
 export const instrumentOverrides = {
   // Fennella's students with correct instruments
+  'sdt_BDH9J3': 'Piano',        // Ceitdh Qui (moved from David)
   'sdt_ySKCJy': 'Voice',        // Dylan Lyall
   'sdt_v1lcJ0': 'Piano',        // Max Toner
   'sdt_MdD4JB': 'Piano',        // Fallou Ndiaye
@@ -447,7 +451,8 @@ export const instrumentOverrides = {
   'sdt_N0z0Jq': 'Piano',        // Tomasso Fossati
   'sdt_NSmyJ3': 'Piano',        // Zia Permall
   'sdt_2grxJL': 'Piano',        // Ryan Ofee
-  'sdt_638hJ9': 'Piano',        // Vanessa V
+  'sdt_L5tgJX': 'Piano',        // Alexander Palmer
+  'sdt_6RJkJp': 'Piano',        // Omar Mukhtar
   
   // Tom's students with correct instruments (defaulting to Guitar - update as needed)
   'sdt_BtxmJ4': 'Guitar',       // Carol Turner
@@ -484,9 +489,10 @@ export const instrumentOverrides = {
   'sdt_yhJTJ0': 'Piano',        // Vaidik Gupta
   
   // David's students with correct instruments
-  'sdt_BDH9J3': 'Piano',        // Ceitdh Qui
   'sdt_MhHLJ0': 'Piano',        // Rebecca Mapata
   'sdt_pGqXJ9': 'Piano / Guitar', // Silver-Ray Noramly
+  'sdt_LqT2J4': 'Bass',          // Fraser Ord
+  'sdt_L5l5JD': 'Piano',         // Dimitra Ntarmou
   
   // Arion's students with correct instruments (defaulting to Guitar - update as needed)
   'sdt_yXFSJf': 'Guitar',       // Indy Norman
