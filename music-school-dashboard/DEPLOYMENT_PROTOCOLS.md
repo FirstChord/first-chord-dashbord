@@ -247,6 +247,74 @@ When adding students for an existing tutor:
    - Restart development server: `npm run dev`
    - Test locally at http://localhost:3000/dashboard
    - Select the tutor and verify new student appears with correct instrument
+
+## 🧹 Project Cleanup Protocol
+
+### Regular Maintenance (Monthly or When Noticed)
+
+Keep the codebase clean by removing temporary files and unused scripts:
+
+**Step 1: Identify Files to Remove**
+```bash
+# Find empty files that serve no purpose
+find . -name "*.js" -size 0 -not -path "./node_modules/*"
+find . -name "*.txt" -size 0 -not -path "./node_modules/*"
+find . -name "*.log" -size 0 -not -path "./node_modules/*"
+```
+
+**Step 2: Remove Temporary/Migration Files**
+```bash
+# Common patterns to remove:
+rm -f update_*.js          # Old migration scripts
+rm -f *_temp.js           # Temporary files
+rm -f debug_*.js          # Debug scripts
+rm -f test_*.js           # Ad-hoc test files (not official tests)
+rm -f *.log               # Log files
+rm -f api-test.js         # Test scripts
+rm -f sync-*.js           # One-time sync scripts
+```
+
+**Step 3: Clean Development Artifacts**
+```bash
+# Remove common development leftovers
+rm -f .env.backup*        # Backup environment files
+rm -f *.tmp               # Temporary files
+rm -f *copy*              # Copy files
+```
+
+**Step 4: Commit Cleanup**
+```bash
+# Stage deletions
+git add -A
+
+# Commit with descriptive message
+git commit -m "chore: Clean up temporary and empty files
+
+- Remove empty migration scripts (update_*.js)
+- Remove debug and test artifacts  
+- Clean up temporary log files
+- Improve project structure and maintainability
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+```
+
+### Files to NEVER Remove
+- `package.json` / `package-lock.json`
+- `next.config.ts` / `tsconfig.json`
+- `tailwind.config.js` / `postcss.config.mjs`
+- `.env.example` (template for others)
+- `README.md` / `DEPLOYMENT_PROTOCOLS.md`
+- Any files in `/app`, `/components`, `/lib` (unless verified unused)
+- `railway.json` / `vercel.json` / `nixpacks.toml`
+
+### Best Practices
+1. **Use temporary files sparingly** - prefer direct edits to config files
+2. **Delete migration scripts after use** - don't let them accumulate  
+3. **Name temporary files clearly** - use `temp_`, `debug_`, `test_` prefixes
+4. **Clean up weekly** - don't let clutter accumulate
+5. **Check functionality** - always test after cleanup before deploying
    - Test Theta Music button for credentials
    - Test Soundslice link
    - Run `npm run build` to test build
