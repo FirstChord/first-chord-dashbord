@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import StudentCard from '@/components/StudentCard';
-import NotesPanel from '@/components/NotesPanel';
-import QuickLinks from '@/components/QuickLinks';
-import SetupWizard from '@/components/SetupWizard';
-import AuthStatus from '@/components/AuthStatus';
+import StudentCard from '@/components/student/StudentCard';
+import NotesPanel from '@/components/student/NotesPanel';
+import QuickLinks from '@/components/navigation/QuickLinks';
+import SetupWizard from '@/components/setup/SetupWizard';
+import AuthStatus from '@/components/auth/AuthStatus';
 import { cache } from '@/lib/cache';
 import { Users, Clock, Search, RefreshCw } from 'lucide-react';
 

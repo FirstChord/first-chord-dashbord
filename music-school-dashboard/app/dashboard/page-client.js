@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import StudentCard from '@/components/StudentCard';
-import NotesPanel from '@/components/NotesPanel';
-import QuickLinks from '@/components/QuickLinks';
+import StudentCard from '@/components/student/StudentCard';
+import NotesPanel from '@/components/student/NotesPanel';
+import QuickLinks from '@/components/navigation/QuickLinks';
 import { Users, Clock, Search } from 'lucide-react';
 import { generateUrls } from '@/lib/config';
 import { cache } from '@/lib/cache';

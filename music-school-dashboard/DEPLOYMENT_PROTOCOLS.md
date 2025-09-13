@@ -104,7 +104,7 @@ git push
 
 ### Development Server Management
 
-After making significant changes to configuration files (especially `/lib/config.js` or `/lib/mms-client.js`), restart the development server:
+After making significant changes to configuration files (especially `/lib/config/` files or `/lib/mms-client.js`), restart the development server:
 
 ```bash
 # Kill current server (Ctrl+C or kill command)
@@ -113,8 +113,9 @@ npm run dev
 ```
 
 **When to restart the server:**
-- After adding new tutor credentials in `config.js`
-- After modifying instrument overrides
+- After adding new tutor credentials in `lib/config/theta-credentials.js`
+- After modifying instrument overrides in `lib/config/instruments.js`
+- After updating service configurations in `lib/config/services.js`
 - When experiencing internal server errors
 - After significant configuration changes
 
@@ -141,14 +142,14 @@ When adding students for a new tutor with Theta Music accounts:
 
 **Step 2: Update Configuration Files**
 
-1. **Add Theta Music Credentials** in `/lib/config.js`:
+1. **Add Theta Music Credentials** in `/lib/config/theta-credentials.js`:
    ```javascript
    // [TutorName]'s students with Theta Music credentials
    'sdt_ABC123': 'studentfc',    // Student Name
    'sdt_DEF456': 'anotherstudentfc',    // Another Student
    ```
 
-2. **Add Instrument Overrides** in `/lib/config.js`:
+2. **Add Instrument Overrides** in `/lib/config/instruments.js`:
    ```javascript
    // [TutorName]'s students with correct instruments
    'sdt_ABC123': 'Piano',        // Student Name
@@ -191,8 +192,8 @@ When adding a brand new tutor to the system:
    'newtutor': 'tch_MMSID'
    ```
 
-2. **Add students' Theta credentials to config.js**
-3. **Add students' instrument overrides to config.js** 
+2. **Add students' Theta credentials to config/theta-credentials.js**
+3. **Add students' instrument overrides to config/instruments.js** 
 4. **Add students' Soundslice URLs to soundslice-mappings.js**
 5. **🚨 CRITICAL: Add tutor to dashboard dropdown in `/app/dashboard/page-client.js`:**
    ```javascript
@@ -225,13 +226,13 @@ When adding students for an existing tutor:
 
 2. **Update configuration files in order:**
 
-   **a) Add Theta Music Credentials** in `/lib/config.js`:
+   **a) Add Theta Music Credentials** in `/lib/config/theta-credentials.js`:
    ```javascript
    // Find the tutor's section in thetaCredentials object:
    'sdt_MMSID': 'thetausername',    // Student Name
    ```
 
-   **b) Add Instrument Override** in `/lib/config.js`:
+   **b) Add Instrument Override** in `/lib/config/instruments.js`:
    ```javascript
    // Find the instrumentOverrides object:
    'sdt_MMSID': 'Guitar',          // Student Name - use Piano, Guitar, Voice, etc.
@@ -356,11 +357,25 @@ Example    Student       studentfc         sdt_ABC123    Piano
 ## 🏗️ Project Structure
 
 ### Key Files
-- `/lib/config.js` - Theta Music credentials & instrument overrides
+
+**Configuration Files:**
+- `/lib/config.js` - Main config entry point (re-exports from modular files)
+- `/lib/config/theta-credentials.js` - Theta Music student credentials
+- `/lib/config/instruments.js` - Student instrument overrides
+- `/lib/config/services.js` - External service configurations & authentication
+- `/lib/config/url-generators.js` - URL generation logic for external services
 - `/lib/soundslice-mappings.js` - Soundslice course URL mappings
 - `/lib/mms-client.js` - MyMusicStaff API client with teacher IDs
-- `/components/QuickLinks.js` - Theta Music modal and credentials display
-- `/components/StudentCard.js` - Student cards with instrument display
+
+**Component Files:**
+- `/components/layout/Dashboard.js` - Main dashboard container component
+- `/components/navigation/QuickLinks.js` - Theta Music modal and credentials display
+- `/components/student/StudentCard.js` - Student cards with instrument display
+- `/components/student/NotesPanel.js` - Student lesson notes display
+- `/components/auth/AuthStatus.js` - Authentication status components
+- `/components/setup/SetupWizard.js` - Initial setup wizard components
+
+**API Routes:**
 - `/app/api/students/route.js` - Student data API endpoint
 - `/app/dashboard/page.js` - Main dashboard page
 
@@ -402,7 +417,7 @@ After every deployment, verify these items work:
 ### Common Error Messages
 
 **"No teacher ID configured for [Tutor]"**
-- Add tutor to mms-client.js teacherIds mapping
+- Add tutor to `/lib/mms-client.js` teacherIds mapping
 - Use placeholder initially: `'Tutor': 'tch_placeholder_tutorname'`
 
 **"Internal Server Error"**  
@@ -410,7 +425,7 @@ After every deployment, verify these items work:
 - Check for syntax errors in config files
 
 **Students load but instruments all show "Guitar"**
-- Add instrument overrides in config.js instrumentOverrides section
+- Add instrument overrides in `/lib/config/instruments.js` instrumentOverrides section
 
 ### MMS Teacher ID Management
 
@@ -420,7 +435,7 @@ After every deployment, verify these items work:
 - Test locally before deploying
 
 **Updating from Placeholder to Real:**
-1. Update both capitalized and lowercase entries in mms-client.js
+1. Update both capitalized and lowercase entries in `/lib/mms-client.js`
 2. Test locally - students should load from live MMS API
 3. Deploy following standard protocol
 
@@ -428,22 +443,23 @@ After every deployment, verify these items work:
 
 ### Regular Tasks
 - Monitor Railway deployment logs for errors  
-- Update student credentials as needed
+- Update student credentials in `/lib/config/theta-credentials.js` as needed
+- Update instrument overrides in `/lib/config/instruments.js` as needed
 - Test Theta Music integration periodically
 - Verify MMS API connectivity monthly
 - Update student counts in protocols after major additions
 
 ### Emergency Protocols
 - If site is down: Check Railway dashboard and build logs
-- If students can't access Theta: Verify credentials in config.js
-- If API errors: Check MMS API status and authentication tokens
+- If students can't access Theta: Verify credentials in `/lib/config/theta-credentials.js`
+- If API errors: Check MMS API status and authentication tokens in `/lib/config/services.js`
 - If mass student data corruption: Check git history for restore points
 
 ### Backup/Recovery
 - All configuration is stored in git repository
 - Railway auto-deploys from git pushes  
 - To rollback: `git revert [commit-hash]` then `railway up`
-- Critical files to backup: config.js, soundslice-mappings.js, mms-client.js
+- Critical files to backup: `/lib/config/` directory, `/lib/soundslice-mappings.js`, `/lib/mms-client.js`
 
 ## 🔗 Important URLs
 
@@ -453,6 +469,41 @@ After every deployment, verify these items work:
 
 ---
 
-**Last Updated**: August 30, 2025  
+## 📁 Project Structure Overview
+
+The project follows a modular, scalable architecture:
+
+```
+music-school-dashboard/
+├── app/                     # Next.js app router pages & API routes
+│   ├── api/                 # API endpoints (students, notes, sync, etc.)
+│   └── dashboard/           # Dashboard pages
+├── components/              # React components organized by category
+│   ├── auth/                # Authentication & login status
+│   ├── layout/              # Main container components  
+│   ├── navigation/          # External links & quick actions
+│   ├── setup/               # Configuration wizards
+│   └── student/             # Student data display components
+├── lib/                     # Core utilities & configurations
+│   ├── config/              # Modular configuration files
+│   │   ├── services.js      # External service configs & auth
+│   │   ├── theta-credentials.js # Student Theta Music credentials
+│   │   ├── instruments.js   # Student instrument overrides
+│   │   └── url-generators.js # URL generation logic
+│   ├── config.js            # Main config entry point
+│   ├── mms-client.js        # MyMusicStaff API client
+│   └── soundslice-mappings.js # Soundslice course URLs
+└── data/                    # Static data files
+```
+
+**Key Principles:**
+- **Modular Configuration**: Config split by concern for easier maintenance
+- **Component Categories**: Organized by functional purpose for scalability
+- **Clear Separation**: Data, logic, and presentation layers are distinct
+- **Backward Compatibility**: Main config.js maintains existing imports
+
+---
+
+**Last Updated**: September 13, 2025  
 **Maintainer**: FirstChord Music School  
-**Version**: 2.0
+**Version**: 3.0 (Post-Refactoring)
