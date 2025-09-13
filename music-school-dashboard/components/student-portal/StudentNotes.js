@@ -16,31 +16,54 @@ export default function StudentNotes({ notes, notesSuccess }) {
   }
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    if (!dateString) return 'Recent Lesson';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Recent Lesson';
+    
+    return date.toLocaleDateString('en-US', {
       weekday: 'long',
       month: 'long',
       day: 'numeric'
     });
   };
 
-  // Clean up HTML from notes for student display
-  const cleanNoteText = (htmlText) => {
-    if (!htmlText) return '';
+  const formatNotesText = (text) => {
+    if (!text) return text;
     
-    // Simple HTML to text conversion for student display
-    let text = htmlText
-      .replace(/<[^>]+>/g, '') // Remove HTML tags
-      .replace(/&nbsp;/g, ' ') // Replace non-breaking spaces
-      .replace(/&quot;/g, '"') // Replace quotes
-      .replace(/&amp;/g, '&') // Replace ampersands
-      .trim();
+    // Split text by lines to process each line
+    const lines = text.split('\n');
     
-    // Limit length for student display
-    if (text.length > 300) {
-      text = text.substring(0, 300) + '...';
-    }
-    
-    return text;
+    return lines.map((line, index) => {
+      // Check if line contains **bold** text (questions from square brackets)
+      if (line.includes('**') && !line.includes('***')) {
+        // Extract the bold text and make it a proper header
+        const boldText = line.replace(/\*\*(.*?)\*\*/g, '$1').trim();
+        if (boldText) {
+          return (
+            <div key={index} className="font-bold text-gray-800 mt-4 mb-2 text-lg border-b border-gray-200 pb-1">
+              {boldText}
+            </div>
+          );
+        }
+      }
+      
+      // Check if line contains ***name:*** text (names with colons)
+      if (line.includes('***')) {
+        // Process the line to make names bold but keep same text size
+        const processedLine = line.replace(/\*\*\*(.*?)\*\*\*/g, '<strong>$1</strong>');
+        return (
+          <div key={index} className="mb-1 mt-2" dangerouslySetInnerHTML={{ __html: processedLine }} />
+        );
+      }
+      
+      // Regular text line
+      if (line.trim()) {
+        return <div key={index} className="mb-1">{line}</div>;
+      }
+      
+      // Empty line for spacing
+      return <div key={index} className="h-2"></div>;
+    });
   };
 
   return (
@@ -52,18 +75,30 @@ export default function StudentNotes({ notes, notesSuccess }) {
       
       <div className="border-l-4 border-blue-500 pl-4">
         <div className="text-sm text-gray-500 mb-2">
-          {formatDate(notes.date)}
+          {formatDate(notes.lesson_date)}
         </div>
         
-        <div className="text-gray-700 leading-relaxed">
-          {cleanNoteText(notes.text) || 'Great lesson today! Keep practicing! 🎵'}
+        <div className="text-gray-700 space-y-2">
+          {notes.attendance === 'Absent' ? (
+            <p className="italic text-gray-500">Student was absent</p>
+          ) : (
+            <div className="whitespace-pre-wrap">
+              {formatNotesText(notes.notes)}
+            </div>
+          )}
         </div>
         
-        {notes.status && (
+        {notes.attendance && (
           <div className="mt-3 text-sm">
             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-              ✓ {notes.status}
+              ✓ {notes.attendance}
             </span>
+          </div>
+        )}
+        
+        {notes.tutor_name && (
+          <div className="mt-2 text-sm text-gray-600">
+            <strong>Tutor:</strong> {notes.tutor_name}
           </div>
         )}
       </div>

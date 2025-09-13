@@ -110,7 +110,7 @@ class MMSClient {
     const endpoint = '/search/attendance';
     const body = {
       StudentIDs: [studentId],
-      Limit: 10,
+      Limit: 3,  // Optimized: Only need 3 recent records to find latest note
       Offset: 0,
       OrderBy: '-EventStartDate' // Most recent first
     };
@@ -131,6 +131,44 @@ class MMSClient {
   extractNotesFromAttendance(attendanceRecords) {
     console.log(`Processing ${attendanceRecords.length} attendance records for notes...`);
     
+    // Optimize: Since records are already sorted by EventStartDate (most recent first),
+    // find the first record with notes without processing all records
+    for (const record of attendanceRecords) {
+      if (record.StudentNote && record.StudentNote.trim() !== '') {
+        console.log(`Using most recent note from ${record.EventStartDate} with status: ${record.AttendanceStatus}`);
+        
+        // Strip HTML tags from notes for preview (keep full HTML for display if needed)
+        const cleanNotes = this.stripHtml(record.StudentNote);
+        
+        return {
+          success: true,
+          notes: cleanNotes,
+          notesHtml: record.StudentNote,
+          date: record.EventStartDate,
+          tutor: record.Teacher?.Name || 'Unknown',
+          attendanceStatus: record.AttendanceStatus,
+          duration: record.EventDuration
+        };
+      }
+    }
+
+    // If no notes found, check for any recent records (fallback logic unchanged)
+    if (attendanceRecords.length > 0) {
+      const mostRecentRecord = attendanceRecords[0];
+      return {
+        success: true,
+        notes: `No notes available for most recent lesson (${mostRecentRecord.AttendanceStatus})`,
+        date: mostRecentRecord.EventStartDate,
+        tutor: mostRecentRecord.Teacher?.Name || 'Unknown',
+        attendanceStatus: mostRecentRecord.AttendanceStatus
+      };
+    }
+
+    return { success: false, message: 'No recent lesson records found' };
+  }
+
+  // Legacy code preserved for reference (the old approach)
+  extractNotesFromAttendanceLegacy(attendanceRecords) {
     // First, let's log all records with notes to debug
     const recordsWithNotes = attendanceRecords.filter(record => 
       record.StudentNote && record.StudentNote.trim() !== ''

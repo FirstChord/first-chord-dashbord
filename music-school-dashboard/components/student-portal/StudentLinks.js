@@ -1,22 +1,55 @@
 'use client';
 
-import { Music, Gamepad2, ExternalLink } from 'lucide-react';
+import { Music, Gamepad2, ExternalLink, Copy, Check, ExternalLink as LinkIcon } from 'lucide-react';
+import { useState } from 'react';
 
 export default function StudentLinks({ student }) {
-  const handleThetaClick = () => {
-    if (student.hasTheta) {
-      // Open Theta Music in new tab
-      window.open('https://trainer.thetamusic.com/en/user/login', '_blank');
-      
-      // Show credentials in a simple way
-      setTimeout(() => {
-        alert(`Your Theta Music login:
-Username: ${student.thetaCredentials.username}
-Password: ${student.thetaCredentials.password}
+  const [showCredentials, setShowCredentials] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
 
-The login page is now open in a new tab!`);
-      }, 500);
+  const handleThetaClick = (e) => {
+    if (student.hasTheta) {
+      e.preventDefault();
+      setShowCredentials(true);
     }
+  };
+
+  const copyToClipboard = async (text, type) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopySuccess(true);
+      console.log(`${type} copied to clipboard`);
+      setTimeout(() => setCopySuccess(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy: ', err);
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    }
+  };
+
+  const openLoginPage = () => {
+    // First, try to logout by opening the logout URL, then redirect to login
+    const logoutUrl = 'https://trainer.thetamusic.com/en/user/logout';
+    const loginUrl = 'https://trainer.thetamusic.com/en/user/login';
+    
+    // Open logout URL first
+    const logoutTab = window.open(logoutUrl, '_blank');
+    
+    // After a short delay, redirect the same tab to the login page
+    setTimeout(() => {
+      if (logoutTab && !logoutTab.closed) {
+        logoutTab.location.href = loginUrl;
+      }
+    }, 1500); // 1.5 second delay to allow logout to process
+    
+    setShowCredentials(false);
   };
 
   return (
@@ -93,6 +126,77 @@ The login page is now open in a new tab!`);
           🌟 <strong>Keep it up!</strong> Regular practice is the key to becoming a great musician!
         </p>
       </div>
+
+      {/* Credentials Modal */}
+      {showCredentials && student.hasTheta && (
+        <div className="fixed inset-0 backdrop-blur-sm bg-white bg-opacity-10 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl border">
+            <div className="text-center mb-4">
+              <Gamepad2 className="w-12 h-12 text-green-500 mx-auto mb-2" />
+              <h3 className="text-lg font-semibold text-gray-800">
+                Theta Music Games Login
+              </h3>
+              <p className="text-sm text-gray-600">
+                Use this for both username and password
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {/* Single Credential */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Username & Password
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={student.thetaCredentials.username}
+                    readOnly
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-800 font-mono text-center text-lg"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => copyToClipboard(student.thetaCredentials.username, 'Credentials')}
+                className={`flex-1 px-4 py-2 text-white rounded-lg transition-colors flex items-center justify-center gap-2 ${
+                  copySuccess 
+                    ? 'bg-green-500 hover:bg-green-600' 
+                    : 'bg-blue-500 hover:bg-blue-600'
+                }`}
+              >
+                {copySuccess ? (
+                  <>
+                    <Check className="w-4 h-4" />
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4" />
+                    Copy
+                  </>
+                )}
+              </button>
+              <button
+                onClick={openLoginPage}
+                className="flex-1 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                <LinkIcon className="w-4 h-4" />
+                Go to Login
+              </button>
+            </div>
+
+            <button
+              onClick={() => setShowCredentials(false)}
+              className="w-full mt-3 px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
