@@ -58,20 +58,24 @@ export async function getStudentData(studentId) {
   if (!studentInfo) return null;
 
   try {
-    // Reuse existing notes API endpoint
-    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-    const response = await fetch(`${baseUrl}/api/notes/${studentId}`, {
-      cache: 'no-store' // Always get fresh notes
-    });
+    // Use optimized API call for student portals
+    const mmsClient = (await import('@/lib/mms-client')).default;
+    const notesResult = await mmsClient.getStudentNotes(studentId, { studentPortal: true });
     
-    if (response.ok) {
-      const notesData = await response.json();
+    if (notesResult.success) {
+      // Transform the MMS data format to match what StudentNotes expects
+      const transformedNotes = {
+        lesson_date: notesResult.date,
+        notes: notesResult.notes,
+        tutor_name: notesResult.tutor,
+        attendance: notesResult.attendanceStatus
+      };
       
       return {
         ...studentInfo,
-        notes: notesData.notes,
-        notesSuccess: notesData.success,
-        notesSource: notesData.source
+        notes: transformedNotes,
+        notesSuccess: true,
+        notesSource: 'mms-direct'
       };
     } else {
       // Return student info without notes if API fails

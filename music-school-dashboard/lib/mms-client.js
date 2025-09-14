@@ -57,16 +57,17 @@ class MMSClient {
     console.log('MMS Token set: Using hardcoded token');
   }
 
-  async fetchFromMMS(endpoint, method = 'GET', body = null) {
+  async fetchFromMMS(endpoint, method = 'GET', body = null, options = {}) {
     // Always use the hardcoded token - never rely on external sources
     const token = this.token;
+    const quiet = options.quiet || false; // Add quiet mode for student portals
     
     if (!token) {
       console.error('No MMS token available');
       return { success: false, error: 'No authentication token' };
     }
 
-    const options = {
+    const fetchOptions = {
       method,
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -77,19 +78,27 @@ class MMSClient {
     };
 
     if (body) {
-      options.body = JSON.stringify(body);
+      fetchOptions.body = JSON.stringify(body);
     }
 
     try {
-      console.log(`Making request to: ${this.baseUrl}${endpoint}`);
-      console.log('Request options:', { ...options, headers: { ...options.headers, Authorization: 'Bearer [HIDDEN]' } });
+      if (!quiet) {
+        console.log(`Making request to: ${this.baseUrl}${endpoint}`);
+        console.log('Request options:', { ...fetchOptions, headers: { ...fetchOptions.headers, Authorization: 'Bearer [HIDDEN]' } });
+      }
       
-      const response = await fetch(`${this.baseUrl}${endpoint}`, options);
-      console.log('Response status:', response.status);
-      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+      const response = await fetch(`${this.baseUrl}${endpoint}`, fetchOptions);
+      
+      if (!quiet) {
+        console.log('Response status:', response.status);
+        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+      }
       
       const responseText = await response.text();
-      console.log('Raw response:', responseText.substring(0, 200) + (responseText.length > 200 ? '...' : ''));
+      
+      if (!quiet) {
+        console.log('Raw response:', responseText.substring(0, 200) + (responseText.length > 200 ? '...' : ''));
+      }
       
       if (!responseText) {
         return { success: false, error: 'Empty response from API' };
@@ -103,8 +112,12 @@ class MMSClient {
     }
   }
 
-  async getStudentNotes(studentId) {
-    console.log(`Fetching notes for student: ${studentId}`);
+  async getStudentNotes(studentId, options = {}) {
+    const studentPortal = options.studentPortal || false;
+    
+    if (!studentPortal) {
+      console.log(`Fetching notes for student: ${studentId}`);
+    }
     
     // Get attendance records which contain the lesson notes
     const endpoint = '/search/attendance';
@@ -115,10 +128,15 @@ class MMSClient {
       OrderBy: '-EventStartDate' // Most recent first
     };
 
-    const result = await this.fetchFromMMS(endpoint, 'POST', body);
+    const result = await this.fetchFromMMS(endpoint, 'POST', body, { quiet: studentPortal });
     
     if (result.success && result.data && result.data.ItemSubset) {
-      return this.extractNotesFromAttendance(result.data.ItemSubset);
+      // For student portals, only process first 5 records to save CPU
+      const recordsToProcess = studentPortal ? 
+        result.data.ItemSubset.slice(0, 5) : 
+        result.data.ItemSubset;
+        
+      return this.extractNotesFromAttendance(recordsToProcess, { studentPortal });
     }
 
     return { 
@@ -128,14 +146,20 @@ class MMSClient {
     };
   }
 
-  extractNotesFromAttendance(attendanceRecords) {
-    console.log(`Processing ${attendanceRecords.length} attendance records for notes...`);
+  extractNotesFromAttendance(attendanceRecords, options = {}) {
+    const studentPortal = options.studentPortal || false;
+    
+    if (!studentPortal) {
+      console.log(`Processing ${attendanceRecords.length} attendance records for notes...`);
+    }
     
     // Optimize: Since records are already sorted by EventStartDate (most recent first),
     // find the first record with notes without processing all records
     for (const record of attendanceRecords) {
       if (record.StudentNote && record.StudentNote.trim() !== '') {
-        console.log(`Using most recent note from ${record.EventStartDate} with status: ${record.AttendanceStatus}`);
+        if (!studentPortal) {
+          console.log(`Using most recent note from ${record.EventStartDate} with status: ${record.AttendanceStatus}`);
+        }
         
         // Strip HTML tags from notes for preview (keep full HTML for display if needed)
         const cleanNotes = this.stripHtml(record.StudentNote);
