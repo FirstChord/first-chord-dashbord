@@ -123,7 +123,7 @@ class MMSClient {
     const endpoint = '/search/attendance';
     const body = {
       StudentIDs: [studentId],
-      Limit: 3,  // Optimized: Only need 3 recent records to find latest note
+      Limit: studentPortal ? 25 : 3,  // Student portals need more records to find notes
       Offset: 0,
       OrderBy: '-EventStartDate' // Most recent first
     };
@@ -131,12 +131,8 @@ class MMSClient {
     const result = await this.fetchFromMMS(endpoint, 'POST', body, { quiet: studentPortal });
     
     if (result.success && result.data && result.data.ItemSubset) {
-      // For student portals, only process first 5 records to save CPU
-      const recordsToProcess = studentPortal ? 
-        result.data.ItemSubset.slice(0, 5) : 
-        result.data.ItemSubset;
-        
-      return this.extractNotesFromAttendance(recordsToProcess, { studentPortal });
+      // Process all retrieved records to find notes (no artificial CPU limitation)
+      return this.extractNotesFromAttendance(result.data.ItemSubset, { studentPortal });
     }
 
     return { 
