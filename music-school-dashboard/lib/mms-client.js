@@ -123,7 +123,7 @@ class MMSClient {
     const endpoint = '/search/attendance';
     const body = {
       StudentIDs: [studentId],
-      Limit: studentPortal ? 25 : 3,  // Student portals need more records to find notes
+      Limit: 3,  // API returns all records regardless, but keep small for efficiency
       Offset: 0,
       OrderBy: '-EventStartDate' // Most recent first
     };
