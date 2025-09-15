@@ -51,6 +51,7 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_2lJMJl': 'https://www.soundslice.com/courses/11618/', // Mohammed Abdelrahman
   'sdt_BlyZJD': 'https://www.soundslice.com/courses/7951/', // Rachael Hill
   'sdt_2lJyJj': 'https://www.soundslice.com/courses/11616/', // Rayan Abdelrahman
+  'sdt_LT9sJN': 'https://www.soundslice.com/courses/17279/', // Sangat Singh
   'sdt_vHS3JK': 'https://www.soundslice.com/courses/8658/', // Sandy Morgan
   'sdt_vLG0JL': 'https://www.soundslice.com/courses/8658/', // Sonny H
   'sdt_sfbtJ5': 'https://www.soundslice.com/courses/12549/', // Stella Hart

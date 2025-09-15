@@ -13,6 +13,7 @@ export const STUDENT_URL_MAPPINGS = {
   'leonardo': 'sdt_KKfGJ0',           // Leonardo Matassoni
   'pablo': 'sdt_Kq3RJW',              // Pablo Cunningham
   'rose': 'sdt_BDsRJ9',               // Rose Drew
+  'sangat': 'sdt_LT9sJN',             // Sangat Singh
   
   // Extended mappings for more students (comment out duplicates)
   'alister': 'sdt_KwbvJG',            // Alister McGhee

@@ -56,18 +56,18 @@ export default function StudentDashboard({ student }) {
       
       {/* Header */}
       <header className="bg-blue-100 shadow-sm border-b border-blue-100/30">
-        <div className="px-6 py-6">
+        <div className="px-4 sm:px-6 py-4 sm:py-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-800 uppercase tracking-wide" style={{ fontFamily: '"Cooper Hewitt", "Nimbus Sans L", "Arial", sans-serif' }}>
+            <h1 className="text-lg sm:text-2xl font-bold text-gray-800 uppercase tracking-wide" style={{ fontFamily: '"Cooper Hewitt", "Nimbus Sans L", "Arial", sans-serif' }}>
               {student.name}'S MUSIC DASHBOARD
             </h1>
-            <p className="text-gray-600">Keep practicing and have fun! 🎵</p>
+            <p className="text-sm sm:text-base text-gray-600">Keep practicing and have fun! 🎵</p>
           </div>
         </div>
       </header>
 
-      <div className="p-6 max-w-7xl mx-auto relative z-10">        
-        <div className="grid gap-6 lg:grid-cols-3">
+      <div className="p-4 sm:p-6 max-w-7xl mx-auto relative z-10">        
+        <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
           {/* Notes Panel - Left Side (wider) */}
           <div className="lg:col-span-2">
             <StudentNotes 
@@ -83,9 +83,9 @@ export default function StudentDashboard({ student }) {
         </div>
 
         {/* Encouraging Message */}
-        <div className="mt-8 text-center">
-          <div className="bg-white/80 backdrop-blur rounded-xl p-4 shadow-sm">
-            <p className="text-gray-700 font-medium">
+        <div className="mt-6 sm:mt-8 text-center">
+          <div className="bg-white/80 backdrop-blur rounded-xl p-3 sm:p-4 shadow-sm">
+            <p className="text-sm sm:text-base text-gray-700 font-medium">
               🌟 Remember: Every great musician started with practice! Keep going! 🌟
             </p>
           </div>
@@ -93,16 +93,19 @@ export default function StudentDashboard({ student }) {
       </div>
 
       {/* First Chord Logo - Bottom Right Corner */}
-      <div className="fixed bottom-4 right-4 z-10">
+      <div className="fixed bottom-2 right-2 sm:bottom-4 sm:right-4 z-10 pointer-events-none">
         <Image
           src="/first-chord-banner.png"
           alt="First Chord Music School - Explore Music Together"
-          width={300}
-          height={169}
-          className="rounded-lg opacity-90 hover:opacity-100 transition-opacity duration-300"
+          width={150}
+          height={85}
+          className="sm:w-[250px] sm:h-[141px] rounded-lg opacity-80 sm:opacity-90 hover:opacity-100 transition-opacity duration-300"
           priority={false}
         />
       </div>
+      
+      {/* Bottom padding to prevent content overlap with logo */}
+      <div className="h-20 sm:h-24"></div>
     </div>
   );
 }

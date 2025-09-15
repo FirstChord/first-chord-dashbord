@@ -49,6 +49,7 @@ export const thetaCredentials = {
   'sdt_2lJMJl': 'mohammedfc',   // Mohammed Abdelrahman
   'sdt_BlyZJD': 'rachaelfc',    // Rachael Hill
   'sdt_2lJyJj': 'rayanfc',      // Rayan Abdelrahman
+  'sdt_LT9sJN': 'sangatfc',     // Sangat Singh
   'sdt_vHS3JK': 'sandyfc',      // Sandy Morgan
   'sdt_vLG0JL': 'sonnyfc',      // Sonny H
   'sdt_sfbtJ5': 'stellafc',     // Stella Hart
