@@ -1,9 +1,13 @@
 import { getStudentData } from '@/lib/student-helpers';
+import { getStudentIdFromUrl } from '@/lib/student-url-mappings';
 import StudentDashboard from '@/components/student-portal/StudentDashboard';
 
 export default async function StudentPage({ params }) {
   const resolvedParams = await params;
-  const studentId = resolvedParams.studentId;
+  const urlParam = resolvedParams.studentId;
+  
+  // Try to resolve friendly URL to student ID, fallback to original ID
+  const studentId = getStudentIdFromUrl(urlParam) || urlParam;
   
   // Get student data (includes validation and notes)
   const studentData = await getStudentData(studentId);
@@ -26,7 +30,11 @@ export default async function StudentPage({ params }) {
 // Generate metadata for the page
 export async function generateMetadata({ params }) {
   const resolvedParams = await params;
-  const studentData = await getStudentData(resolvedParams.studentId);
+  const urlParam = resolvedParams.studentId;
+  
+  // Try to resolve friendly URL to student ID, fallback to original ID
+  const studentId = getStudentIdFromUrl(urlParam) || urlParam;
+  const studentData = await getStudentData(studentId);
   
   if (!studentData) {
     return {

@@ -4,10 +4,18 @@ import { thetaCredentials } from '@/lib/config/theta-credentials';
 // Import existing soundslice mappings
 import SOUNDSLICE_MAPPINGS from '@/lib/soundslice-mappings';
 
-// Valid student IDs (security)
+// Valid student IDs (security) - 10 test students with friendly URLs
 const VALID_STUDENT_IDS = [
-  'sdt_H6CvJv', // Mathilde Thallon
-  // Add more students as the portal expands
+  'sdt_H6CvJv', // Mathilde thallon (/mathilde)
+  'sdt_gwyQJr', // Alex Chang (/alex)
+  'sdt_BDHKJs', // Archie Toner (/archie)
+  'sdt_K3h1JJ', // Aria Thomson (/aria)
+  'sdt_cZDlJQ', // Finlay Cackett (/finlay)
+  'sdt_K9psJ9', // Hudson Woodford (/hudson)
+  'sdt_K9pNJt', // Joel Adler (/joel)
+  'sdt_KKfGJ0', // Leonardo Matassoni (/leonardo)
+  'sdt_Kq3RJW', // Pablo Cunningham (/pablo)
+  'sdt_BDsRJ9', // Rose Drew (/rose)
 ];
 
 export function isValidStudentId(studentId) {
