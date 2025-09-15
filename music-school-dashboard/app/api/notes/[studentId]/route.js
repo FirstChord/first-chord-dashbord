@@ -1,4 +1,4 @@
-import mmsClient from '@/lib/mms-client';
+import mmsClient from '@/lib/mms-client-cached';
 
 // BYPASS DATABASE - GET NOTES DIRECTLY FROM MMS
 export async function POST(request, { params }) {

@@ -1,4 +1,4 @@
-import mmsClient from '@/lib/mms-client';
+import mmsClient from '@/lib/mms-client-cached';
 import { enhanceStudentsWithSoundslice } from '@/lib/soundslice-mappings';
 
 // BYPASS DATABASE - JUST USE MMS DATA DIRECTLY WITH HARDCODED SOUNDSLICE

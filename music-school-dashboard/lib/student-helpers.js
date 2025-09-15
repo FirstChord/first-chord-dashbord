@@ -58,8 +58,8 @@ export async function getStudentData(studentId) {
   if (!studentInfo) return null;
 
   try {
-    // Use optimized API call for student portals
-    const mmsClient = (await import('@/lib/mms-client')).default;
+    // Use optimized API call with caching for student portals
+    const mmsClient = (await import('@/lib/mms-client-cached')).default;
     const notesResult = await mmsClient.getStudentNotes(studentId, { studentPortal: true });
     
     if (notesResult.success) {
