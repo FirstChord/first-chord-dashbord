@@ -160,6 +160,7 @@ export const STUDENT_URL_MAPPINGS = {
   'tormad': 'sdt_cB0YJd',             // Tormad MacRobert
   'vaila': 'sdt_w6T7Jd',              // Vaila Donaghey
   'vaidik': 'sdt_yhJTJ0',             // Vaidik Gupta
+  'vanessa': 'sdt_638hJ9',            // Vanessa
   'yahya': 'sdt_Fq8ZJ1',              // Yahya Faraj
   'yarah': 'sdt_QP01Jp',              // Yarah Love
   'zayn': 'sdt_NxMZJz',               // Zayn Speirs

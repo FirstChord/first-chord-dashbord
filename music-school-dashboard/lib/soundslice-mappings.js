@@ -178,7 +178,8 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_MhHLJ0': 'https://www.soundslice.com/courses/17214/', // Rebecca Mapata
   'sdt_pGqXJ9': 'https://www.soundslice.com/courses/8552/', // Silver-Ray Noramly
   'sdt_LqT2J4': 'https://www.soundslice.com/courses/17253/', // Fraser Ord
-  'sdt_L5l5JD': 'https://www.soundslice.com/courses/17254/' // Dimitra Ntarmou
+  'sdt_L5l5JD': 'https://www.soundslice.com/courses/17254/', // Dimitra Ntarmou
+  'sdt_638hJ9': 'https://www.soundslice.com/courses/16881/' // Vanessa
 };
 
 // Function to get Soundslice course for a student

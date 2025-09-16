@@ -82,6 +82,7 @@ export const thetaCredentials = {
   'sdt_pGqXJ9': 'silverrayfc',      // Silver-Ray Noramly
   'sdt_LqT2J4': 'fraserfc',         // Fraser Ord
   'sdt_L5l5JD': 'dimitrafc',        // Dimitra Ntarmou
+  'sdt_638hJ9': 'vanessafc',        // Vanessa
   
   // Fennella's students with Theta Music credentials
   'sdt_BDH9J3': 'ceitdhfc',     // Ceitdh Qui (moved from David)
