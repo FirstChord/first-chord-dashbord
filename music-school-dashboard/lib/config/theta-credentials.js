@@ -183,12 +183,12 @@ export const thetaCredentials = {
   'sdt_DdxtJZ': 'rosiefc',          // Rosie Ward
   'sdt_pFYFJT': 'rosie & johnnyfc', // Rosie & Johnny Kinniburgh
   'sdt_w6TBJ3': 'rowanfc',          // Rowan Moore
-  'sdt_D9ftJB': 'sadiefc',          // Sadie Lowe
   'sdt_pT5MJz': 'sonnyfc',          // Sonny Ford
   'sdt_Nt4LJ3': 'stellafc',         // Stella French
   'sdt_QjMGJc': 'carlafc',          // Carla Jurado
   'sdt_6yvpJb': 'lesfc',            // Les Graham
   'sdt_6PjKJF': 'ruaraidhfc',       // Ruaraidh Somerville
   'sdt_6ZrzJq': 'icarofc',          // Icaro Segnini-Hernandez
-  'sdt_cZ39Jz': 'anniefc'           // Annie Brown
+  'sdt_cZ39Jz': 'anniefc',          // Annie Brown
+  'sdt_D9ftJB': 'sadiefc'           // Sadie Lowe
 };

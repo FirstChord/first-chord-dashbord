@@ -87,7 +87,6 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_DdxtJZ': 'https://www.soundslice.com/courses/10246/', // Rosie Ward
   'sdt_pFYFJT': 'https://www.soundslice.com/courses/6131/', // Rosie & Johnny Kinniburgh
   'sdt_w6TBJ3': 'https://www.soundslice.com/courses/8464/', // Rowan Moore
-  'sdt_D9ftJB': 'https://www.soundslice.com/courses/10247/', // Sadie Lowe
   'sdt_pT5MJz': 'https://www.soundslice.com/courses/6045/', // Sonny Ford
   'sdt_Nt4LJ3': 'https://www.soundslice.com/courses/9135/', // Stella French
   'sdt_QjMGJc': 'https://www.soundslice.com/courses/15453/', // Carla Jurado
@@ -95,6 +94,7 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_6PjKJF': 'https://www.soundslice.com/courses/17041/', // Ruaraidh Somerville
   'sdt_6ZrzJq': 'https://www.soundslice.com/courses/17058/', // Icaro Segnini-Hernandez
   'sdt_cZ39Jz': 'https://www.soundslice.com/courses/17182/', // Annie Brown
+  'sdt_D9ftJB': 'https://www.soundslice.com/courses/10247/', // Sadie Lowe
   
   // Finn's students
   'sdt_cZDlJQ': 'https://www.soundslice.com/courses/16374/', // Finlay Cackett

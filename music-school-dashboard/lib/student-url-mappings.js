@@ -135,7 +135,6 @@ export const STUDENT_URL_MAPPINGS = {
   'rowan': 'sdt_w6TBJ3',              // Rowan Moore
   'ruaraidh': 'sdt_6PjKJF',           // Ruaraidh Somerville
   'ryan': 'sdt_2grxJL',               // Ryan Ofee
-  'sadie': 'sdt_D9ftJB',              // Sadie Lowe
   'saketh': 'sdt_yLv3J7',             // Saketh Pamidimarry
   'sandy': 'sdt_vHS3JK',              // Sandy Morgan
   'santi': 'sdt_Kv5XJL',              // Santi Freeth
@@ -166,6 +165,7 @@ export const STUDENT_URL_MAPPINGS = {
   'zayn': 'sdt_NxMZJz',               // Zayn Speirs
   'zia': 'sdt_NSmyJ3',                // Zia Permall
   'zoe': 'sdt_y0SPJJ',                // Zoe Bannatyne
+  'sadie': 'sdt_D9ftJB',              // Sadie Lowe
 };
 
 // Reverse mapping for getting friendly name from student ID

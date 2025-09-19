@@ -34,11 +34,11 @@ const VALID_STUDENT_IDS = [
   'sdt_6n94J7', 'sdt_v1lcJ0', 'sdt_HVbNJk', 'sdt_N8lVJ1', 'sdt_2lJMJl', 'sdt_QPqsJC', 'sdt_gWXHJN', 'sdt_QNVYJ4',
   'sdt_vgjdJv', 'sdt_6Zd7J3', 'sdt_cYvdJp', 'sdt_yLvlJx', 'sdt_cGPBJ3', 'sdt_6RJkJp', 'sdt_Fq8vJj', 'sdt_ccgQJ8',
   'sdt_Q2ntJX', 'sdt_K9pMJg', 'sdt_BlyZJD', 'sdt_2lJyJj', 'sdt_MhHLJ0', 'sdt_BkflJy', 'sdt_yXFnJm', 'sdt_D9rnJT',
-  'sdt_s2JpJx', 'sdt_Kq2TJR', 'sdt_pFYFJT', 'sdt_DdxtJZ', 'sdt_w6TBJ3', 'sdt_6PjKJF', 'sdt_2grxJL', 'sdt_D9ftJB',
+  'sdt_s2JpJx', 'sdt_Kq2TJR', 'sdt_pFYFJT', 'sdt_DdxtJZ', 'sdt_w6TBJ3', 'sdt_6PjKJF', 'sdt_2grxJL',
   'sdt_yLv3J7', 'sdt_vHS3JK', 'sdt_Kv5XJL', 'sdt_cqlvJb', 'sdt_cfGhJh', 'sdt_pGqXJ9', 'sdt_KKfZJC', 'sdt_pT5MJz',
   'sdt_vLG0JL', 'sdt_HlXyJl', 'sdt_MPMWJy', 'sdt_x48LJT', 'sdt_Nt4LJ3', 'sdt_sfbtJ5', 'sdt_DdZxJQ', 'sdt_cJDjJj',
   'sdt_NS6bJW', 'sdt_BDsMJk', 'sdt_BDHdJ4', 'sdt_c44QJk', 'sdt_N0z0Jq', 'sdt_cB0YJd', 'sdt_w6T7Jd', 'sdt_yhJTJ0',
-  'sdt_Fq8ZJ1', 'sdt_QP01Jp', 'sdt_NxMZJz', 'sdt_NSmyJ3', 'sdt_y0SPJJ', 'sdt_638hJ9'
+  'sdt_Fq8ZJ1', 'sdt_QP01Jp', 'sdt_NxMZJz', 'sdt_NSmyJ3', 'sdt_y0SPJJ', 'sdt_638hJ9', 'sdt_D9ftJB'
 ];
 
 export function isValidStudentId(studentId) {

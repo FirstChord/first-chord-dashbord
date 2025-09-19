@@ -149,15 +149,60 @@ class MMSClient {
       console.log(`Processing ${attendanceRecords.length} attendance records for notes...`);
     }
     
-    // Optimize: Since records are already sorted by EventStartDate (most recent first),
-    // find the first record with notes without processing all records
+    // Enhanced algorithm to handle edge cases where recent notes are in completed lessons
+    const now = new Date();
+    const sixMonthsAgo = new Date(now.getTime() - (6 * 30 * 24 * 60 * 60 * 1000));
+    
+    // Phase 1: Look for notes in recent completed lessons (Present, AbsentNotice, etc.)
+    // This fixes the issue where future scheduled lessons block real completed lessons
+    const completedStatuses = ['Present', 'AbsentNotice', 'AbsentNoMakeup', 'TeacherAbsentMakeup'];
+    const recentCompletedLessons = attendanceRecords.filter(record => {
+      const recordDate = new Date(record.EventStartDate);
+      return completedStatuses.includes(record.AttendanceStatus) && 
+             recordDate >= sixMonthsAgo && 
+             recordDate <= now;
+    });
+    
+    // Sort recent completed lessons by date (most recent first)
+    recentCompletedLessons.sort((a, b) => new Date(b.EventStartDate) - new Date(a.EventStartDate));
+    
+    if (!studentPortal) {
+      console.log(`Found ${recentCompletedLessons.length} recent completed lessons in the last 6 months`);
+    }
+    
+    // Find most recent completed lesson with notes
+    for (const record of recentCompletedLessons) {
+      if (record.StudentNote && record.StudentNote.trim() !== '') {
+        if (!studentPortal) {
+          console.log(`Found recent notes in completed lesson from ${record.EventStartDate} with status: ${record.AttendanceStatus}`);
+        }
+        
+        const cleanNotes = this.stripHtml(record.StudentNote);
+        
+        return {
+          success: true,
+          notes: cleanNotes,
+          notesHtml: record.StudentNote,
+          date: record.EventStartDate,
+          tutor: record.Teacher?.Name || 'Unknown',
+          attendanceStatus: record.AttendanceStatus,
+          duration: record.EventDuration
+        };
+      }
+    }
+    
+    // Phase 2: Fall back to original algorithm (any record with notes)
+    // This ensures we don't break existing working students
+    if (!studentPortal) {
+      console.log(`No recent completed lessons with notes found, falling back to original algorithm...`);
+    }
+    
     for (const record of attendanceRecords) {
       if (record.StudentNote && record.StudentNote.trim() !== '') {
         if (!studentPortal) {
-          console.log(`Using most recent note from ${record.EventStartDate} with status: ${record.AttendanceStatus}`);
+          console.log(`Using fallback note from ${record.EventStartDate} with status: ${record.AttendanceStatus}`);
         }
         
-        // Strip HTML tags from notes for preview (keep full HTML for display if needed)
         const cleanNotes = this.stripHtml(record.StudentNote);
         
         return {
