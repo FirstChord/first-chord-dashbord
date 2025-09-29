@@ -34,6 +34,10 @@ class MMSClient {
       'Tom Walters': 'tch_mYJJR',
       'David': 'tch_z2j2Jf',
       'David Husz': 'tch_z2j2Jf',
+      // New tutors - placeholder IDs (to be updated with real MMS teacher IDs)
+      'Kenny': 'tch_zsyfJr',
+      'Maks': 'tch_placeholder_maks', 
+      'Ines': 'tch_placeholder_ines',
       // Lowercase aliases for easy access
       'finn': 'tch_QhxJJ',
       'arion': 'tch_zplpJw',
@@ -48,7 +52,10 @@ class MMSClient {
       'stef': 'tch_z5YmJX',
       'tom': 'tch_mYJJR',
       'david': 'tch_z2j2Jf',
-      'david husz': 'tch_z2j2Jf'
+      'david husz': 'tch_z2j2Jf',
+      'kenny': 'tch_zsyfJr',
+      'maks': 'tch_placeholder_maks',
+      'ines': 'tch_placeholder_ines'
     };
   }
 

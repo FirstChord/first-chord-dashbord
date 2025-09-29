@@ -116,7 +116,30 @@ Applied protocol successfully to Tom's student Charlie Norton:
 - Enhanced algorithm handles both edge cases and normal scenarios
 - Monitor for additional students with similar patterns using this protocol
 
+## Teacher ID Discovery Protocol
+
+### How to Find MMS Teacher IDs
+**Method**: Use MMS Payroll Network Console Inspection
+
+**Steps**:
+1. Log into MMS admin panel
+2. Navigate to the teacher's profile
+3. Click on their "Payroll" section
+4. Open browser Network Console (F12 → Network tab)
+5. Check the "Payload" tab in the network requests
+6. The teacher ID will appear in the network requests (format: `tch_XXXXXX`)
+
+**Example**: Kenny Bates → Payroll → Network Console → `tch_zsyfJr`
+
+**Implementation**: Update teacher ID mappings in `/lib/mms-client.js`:
+```javascript
+// Replace placeholder with real ID
+'Kenny': 'tch_placeholder_kenny', // OLD
+'Kenny': 'tch_zsyfJr',            // NEW
+```
+
 ## Notes
 - MMS system has inconsistent note storage patterns between students
 - Enhanced algorithm is backward compatible and maintains performance
 - Protocol can be applied systematically to investigate any reported issues
+- Teacher ID discovery via payroll network console is reliable and consistent

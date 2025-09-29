@@ -179,7 +179,15 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_pGqXJ9': 'https://www.soundslice.com/courses/8552/', // Silver-Ray Noramly
   'sdt_LqT2J4': 'https://www.soundslice.com/courses/17253/', // Fraser Ord
   'sdt_L5l5JD': 'https://www.soundslice.com/courses/17254/', // Dimitra Ntarmou
-  'sdt_638hJ9': 'https://www.soundslice.com/courses/16881/' // Vanessa
+  'sdt_638hJ9': 'https://www.soundslice.com/courses/16881/', // Vanessa
+  
+  // Kenny's students
+  'sdt_L9nZJs': 'https://www.soundslice.com/courses/17288/', // Craig Mcaulay
+  'sdt_LTf0Jx': 'https://www.soundslice.com/courses/17290/', // Olivia Wong
+  'sdt_cZsDJp': 'https://www.soundslice.com/courses/17317/', // Katie Brown
+  'sdt_cZsMJD': 'https://www.soundslice.com/courses/17318/', // Nina Brown
+  'sdt_LxdXJC': 'https://www.soundslice.com/courses/17355/', // Joe Wallace
+  'sdt_60tqJf': 'https://www.soundslice.com/courses/17354/', // Iain Morrison
 };
 
 // Function to get Soundslice course for a student

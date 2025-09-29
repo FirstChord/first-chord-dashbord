@@ -38,7 +38,15 @@ const VALID_STUDENT_IDS = [
   'sdt_yLv3J7', 'sdt_vHS3JK', 'sdt_Kv5XJL', 'sdt_cqlvJb', 'sdt_cfGhJh', 'sdt_pGqXJ9', 'sdt_KKfZJC', 'sdt_pT5MJz',
   'sdt_vLG0JL', 'sdt_HlXyJl', 'sdt_MPMWJy', 'sdt_x48LJT', 'sdt_Nt4LJ3', 'sdt_sfbtJ5', 'sdt_DdZxJQ', 'sdt_cJDjJj',
   'sdt_NS6bJW', 'sdt_BDsMJk', 'sdt_BDHdJ4', 'sdt_c44QJk', 'sdt_N0z0Jq', 'sdt_cB0YJd', 'sdt_w6T7Jd', 'sdt_yhJTJ0',
-  'sdt_Fq8ZJ1', 'sdt_QP01Jp', 'sdt_NxMZJz', 'sdt_NSmyJ3', 'sdt_y0SPJJ', 'sdt_638hJ9', 'sdt_D9ftJB'
+  'sdt_Fq8ZJ1', 'sdt_QP01Jp', 'sdt_NxMZJz', 'sdt_NSmyJ3', 'sdt_y0SPJJ', 'sdt_638hJ9', 'sdt_D9ftJB',
+  
+  // Kenny's students
+  'sdt_L9nZJs', // Craig Mcaulay (/craig)
+  'sdt_LTf0Jx', // Olivia Wong (/olivia-w)  
+  'sdt_cZsDJp', // Katie Brown (/katie)
+  'sdt_cZsMJD', // Nina Brown (/nina)
+  'sdt_LxdXJC', // Joe Wallace (/joe)
+  'sdt_60tqJf', // Iain Morrison (/iain)
 ];
 
 export function isValidStudentId(studentId) {

@@ -166,6 +166,14 @@ export const STUDENT_URL_MAPPINGS = {
   'zia': 'sdt_NSmyJ3',                // Zia Permall
   'zoe': 'sdt_y0SPJJ',                // Zoe Bannatyne
   'sadie': 'sdt_D9ftJB',              // Sadie Lowe
+  
+  // Kenny's students
+  'craig': 'sdt_L9nZJs',             // Craig Mcaulay  
+  'olivia-w': 'sdt_LTf0Jx',           // Olivia Wong
+  'katie': 'sdt_cZsDJp',             // Katie Brown
+  'nina': 'sdt_cZsMJD',              // Nina Brown
+  'joe': 'sdt_LxdXJC',                // Joe Wallace
+  'iain': 'sdt_60tqJf',               // Iain Morrison
 };
 
 // Reverse mapping for getting friendly name from student ID

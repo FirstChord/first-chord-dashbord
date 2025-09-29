@@ -190,5 +190,13 @@ export const thetaCredentials = {
   'sdt_6PjKJF': 'ruaraidhfc',       // Ruaraidh Somerville
   'sdt_6ZrzJq': 'icarofc',          // Icaro Segnini-Hernandez
   'sdt_cZ39Jz': 'anniefc',          // Annie Brown
-  'sdt_D9ftJB': 'sadiefc'           // Sadie Lowe
+  'sdt_D9ftJB': 'sadiefc',          // Sadie Lowe
+  
+  // Kenny's students with Theta Music credentials
+  'sdt_L9nZJs': 'craigfc',          // Craig Mcaulay
+  'sdt_LTf0Jx': 'oliviafc',         // Olivia Wong
+  'sdt_cZsDJp': 'katiefc',          // Katie Brown
+  'sdt_cZsMJD': 'ninafc',           // Nina Brown
+  // 'sdt_LxdXJC': Joe Wallace (no Theta credentials)
+  // 'sdt_TBD': Iain Morrison (no MMS ID yet, no Theta credentials)
 };
