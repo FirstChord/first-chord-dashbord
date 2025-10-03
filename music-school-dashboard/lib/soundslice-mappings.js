@@ -173,6 +173,7 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_2grxJL': 'https://www.soundslice.com/courses/16914/', // Ryan Ofee
   'sdt_L5tgJX': 'https://www.soundslice.com/courses/17255/', // Alexander Palmer
   'sdt_6RJkJp': 'https://www.soundslice.com/courses/17097/', // Omar Mukhtar
+  'sdt_635GJ0': 'https://www.soundslice.com/courses/17489/', // Ritisha Paryani
   
   // David's students
   'sdt_MhHLJ0': 'https://www.soundslice.com/courses/17214/', // Rebecca Mapata

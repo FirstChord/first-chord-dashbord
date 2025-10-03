@@ -54,6 +54,7 @@ export const instrumentOverrides = {
   'sdt_2grxJL': 'Piano',        // Ryan Ofee
   'sdt_L5tgJX': 'Piano',        // Alexander Palmer
   'sdt_6RJkJp': 'Piano',        // Omar Mukhtar
+  'sdt_635GJ0': 'Piano',        // Ritisha Paryani
   
   // Tom's students with correct instruments (defaulting to Guitar - update as needed)
   'sdt_BtxmJ4': 'Guitar',       // Carol Turner

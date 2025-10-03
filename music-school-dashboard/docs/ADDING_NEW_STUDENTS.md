@@ -1,5 +1,16 @@
 # Adding New Students to the Portal System
 
+**Last Updated**: September 29, 2025  
+**Verified Working**: Kenny's 6 students with URL simplification  
+**Related Files**: [DEPLOYMENT_PROTOCOLS.md](../DEPLOYMENT_PROTOCOLS.md), [NOTES_EDGE_CASE_PROTOCOL.md](../NOTES_EDGE_CASE_PROTOCOL.md)
+
+## 🚨 Quick Fixes
+- **Student portal shows 404?** → Check friendly name in `student-url-mappings.js` and student ID in `VALID_STUDENT_IDS`
+- **Student loads but shows error?** → Verify MMS ID format and student exists in MMS system
+- **Missing Soundslice/Theta?** → Check mappings in respective files and confirm student assignments
+- **Naming conflicts?** → Use conflict resolution pattern: `firstname-lastinitial`
+- **Build fails after changes?** → Check syntax in all modified config files
+
 ## Overview
 This guide walks through the complete process of adding new students to the friendly URL portal system. Follow these steps in order to ensure proper functionality.
 
@@ -128,6 +139,8 @@ This guide walks through the complete process of adding new students to the frie
 
 ### Step 7: Commit and Deploy
 
+> **See [DEPLOYMENT_PROTOCOLS.md](../DEPLOYMENT_PROTOCOLS.md) for complete deployment process**
+
 1. **Add files to git**:
    ```bash
    git add lib/student-url-mappings.js
@@ -145,7 +158,10 @@ This guide walks through the complete process of adding new students to the frie
    Co-Authored-By: Claude <noreply@anthropic.com>"
    ```
 
-3. **Deploy to Railway** (auto-deploys from main branch)
+3. **Push to repository** (Railway auto-deploys from git pushes):
+   ```bash
+   git push
+   ```
 
 ### Step 8: Update WordPress Redirect (If Needed)
 

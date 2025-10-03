@@ -119,6 +119,7 @@ export const STUDENT_URL_MAPPINGS = {
   'olivia': 'sdt_cGPBJ3',             // Olivia Mcintosh
   'omar': 'sdt_6RJkJp',               // Omar Mukhtar
   'oscar': 'sdt_Fq8vJj',              // Oscar Wallace
+  'ritisha': 'sdt_635GJ0',            // Ritisha Paryani
   'paisley': 'sdt_ccgQJ8',            // Paisley Hewitt
   'peadar': 'sdt_Q2ntJX',             // Peadar Chew
   'quin': 'sdt_K9pMJg',               // Quin Cooper

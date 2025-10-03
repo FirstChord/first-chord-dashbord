@@ -1,5 +1,16 @@
 # 🚀 Music School Dashboard - Deployment Protocols
 
+**Last Updated**: September 29, 2025  
+**Verified Working**: Kenny student setup and URL simplification  
+**Related Files**: [ADDING_NEW_STUDENTS.md](./docs/ADDING_NEW_STUDENTS.md), [NOTES_EDGE_CASE_PROTOCOL.md](./NOTES_EDGE_CASE_PROTOCOL.md)
+
+## 🚨 Quick Fixes
+- **Build fails?** → Check syntax in config files, run `npm run build` locally first
+- **Students not loading?** → Verify teacher ID in `/lib/mms-client.js` 
+- **Railway deployment stuck?** → Railway auto-deploys from git push - just commit and push
+- **URLs not working?** → Check student-url-mappings.js and student-helpers.js for conflicts
+- **Internal server errors?** → Restart dev server after config changes: `npm run dev`
+
 ## Overview
 This document contains all deployment and maintenance protocols for the Music School Dashboard project.
 
@@ -128,6 +139,8 @@ npm run dev
 | Commit fails | Check `git status` first, then use `git add .` |
 
 ## 🎯 Student Management Protocols
+
+> **For detailed student portal setup, see [ADDING_NEW_STUDENTS.md](./docs/ADDING_NEW_STUDENTS.md)**
 
 ### Adding New Tutors with Theta Music Integration
 

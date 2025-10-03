@@ -1,5 +1,15 @@
 # 🔍 Notes Edge Case Protocol
 
+**Last Updated**: September 29, 2025  
+**Status**: Issue resolved with enhanced algorithm  
+**Related Files**: [DEPLOYMENT_PROTOCOLS.md](./DEPLOYMENT_PROTOCOLS.md), [ADDING_NEW_STUDENTS.md](./docs/ADDING_NEW_STUDENTS.md)
+
+## 🚨 Quick Fixes
+- **Student shows old notes?** → Check if recent lessons are marked as "Present" vs "Unrecorded"
+- **Notes not updating?** → Verify lesson completion status in MMS admin panel
+- **Inconsistent note dates?** → Use enhanced algorithm that checks completed lessons first
+- **Teacher ID issues?** → Use MMS payroll network console method to find correct ID
+
 ## Problem Identified
 **Date**: 2025-01-19  
 **Issue**: Some student portals show outdated lesson notes while teachers can see recent notes in MMS UI.

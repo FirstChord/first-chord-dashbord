@@ -129,6 +129,7 @@ export const thetaCredentials = {
   'sdt_2grxJL': 'ryanfc',       // Ryan Ofee
   'sdt_L5tgJX': 'alexanderfc',  // Alexander Palmer
   'sdt_6RJkJp': 'omarfc',       // Omar Mukhtar
+  'sdt_635GJ0': 'ritishafc',    // Ritisha Paryani
   
   // Kim's students with Theta Music credentials
   'sdt_BkflJy': 'reubenfc',         // Reuben Barnes
