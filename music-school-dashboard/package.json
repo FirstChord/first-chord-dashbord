@@ -10,7 +10,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "analyze": "ANALYZE=true npm run build"
+    "analyze": "ANALYZE=true npm run build",
+    "validate": "node scripts/validate-students.js"
   },
   "dependencies": {
     "@modelcontextprotocol/server-gdrive": "^2025.1.14",

@@ -53,6 +53,7 @@ docs/workflows/02-adding-tutors.md                → Add tutor workflow
 docs/workflows/03-troubleshooting-common-issues.md → Common problems & fixes
 docs/workflows/04-deployment-checklist.md         → Pre-deploy checklist
 docs/workflows/05-testing-guide.md                → Testing procedures
+docs/VALIDATION_GUIDE.md                          → Data validation guide
 ```
 
 ---
@@ -67,9 +68,10 @@ docs/workflows/05-testing-guide.md                → Testing procedures
 1. Get: Student name, MMS ID (sdt_XXXXXX), tutor, instrument, Soundslice URL
 2. Check for URL conflicts: `grep -i "'firstname'" lib/student-url-mappings.js`
 3. Update all 5 config files (see `docs/workflows/01-adding-students.md`)
-4. Test locally: `npm run dev` → Visit `/localhost:3000/[name]`
-5. Build test: `npm run build`
-6. Deploy: `git add . && git commit && git push`
+4. **Validate**: `npm run validate` (check for errors)
+5. Test locally: `npm run dev` → Visit `/localhost:3000/[name]`
+6. Build test: `npm run build`
+7. Deploy: `git add . && git commit && git push`
 
 **Reference**: `docs/workflows/01-adding-students.md`
 
