@@ -2,8 +2,12 @@
 
 **Purpose**: Add a new student to both the main tutor dashboard and create their individual student portal
 
-**Time Required**: 5-10 minutes
-**Last Updated**: October 3, 2025
+**Time Required**: 2-3 minutes (with new registry system!)
+**Last Updated**: October 4, 2025
+**System Version**: 2.0 (Registry-based)
+
+> **🎉 NEW**: This workflow now uses the **Student Registry System** - edit 1 file instead of 5!
+> For complete registry documentation, see: [STUDENT_REGISTRY_GUIDE.md](../STUDENT_REGISTRY_GUIDE.md)
 
 ---
 
@@ -14,9 +18,9 @@ Before starting, gather this information:
 - [ ] **Student's full name** (First and Last)
 - [ ] **MMS Student ID** (format: `sdt_XXXXXX`)
 - [ ] **Tutor name** (e.g., "Jungyoun", "Kenny", "Finn")
-- [ ] **Instrument** (Piano, Guitar, Voice, Bass, etc.)
-- [ ] **Soundslice course URL** (e.g., `https://www.soundslice.com/courses/17489/`)
-- [ ] **Theta Music username** (format: `[firstname]fc` - all lowercase)
+- [ ] **Instrument** (Piano, Guitar, Voice, Bass, etc.) - optional
+- [ ] **Soundslice course URL** (e.g., `https://www.soundslice.com/courses/17489/`) - optional
+- [ ] **Theta Music username** (format: `[firstname]fc` - all lowercase) - optional
 
 **Where to get MMS Student ID:**
 - Log into MyMusicStaff
@@ -33,8 +37,14 @@ Adding a student updates **TWO SYSTEMS**:
 Students automatically appear on the tutor's dashboard when their MMS ID exists in MyMusicStaff. No code changes needed - the dashboard fetches live data from the MMS API.
 
 ### 2. Individual Student Portal (Requires Configuration)
-To create a student portal at `/[firstname]`, you need to update **5 configuration files**:
+To create a student portal at `/[firstname]`, you need to:
 
+**NEW SYSTEM (Registry-based)**:
+1. Edit **1 file**: `lib/config/students-registry.js`
+2. Run **1 command**: `npm run generate-configs`
+3. Auto-generates all 5 config files
+
+**Generated Files** (do not edit manually):
 ```
 lib/student-url-mappings.js     → Friendly URL mapping
 lib/student-helpers.js          → Security whitelist

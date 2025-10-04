@@ -194,16 +194,3 @@ const SOUNDSLICE_MAPPINGS = {
 };
 
 export default SOUNDSLICE_MAPPINGS;
-
-// Helper function to get Soundslice course URL for a student
-export function getSoundsliceCourse(studentId) {
-  return SOUNDSLICE_MAPPINGS[studentId] || null;
-}
-
-// Helper function to enhance student data with Soundslice courses
-export function enhanceStudentsWithSoundslice(students) {
-  return students.map(student => ({
-    ...student,
-    soundslice_course: getSoundsliceCourse(student.mms_id)
-  }));
-}
