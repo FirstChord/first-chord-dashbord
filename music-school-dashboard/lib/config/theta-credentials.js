@@ -140,6 +140,7 @@ export const thetaCredentials = {
 
   // Maks's students
   'sdt_LYflJY': 'lamfc', // Lam Wa Zeng
+  'sdt_6ZrzJq': 'icarofc', // Icaro Segnini-Hernandez
   'sdt_LsWTJR': 'dharafc', // Rudra Dhara
   'sdt_LpXfJQ': 'ninahfc', // Nina Hamilton
   'sdt_LNvQJ7': 'albafc', // Alba McMillan
@@ -176,7 +177,6 @@ export const thetaCredentials = {
   // Tom's students
   'sdt_417JJ3': 'charliefc', // Charlie Norton
   'sdt_6PjKJF': 'ruaraidhfc', // Ruaraidh Somerville
-  'sdt_6ZrzJq': 'icarofc', // Icaro Segnini-Hernandez
   'sdt_6yvpJb': 'lesfc', // Les Graham
   'sdt_B4zSJc': 'florencefc', // Florence Bartlett
   'sdt_BMtHJs': 'lukefc', // Luke Moran

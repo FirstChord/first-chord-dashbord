@@ -36,7 +36,7 @@ class MMSClient {
       'David Husz': 'tch_z2j2Jf',
       // New tutors - placeholder IDs (to be updated with real MMS teacher IDs)
       'Kenny': 'tch_zsyfJr',
-      'Maks': 'tch_placeholder_maks', 
+      'Maks': 'tch_zHdxJZ',
       'Ines': 'tch_placeholder_ines',
       // Lowercase aliases for easy access
       'finn': 'tch_QhxJJ',
