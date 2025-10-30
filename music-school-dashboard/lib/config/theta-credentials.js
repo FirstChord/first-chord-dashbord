@@ -138,6 +138,12 @@ export const thetaCredentials = {
   'sdt_QbBNJq': 'carolinefc', // Caroline Bingley
   'sdt_QcCtJT': 'marcofc', // Marco Sarconi
 
+  // Maks's students
+  'sdt_LYflJY': 'lamfc', // Lam Wa Zeng
+  'sdt_LsWTJR': 'dharafc', // Rudra Dhara
+  'sdt_LpXfJQ': 'ninahfc', // Nina Hamilton
+  'sdt_LNvQJ7': 'albafc', // Alba McMillan
+
   // Patrick's students
   'sdt_Q39JJ9': 'kushalfc', // Kushal Avvaru
   'sdt_QP01Jp': 'yarahfc', // Yarah Love
