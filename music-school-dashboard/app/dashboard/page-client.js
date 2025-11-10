@@ -221,7 +221,7 @@ export default function DashboardClient() {
         <div className="bg-white p-12 rounded-xl shadow-lg max-w-4xl w-full mx-8 relative z-10">
           <h1 className="text-2xl font-bold mb-8 text-center">Select Your Profile</h1>
           <div className="grid grid-cols-4 gap-8">
-            {['Arion', 'David', 'Dean', 'Eléna', 'Fennella', 'Finn', 'Ines', 'Jungyoun', 'Kenny', 'Kim', 'Maks', 'Patrick', 'Robbie', 'Stef', 'Tom'].map(tutorName => (
+            {['Arion', 'David', 'Dean', 'Eléna', 'Fennella', 'Finn', 'Ines', 'Kenny', 'Kim', 'Maks', 'Patrick', 'Robbie', 'Stef', 'Tom'].map(tutorName => (
               <button
                 key={tutorName}
                 onClick={() => setTutor(tutorName)}
