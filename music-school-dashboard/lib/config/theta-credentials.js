@@ -63,6 +63,7 @@ export const thetaCredentials = {
   'sdt_H5ysJM': 'beaufc', // Beau Cassidy
   'sdt_HVbNJk': 'melaniafc', // Melania R
   'sdt_HWVBJL': 'alizefc', // Alize Ekdi
+  'sdt_Ll4DJt': 'aislingfc', // Aisling Mackenzie
   'sdt_Mg2kJz': 'annafc', // Anna Kennedy
   'sdt_QKcMJS': 'jennyfc', // Jenny O
   'sdt_QNVYJ4': 'nicofc', // Nico Murdoch
@@ -125,6 +126,7 @@ export const thetaCredentials = {
 
   // Kenny's students
   'sdt_L9nZJs': 'craigfc', // Craig Mcaulay
+  'sdt_LP3gJ5': 'astonfc', // Aston Black
   'sdt_LTf0Jx': 'oliviafc', // Olivia Wong
   'sdt_cZsDJp': 'katiefc', // Katie Brown
   'sdt_cZsMJD': 'ninafc', // Nina Brown

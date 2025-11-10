@@ -38,6 +38,7 @@ export const instrumentOverrides = {
   'sdt_H5ysJM': 'Voice', // Beau Cassidy
   'sdt_HVbNJk': 'Piano / Voice', // Melania R
   'sdt_HWVBJL': 'Piano', // Alize Ekdi
+  'sdt_Ll4DJt': 'Voice', // Aisling Mackenzie
   'sdt_Mg2kJz': 'Piano', // Anna Kennedy
   'sdt_QKcMJS': 'Voice', // Jenny O
   'sdt_QNVYJ4': 'Voice', // Nico Murdoch
@@ -65,6 +66,13 @@ export const instrumentOverrides = {
   'sdt_NSmyJ3': 'Piano', // Zia Permall
   'sdt_NXNKJJ': 'Piano', // Eva Lindsay
   'sdt_c794J5': 'Piano', // Mateo Alonso
+
+  // Kenny's students
+  'sdt_L9nZJs': 'Guitar', // Craig Mcaulay
+  'sdt_LP3gJ5': 'Guitar', // Aston Black
+  'sdt_LTf0Jx': 'Guitar', // Olivia Wong
+  'sdt_cZsDJp': 'Voice', // Katie Brown
+  'sdt_cZsMJD': 'Guitar', // Nina Brown
 
   // Kim's students
   'sdt_38MBJF': 'Guitar', // Mark Chalmers
