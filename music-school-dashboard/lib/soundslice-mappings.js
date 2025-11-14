@@ -120,6 +120,9 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_NXNKJJ': 'https://www.soundslice.com/courses/16910/', // Eva Lindsay
   'sdt_c794J5': 'https://www.soundslice.com/courses/16908/', // Mateo Alonso
 
+  // Ines's students
+  'sdt_LP9GJp': 'https://www.soundslice.com/courses/17926/', // Mark Mitchell
+
   // Kenny's students
   'sdt_60tqJf': 'https://www.soundslice.com/courses/17354/', // Iain Morrison
   'sdt_L9nZJs': 'https://www.soundslice.com/courses/17288/', // Craig Mcaulay

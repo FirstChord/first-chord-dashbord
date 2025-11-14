@@ -124,6 +124,9 @@ export const thetaCredentials = {
   'sdt_NXNKJJ': 'evafc', // Eva Lindsay
   'sdt_c794J5': 'mateofc', // Mateo Alonso
 
+  // Ines's students
+  'sdt_LP9GJp': 'markmfc', // Mark Mitchell
+
   // Kenny's students
   'sdt_L9nZJs': 'craigfc', // Craig Mcaulay
   'sdt_LP3gJ5': 'astonfc', // Aston Black

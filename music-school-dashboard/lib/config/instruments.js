@@ -67,6 +67,9 @@ export const instrumentOverrides = {
   'sdt_NXNKJJ': 'Piano', // Eva Lindsay
   'sdt_c794J5': 'Piano', // Mateo Alonso
 
+  // Ines's students
+  'sdt_LP9GJp': 'Piano', // Mark Mitchell
+
   // Kenny's students
   'sdt_L9nZJs': 'Guitar', // Craig Mcaulay
   'sdt_LP3gJ5': 'Guitar', // Aston Black
