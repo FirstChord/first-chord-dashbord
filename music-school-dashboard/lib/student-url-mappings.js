@@ -136,6 +136,12 @@ export const STUDENT_URL_MAPPINGS = {
   'caroline': 'sdt_QbBNJq',          // Caroline Bingley
   'marco': 'sdt_QcCtJT',             // Marco Sarconi
 
+  // Maks's students
+  'alba': 'sdt_LNvQJ7',              // Alba McMillan
+  'lam-wa': 'sdt_LYflJY',            // Lam Wa Zeng
+  'rudra': 'sdt_LsWTJR',             // Rudra Dhara
+  'nina-h': 'sdt_LpXfJQ',            // Nina Hamilton
+
   // Patrick's students
   'kushal': 'sdt_Q39JJ9',            // Kushal Avvaru
   'yarah': 'sdt_QP01Jp',             // Yarah Love

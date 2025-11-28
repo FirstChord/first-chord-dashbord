@@ -140,6 +140,12 @@ const VALID_STUDENT_IDS = [
   'sdt_QbBNJq', // Caroline Bingley (/caroline)
   'sdt_QcCtJT', // Marco Sarconi (/marco)
 
+  // Maks's students
+  'sdt_LNvQJ7', // Alba McMillan (/alba)
+  'sdt_LYflJY', // Lam Wa Zeng (/lam-wa)
+  'sdt_LsWTJR', // Rudra Dhara (/rudra)
+  'sdt_LpXfJQ', // Nina Hamilton (/nina-h)
+
   // Patrick's students
   'sdt_Q39JJ9', // Kushal Avvaru (/kushal)
   'sdt_QP01Jp', // Yarah Love (/yarah)
