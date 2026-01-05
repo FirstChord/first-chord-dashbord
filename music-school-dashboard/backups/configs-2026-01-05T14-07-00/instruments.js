@@ -13,8 +13,6 @@ export const instrumentOverrides = {
   'sdt_cGPBJ3': 'Guitar', // Olivia Mcintosh
   'sdt_yXFSJf': 'Guitar', // Indy Norman
   'sdt_yXFnJm': 'Guitar', // Roar Norman
-  'sdt_m1P8Js': 'Guitar', // Coban Kousourou
-  'sdt_m941JY': 'Piano', // Peyton Okorodudu
 
   // David's students
   'sdt_L5l5JD': 'Piano', // Dimitra Ntarmou
@@ -40,6 +38,7 @@ export const instrumentOverrides = {
   'sdt_H5ysJM': 'Voice', // Beau Cassidy
   'sdt_HVbNJk': 'Piano / Voice', // Melania R
   'sdt_HWVBJL': 'Piano', // Alize Ekdi
+  'sdt_Ll4DJt': 'Voice', // Aisling Mackenzie
   'sdt_Mg2kJz': 'Piano', // Anna Kennedy
   'sdt_QKcMJS': 'Voice', // Jenny O
   'sdt_QNVYJ4': 'Voice', // Nico Murdoch
@@ -68,6 +67,16 @@ export const instrumentOverrides = {
   'sdt_NXNKJJ': 'Piano', // Eva Lindsay
   'sdt_c794J5': 'Piano', // Mateo Alonso
 
+  // Ines's students
+  'sdt_LP9GJp': 'Piano', // Mark Mitchell
+
+  // Kenny's students
+  'sdt_L9nZJs': 'Guitar', // Craig Mcaulay
+  'sdt_LP3gJ5': 'Guitar', // Aston Black
+  'sdt_LTf0Jx': 'Guitar', // Olivia Wong
+  'sdt_cZsDJp': 'Voice', // Katie Brown
+  'sdt_cZsMJD': 'Guitar', // Nina Brown
+
   // Kim's students
   'sdt_38MBJF': 'Guitar', // Mark Chalmers
   'sdt_BkflJy': 'Guitar', // Reuben Barnes
@@ -76,6 +85,12 @@ export const instrumentOverrides = {
   'sdt_HbXMJZ': 'Guitar', // Lyra Jackson
   'sdt_QbBNJq': 'Guitar', // Caroline Bingley
   'sdt_QcCtJT': 'Guitar', // Marco Sarconi
+
+  // Maks's students
+  'sdt_LYflJY': 'Bass', // Lam Wa Zeng
+  'sdt_LsWTJR': 'Guitar', // Rudra Dhara
+  'sdt_LpXfJQ': 'Guitar', // Nina Hamilton
+  'sdt_LNvQJ7': 'Guitar', // Alba McMillan
 
   // Patrick's students
   'sdt_Q39JJ9': 'Guitar', // Kushal Avvaru

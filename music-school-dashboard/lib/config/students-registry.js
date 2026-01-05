@@ -1591,6 +1591,26 @@ export const STUDENTS_REGISTRY = {
     thetaUsername: 'roarfc',
   }, // Roar Norman
 
+  'sdt_m1P8Js': {
+    firstName: 'Coban',
+    lastName: 'Kousourou',
+    friendlyUrl: 'coban',
+    tutor: 'Arion',
+    instrument: 'Guitar',
+    soundsliceUrl: 'https://www.soundslice.com/courses/18489/',
+    thetaUsername: 'cobanfc',
+  }, // Coban Kousourou
+
+  'sdt_m941JY': {
+    firstName: 'Peyton',
+    lastName: 'Okorodudu',
+    friendlyUrl: 'peyton',
+    tutor: 'Arion',
+    instrument: 'Piano',
+    soundsliceUrl: 'https://www.soundslice.com/courses/18488/',
+    thetaUsername: 'peytonfc',
+  }, // Peyton Okorodudu
+
   'sdt_ybcdJ7': {
     firstName: 'Elizabeth',
     lastName: 'MacKenzie',

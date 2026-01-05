@@ -9,8 +9,6 @@ export const STUDENT_URL_MAPPINGS = {
   'olivia': 'sdt_cGPBJ3',            // Olivia Mcintosh
   'indy': 'sdt_yXFSJf',              // Indy Norman
   'roar': 'sdt_yXFnJm',              // Roar Norman
-  'coban': 'sdt_m1P8Js',             // Coban Kousourou
-  'peyton': 'sdt_m941JY',            // Peyton Okorodudu
 
   // David's students
   'vanessa': 'sdt_638hJ9',           // Vanessa
@@ -137,6 +135,12 @@ export const STUDENT_URL_MAPPINGS = {
   'lyra': 'sdt_HbXMJZ',              // Lyra Jackson
   'caroline': 'sdt_QbBNJq',          // Caroline Bingley
   'marco': 'sdt_QcCtJT',             // Marco Sarconi
+
+  // Maks's students
+  'alba': 'sdt_LNvQJ7',              // Alba McMillan
+  'lam-wa': 'sdt_LYflJY',            // Lam Wa Zeng
+  'rudra': 'sdt_LsWTJR',             // Rudra Dhara
+  'nina-h': 'sdt_LpXfJQ',            // Nina Hamilton
 
   // Patrick's students
   'kushal': 'sdt_Q39JJ9',            // Kushal Avvaru

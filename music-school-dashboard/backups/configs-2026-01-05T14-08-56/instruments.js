@@ -13,8 +13,6 @@ export const instrumentOverrides = {
   'sdt_cGPBJ3': 'Guitar', // Olivia Mcintosh
   'sdt_yXFSJf': 'Guitar', // Indy Norman
   'sdt_yXFnJm': 'Guitar', // Roar Norman
-  'sdt_m1P8Js': 'Guitar', // Coban Kousourou
-  'sdt_m941JY': 'Piano', // Peyton Okorodudu
 
   // David's students
   'sdt_L5l5JD': 'Piano', // Dimitra Ntarmou

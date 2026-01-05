@@ -13,8 +13,6 @@ const VALID_STUDENT_IDS = [
   'sdt_cGPBJ3', // Olivia Mcintosh (/olivia)
   'sdt_yXFSJf', // Indy Norman (/indy)
   'sdt_yXFnJm', // Roar Norman (/roar)
-  'sdt_m1P8Js', // Coban Kousourou (/coban)
-  'sdt_m941JY', // Peyton Okorodudu (/peyton)
 
   // David's students
   'sdt_638hJ9', // Vanessa (/vanessa)

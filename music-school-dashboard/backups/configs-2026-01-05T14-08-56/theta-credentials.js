@@ -13,8 +13,6 @@ export const thetaCredentials = {
   'sdt_cGPBJ3': 'oliviafc', // Olivia Mcintosh
   'sdt_yXFSJf': 'indyfc', // Indy Norman
   'sdt_yXFnJm': 'roarfc', // Roar Norman
-  'sdt_m1P8Js': 'cobanfc', // Coban Kousourou
-  'sdt_m941JY': 'peytonfc', // Peyton Okorodudu
 
   // David's students
   'sdt_638hJ9': 'vanessafc', // Vanessa

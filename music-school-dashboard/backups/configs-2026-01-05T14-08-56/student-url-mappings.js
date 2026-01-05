@@ -9,8 +9,6 @@ export const STUDENT_URL_MAPPINGS = {
   'olivia': 'sdt_cGPBJ3',            // Olivia Mcintosh
   'indy': 'sdt_yXFSJf',              // Indy Norman
   'roar': 'sdt_yXFnJm',              // Roar Norman
-  'coban': 'sdt_m1P8Js',             // Coban Kousourou
-  'peyton': 'sdt_m941JY',            // Peyton Okorodudu
 
   // David's students
   'vanessa': 'sdt_638hJ9',           // Vanessa

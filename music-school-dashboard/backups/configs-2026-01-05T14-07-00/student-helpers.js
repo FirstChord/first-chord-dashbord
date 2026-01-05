@@ -13,8 +13,6 @@ const VALID_STUDENT_IDS = [
   'sdt_cGPBJ3', // Olivia Mcintosh (/olivia)
   'sdt_yXFSJf', // Indy Norman (/indy)
   'sdt_yXFnJm', // Roar Norman (/roar)
-  'sdt_m1P8Js', // Coban Kousourou (/coban)
-  'sdt_m941JY', // Peyton Okorodudu (/peyton)
 
   // David's students
   'sdt_638hJ9', // Vanessa (/vanessa)
@@ -141,6 +139,12 @@ const VALID_STUDENT_IDS = [
   'sdt_HbXMJZ', // Lyra Jackson (/lyra)
   'sdt_QbBNJq', // Caroline Bingley (/caroline)
   'sdt_QcCtJT', // Marco Sarconi (/marco)
+
+  // Maks's students
+  'sdt_LNvQJ7', // Alba McMillan (/alba)
+  'sdt_LYflJY', // Lam Wa Zeng (/lam-wa)
+  'sdt_LsWTJR', // Rudra Dhara (/rudra)
+  'sdt_LpXfJQ', // Nina Hamilton (/nina-h)
 
   // Patrick's students
   'sdt_Q39JJ9', // Kushal Avvaru (/kushal)

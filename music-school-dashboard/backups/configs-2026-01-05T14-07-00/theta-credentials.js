@@ -13,8 +13,6 @@ export const thetaCredentials = {
   'sdt_cGPBJ3': 'oliviafc', // Olivia Mcintosh
   'sdt_yXFSJf': 'indyfc', // Indy Norman
   'sdt_yXFnJm': 'roarfc', // Roar Norman
-  'sdt_m1P8Js': 'cobanfc', // Coban Kousourou
-  'sdt_m941JY': 'peytonfc', // Peyton Okorodudu
 
   // David's students
   'sdt_638hJ9': 'vanessafc', // Vanessa
@@ -65,6 +63,7 @@ export const thetaCredentials = {
   'sdt_H5ysJM': 'beaufc', // Beau Cassidy
   'sdt_HVbNJk': 'melaniafc', // Melania R
   'sdt_HWVBJL': 'alizefc', // Alize Ekdi
+  'sdt_Ll4DJt': 'aislingfc', // Aisling Mackenzie
   'sdt_Mg2kJz': 'annafc', // Anna Kennedy
   'sdt_QKcMJS': 'jennyfc', // Jenny O
   'sdt_QNVYJ4': 'nicofc', // Nico Murdoch
@@ -125,8 +124,12 @@ export const thetaCredentials = {
   'sdt_NXNKJJ': 'evafc', // Eva Lindsay
   'sdt_c794J5': 'mateofc', // Mateo Alonso
 
+  // Ines's students
+  'sdt_LP9GJp': 'markmfc', // Mark Mitchell
+
   // Kenny's students
   'sdt_L9nZJs': 'craigfc', // Craig Mcaulay
+  'sdt_LP3gJ5': 'astonfc', // Aston Black
   'sdt_LTf0Jx': 'oliviafc', // Olivia Wong
   'sdt_cZsDJp': 'katiefc', // Katie Brown
   'sdt_cZsMJD': 'ninafc', // Nina Brown
@@ -139,6 +142,13 @@ export const thetaCredentials = {
   'sdt_HbXMJZ': 'lyrafc', // Lyra Jackson
   'sdt_QbBNJq': 'carolinefc', // Caroline Bingley
   'sdt_QcCtJT': 'marcofc', // Marco Sarconi
+
+  // Maks's students
+  'sdt_LYflJY': 'lamfc', // Lam Wa Zeng
+  'sdt_6ZrzJq': 'icarofc', // Icaro Segnini-Hernandez
+  'sdt_LsWTJR': 'dharafc', // Rudra Dhara
+  'sdt_LpXfJQ': 'ninahfc', // Nina Hamilton
+  'sdt_LNvQJ7': 'albafc', // Alba McMillan
 
   // Patrick's students
   'sdt_Q39JJ9': 'kushalfc', // Kushal Avvaru
@@ -172,7 +182,6 @@ export const thetaCredentials = {
   // Tom's students
   'sdt_417JJ3': 'charliefc', // Charlie Norton
   'sdt_6PjKJF': 'ruaraidhfc', // Ruaraidh Somerville
-  'sdt_6ZrzJq': 'icarofc', // Icaro Segnini-Hernandez
   'sdt_6yvpJb': 'lesfc', // Les Graham
   'sdt_B4zSJc': 'florencefc', // Florence Bartlett
   'sdt_BMtHJs': 'lukefc', // Luke Moran

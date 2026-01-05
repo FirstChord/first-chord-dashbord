@@ -59,6 +59,7 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_H5ysJM': 'https://www.soundslice.com/courses/16888/', // Beau Cassidy
   'sdt_HVbNJk': 'https://www.soundslice.com/courses/16895/', // Melania R
   'sdt_HWVBJL': 'https://www.soundslice.com/courses/16887/', // Alize Ekdi
+  'sdt_Ll4DJt': 'https://www.soundslice.com/courses/17893/', // Aisling Mackenzie
   'sdt_Mg2kJz': 'https://www.soundslice.com/courses/16889/', // Anna Kennedy
   'sdt_QKcMJS': 'https://www.soundslice.com/courses/16899/', // Jenny O
   'sdt_QNVYJ4': 'https://www.soundslice.com/courses/16901/', // Nico Murdoch
@@ -119,9 +120,13 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_NXNKJJ': 'https://www.soundslice.com/courses/16910/', // Eva Lindsay
   'sdt_c794J5': 'https://www.soundslice.com/courses/16908/', // Mateo Alonso
 
+  // Ines's students
+  'sdt_LP9GJp': 'https://www.soundslice.com/courses/17926/', // Mark Mitchell
+
   // Kenny's students
   'sdt_60tqJf': 'https://www.soundslice.com/courses/17354/', // Iain Morrison
   'sdt_L9nZJs': 'https://www.soundslice.com/courses/17288/', // Craig Mcaulay
+  'sdt_LP3gJ5': 'https://www.soundslice.com/courses/17906/', // Aston Black
   'sdt_LTf0Jx': 'https://www.soundslice.com/courses/17290/', // Olivia Wong
   'sdt_LxdXJC': 'https://www.soundslice.com/courses/17355/', // Joe Wallace
   'sdt_cZsDJp': 'https://www.soundslice.com/courses/17317/', // Katie Brown
@@ -135,6 +140,12 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_HbXMJZ': 'https://www.soundslice.com/courses/13588/', // Lyra Jackson
   'sdt_QbBNJq': 'https://www.soundslice.com/courses/15543/', // Caroline Bingley
   'sdt_QcCtJT': 'https://www.soundslice.com/courses/15425/', // Marco Sarconi
+
+  // Maks's students
+  'sdt_LYflJY': 'https://www.soundslice.com/courses/17809/', // Lam Wa Zeng
+  'sdt_LsWTJR': 'https://www.soundslice.com/courses/17808/', // Rudra Dhara
+  'sdt_LpXfJQ': 'https://www.soundslice.com/courses/17807/', // Nina Hamilton
+  'sdt_LNvQJ7': 'https://www.soundslice.com/courses/17810/', // Alba McMillan
 
   // Patrick's students
   'sdt_Q39JJ9': 'https://www.soundslice.com/courses/15467/', // Kushal Avvaru
@@ -194,3 +205,16 @@ const SOUNDSLICE_MAPPINGS = {
 };
 
 export default SOUNDSLICE_MAPPINGS;
+
+// Helper function to get Soundslice course URL for a student
+export function getSoundsliceCourse(studentId) {
+  return SOUNDSLICE_MAPPINGS[studentId] || null;
+}
+
+// Helper function to enhance student data with Soundslice courses
+export function enhanceStudentsWithSoundslice(students) {
+  return students.map(student => ({
+    ...student,
+    soundslice_course: getSoundsliceCourse(student.mms_id)
+  }));
+}
