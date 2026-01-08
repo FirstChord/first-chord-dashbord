@@ -1479,6 +1479,16 @@ export const STUDENTS_REGISTRY = {
     thetaUsername: 'rowanfc',
   }, // Rowan Moore
 
+  'sdt_417tJM': {
+    firstName: 'Ash',
+    lastName: 'Dallas Gray',
+    friendlyUrl: 'ash',
+    tutor: 'Tom',
+    instrument: 'Guitar',
+    soundsliceUrl: 'https://www.soundslice.com/courses/18515/',
+    thetaUsername: 'ashfc',
+  }, // Ash Dallas Gray
+
   'sdt_w6TSJX': {
     firstName: 'Arjun',
     lastName: 'Darshini',

@@ -192,7 +192,6 @@ export const thetaCredentials = {
   'sdt_slc4Jq': 'harryfc', // Harry Dafas
   'sdt_vGjtJ7': 'catfc', // Cat Macfarlane
   'sdt_w6TBJ3': 'rowanfc', // Rowan Moore
-  'sdt_417tJM': 'ashfc', // Ash Dallas Gray
 
   // Unknown's students
   'sdt_6Zd7J3': 'niamhfc', // Niamh McCrudden

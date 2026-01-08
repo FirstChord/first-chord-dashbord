@@ -190,7 +190,6 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_slc4Jq': 'https://www.soundslice.com/courses/12632/', // Harry Dafas
   'sdt_vGjtJ7': 'https://www.soundslice.com/courses/8842/', // Cat Macfarlane
   'sdt_w6TBJ3': 'https://www.soundslice.com/courses/8464/', // Rowan Moore
-  'sdt_417tJM': 'https://www.soundslice.com/courses/18515/', // Ash Dallas Gray
 
   // Unknown's students
 

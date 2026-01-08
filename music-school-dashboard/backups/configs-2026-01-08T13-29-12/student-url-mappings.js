@@ -190,7 +190,6 @@ export const STUDENT_URL_MAPPINGS = {
   'harry-d': 'sdt_slc4Jq',           // Harry Dafas
   'cat': 'sdt_vGjtJ7',               // Cat Macfarlane
   'rowan': 'sdt_w6TBJ3',             // Rowan Moore
-  'ash': 'sdt_417tJM',               // Ash Dallas Gray
 
   // Unknown's students
   'niamh-m': 'sdt_6Zd7J3',           // Niamh McCrudden

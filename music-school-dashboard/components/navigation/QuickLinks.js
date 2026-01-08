@@ -33,6 +33,14 @@ export default function QuickLinks({ student }) {
       color: "bg-purple-500"
     },
     {
+      name: "Practice Chat!",
+      icon: <FileText className="w-5 h-5" />,
+      url: "https://practice-chat-pwa.web.app/",
+      instruction: "For taking homework notes",
+      requiresAuth: false,
+      color: "bg-orange-500"
+    },
+    {
       name: "Theta Music Games",
       icon: <Gamepad2 className="w-5 h-5" />,
       url: smartUrls.thetaMusic.url,
@@ -49,16 +57,17 @@ export default function QuickLinks({ student }) {
       instruction: smartUrls.myMusicStaff.instruction,
       requiresAuth: smartUrls.myMusicStaff.requiresAuth,
       color: "bg-blue-500"
-    },
-    {
-      name: "Christmas Show!",
-      icon: <Star className="w-5 h-5 fill-yellow-500" />,
-      url: "https://docs.google.com/forms/d/e/1FAIpQLSdeRcsR4NeghFc8KQeMa0jK5qU9nJjcIdcmwwo8qbfj8d87EA/viewform?usp=header",
-      instruction: "Let us know what song you would like to play at the First Chord Student Showcase (21st of December)",
-      requiresAuth: false,
-      color: "bg-gradient-to-r from-red-500 to-green-600",
-      isChristmas: true
     }
+    // UNCOMMENT FOR SUMMER SHOW: Update name, url, instruction, and date
+    // {
+    //   name: "Christmas Show!",
+    //   icon: <Star className="w-5 h-5 fill-yellow-500" />,
+    //   url: "https://docs.google.com/forms/d/e/1FAIpQLSdeRcsR4NeghFc8KQeMa0jK5qU9nJjcIdcmwwo8qbfj8d87EA/viewform?usp=header",
+    //   instruction: "Let us know what song you would like to play at the First Chord Student Showcase (21st of December)",
+    //   requiresAuth: false,
+    //   color: "bg-gradient-to-r from-red-500 to-green-600",
+    //   isChristmas: true
+    // }
   ];
   
   const handleThetaMusicClick = (e, link) => {

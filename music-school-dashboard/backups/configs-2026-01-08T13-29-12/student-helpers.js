@@ -194,7 +194,6 @@ const VALID_STUDENT_IDS = [
   'sdt_slc4Jq', // Harry Dafas (/harry-d)
   'sdt_vGjtJ7', // Cat Macfarlane (/cat)
   'sdt_w6TBJ3', // Rowan Moore (/rowan)
-  'sdt_417tJM', // Ash Dallas Gray (/ash)
 
   // Unknown's students
   'sdt_6Zd7J3', // Niamh McCrudden (/niamh-m)

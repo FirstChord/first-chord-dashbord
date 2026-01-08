@@ -129,7 +129,6 @@ export const instrumentOverrides = {
   'sdt_slc4Jq': 'Guitar', // Harry Dafas
   'sdt_vGjtJ7': 'Guitar', // Cat Macfarlane
   'sdt_w6TBJ3': 'Guitar', // Rowan Moore
-  'sdt_417tJM': 'Guitar', // Ash Dallas Gray
 
   // Unknown's students
   'sdt_6Zd7J3': 'Piano', // Niamh McCrudden
