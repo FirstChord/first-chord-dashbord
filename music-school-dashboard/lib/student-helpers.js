@@ -135,6 +135,7 @@ const VALID_STUDENT_IDS = [
   'sdt_cZsDJp', // Katie Brown (/katie)
   'sdt_cZsMJD', // Nina Brown (/nina)
   'sdt_mYNRJx', // Lloyd Raymond (/lloyd)
+  'sdt_LP3gJ5', // Aston Black (/aston)
 
   // Kim's students
   'sdt_38MBJF', // Mark Chalmers (/mark)

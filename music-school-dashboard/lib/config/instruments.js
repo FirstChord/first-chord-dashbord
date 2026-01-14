@@ -74,6 +74,7 @@ export const instrumentOverrides = {
 
   // Kenny's students
   'sdt_mYNRJx': 'Guitar', // Lloyd Raymond
+  'sdt_LP3gJ5': 'Guitar', // Aston Black
 
   // Kim's students
   'sdt_38MBJF': 'Guitar', // Mark Chalmers

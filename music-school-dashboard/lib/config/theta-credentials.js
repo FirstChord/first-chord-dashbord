@@ -133,6 +133,7 @@ export const thetaCredentials = {
   'sdt_cZsDJp': 'katiefc', // Katie Brown
   'sdt_cZsMJD': 'ninafc', // Nina Brown
   'sdt_mYNRJx': 'lloydfc', // Lloyd Raymond
+  'sdt_LP3gJ5': 'astonfc', // Aston Black
 
   // Kim's students
   'sdt_38MBJF': 'markfc', // Mark Chalmers

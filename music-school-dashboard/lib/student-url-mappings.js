@@ -131,6 +131,7 @@ export const STUDENT_URL_MAPPINGS = {
   'katie': 'sdt_cZsDJp',             // Katie Brown
   'nina': 'sdt_cZsMJD',              // Nina Brown
   'lloyd': 'sdt_mYNRJx',             // Lloyd Raymond
+  'aston': 'sdt_LP3gJ5',             // Aston Black
 
   // Kim's students
   'mark': 'sdt_38MBJF',              // Mark Chalmers

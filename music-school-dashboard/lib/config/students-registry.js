@@ -1209,6 +1209,16 @@ export const STUDENTS_REGISTRY = {
     thetaUsername: 'lloydfc',
   }, // Lloyd Raymond
 
+  'sdt_LP3gJ5': {
+    firstName: 'Aston',
+    lastName: 'Black',
+    friendlyUrl: 'aston',
+    tutor: 'Kenny',
+    instrument: 'Guitar',
+    soundsliceUrl: 'https://www.soundslice.com/courses/17906/',
+    thetaUsername: 'astonfc',
+  }, // Aston Black
+
   'sdt_ccgQJ8': {
     firstName: 'Paisley',
     lastName: 'Hewitt',
