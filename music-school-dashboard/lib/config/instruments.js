@@ -72,6 +72,9 @@ export const instrumentOverrides = {
   'sdt_NXNKJJ': 'Piano', // Eva Lindsay
   'sdt_c794J5': 'Piano', // Mateo Alonso
 
+  // Kenny's students
+  'sdt_mYNRJx': 'Guitar', // Lloyd Raymond
+
   // Kim's students
   'sdt_38MBJF': 'Guitar', // Mark Chalmers
   'sdt_BkflJy': 'Guitar', // Reuben Barnes

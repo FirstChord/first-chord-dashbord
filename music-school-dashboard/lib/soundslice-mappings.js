@@ -130,6 +130,7 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_LxdXJC': 'https://www.soundslice.com/courses/17355/', // Joe Wallace
   'sdt_cZsDJp': 'https://www.soundslice.com/courses/17317/', // Katie Brown
   'sdt_cZsMJD': 'https://www.soundslice.com/courses/17318/', // Nina Brown
+  'sdt_mYNRJx': 'https://www.soundslice.com/courses/18592/', // Lloyd Raymond
 
   // Kim's students
   'sdt_38MBJF': 'https://www.soundslice.com/courses/11529/', // Mark Chalmers
