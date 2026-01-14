@@ -24,6 +24,7 @@ export const thetaCredentials = {
   'sdt_pGqXJ9': 'silverrayfc', // Silver-Ray Noramly
 
   // Dean's students
+  'sdt_BDHqJv': 'alicefc', // Alice Drew
   'sdt_2lJMJl': 'mohammedfc', // Mohammed Abdelrahman
   'sdt_2lJyJj': 'rayanfc', // Rayan Abdelrahman
   'sdt_2sjZJs': 'harrisonfc', // Harrison Aitken

@@ -24,6 +24,7 @@ const VALID_STUDENT_IDS = [
   'sdt_pGqXJ9', // Silver-Ray Noramly (/silverray)
 
   // Dean's students
+  'sdt_BDHqJv', // Alice Drew (/alice)
   'sdt_2lJMJl', // Mohammed Abdelrahman (/mohammed)
   'sdt_2lJyJj', // Rayan Abdelrahman (/rayan)
   'sdt_2sjZJs', // Harrison Aitken (/harrison)

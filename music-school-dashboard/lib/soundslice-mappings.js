@@ -20,6 +20,7 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_pGqXJ9': 'https://www.soundslice.com/courses/8552/', // Silver-Ray Noramly
 
   // Dean's students
+  'sdt_BDHqJv': 'https://www.soundslice.com/courses/18590/', // Alice Drew
   'sdt_2lJMJl': 'https://www.soundslice.com/courses/11618/', // Mohammed Abdelrahman
   'sdt_2lJyJj': 'https://www.soundslice.com/courses/11616/', // Rayan Abdelrahman
   'sdt_2sjZJs': 'https://www.soundslice.com/courses/11873/', // Harrison Aitken

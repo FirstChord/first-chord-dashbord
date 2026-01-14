@@ -20,6 +20,7 @@ export const STUDENT_URL_MAPPINGS = {
   'silverray': 'sdt_pGqXJ9',         // Silver-Ray Noramly
 
   // Dean's students
+  'alice': 'sdt_BDHqJv',             // Alice Drew
   'mohammed': 'sdt_2lJMJl',          // Mohammed Abdelrahman
   'rayan': 'sdt_2lJyJj',             // Rayan Abdelrahman
   'harrison': 'sdt_2sjZJs',          // Harrison Aitken
