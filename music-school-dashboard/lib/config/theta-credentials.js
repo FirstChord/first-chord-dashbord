@@ -22,9 +22,9 @@ export const thetaCredentials = {
   'sdt_LqT2J4': 'fraserfc', // Fraser Ord
   'sdt_MhHLJ0': 'rebeccafc', // Rebecca Mapata
   'sdt_pGqXJ9': 'silverrayfc', // Silver-Ray Noramly
+  'sdt_m4rFJC': 'sineadfc', // Sinead Smollett
 
   // Dean's students
-  'sdt_BDHqJv': 'alicefc', // Alice Drew
   'sdt_2lJMJl': 'mohammedfc', // Mohammed Abdelrahman
   'sdt_2lJyJj': 'rayanfc', // Rayan Abdelrahman
   'sdt_2sjZJs': 'harrisonfc', // Harrison Aitken
@@ -39,6 +39,7 @@ export const thetaCredentials = {
   'sdt_LT9sJN': 'sangatfc', // Sangat Singh
   'sdt_NxMZJz': 'zaynfc', // Zayn Speirs
   'sdt_QnkRJT': 'adafc', // Ada Neocleous
+  'sdt_BDHqJv': 'alicefc', // Alice Drew
   'sdt_cYDxJM': 'jamesfc', // James Taylor
   'sdt_cfbyJQ': 'harryfc', // Harry Wallace
   'sdt_csfBJd': 'charlottefc', // Charlotte Lawrie

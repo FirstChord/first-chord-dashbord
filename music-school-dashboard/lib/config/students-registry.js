@@ -1043,6 +1043,16 @@ export const STUDENTS_REGISTRY = {
     thetaUsername: 'adafc',
   }, // Ada Neocleous
 
+  'sdt_BDHqJv': {
+    firstName: 'Alice',
+    lastName: 'Drew',
+    friendlyUrl: 'alice',
+    tutor: 'Dean',
+    instrument: 'Guitar',
+    soundsliceUrl: 'https://www.soundslice.com/courses/18590/',
+    thetaUsername: 'alicefc',
+  }, // Alice Drew
+
   'sdt_QpGPJv': {
     firstName: 'Alexander',
     lastName: 'Murray',
@@ -1334,6 +1344,16 @@ export const STUDENTS_REGISTRY = {
     soundsliceUrl: 'https://www.soundslice.com/courses/8552/',
     thetaUsername: 'silverrayfc',
   }, // Silver-Ray Noramly
+
+  'sdt_m4rFJC': {
+    firstName: 'Sinead',
+    lastName: 'Smollett',
+    friendlyUrl: 'sinead',
+    tutor: 'David',
+    instrument: 'Guitar',
+    soundsliceUrl: 'https://www.soundslice.com/courses/18591/',
+    thetaUsername: 'sineadfc',
+  }, // Sinead Smollett
 
   'sdt_pT5MJz': {
     firstName: 'Sonny',

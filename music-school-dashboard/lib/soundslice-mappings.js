@@ -18,9 +18,9 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_LqT2J4': 'https://www.soundslice.com/courses/17253/', // Fraser Ord
   'sdt_MhHLJ0': 'https://www.soundslice.com/courses/17214/', // Rebecca Mapata
   'sdt_pGqXJ9': 'https://www.soundslice.com/courses/8552/', // Silver-Ray Noramly
+  'sdt_m4rFJC': 'https://www.soundslice.com/courses/18591/', // Sinead Smollett
 
   // Dean's students
-  'sdt_BDHqJv': 'https://www.soundslice.com/courses/18590/', // Alice Drew
   'sdt_2lJMJl': 'https://www.soundslice.com/courses/11618/', // Mohammed Abdelrahman
   'sdt_2lJyJj': 'https://www.soundslice.com/courses/11616/', // Rayan Abdelrahman
   'sdt_2sjZJs': 'https://www.soundslice.com/courses/11873/', // Harrison Aitken
@@ -35,6 +35,7 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_LT9sJN': 'https://www.soundslice.com/courses/17279/', // Sangat Singh
   'sdt_NxMZJz': 'https://www.soundslice.com/courses/9221/', // Zayn Speirs
   'sdt_QnkRJT': 'https://www.soundslice.com/courses/15657/', // Ada Neocleous
+  'sdt_BDHqJv': 'https://www.soundslice.com/courses/18590/', // Alice Drew
   'sdt_cYDxJM': 'https://www.soundslice.com/courses/16009/', // James Taylor
   'sdt_cfbyJQ': 'https://www.soundslice.com/courses/16205/', // Harry Wallace
   'sdt_csfBJd': 'https://www.soundslice.com/courses/16165/', // Charlotte Lawrie

@@ -18,9 +18,9 @@ export const STUDENT_URL_MAPPINGS = {
   'fraser': 'sdt_LqT2J4',            // Fraser Ord
   'rebecca': 'sdt_MhHLJ0',           // Rebecca Mapata
   'silverray': 'sdt_pGqXJ9',         // Silver-Ray Noramly
+  'sinead': 'sdt_m4rFJC',            // Sinead Smollett
 
   // Dean's students
-  'alice': 'sdt_BDHqJv',             // Alice Drew
   'mohammed': 'sdt_2lJMJl',          // Mohammed Abdelrahman
   'rayan': 'sdt_2lJyJj',             // Rayan Abdelrahman
   'harrison': 'sdt_2sjZJs',          // Harrison Aitken
@@ -35,6 +35,7 @@ export const STUDENT_URL_MAPPINGS = {
   'sangat': 'sdt_LT9sJN',            // Sangat Singh
   'zayn': 'sdt_NxMZJz',              // Zayn Speirs
   'ada': 'sdt_QnkRJT',               // Ada Neocleous
+  'alice': 'sdt_BDHqJv',             // Alice Drew
   'james-t': 'sdt_cYDxJM',           // James Taylor
   'harry-w': 'sdt_cfbyJQ',           // Harry Wallace
   'charlotte': 'sdt_csfBJd',         // Charlotte Lawrie

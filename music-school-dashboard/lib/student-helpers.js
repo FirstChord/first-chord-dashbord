@@ -22,9 +22,9 @@ const VALID_STUDENT_IDS = [
   'sdt_LqT2J4', // Fraser Ord (/fraser)
   'sdt_MhHLJ0', // Rebecca Mapata (/rebecca)
   'sdt_pGqXJ9', // Silver-Ray Noramly (/silverray)
+  'sdt_m4rFJC', // Sinead Smollett (/sinead)
 
   // Dean's students
-  'sdt_BDHqJv', // Alice Drew (/alice)
   'sdt_2lJMJl', // Mohammed Abdelrahman (/mohammed)
   'sdt_2lJyJj', // Rayan Abdelrahman (/rayan)
   'sdt_2sjZJs', // Harrison Aitken (/harrison)
@@ -39,6 +39,7 @@ const VALID_STUDENT_IDS = [
   'sdt_LT9sJN', // Sangat Singh (/sangat)
   'sdt_NxMZJz', // Zayn Speirs (/zayn)
   'sdt_QnkRJT', // Ada Neocleous (/ada)
+  'sdt_BDHqJv', // Alice Drew (/alice)
   'sdt_cYDxJM', // James Taylor (/james-t)
   'sdt_cfbyJQ', // Harry Wallace (/harry-w)
   'sdt_csfBJd', // Charlotte Lawrie (/charlotte)

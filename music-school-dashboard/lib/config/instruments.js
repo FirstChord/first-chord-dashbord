@@ -21,6 +21,10 @@ export const instrumentOverrides = {
   'sdt_LqT2J4': 'Bass', // Fraser Ord
   'sdt_MhHLJ0': 'Piano', // Rebecca Mapata
   'sdt_pGqXJ9': 'Piano / Guitar', // Silver-Ray Noramly
+  'sdt_m4rFJC': 'Guitar', // Sinead Smollett
+
+  // Dean's students
+  'sdt_BDHqJv': 'Guitar', // Alice Drew
 
   // Eléna's students
   'sdt_60gYJ7': 'Piano', // Cecilia Zhuansun
