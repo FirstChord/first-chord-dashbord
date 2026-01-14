@@ -2,13 +2,35 @@
 
 **Purpose**: Add a new student to both the main tutor dashboard and create their individual student portal
 
-**Time Required**: ~12 minutes for humans (60% faster than old system), ~10 seconds for AI agents
-**Last Updated**: October 4, 2025
+**Time Required**: ~2 minutes with Registry System
+**Last Updated**: January 14, 2026
 **System Version**: 2.0 (Registry-based)
 
-> **🎉 NEW**: This workflow now uses the **Student Registry System** - edit 1 file instead of 5!
-> **Primary benefit**: Zero risk of data inconsistencies (old system had manual sync errors)
-> For complete registry documentation, see: [STUDENT_REGISTRY_GUIDE.md](../STUDENT_REGISTRY_GUIDE.md)
+> **⚠️ CRITICAL**: This workflow uses the **Student Registry System** - edit 1 file instead of 5!
+> **DO NOT manually edit the generated config files - they will be overwritten during deployment!**
+
+---
+
+## Quick Start (For AI Agents)
+
+```bash
+# 1. Add student to registry
+# Edit: lib/config/students-registry.js
+
+# 2. Generate configs
+npm run generate-configs
+
+# 3. Validate
+npm run validate
+
+# 4. Test
+npm run dev
+
+# 5. Deploy
+git add lib/config/students-registry.js lib/student-url-mappings.js lib/student-helpers.js lib/soundslice-mappings.js lib/config/theta-credentials.js lib/config/instruments.js
+git commit -m "feat: add student [Name] for tutor [Tutor]"
+git push
+```
 
 ---
 
@@ -18,40 +40,38 @@ Before starting, gather this information:
 
 - [ ] **Student's full name** (First and Last)
 - [ ] **MMS Student ID** (format: `sdt_XXXXXX`)
-- [ ] **Tutor name** (e.g., "Jungyoun", "Kenny", "Finn")
-- [ ] **Instrument** (Piano, Guitar, Voice, Bass, etc.) - optional
-- [ ] **Soundslice course URL** (e.g., `https://www.soundslice.com/courses/17489/`) - optional
-- [ ] **Theta Music username** (format: `[firstname]fc` - all lowercase) - optional
+- [ ] **Tutor name** (e.g., "Dean", "David", "Finn")
+- [ ] **Instrument** (Guitar, Piano, Bass, etc.) - optional
+- [ ] **Soundslice course URL** - optional
+- [ ] **Theta Music username** (format: `[firstname]fc`) - optional
 
 **Where to get MMS Student ID:**
 - Log into MyMusicStaff
 - Navigate to Students section
-- Find student and copy their ID from the URL or student details
+- Find student and copy their ID from the URL
 
 ---
 
 ## What Gets Updated
 
-Adding a student updates **TWO SYSTEMS**:
+### 1. Tutor Dashboard (Automatic)
+Students automatically appear on the tutor's dashboard when their MMS ID exists in MyMusicStaff. **No code changes needed** - the dashboard fetches live data from the MMS API.
 
-### 1. Main Tutor Dashboard
-Students automatically appear on the tutor's dashboard when their MMS ID exists in MyMusicStaff. No code changes needed - the dashboard fetches live data from the MMS API.
+### 2. Student Portal (Registry System)
+To create a student portal at `/[firstname]`, use the Registry System:
 
-### 2. Individual Student Portal (Requires Configuration)
-To create a student portal at `/[firstname]`, you need to:
-
-**NEW SYSTEM (Registry-based)**:
-1. Edit **1 file**: `lib/config/students-registry.js`
-2. Run **1 command**: `npm run generate-configs`
-3. Auto-generates all 5 config files
-
-**Generated Files** (do not edit manually):
+**ONE FILE TO EDIT**:
 ```
-lib/student-url-mappings.js     → Friendly URL mapping
-lib/student-helpers.js          → Security whitelist
-lib/soundslice-mappings.js      → Soundslice course link
-lib/config/theta-credentials.js → Theta Music login
-lib/config/instruments.js       → Instrument override
+lib/config/students-registry.js     → Add student entry here
+```
+
+**GENERATED FILES** (do not edit manually):
+```
+lib/student-url-mappings.js         → Friendly URL mapping
+lib/student-helpers.js              → Security whitelist
+lib/soundslice-mappings.js          → Soundslice course links
+lib/config/theta-credentials.js     → Theta Music logins
+lib/config/instruments.js           → Instrument overrides
 ```
 
 ---
@@ -68,280 +88,216 @@ grep -i "'[firstname]'" lib/student-url-mappings.js
 ```
 
 **If conflict exists**, use pattern: `firstname-lastinitial`
-- Example: `olivia` (Olivia Mcintosh) exists, so new Olivia Wong → `olivia-w`
+- Example: `olivia` exists, so Olivia Wong → `olivia-w`
 - Example: `charlie` exists, so Charlie Mcdougall → `charlie-m`
-
-### Step 2: Update URL Mappings
-
-**File**: `lib/student-url-mappings.js`
-
-Add entry in **alphabetical order** within the appropriate tutor section:
-
-```javascript
-// Find the tutor's section (e.g., "Jungyoun's students")
-// Add in alphabetical order:
-'ritisha': 'sdt_635GJ0',            // Ritisha Paryani
-```
-
-**Pattern**:
-```javascript
-'[friendly-url]': '[mms-student-id]',  // [Full Name]
-```
-
-### Step 3: Add to Security Whitelist
-
-**File**: `lib/student-helpers.js`
-
-Find the compact array section and add the student ID:
-
-```javascript
-// Find line around line 41 (end of main array before Kenny's students comment)
-'sdt_Fq8ZJ1', 'sdt_QP01Jp', 'sdt_NxMZJz', 'sdt_NSmyJ3', 'sdt_y0SPJJ', 'sdt_638hJ9', 'sdt_D9ftJB', 'sdt_635GJ0',
-                                                                                                    // ↑ Add here
-```
-
-### Step 4: Add Soundslice Course
-
-**File**: `lib/soundslice-mappings.js`
-
-Find the tutor's section and add the mapping:
-
-```javascript
-// Jungyoun's students
-'sdt_c794J5': 'https://www.soundslice.com/courses/16908/', // Mateo Alonso
-// ... other students ...
-'sdt_635GJ0': 'https://www.soundslice.com/courses/17489/', // Ritisha Paryani
-```
-
-**Pattern**:
-```javascript
-'[mms-id]': '[soundslice-url]', // [Full Name]
-```
-
-### Step 5: Add Theta Music Credentials
-
-**File**: `lib/config/theta-credentials.js`
-
-Find the tutor's section and add credentials:
-
-```javascript
-// Jungyoun's students with Theta Music credentials
-'sdt_c794J5': 'mateofc',      // Mateo Alonso
-// ... other students ...
-'sdt_635GJ0': 'ritishafc',    // Ritisha Paryani
-```
-
-**Pattern**:
-```javascript
-'[mms-id]': '[firstname]fc',    // [Full Name]
-```
-
-**Note**: Username and password are the same (e.g., `ritishafc`)
-
-### Step 6: Add Instrument Override
-
-**File**: `lib/config/instruments.js`
-
-Find the tutor's section and add instrument:
-
-```javascript
-// Jungyoun's students with correct instruments (all Piano)
-'sdt_c794J5': 'Piano',        // Mateo Alonso
-// ... other students ...
-'sdt_635GJ0': 'Piano',        // Ritisha Paryani
-```
-
-**Common instruments**: `Piano`, `Guitar`, `Voice`, `Bass`, `Piano / Guitar`, `Piano / Voice`
 
 ---
 
-## Testing
+### Step 2: Add to Registry
 
-### Local Testing
+**File**: `lib/config/students-registry.js`
 
-1. **Start dev server** (if not already running):
+Find the tutor's section and add the student:
+
+```javascript
+export const STUDENTS_REGISTRY = {
+  // ... existing students ...
+
+  // Dean's students (or whichever tutor)
+  'sdt_BDHqJv': {
+    firstName: 'Alice',
+    lastName: 'Drew',
+    friendlyUrl: 'alice',
+    tutor: 'Dean',
+    instrument: 'Guitar',                                      // Optional
+    soundsliceUrl: 'https://www.soundslice.com/courses/18590/', // Optional
+    thetaUsername: 'alicefc',                                   // Optional
+  }, // Alice Drew
+
+  // ... more students ...
+};
+```
+
+**Required Fields:**
+- `firstName`
+- `friendlyUrl`
+- `tutor`
+
+**Optional Fields:**
+- `lastName`
+- `instrument` (only if overriding MMS data)
+- `soundsliceUrl`
+- `thetaUsername`
+
+---
+
+### Step 3: Generate Config Files
+
+```bash
+npm run generate-configs
+```
+
+**Expected output:**
+```
+🔨 Generating config files from student registry...
+✓ Loaded 173 students
+✓ Found 14 tutors
+✓ Generated: lib/student-url-mappings.js
+✓ Generated: lib/student-helpers.js
+✓ Generated: lib/soundslice-mappings.js
+✓ Generated: lib/config/theta-credentials.js
+✓ Generated: lib/config/instruments.js
+✅ Config generation complete!
+```
+
+---
+
+### Step 4: Validate
+
+```bash
+npm run validate
+```
+
+**Must have 0 errors** (warnings are acceptable):
+
+```
+Total checks run: 13
+Errors found: 0        ← Must be 0!
+Warnings found: 3      ← These are OK
+```
+
+**If errors exist**, fix them in the registry and re-generate.
+
+---
+
+### Step 5: Test Locally
+
 ```bash
 npm run dev
 ```
 
-2. **Test student portal**:
-```
-Visit: http://localhost:3000/[friendly-url]
-Example: http://localhost:3000/ritisha
-```
+Visit: `http://localhost:3000/[friendlyurl]`
 
-3. **Verify all sections load**:
-- [ ] Student name displays correctly
-- [ ] Instrument shows correctly
-- [ ] Lesson notes appear (most recent lesson)
-- [ ] Soundslice course link works
-- [ ] Theta Music credentials display
-
-4. **Test main dashboard**:
-```
-Visit: http://localhost:3000/dashboard
-Select the tutor from dropdown
-```
-- [ ] Student appears in the list
-- [ ] Correct instrument shows
-- [ ] Soundslice link appears (if configured)
-- [ ] Can click to view notes
-
-### Build Test
-
-**Always test build before committing:**
-
-```bash
-npm run build
-```
-
-If build fails, check error messages for:
-- Syntax errors in config files
-- Missing commas
-- Duplicate keys
+**Verify:**
+- ✅ URL resolves (no 404)
+- ✅ Student name appears in header
+- ✅ Notes section loads
+- ✅ Soundslice link appears (if added)
+- ✅ Theta credentials appear (if added)
+- ✅ Mobile responsive design works
+- ✅ No console errors
 
 ---
 
-## Deployment
-
-### Commit and Push
+### Step 6: Commit and Deploy
 
 ```bash
-# Stage all changes
-git add .
+# Stage all modified files (registry + generated files)
+git add lib/config/students-registry.js lib/student-url-mappings.js lib/student-helpers.js lib/soundslice-mappings.js lib/config/theta-credentials.js lib/config/instruments.js
 
 # Commit with descriptive message
-git commit -m "feat: add [Student Name] to [Tutor]'s students
+git commit -m "feat: add student [Student Name] for tutor [Tutor]
 
-- Added student portal URL mapping: /[friendly-url] -> [mms-id]
-- Added to security whitelist
-- Configured Soundslice course: [url]
-- Set up Theta Music credentials: [username]
-- Set instrument override: [instrument]
+Added to students-registry.js:
+- [Full Name] (/[url]) - [Tutor]'s student
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
+Generated configs with npm run generate-configs
+Validation: 0 errors
 
-Co-Authored-By: Claude <noreply@anthropic.com>
-"
+🤖 Generated with Claude Code
+Co-Authored-By: Claude <noreply@anthropic.com>"
 
-# Push to trigger Railway auto-deploy
+# Push to deploy (Railway auto-deploys)
 git push
 ```
 
-### Monitor Deployment
+**Deployment:**
+- Railway auto-deploys from git pushes
+- Takes 1-2 minutes to go live
+- Test at: `https://firstchord.co.uk/[friendlyurl]`
 
-Railway auto-deploys when you push to main branch.
+---
 
-1. **Check Railway dashboard** (optional):
-   - Visit: https://railway.app
-   - Look for deployment status
+## Quick Reference Checklist
 
-2. **Wait 2-3 minutes** for build and deployment
-
-3. **Test live site**:
 ```
-https://efficient-sparkle-production.up.railway.app/[friendly-url]
-https://efficient-sparkle-production.up.railway.app/dashboard
-```
-
----
-
-## Verification Checklist
-
-After deployment completes:
-
-### Student Portal
-- [ ] Portal loads: `https://efficient-sparkle-production.up.railway.app/[name]`
-- [ ] Notes section displays
-- [ ] Soundslice button appears and links correctly
-- [ ] Theta Music credentials show
-- [ ] Correct instrument displays
-- [ ] No console errors (check browser DevTools)
-
-### Main Dashboard
-- [ ] Visit: `https://efficient-sparkle-production.up.railway.app/dashboard`
-- [ ] Select the tutor from dropdown
-- [ ] Student appears in the list
-- [ ] Student card shows correct information
-- [ ] Soundslice link works (if configured)
-
----
-
-## Common Issues & Solutions
-
-### Issue: Student portal shows 404
-**Cause**: Friendly URL not in mappings or security whitelist
-**Fix**:
-- Check `student-url-mappings.js` has correct entry
-- Check `student-helpers.js` has student ID in VALID_STUDENT_IDS array
-
-### Issue: Notes not loading
-**Cause**: MMS student ID incorrect or student doesn't exist in MMS
-**Fix**:
-- Verify student ID in MyMusicStaff
-- Check student has had at least one lesson
-- See: `NOTES_EDGE_CASE_PROTOCOL.md`
-
-### Issue: Soundslice link missing
-**Cause**: Not added to soundslice-mappings.js
-**Fix**: Add mapping in `lib/soundslice-mappings.js`
-
-### Issue: Theta credentials not showing
-**Cause**: Not added to theta-credentials.js
-**Fix**: Add credentials in `lib/config/theta-credentials.js`
-
-### Issue: Wrong instrument displays
-**Cause**: MMS has incorrect instrument or no override set
-**Fix**: Add correct instrument in `lib/config/instruments.js`
-
-### Issue: Build fails
-**Cause**: Syntax error in config files
-**Fix**:
-- Check for missing commas
-- Check for duplicate keys
-- Review error message for file and line number
-
----
-
-## Rollback Procedure
-
-If deployment causes issues:
-
-```bash
-# Revert the last commit
-git revert HEAD
-
-# Push to trigger new deployment
-git push
+□ 1. Gather student info (name, MMS ID, tutor, etc.)
+□ 2. Check for URL conflicts
+□ 3. Add entry to lib/config/students-registry.js
+□ 4. Run: npm run generate-configs
+□ 5. Run: npm run validate (must have 0 errors)
+□ 6. Run: npm run dev and test locally
+□ 7. Stage registry + all generated files
+□ 8. Commit and push
+□ 9. Verify live (wait 1-2 minutes)
 ```
 
-Or manually fix issues and push again.
+---
+
+## Common Patterns
+
+### Single Name Students
+```javascript
+'sdt_H6CvJv': {
+  firstName: 'Mathilde',
+  lastName: 'Thallon',
+  friendlyUrl: 'mathilde',
+  tutor: 'Finn',
+  soundsliceUrl: 'https://www.soundslice.com/courses/17397/',
+  thetaUsername: 'mathildefc',
+}, // Mathilde Thallon
+```
+
+### Conflict Resolution
+```javascript
+'sdt_x48LJT': {
+  firstName: 'Stella',
+  lastName: 'Cook',
+  friendlyUrl: 'stella-c',        // Added -c to avoid conflict
+  tutor: 'Finn',
+  soundsliceUrl: 'https://www.soundslice.com/courses/16915/',
+  thetaUsername: 'stellafc',
+}, // Stella Cook
+```
+
+### Without Optional Fields
+```javascript
+'sdt_638hJ9': {
+  firstName: 'Vanessa',
+  friendlyUrl: 'vanessa',
+  tutor: 'David',
+  soundsliceUrl: 'https://www.soundslice.com/courses/16881/',
+  thetaUsername: 'vanessafc',
+}, // Vanessa (no last name, instrument from MMS)
+```
 
 ---
 
-## Quick Reference
+## Troubleshooting
 
-### File Updates Summary
+### "0 errors" not showing in validation
+- Check for syntax errors in registry (missing commas, quotes)
+- Ensure MMS ID format is correct (`sdt_` + 6-7 characters)
+- Re-run `npm run generate-configs`
 
-| File | What to Add | Pattern |
-|------|-------------|---------|
-| `student-url-mappings.js` | Friendly URL | `'name': 'sdt_XXXXXX',` |
-| `student-helpers.js` | Security whitelist | Add to VALID_STUDENT_IDS array |
-| `soundslice-mappings.js` | Course URL | `'sdt_XXXXXX': 'https://...',` |
-| `theta-credentials.js` | Login credentials | `'sdt_XXXXXX': 'namefc',` |
-| `instruments.js` | Instrument | `'sdt_XXXXXX': 'Piano',` |
+### Changes don't appear on Railway
+- Verify you committed ALL files (registry + 5 generated files)
+- Check Railway build logs for errors
+- Wait full 1-2 minutes for deployment
 
-### Testing URLs
-
-- **Local portal**: `http://localhost:3000/[name]`
-- **Local dashboard**: `http://localhost:3000/dashboard`
-- **Live portal**: `https://efficient-sparkle-production.up.railway.app/[name]`
-- **Live dashboard**: `https://efficient-sparkle-production.up.railway.app/dashboard`
+### Student portal 404
+- Check friendly URL in registry
+- Verify `npm run generate-configs` was run
+- Check for typos in MMS ID
 
 ---
 
-## Related Workflows
+## Related Documentation
 
-- See: `02-adding-tutors.md` - If adding a new tutor's first student
-- See: `03-troubleshooting-common-issues.md` - For debugging help
-- See: `05-testing-guide.md` - For comprehensive testing checklist
+- [ADDING_NEW_STUDENTS.md](../ADDING_NEW_STUDENTS.md) - Detailed guide
+- [STUDENT_REGISTRY_GUIDE.md](../STUDENT_REGISTRY_GUIDE.md) - Registry system docs
+- [VALIDATION_GUIDE.md](../VALIDATION_GUIDE.md) - Validation details
+
+---
+
+**⚠️ Remember: ONLY edit the registry file. ALL other config files are auto-generated!**
