@@ -466,23 +466,24 @@ class MMSClient {
     const endpoint = '/search/students';
     const queryParams = new URLSearchParams({
       offset: '0',
-      limit: '500',
+      limit: '1000', // Increased from 500 to get all students
       fields: 'Family,StudentGroups,BillingProfiles,NextEventDate,AccessStatus',
       orderby: 'FullName'
     });
 
-    const result = await this.fetchFromMMS(`${endpoint}?${queryParams}`, 'POST');
+    // Filter for only active students to reduce payload
+    const body = {
+      Active: true
+    };
+
+    const result = await this.fetchFromMMS(`${endpoint}?${queryParams}`, 'POST', body);
     
     if (result.success && result.data && result.data.ItemSubset) {
-      console.log(`Found ${result.data.ItemSubset.length} total students, filtering for teacher ${teacherId}...`);
-      
+      console.log(`Found ${result.data.ItemSubset.length} active students from MMS, filtering for teacher ${teacherId}...`);
+
       // Debug: log first student to see structure
       if (result.data.ItemSubset.length > 0) {
         console.log('Sample student object:', JSON.stringify(result.data.ItemSubset[0], null, 2));
-        
-        // Find and log some active students
-        const activeStudents = result.data.ItemSubset.filter(s => s.Active === true || s.Status === "Active");
-        console.log(`Found ${activeStudents.length} active students out of ${result.data.ItemSubset.length} total`);
         
         // Find students with StudentGroups
         const studentsWithGroups = result.data.ItemSubset.filter(s => s.StudentGroups && s.StudentGroups.length > 0);
@@ -511,39 +512,78 @@ class MMSClient {
         }
       }
       
+      // DEBUG: Check specifically for Yarah Love
+      const yarah = result.data.ItemSubset.find(s => s.FirstName === 'Yarah' && s.LastName === 'Love');
+      if (yarah) {
+        console.log('🔍 Found Yarah Love in raw data:', {
+          id: yarah.ID,
+          active: yarah.Active,
+          status: yarah.Status,
+          hasStudentGroups: yarah.StudentGroups?.length > 0,
+          studentGroupsCount: yarah.StudentGroups?.length,
+          hasBillingProfiles: yarah.BillingProfiles?.length > 0,
+          billingProfilesCount: yarah.BillingProfiles?.length,
+          billingTeachers: yarah.BillingProfiles?.map(p => ({ teacherId: p.TeacherID, active: p.Active }))
+        });
+      } else {
+        console.log('❌ Yarah Love NOT found in raw MMS data');
+      }
+
       // Filter students that have active assignments with this specific teacher
       const teacherStudents = result.data.ItemSubset.filter(student => {
+        const isYarah = student.FirstName === 'Yarah' && student.LastName === 'Love';
+
         // Check if student is active (try multiple possible property names)
-        const isActive = student.Active === true || 
-                        student.IsActive === true || 
+        const isActive = student.Active === true ||
+                        student.IsActive === true ||
                         student.Status === "Active" ||
                         student.Status === "active";
-        
+
         if (!isActive) {
+          if (isYarah) console.log('❌ Yarah rejected: not active');
           return false;
         }
 
         // Check StudentGroups first (if available)
         if (student.StudentGroups && student.StudentGroups.length > 0) {
-          return student.StudentGroups.some(group => {
+          const result = student.StudentGroups.some(group => {
             const isTeacherMatch = group.TeacherID === teacherId;
             const isActive = group.IsActive;
             const notEnded = !group.EndDate || new Date(group.EndDate) > new Date();
-            
+
             return isTeacherMatch && isActive && notEnded;
           });
+          if (isYarah) console.log(`🔍 Yarah StudentGroups check for ${tutorName}: ${result}`);
+          return result;
         }
 
         // Fallback: Check BillingProfiles for teacher assignment
         if (student.BillingProfiles && student.BillingProfiles.length > 0) {
-          return student.BillingProfiles.some(profile => {
+          const matchingProfile = student.BillingProfiles.find(profile => profile.TeacherID === teacherId);
+          if (isYarah) {
+            console.log(`🔍 Yarah BillingProfiles check for ${tutorName} (${teacherId}):`, {
+              hasBillingProfiles: true,
+              profileCount: student.BillingProfiles.length,
+              teacherIds: student.BillingProfiles.map(p => p.TeacherID),
+              matchingProfile: matchingProfile ? {
+                teacherId: matchingProfile.TeacherID,
+                active: matchingProfile.Active,
+                activeCheck: matchingProfile.Active !== false
+              } : null
+            });
+          }
+
+          const result = student.BillingProfiles.some(profile => {
             const isTeacherMatch = profile.TeacherID === teacherId;
             const isActive = profile.Active !== false; // Some might not have this field
-            
+
             return isTeacherMatch && isActive;
           });
+          if (isYarah) console.log(`✅ Yarah BillingProfiles result for ${tutorName}: ${result}`);
+          return result;
         }
-        
+
+        if (isYarah) console.log('❌ Yarah rejected: no StudentGroups or BillingProfiles');
         return false;
       }).map(student => {
         // Find the teacher's group to get instrument/subject
