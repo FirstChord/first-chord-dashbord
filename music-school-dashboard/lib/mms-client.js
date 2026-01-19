@@ -471,9 +471,16 @@ class MMSClient {
       orderby: 'FullName'
     });
 
-    // Filter for only active students to reduce payload
+    // Filter for only active students assigned to this teacher using the correct MMS API format
     const body = {
-      Active: true
+      IDs: [],
+      SearchText: "",
+      FirstName: null,
+      LastName: null,
+      Statuses: ["Active"],      // Filter only active students
+      TeacherIDs: [teacherId],   // Filter by specific teacher (massive optimization!)
+      FamilyIDs: [],
+      StudentGroupIDs: []
     };
 
     const result = await this.fetchFromMMS(`${endpoint}?${queryParams}`, 'POST', body);
