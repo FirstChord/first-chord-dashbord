@@ -73,8 +73,10 @@ export const instrumentOverrides = {
   'sdt_c794J5': 'Piano', // Mateo Alonso
 
   // Kenny's students
+  'sdt_cZsMJD': 'Guitar', // Nina Brown
   'sdt_mYNRJx': 'Guitar', // Lloyd Raymond
   'sdt_LP3gJ5': 'Guitar', // Aston Black
+  'sdt_mNd0J8': 'Guitar', // Gerry Morrison
 
   // Kim's students
   'sdt_38MBJF': 'Guitar', // Mark Chalmers

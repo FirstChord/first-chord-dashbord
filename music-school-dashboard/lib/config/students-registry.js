@@ -133,13 +133,6 @@ export const STUDENTS_REGISTRY = {
     thetaUsername: 'ceciliafc',
   }, // Cecilia Zhuansun
 
-  'sdt_60tqJf': {
-    firstName: 'Iain',
-    lastName: 'Morrison',
-    friendlyUrl: 'iain',
-    tutor: 'Kenny',
-    soundsliceUrl: 'https://www.soundslice.com/courses/17354/',
-  }, // Iain Morrison
 
   'sdt_635GJ0': {
     firstName: 'Ritisha',
@@ -732,14 +725,6 @@ export const STUDENTS_REGISTRY = {
     thetaUsername: 'sangatfc',
   }, // Sangat Singh
 
-  'sdt_LTf0Jx': {
-    firstName: 'Olivia',
-    lastName: 'Wong',
-    friendlyUrl: 'olivia-w',
-    tutor: 'Kenny',
-    soundsliceUrl: 'https://www.soundslice.com/courses/17290/',
-    thetaUsername: 'oliviafc',
-  }, // Olivia Wong
 
   'sdt_LqT2J4': {
     firstName: 'Fraser',
@@ -751,13 +736,6 @@ export const STUDENTS_REGISTRY = {
     thetaUsername: 'fraserfc',
   }, // Fraser Ord
 
-  'sdt_LxdXJC': {
-    firstName: 'Joe',
-    lastName: 'Wallace',
-    friendlyUrl: 'joe',
-    tutor: 'Kenny',
-    soundsliceUrl: 'https://www.soundslice.com/courses/17355/',
-  }, // Joe Wallace
 
   'sdt_M3RnJG': {
     firstName: 'Athena',
@@ -1181,22 +1159,15 @@ export const STUDENTS_REGISTRY = {
     thetaUsername: 'Finnlayfc',
   }, // Finlay Cackett
 
-  'sdt_cZsDJp': {
-    firstName: 'Katie',
-    lastName: 'Brown',
-    friendlyUrl: 'katie',
-    tutor: 'Kenny',
-    soundsliceUrl: 'https://www.soundslice.com/courses/17317/',
-    thetaUsername: 'katiefc',
-  }, // Katie Brown
 
   'sdt_cZsMJD': {
     firstName: 'Nina',
     lastName: 'Brown',
     friendlyUrl: 'nina',
     tutor: 'Kenny',
+    instrument: 'Guitar',
     soundsliceUrl: 'https://www.soundslice.com/courses/17318/',
-    thetaUsername: 'ninafc',
+    thetaUsername: 'ninabfc',
   }, // Nina Brown
 
   'sdt_mYNRJx': {
@@ -1218,6 +1189,16 @@ export const STUDENTS_REGISTRY = {
     soundsliceUrl: 'https://www.soundslice.com/courses/17906/',
     thetaUsername: 'astonfc',
   }, // Aston Black
+
+  'sdt_mNd0J8': {
+    firstName: 'Gerry',
+    lastName: 'Morrison',
+    friendlyUrl: 'gerry',
+    tutor: 'Kenny',
+    instrument: 'Guitar',
+    soundsliceUrl: 'https://www.soundslice.com/courses/18640/',
+    thetaUsername: 'gerryfc',
+  }, // Gerry Morrison
 
   'sdt_ccgQJ8': {
     firstName: 'Paisley',

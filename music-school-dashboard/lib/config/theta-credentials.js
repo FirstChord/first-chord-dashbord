@@ -129,11 +129,10 @@ export const thetaCredentials = {
 
   // Kenny's students
   'sdt_L9nZJs': 'craigfc', // Craig Mcaulay
-  'sdt_LTf0Jx': 'oliviafc', // Olivia Wong
-  'sdt_cZsDJp': 'katiefc', // Katie Brown
-  'sdt_cZsMJD': 'ninafc', // Nina Brown
+  'sdt_cZsMJD': 'ninabfc', // Nina Brown
   'sdt_mYNRJx': 'lloydfc', // Lloyd Raymond
   'sdt_LP3gJ5': 'astonfc', // Aston Black
+  'sdt_mNd0J8': 'gerryfc', // Gerry Morrison
 
   // Kim's students
   'sdt_38MBJF': 'markfc', // Mark Chalmers

@@ -124,14 +124,11 @@ export const STUDENT_URL_MAPPINGS = {
   'mateo': 'sdt_c794J5',             // Mateo Alonso
 
   // Kenny's students
-  'iain': 'sdt_60tqJf',              // Iain Morrison
   'craig': 'sdt_L9nZJs',             // Craig Mcaulay
-  'olivia-w': 'sdt_LTf0Jx',          // Olivia Wong
-  'joe': 'sdt_LxdXJC',               // Joe Wallace
-  'katie': 'sdt_cZsDJp',             // Katie Brown
   'nina': 'sdt_cZsMJD',              // Nina Brown
   'lloyd': 'sdt_mYNRJx',             // Lloyd Raymond
   'aston': 'sdt_LP3gJ5',             // Aston Black
+  'gerry': 'sdt_mNd0J8',             // Gerry Morrison
 
   // Kim's students
   'mark': 'sdt_38MBJF',              // Mark Chalmers

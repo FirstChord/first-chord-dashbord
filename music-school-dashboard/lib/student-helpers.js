@@ -128,14 +128,11 @@ const VALID_STUDENT_IDS = [
   'sdt_c794J5', // Mateo Alonso (/mateo)
 
   // Kenny's students
-  'sdt_60tqJf', // Iain Morrison (/iain)
   'sdt_L9nZJs', // Craig Mcaulay (/craig)
-  'sdt_LTf0Jx', // Olivia Wong (/olivia-w)
-  'sdt_LxdXJC', // Joe Wallace (/joe)
-  'sdt_cZsDJp', // Katie Brown (/katie)
   'sdt_cZsMJD', // Nina Brown (/nina)
   'sdt_mYNRJx', // Lloyd Raymond (/lloyd)
   'sdt_LP3gJ5', // Aston Black (/aston)
+  'sdt_mNd0J8', // Gerry Morrison (/gerry)
 
   // Kim's students
   'sdt_38MBJF', // Mark Chalmers (/mark)

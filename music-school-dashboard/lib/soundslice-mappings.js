@@ -124,14 +124,11 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_c794J5': 'https://www.soundslice.com/courses/16908/', // Mateo Alonso
 
   // Kenny's students
-  'sdt_60tqJf': 'https://www.soundslice.com/courses/17354/', // Iain Morrison
   'sdt_L9nZJs': 'https://www.soundslice.com/courses/17288/', // Craig Mcaulay
-  'sdt_LTf0Jx': 'https://www.soundslice.com/courses/17290/', // Olivia Wong
-  'sdt_LxdXJC': 'https://www.soundslice.com/courses/17355/', // Joe Wallace
-  'sdt_cZsDJp': 'https://www.soundslice.com/courses/17317/', // Katie Brown
   'sdt_cZsMJD': 'https://www.soundslice.com/courses/17318/', // Nina Brown
   'sdt_mYNRJx': 'https://www.soundslice.com/courses/18592/', // Lloyd Raymond
   'sdt_LP3gJ5': 'https://www.soundslice.com/courses/17906/', // Aston Black
+  'sdt_mNd0J8': 'https://www.soundslice.com/courses/18640/', // Gerry Morrison
 
   // Kim's students
   'sdt_38MBJF': 'https://www.soundslice.com/courses/11529/', // Mark Chalmers
