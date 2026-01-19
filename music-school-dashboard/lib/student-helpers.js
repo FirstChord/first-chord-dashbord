@@ -61,26 +61,37 @@ const VALID_STUDENT_IDS = [
 
   // Fennella's students
   'sdt_39hsJY', // Chiara Cavanna (/chiara)
-  'sdt_6FRsJF', // Claire Lindsay (/claire-l)
+  'sdt_6Zd7J3', // Niamh McCrudden (/niamh-m)
+  'sdt_6nhSJM', // Giorgio O (/giorgio)
   'sdt_BDH9J3', // Ceitdh Qui (/ceitdh)
+  'sdt_BtxmJ4', // Carol Turner (/carol)
   'sdt_H5yHJQ', // Charlie Gillespie (/charlie-g)
-  'sdt_H5ysJM', // Beau Cassidy (/beau)
   'sdt_HVbNJk', // Melania R (/melania)
   'sdt_HWVBJL', // Alize Ekdi (/alize)
+  'sdt_MdD4JB', // Fallou Ndiaye (/fallou)
   'sdt_Mg2kJz', // Anna Kennedy (/anna)
-  'sdt_QKcMJS', // Jenny O (/jenny)
-  'sdt_QNVYJ4', // Nico Murdoch (/nico)
-  'sdt_QPqsJC', // Natalie Wong (/natalie)
+  'sdt_NS6bJW', // Tabitha Slocombe (/tabitha)
+  'sdt_QP01Jp', // Yarah Love (/yarah)
   'sdt_QpGPJv', // Alexander Murray (/alexander-m)
   'sdt_c8fFJ3', // Emma Snaraite (/emma)
   'sdt_cB0YJd', // Tormad MacRobert (/tormad)
   'sdt_ccgQJ8', // Paisley Hewitt (/paisley)
   'sdt_cfGhJh', // Sian Malyin (/sian)
-  'sdt_ckzHJS', // Georgia Charalampous (/georgia)
   'sdt_cqlKJm', // Charles Moriarty (/charles)
-  'sdt_cz6ZJz', // James Holden (/james-h)
+  'sdt_v1lcJ0', // Max Toner (/max)
   'sdt_v9m8JT', // Eliza Dem (/eliza)
+  'sdt_y0SPJJ', // Zoe Bannatyne (/zoe)
+  'sdt_ySKCJy', // Dylan Lyall (/dylan-l)
   'sdt_ybcdJ7', // Elizabeth MacKenzie (/elizabeth)
+  'sdt_yLBVJQ', // Elliot (/elliot)
+  'sdt_yLBsJ7', // Léo TERHZAZ (/leo)
+  'sdt_cRXfJT', // Thomas McGrath (/thomas-m)
+  'sdt_LfgNJC', // Solomon Nazir (/solomon)
+  'sdt_LXBCJ0', // Rian Wilson (/rian)
+  'sdt_L1NQJl', // Niamh Walker (/niamh-w)
+  'sdt_Ll4DJt', // Aisling Mackenzie (/aisling)
+  'sdt_mvhgJ3', // Patricia Miranda (/patricia)
+  'sdt_mqLVJ3', // Mavi Ayhan (/mavi)
 
   // Finn's students
   'sdt_2slYJ7', // Jo Vardy (/jo)
@@ -145,7 +156,6 @@ const VALID_STUDENT_IDS = [
 
   // Patrick's students
   'sdt_Q39JJ9', // Kushal Avvaru (/kushal)
-  'sdt_QP01Jp', // Yarah Love (/yarah)
   'sdt_QSzJJ2', // Aras Korkmaz (/aras)
   'sdt_Qcm1JR', // Canan Dogan (/canan)
   'sdt_QfWBJx', // Eddie Roarty (/eddie)
@@ -165,7 +175,6 @@ const VALID_STUDENT_IDS = [
 
   // Stef's students
   'sdt_6llSJ8', // Jamie Welsh (/jamie)
-  'sdt_NS6bJW', // Tabitha Slocombe (/tabitha)
   'sdt_NSmPJr', // Ava Garcia Bree (/ava)
   'sdt_NdzdJM', // Elsa Thorton (/elsa)
   'sdt_czFfJy', // Bonnie Clark (/bonnie)
@@ -179,7 +188,6 @@ const VALID_STUDENT_IDS = [
   'sdt_6yvpJb', // Les Graham (/les)
   'sdt_B4zSJc', // Florence Bartlett (/florence)
   'sdt_BMtHJs', // Luke Moran (/luke)
-  'sdt_BtxmJ4', // Carol Turner (/carol)
   'sdt_D9ftJB', // Sadie Lowe (/sadie)
   'sdt_DdxtJZ', // Rosie Ward (/rosie-w)
   'sdt_F3FHJs', // Logan Wilson (/logan)
@@ -198,13 +206,7 @@ const VALID_STUDENT_IDS = [
   'sdt_417tJM', // Ash Dallas Gray (/ash)
 
   // Unknown's students
-  'sdt_6Zd7J3', // Niamh McCrudden (/niamh-m)
-  'sdt_6nhSJM', // Giorgio O (/giorgio)
   'sdt_BDsMJk', // Teagan Samuel (/teagan)
-  'sdt_MdD4JB', // Fallou Ndiaye (/fallou)
-  'sdt_v1lcJ0', // Max Toner (/max)
-  'sdt_y0SPJJ', // Zoe Bannatyne (/zoe)
-  'sdt_ySKCJy', // Dylan Lyall (/dylan-l)
 
 ];
 

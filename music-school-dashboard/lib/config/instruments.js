@@ -38,26 +38,37 @@ export const instrumentOverrides = {
 
   // Fennella's students
   'sdt_39hsJY': 'Piano', // Chiara Cavanna
-  'sdt_6FRsJF': 'Piano', // Claire Lindsay
+  'sdt_6Zd7J3': 'Piano', // Niamh McCrudden
+  'sdt_6nhSJM': 'Piano', // Giorgio O
   'sdt_BDH9J3': 'Piano', // Ceitdh Qui
+  'sdt_BtxmJ4': 'Voice', // Carol Turner
   'sdt_H5yHJQ': 'Piano', // Charlie Gillespie
-  'sdt_H5ysJM': 'Voice', // Beau Cassidy
   'sdt_HVbNJk': 'Piano / Voice', // Melania R
   'sdt_HWVBJL': 'Piano', // Alize Ekdi
+  'sdt_MdD4JB': 'Piano', // Fallou Ndiaye
   'sdt_Mg2kJz': 'Piano', // Anna Kennedy
-  'sdt_QKcMJS': 'Voice', // Jenny O
-  'sdt_QNVYJ4': 'Voice', // Nico Murdoch
-  'sdt_QPqsJC': 'Piano', // Natalie Wong
+  'sdt_NS6bJW': 'Voice', // Tabitha Slocombe
+  'sdt_QP01Jp': 'Piano', // Yarah Love
   'sdt_QpGPJv': 'Piano', // Alexander Murray
   'sdt_c8fFJ3': 'Piano', // Emma Snaraite
   'sdt_cB0YJd': 'Piano', // Tormad MacRobert
   'sdt_ccgQJ8': 'Piano', // Paisley Hewitt
   'sdt_cfGhJh': 'Voice', // Sian Malyin
-  'sdt_ckzHJS': 'Voice', // Georgia Charalampous
   'sdt_cqlKJm': 'Piano', // Charles Moriarty
-  'sdt_cz6ZJz': 'Piano', // James Holden
+  'sdt_v1lcJ0': 'Piano', // Max Toner
   'sdt_v9m8JT': 'Voice', // Eliza Dem
+  'sdt_y0SPJJ': 'Piano', // Zoe Bannatyne
+  'sdt_ySKCJy': 'Voice', // Dylan Lyall
   'sdt_ybcdJ7': 'Piano', // Elizabeth MacKenzie
+  'sdt_yLBVJQ': 'Piano', // Elliot
+  'sdt_yLBsJ7': 'Voice', // Léo TERHZAZ
+  'sdt_cRXfJT': 'Piano', // Thomas McGrath
+  'sdt_LfgNJC': 'Piano', // Solomon Nazir
+  'sdt_LXBCJ0': 'Piano', // Rian Wilson
+  'sdt_L1NQJl': 'Voice', // Niamh Walker
+  'sdt_Ll4DJt': 'Voice', // Aisling Mackenzie
+  'sdt_mvhgJ3': 'Voice', // Patricia Miranda
+  'sdt_mqLVJ3': 'Piano', // Mavi Ayhan
 
   // Jungyoun's students
   'sdt_2grxJL': 'Piano', // Ryan Ofee
@@ -89,7 +100,6 @@ export const instrumentOverrides = {
 
   // Patrick's students
   'sdt_Q39JJ9': 'Guitar', // Kushal Avvaru
-  'sdt_QP01Jp': 'Guitar', // Yarah Love
   'sdt_QSzJJ2': 'Piano', // Aras Korkmaz
   'sdt_Qcm1JR': 'Guitar', // Canan Dogan
   'sdt_QfWBJx': 'Guitar', // Eddie Roarty
@@ -109,7 +119,6 @@ export const instrumentOverrides = {
 
   // Stef's students
   'sdt_6llSJ8': 'Guitar', // Jamie Welsh
-  'sdt_NS6bJW': 'Guitar', // Tabitha Slocombe
   'sdt_NSmPJr': 'Guitar', // Ava Garcia Bree
   'sdt_NdzdJM': 'Guitar', // Elsa Thorton
   'sdt_czFfJy': 'Guitar', // Bonnie Clark
@@ -123,7 +132,6 @@ export const instrumentOverrides = {
   'sdt_6yvpJb': 'Guitar', // Les Graham
   'sdt_B4zSJc': 'Guitar', // Florence Bartlett
   'sdt_BMtHJs': 'Guitar', // Luke Moran
-  'sdt_BtxmJ4': 'Guitar', // Carol Turner
   'sdt_D9ftJB': 'Guitar', // Sadie Lowe
   'sdt_DdxtJZ': 'Guitar', // Rosie Ward
   'sdt_F3FHJs': 'Guitar', // Logan Wilson
@@ -140,13 +148,5 @@ export const instrumentOverrides = {
   'sdt_vGjtJ7': 'Guitar', // Cat Macfarlane
   'sdt_w6TBJ3': 'Guitar', // Rowan Moore
   'sdt_417tJM': 'Guitar', // Ash Dallas Gray
-
-  // Unknown's students
-  'sdt_6Zd7J3': 'Piano', // Niamh McCrudden
-  'sdt_6nhSJM': 'Piano', // Giorgio O
-  'sdt_MdD4JB': 'Piano', // Fallou Ndiaye
-  'sdt_v1lcJ0': 'Piano', // Max Toner
-  'sdt_y0SPJJ': 'Piano', // Zoe Bannatyne
-  'sdt_ySKCJy': 'Voice', // Dylan Lyall
 
 };

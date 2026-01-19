@@ -57,26 +57,37 @@ export const STUDENT_URL_MAPPINGS = {
 
   // Fennella's students
   'chiara': 'sdt_39hsJY',            // Chiara Cavanna
-  'claire-l': 'sdt_6FRsJF',          // Claire Lindsay
+  'niamh-m': 'sdt_6Zd7J3',           // Niamh McCrudden
+  'giorgio': 'sdt_6nhSJM',           // Giorgio O
   'ceitdh': 'sdt_BDH9J3',            // Ceitdh Qui
+  'carol': 'sdt_BtxmJ4',             // Carol Turner
   'charlie-g': 'sdt_H5yHJQ',         // Charlie Gillespie
-  'beau': 'sdt_H5ysJM',              // Beau Cassidy
   'melania': 'sdt_HVbNJk',           // Melania R
   'alize': 'sdt_HWVBJL',             // Alize Ekdi
+  'fallou': 'sdt_MdD4JB',            // Fallou Ndiaye
   'anna': 'sdt_Mg2kJz',              // Anna Kennedy
-  'jenny': 'sdt_QKcMJS',             // Jenny O
-  'nico': 'sdt_QNVYJ4',              // Nico Murdoch
-  'natalie': 'sdt_QPqsJC',           // Natalie Wong
+  'tabitha': 'sdt_NS6bJW',           // Tabitha Slocombe
+  'yarah': 'sdt_QP01Jp',             // Yarah Love
   'alexander-m': 'sdt_QpGPJv',       // Alexander Murray
   'emma': 'sdt_c8fFJ3',              // Emma Snaraite
   'tormad': 'sdt_cB0YJd',            // Tormad MacRobert
   'paisley': 'sdt_ccgQJ8',           // Paisley Hewitt
   'sian': 'sdt_cfGhJh',              // Sian Malyin
-  'georgia': 'sdt_ckzHJS',           // Georgia Charalampous
   'charles': 'sdt_cqlKJm',           // Charles Moriarty
-  'james-h': 'sdt_cz6ZJz',           // James Holden
+  'max': 'sdt_v1lcJ0',               // Max Toner
   'eliza': 'sdt_v9m8JT',             // Eliza Dem
+  'zoe': 'sdt_y0SPJJ',               // Zoe Bannatyne
+  'dylan-l': 'sdt_ySKCJy',           // Dylan Lyall
   'elizabeth': 'sdt_ybcdJ7',         // Elizabeth MacKenzie
+  'elliot': 'sdt_yLBVJQ',            // Elliot
+  'leo': 'sdt_yLBsJ7',               // Léo TERHZAZ
+  'thomas-m': 'sdt_cRXfJT',          // Thomas McGrath
+  'solomon': 'sdt_LfgNJC',           // Solomon Nazir
+  'rian': 'sdt_LXBCJ0',              // Rian Wilson
+  'niamh-w': 'sdt_L1NQJl',           // Niamh Walker
+  'aisling': 'sdt_Ll4DJt',           // Aisling Mackenzie
+  'patricia': 'sdt_mvhgJ3',          // Patricia Miranda
+  'mavi': 'sdt_mqLVJ3',              // Mavi Ayhan
 
   // Finn's students
   'jo': 'sdt_2slYJ7',                // Jo Vardy
@@ -141,7 +152,6 @@ export const STUDENT_URL_MAPPINGS = {
 
   // Patrick's students
   'kushal': 'sdt_Q39JJ9',            // Kushal Avvaru
-  'yarah': 'sdt_QP01Jp',             // Yarah Love
   'aras': 'sdt_QSzJJ2',              // Aras Korkmaz
   'canan': 'sdt_Qcm1JR',             // Canan Dogan
   'eddie': 'sdt_QfWBJx',             // Eddie Roarty
@@ -161,7 +171,6 @@ export const STUDENT_URL_MAPPINGS = {
 
   // Stef's students
   'jamie': 'sdt_6llSJ8',             // Jamie Welsh
-  'tabitha': 'sdt_NS6bJW',           // Tabitha Slocombe
   'ava': 'sdt_NSmPJr',               // Ava Garcia Bree
   'elsa': 'sdt_NdzdJM',              // Elsa Thorton
   'bonnie': 'sdt_czFfJy',            // Bonnie Clark
@@ -175,7 +184,6 @@ export const STUDENT_URL_MAPPINGS = {
   'les': 'sdt_6yvpJb',               // Les Graham
   'florence': 'sdt_B4zSJc',          // Florence Bartlett
   'luke': 'sdt_BMtHJs',              // Luke Moran
-  'carol': 'sdt_BtxmJ4',             // Carol Turner
   'sadie': 'sdt_D9ftJB',             // Sadie Lowe
   'rosie-w': 'sdt_DdxtJZ',           // Rosie Ward
   'logan': 'sdt_F3FHJs',             // Logan Wilson
@@ -194,13 +202,7 @@ export const STUDENT_URL_MAPPINGS = {
   'ash': 'sdt_417tJM',               // Ash Dallas Gray
 
   // Unknown's students
-  'niamh-m': 'sdt_6Zd7J3',           // Niamh McCrudden
-  'giorgio': 'sdt_6nhSJM',           // Giorgio O
   'teagan': 'sdt_BDsMJk',            // Teagan Samuel
-  'fallou': 'sdt_MdD4JB',            // Fallou Ndiaye
-  'max': 'sdt_v1lcJ0',               // Max Toner
-  'zoe': 'sdt_y0SPJJ',               // Zoe Bannatyne
-  'dylan-l': 'sdt_ySKCJy',           // Dylan Lyall
 
 };
 
