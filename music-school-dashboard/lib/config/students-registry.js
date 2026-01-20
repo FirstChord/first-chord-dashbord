@@ -835,7 +835,7 @@ export const STUDENTS_REGISTRY = {
     lastName: 'French',
     friendlyUrl: 'stella-f',
     tutor: 'Tom',
-    instrument: 'Guitar',
+    instrument: 'Bass',
     soundsliceUrl: 'https://www.soundslice.com/courses/9135/',
     thetaUsername: 'stellafc',
   }, // Stella French

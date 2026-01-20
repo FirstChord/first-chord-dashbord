@@ -134,7 +134,7 @@ export const instrumentOverrides = {
   'sdt_DdxtJZ': 'Guitar', // Rosie Ward
   'sdt_F3FHJs': 'Guitar', // Logan Wilson
   'sdt_FXKDJS': 'Guitar', // Cormac Morton
-  'sdt_Nt4LJ3': 'Guitar', // Stella French
+  'sdt_Nt4LJ3': 'Bass', // Stella French
   'sdt_QjMGJc': 'Guitar', // Carla Jurado
   'sdt_cZ39Jz': 'Guitar', // Annie Brown
   'sdt_gDcVJp': 'Guitar', // Luca Kennedy
