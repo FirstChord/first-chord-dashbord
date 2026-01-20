@@ -41,7 +41,6 @@ export const instrumentOverrides = {
   'sdt_6Zd7J3': 'Piano', // Niamh McCrudden
   'sdt_6nhSJM': 'Piano', // Giorgio O
   'sdt_BDH9J3': 'Piano', // Ceitdh Qui
-  'sdt_BtxmJ4': 'Voice', // Carol Turner
   'sdt_H5yHJQ': 'Piano', // Charlie Gillespie
   'sdt_HVbNJk': 'Piano / Voice', // Melania R
   'sdt_HWVBJL': 'Piano', // Alize Ekdi
@@ -128,15 +127,13 @@ export const instrumentOverrides = {
   // Tom's students
   'sdt_417JJ3': 'Guitar', // Charlie Norton
   'sdt_6PjKJF': 'Guitar', // Ruaraidh Somerville
-  'sdt_6ZrzJq': 'Guitar', // Icaro Segnini-Hernandez
-  'sdt_6yvpJb': 'Guitar', // Les Graham
   'sdt_B4zSJc': 'Guitar', // Florence Bartlett
   'sdt_BMtHJs': 'Guitar', // Luke Moran
+  'sdt_BtxmJ4': 'Bass', // Carol Turner
   'sdt_D9ftJB': 'Guitar', // Sadie Lowe
   'sdt_DdxtJZ': 'Guitar', // Rosie Ward
   'sdt_F3FHJs': 'Guitar', // Logan Wilson
   'sdt_FXKDJS': 'Guitar', // Cormac Morton
-  'sdt_N8lVJ1': 'Guitar', // Mohamed Zayed
   'sdt_Nt4LJ3': 'Guitar', // Stella French
   'sdt_QjMGJc': 'Guitar', // Carla Jurado
   'sdt_cZ39Jz': 'Guitar', // Annie Brown
@@ -148,5 +145,6 @@ export const instrumentOverrides = {
   'sdt_vGjtJ7': 'Guitar', // Cat Macfarlane
   'sdt_w6TBJ3': 'Guitar', // Rowan Moore
   'sdt_417tJM': 'Guitar', // Ash Dallas Gray
+  'sdt_DP20Js': 'Bass', // Evan Gibson
 
 };

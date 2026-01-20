@@ -60,7 +60,6 @@ export const STUDENT_URL_MAPPINGS = {
   'niamh-m': 'sdt_6Zd7J3',           // Niamh McCrudden
   'giorgio': 'sdt_6nhSJM',           // Giorgio O
   'ceitdh': 'sdt_BDH9J3',            // Ceitdh Qui
-  'carol': 'sdt_BtxmJ4',             // Carol Turner
   'charlie-g': 'sdt_H5yHJQ',         // Charlie Gillespie
   'melania': 'sdt_HVbNJk',           // Melania R
   'alize': 'sdt_HWVBJL',             // Alize Ekdi
@@ -180,15 +179,13 @@ export const STUDENT_URL_MAPPINGS = {
   // Tom's students
   'charlie-n': 'sdt_417JJ3',         // Charlie Norton
   'ruaraidh': 'sdt_6PjKJF',          // Ruaraidh Somerville
-  'icaro': 'sdt_6ZrzJq',             // Icaro Segnini-Hernandez
-  'les': 'sdt_6yvpJb',               // Les Graham
   'florence': 'sdt_B4zSJc',          // Florence Bartlett
   'luke': 'sdt_BMtHJs',              // Luke Moran
+  'carol': 'sdt_BtxmJ4',             // Carol Turner
   'sadie': 'sdt_D9ftJB',             // Sadie Lowe
   'rosie-w': 'sdt_DdxtJZ',           // Rosie Ward
   'logan': 'sdt_F3FHJs',             // Logan Wilson
   'cormac': 'sdt_FXKDJS',            // Cormac Morton
-  'mohamed': 'sdt_N8lVJ1',           // Mohamed Zayed
   'stella-f': 'sdt_Nt4LJ3',          // Stella French
   'carla': 'sdt_QjMGJc',             // Carla Jurado
   'annie': 'sdt_cZ39Jz',             // Annie Brown
@@ -200,6 +197,7 @@ export const STUDENT_URL_MAPPINGS = {
   'cat': 'sdt_vGjtJ7',               // Cat Macfarlane
   'rowan': 'sdt_w6TBJ3',             // Rowan Moore
   'ash': 'sdt_417tJM',               // Ash Dallas Gray
+  'evan-g': 'sdt_DP20Js',            // Evan Gibson
 
   // Unknown's students
   'teagan': 'sdt_BDsMJk',            // Teagan Samuel

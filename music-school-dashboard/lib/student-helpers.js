@@ -64,7 +64,6 @@ const VALID_STUDENT_IDS = [
   'sdt_6Zd7J3', // Niamh McCrudden (/niamh-m)
   'sdt_6nhSJM', // Giorgio O (/giorgio)
   'sdt_BDH9J3', // Ceitdh Qui (/ceitdh)
-  'sdt_BtxmJ4', // Carol Turner (/carol)
   'sdt_H5yHJQ', // Charlie Gillespie (/charlie-g)
   'sdt_HVbNJk', // Melania R (/melania)
   'sdt_HWVBJL', // Alize Ekdi (/alize)
@@ -184,15 +183,13 @@ const VALID_STUDENT_IDS = [
   // Tom's students
   'sdt_417JJ3', // Charlie Norton (/charlie-n)
   'sdt_6PjKJF', // Ruaraidh Somerville (/ruaraidh)
-  'sdt_6ZrzJq', // Icaro Segnini-Hernandez (/icaro)
-  'sdt_6yvpJb', // Les Graham (/les)
   'sdt_B4zSJc', // Florence Bartlett (/florence)
   'sdt_BMtHJs', // Luke Moran (/luke)
+  'sdt_BtxmJ4', // Carol Turner (/carol)
   'sdt_D9ftJB', // Sadie Lowe (/sadie)
   'sdt_DdxtJZ', // Rosie Ward (/rosie-w)
   'sdt_F3FHJs', // Logan Wilson (/logan)
   'sdt_FXKDJS', // Cormac Morton (/cormac)
-  'sdt_N8lVJ1', // Mohamed Zayed (/mohamed)
   'sdt_Nt4LJ3', // Stella French (/stella-f)
   'sdt_QjMGJc', // Carla Jurado (/carla)
   'sdt_cZ39Jz', // Annie Brown (/annie)
@@ -204,6 +201,7 @@ const VALID_STUDENT_IDS = [
   'sdt_vGjtJ7', // Cat Macfarlane (/cat)
   'sdt_w6TBJ3', // Rowan Moore (/rowan)
   'sdt_417tJM', // Ash Dallas Gray (/ash)
+  'sdt_DP20Js', // Evan Gibson (/evan-g)
 
   // Unknown's students
   'sdt_BDsMJk', // Teagan Samuel (/teagan)

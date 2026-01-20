@@ -60,7 +60,6 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_6Zd7J3': 'https://www.soundslice.com/courses/17050/', // Niamh McCrudden
   'sdt_6nhSJM': 'https://www.soundslice.com/courses/18676/', // Giorgio O
   'sdt_BDH9J3': 'https://www.soundslice.com/courses/17213/', // Ceitdh Qui
-  'sdt_BtxmJ4': 'https://www.soundslice.com/courses/16900/', // Carol Turner
   'sdt_H5yHJQ': 'https://www.soundslice.com/courses/16890/', // Charlie Gillespie
   'sdt_HVbNJk': 'https://www.soundslice.com/courses/16895/', // Melania R
   'sdt_HWVBJL': 'https://www.soundslice.com/courses/16887/', // Alize Ekdi
@@ -180,15 +179,13 @@ const SOUNDSLICE_MAPPINGS = {
   // Tom's students
   'sdt_417JJ3': 'https://www.soundslice.com/courses/6672/', // Charlie Norton
   'sdt_6PjKJF': 'https://www.soundslice.com/courses/17041/', // Ruaraidh Somerville
-  'sdt_6ZrzJq': 'https://www.soundslice.com/courses/17058/', // Icaro Segnini-Hernandez
-  'sdt_6yvpJb': 'https://www.soundslice.com/courses/16960/', // Les Graham
   'sdt_B4zSJc': 'https://www.soundslice.com/courses/7566/', // Florence Bartlett
   'sdt_BMtHJs': 'https://www.soundslice.com/courses/7757/', // Luke Moran
+  'sdt_BtxmJ4': 'https://www.soundslice.com/courses/6979/', // Carol Turner
   'sdt_D9ftJB': 'https://www.soundslice.com/courses/10247/', // Sadie Lowe
   'sdt_DdxtJZ': 'https://www.soundslice.com/courses/10246/', // Rosie Ward
   'sdt_F3FHJs': 'https://www.soundslice.com/courses/4975/', // Logan Wilson
   'sdt_FXKDJS': 'https://www.soundslice.com/courses/5434/', // Cormac Morton
-  'sdt_N8lVJ1': 'https://www.soundslice.com/courses/10230/', // Mohamed Zayed
   'sdt_Nt4LJ3': 'https://www.soundslice.com/courses/9135/', // Stella French
   'sdt_QjMGJc': 'https://www.soundslice.com/courses/15453/', // Carla Jurado
   'sdt_cZ39Jz': 'https://www.soundslice.com/courses/17182/', // Annie Brown
@@ -200,6 +197,7 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_vGjtJ7': 'https://www.soundslice.com/courses/8842/', // Cat Macfarlane
   'sdt_w6TBJ3': 'https://www.soundslice.com/courses/8464/', // Rowan Moore
   'sdt_417tJM': 'https://www.soundslice.com/courses/18515/', // Ash Dallas Gray
+  'sdt_DP20Js': 'https://www.soundslice.com/courses/18538/', // Evan Gibson
 
   // Unknown's students
 

@@ -182,16 +182,6 @@ export const STUDENTS_REGISTRY = {
     thetaUsername: 'niamhfc',
   }, // Niamh McCrudden
 
-  'sdt_6ZrzJq': {
-    firstName: 'Icaro',
-    lastName: 'Segnini-Hernandez',
-    friendlyUrl: 'icaro',
-    tutor: 'Tom',
-    instrument: 'Guitar',
-    soundsliceUrl: 'https://www.soundslice.com/courses/17058/',
-    thetaUsername: 'icarofc',
-  }, // Icaro Segnini-Hernandez
-
   'sdt_6llSJ8': {
     firstName: 'Jamie',
     lastName: 'Welsh',
@@ -221,16 +211,6 @@ export const STUDENTS_REGISTRY = {
     soundsliceUrl: 'https://www.soundslice.com/courses/18676/',
     thetaUsername: 'giorgiofc',
   }, // Giorgio O'Neil
-
-  'sdt_6yvpJb': {
-    firstName: 'Les',
-    lastName: 'Graham',
-    friendlyUrl: 'les',
-    tutor: 'Tom',
-    instrument: 'Guitar',
-    soundsliceUrl: 'https://www.soundslice.com/courses/16960/',
-    thetaUsername: 'lesfc',
-  }, // Les Graham
 
   'sdt_B4zSJc': {
     firstName: 'Florence',
@@ -363,9 +343,9 @@ export const STUDENTS_REGISTRY = {
     firstName: 'Carol',
     lastName: 'Turner',
     friendlyUrl: 'carol',
-    tutor: 'Fennella',
-    instrument: 'Voice',
-    soundsliceUrl: 'https://www.soundslice.com/courses/16900/',
+    tutor: 'Tom',
+    instrument: 'Bass',
+    soundsliceUrl: 'https://www.soundslice.com/courses/6979/',
     thetaUsername: 'carolfc',
   }, // Carol Turner
 
@@ -789,16 +769,6 @@ export const STUDENTS_REGISTRY = {
     soundsliceUrl: 'https://www.soundslice.com/courses/9866/',
     thetaUsername: 'josefc',
   }, // Jose Santi Dad
-
-  'sdt_N8lVJ1': {
-    firstName: 'Mohamed',
-    lastName: 'Zayed',
-    friendlyUrl: 'mohamed',
-    tutor: 'Tom',
-    instrument: 'Guitar',
-    soundsliceUrl: 'https://www.soundslice.com/courses/10230/',
-    thetaUsername: 'mohamedfc',
-  }, // Mohamed Zayed
 
   'sdt_NS6bJW': {
     firstName: 'Tabitha',
@@ -1692,4 +1662,14 @@ export const STUDENTS_REGISTRY = {
     soundsliceUrl: 'https://www.soundslice.com/courses/13507/',
     thetaUsername: 'vaidikfc',
   }, // Vaidik Gupta
+
+  'sdt_DP20Js': {
+    firstName: 'Evan',
+    lastName: 'Gibson',
+    friendlyUrl: 'evan-g',
+    tutor: 'Tom',
+    instrument: 'Bass',
+    soundsliceUrl: 'https://www.soundslice.com/courses/18538/',
+    thetaUsername: 'evanfc',
+  }, // Evan Gibson
 };

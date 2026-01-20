@@ -64,7 +64,6 @@ export const thetaCredentials = {
   'sdt_6Zd7J3': 'niamhfc', // Niamh McCrudden
   'sdt_6nhSJM': 'giorgiofc', // Giorgio O
   'sdt_BDH9J3': 'ceitdhfc', // Ceitdh Qui
-  'sdt_BtxmJ4': 'carolfc', // Carol Turner
   'sdt_H5yHJQ': 'charliefc', // Charlie Gillespie
   'sdt_HVbNJk': 'melaniafc', // Melania R
   'sdt_HWVBJL': 'alizefc', // Alize Ekdi
@@ -184,15 +183,13 @@ export const thetaCredentials = {
   // Tom's students
   'sdt_417JJ3': 'charliefc', // Charlie Norton
   'sdt_6PjKJF': 'ruaraidhfc', // Ruaraidh Somerville
-  'sdt_6ZrzJq': 'icarofc', // Icaro Segnini-Hernandez
-  'sdt_6yvpJb': 'lesfc', // Les Graham
   'sdt_B4zSJc': 'florencefc', // Florence Bartlett
   'sdt_BMtHJs': 'lukefc', // Luke Moran
+  'sdt_BtxmJ4': 'carolfc', // Carol Turner
   'sdt_D9ftJB': 'sadiefc', // Sadie Lowe
   'sdt_DdxtJZ': 'rosiefc', // Rosie Ward
   'sdt_F3FHJs': 'loganfc', // Logan Wilson
   'sdt_FXKDJS': 'cormacfc', // Cormac Morton
-  'sdt_N8lVJ1': 'mohamedfc', // Mohamed Zayed
   'sdt_Nt4LJ3': 'stellafc', // Stella French
   'sdt_QjMGJc': 'carlafc', // Carla Jurado
   'sdt_cZ39Jz': 'anniefc', // Annie Brown
@@ -204,6 +201,7 @@ export const thetaCredentials = {
   'sdt_vGjtJ7': 'catfc', // Cat Macfarlane
   'sdt_w6TBJ3': 'rowanfc', // Rowan Moore
   'sdt_417tJM': 'ashfc', // Ash Dallas Gray
+  'sdt_DP20Js': 'evanfc', // Evan Gibson
 
   // Unknown's students
 
