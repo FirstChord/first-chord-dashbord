@@ -143,6 +143,7 @@ export const thetaCredentials = {
   'sdt_mYNRJx': 'lloydfc', // Lloyd Raymond
   'sdt_LP3gJ5': 'astonfc', // Aston Black
   'sdt_mNd0J8': 'gerryfc', // Gerry Morrison
+  'sdt_LXQhJB': 'nevisfc', // Nevis Porecki
 
   // Kim's students
   'sdt_38MBJF': 'markfc', // Mark Chalmers

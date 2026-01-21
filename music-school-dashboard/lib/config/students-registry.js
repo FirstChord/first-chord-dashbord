@@ -676,6 +676,7 @@ export const STUDENTS_REGISTRY = {
     lastName: 'Mcaulay',
     friendlyUrl: 'craig',
     tutor: 'Kenny',
+    instrument: 'Guitar',
     soundsliceUrl: 'https://www.soundslice.com/courses/17288/',
     thetaUsername: 'craigfc',
   }, // Craig Mcaulay
@@ -1125,6 +1126,16 @@ export const STUDENTS_REGISTRY = {
     soundsliceUrl: 'https://www.soundslice.com/courses/18640/',
     thetaUsername: 'gerryfc',
   }, // Gerry Morrison
+
+  'sdt_LXQhJB': {
+    firstName: 'Nevis',
+    lastName: 'Porecki',
+    friendlyUrl: 'nevis',
+    tutor: 'Kenny',
+    instrument: 'Guitar',
+    soundsliceUrl: 'https://www.soundslice.com/courses/18706/',
+    thetaUsername: 'nevisfc',
+  }, // Nevis Porecki
 
   'sdt_ccgQJ8': {
     firstName: 'Paisley',

@@ -139,6 +139,7 @@ export const STUDENT_URL_MAPPINGS = {
   'lloyd': 'sdt_mYNRJx',             // Lloyd Raymond
   'aston': 'sdt_LP3gJ5',             // Aston Black
   'gerry': 'sdt_mNd0J8',             // Gerry Morrison
+  'nevis': 'sdt_LXQhJB',             // Nevis Porecki
 
   // Kim's students
   'mark': 'sdt_38MBJF',              // Mark Chalmers
