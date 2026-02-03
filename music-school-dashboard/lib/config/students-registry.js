@@ -1137,6 +1137,16 @@ export const STUDENTS_REGISTRY = {
     thetaUsername: 'nevisfc',
   }, // Nevis Porecki
 
+  'sdt_mMtGJ5': {
+    firstName: 'Ruqa',
+    lastName: 'Almotabaqi',
+    friendlyUrl: 'ruqa',
+    tutor: 'Kenny',
+    instrument: 'Guitar',
+    soundsliceUrl: 'https://www.soundslice.com/courses/18802/',
+    thetaUsername: 'ruqafc',
+  }, // Ruqa Almotabaqi
+
   'sdt_ccgQJ8': {
     firstName: 'Paisley',
     lastName: 'Hewitt',

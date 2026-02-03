@@ -140,6 +140,7 @@ export const STUDENT_URL_MAPPINGS = {
   'aston': 'sdt_LP3gJ5',             // Aston Black
   'gerry': 'sdt_mNd0J8',             // Gerry Morrison
   'nevis': 'sdt_LXQhJB',             // Nevis Porecki
+  'ruqa': 'sdt_mMtGJ5',              // Ruqa Almotabaqi
 
   // Kim's students
   'mark': 'sdt_38MBJF',              // Mark Chalmers

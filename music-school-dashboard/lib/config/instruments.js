@@ -89,6 +89,7 @@ export const instrumentOverrides = {
   'sdt_LP3gJ5': 'Guitar', // Aston Black
   'sdt_mNd0J8': 'Guitar', // Gerry Morrison
   'sdt_LXQhJB': 'Guitar', // Nevis Porecki
+  'sdt_mMtGJ5': 'Guitar', // Ruqa Almotabaqi
 
   // Kim's students
   'sdt_38MBJF': 'Guitar', // Mark Chalmers

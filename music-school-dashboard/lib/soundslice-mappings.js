@@ -140,6 +140,7 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_LP3gJ5': 'https://www.soundslice.com/courses/17906/', // Aston Black
   'sdt_mNd0J8': 'https://www.soundslice.com/courses/18640/', // Gerry Morrison
   'sdt_LXQhJB': 'https://www.soundslice.com/courses/18706/', // Nevis Porecki
+  'sdt_mMtGJ5': 'https://www.soundslice.com/courses/18802/', // Ruqa Almotabaqi
 
   // Kim's students
   'sdt_38MBJF': 'https://www.soundslice.com/courses/11529/', // Mark Chalmers

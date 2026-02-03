@@ -144,6 +144,7 @@ const VALID_STUDENT_IDS = [
   'sdt_LP3gJ5', // Aston Black (/aston)
   'sdt_mNd0J8', // Gerry Morrison (/gerry)
   'sdt_LXQhJB', // Nevis Porecki (/nevis)
+  'sdt_mMtGJ5', // Ruqa Almotabaqi (/ruqa)
 
   // Kim's students
   'sdt_38MBJF', // Mark Chalmers (/mark)
