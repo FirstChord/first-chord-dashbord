@@ -100,6 +100,14 @@ export const instrumentOverrides = {
   'sdt_QbBNJq': 'Guitar', // Caroline Bingley
   'sdt_QcCtJT': 'Guitar', // Marco Sarconi
 
+  // Maks's students
+  'sdt_LYflJY': 'Bass', // Lam Wa Zeng
+  'sdt_6ZrzJq': 'Guitar', // Icaro Segnini-Hernandez
+  'sdt_LsWTJR': 'Guitar', // Anuraha Dhara
+  'sdt_LpXfJQ': 'Guitar', // Nina Hamilton
+  'sdt_LNvQJ7': 'Guitar', // Alba McMillan
+  'sdt_cZsDJp': 'Guitar', // Katie Brown
+
   // Patrick's students
   'sdt_Q39JJ9': 'Guitar', // Kushal Avvaru
   'sdt_QSzJJ2': 'Piano', // Aras Korkmaz

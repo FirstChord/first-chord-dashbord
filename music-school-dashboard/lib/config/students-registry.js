@@ -1693,4 +1693,64 @@ export const STUDENTS_REGISTRY = {
     soundsliceUrl: 'https://www.soundslice.com/courses/18538/',
     thetaUsername: 'evanfc',
   }, // Evan Gibson
+
+  'sdt_LYflJY': {
+    firstName: 'Lam Wa',
+    lastName: 'Zeng',
+    friendlyUrl: 'lamwa',
+    tutor: 'Maks',
+    instrument: 'Bass',
+    soundsliceUrl: 'https://www.soundslice.com/courses/17809/',
+    thetaUsername: 'lamfc',
+  }, // Lam Wa Zeng
+
+  'sdt_6ZrzJq': {
+    firstName: 'Icaro',
+    lastName: 'Segnini-Hernandez',
+    friendlyUrl: 'icaro',
+    tutor: 'Maks',
+    instrument: 'Guitar',
+    soundsliceUrl: 'https://www.soundslice.com/courses/17058/',
+    thetaUsername: 'icarofc',
+  }, // Icaro Segnini-Hernandez
+
+  'sdt_LsWTJR': {
+    firstName: 'Anuraha',
+    lastName: 'Dhara',
+    friendlyUrl: 'anuraha',
+    tutor: 'Maks',
+    instrument: 'Guitar',
+    soundsliceUrl: 'https://www.soundslice.com/courses/17808/',
+    thetaUsername: 'dharafc',
+  }, // Anuraha Dhara
+
+  'sdt_LpXfJQ': {
+    firstName: 'Nina',
+    lastName: 'Hamilton',
+    friendlyUrl: 'nina-h',
+    tutor: 'Maks',
+    instrument: 'Guitar',
+    soundsliceUrl: 'https://www.soundslice.com/courses/17807/',
+    thetaUsername: 'ninahfc',
+  }, // Nina Hamilton
+
+  'sdt_LNvQJ7': {
+    firstName: 'Alba',
+    lastName: 'McMillan',
+    friendlyUrl: 'alba',
+    tutor: 'Maks',
+    instrument: 'Guitar',
+    soundsliceUrl: 'https://www.soundslice.com/courses/17810/',
+    thetaUsername: 'albafc',
+  }, // Alba McMillan
+
+  'sdt_cZsDJp': {
+    firstName: 'Katie',
+    lastName: 'Brown',
+    friendlyUrl: 'katie',
+    tutor: 'Maks',
+    instrument: 'Guitar',
+    soundsliceUrl: 'https://www.soundslice.com/courses/17317/',
+    thetaUsername: 'katiefc',
+  }, // Katie Brown
 };

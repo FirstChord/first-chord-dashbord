@@ -151,6 +151,14 @@ export const STUDENT_URL_MAPPINGS = {
   'caroline': 'sdt_QbBNJq',          // Caroline Bingley
   'marco': 'sdt_QcCtJT',             // Marco Sarconi
 
+  // Maks's students
+  'lamwa': 'sdt_LYflJY',             // Lam Wa Zeng
+  'icaro': 'sdt_6ZrzJq',             // Icaro Segnini-Hernandez
+  'anuraha': 'sdt_LsWTJR',           // Anuraha Dhara
+  'nina-h': 'sdt_LpXfJQ',            // Nina Hamilton
+  'alba': 'sdt_LNvQJ7',              // Alba McMillan
+  'katie': 'sdt_cZsDJp',             // Katie Brown
+
   // Patrick's students
   'kushal': 'sdt_Q39JJ9',            // Kushal Avvaru
   'aras': 'sdt_QSzJJ2',              // Aras Korkmaz

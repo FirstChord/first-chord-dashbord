@@ -155,6 +155,14 @@ const VALID_STUDENT_IDS = [
   'sdt_QbBNJq', // Caroline Bingley (/caroline)
   'sdt_QcCtJT', // Marco Sarconi (/marco)
 
+  // Maks's students
+  'sdt_LYflJY', // Lam Wa Zeng (/lamwa)
+  'sdt_6ZrzJq', // Icaro Segnini-Hernandez (/icaro)
+  'sdt_LsWTJR', // Anuraha Dhara (/anuraha)
+  'sdt_LpXfJQ', // Nina Hamilton (/nina-h)
+  'sdt_LNvQJ7', // Alba McMillan (/alba)
+  'sdt_cZsDJp', // Katie Brown (/katie)
+
   // Patrick's students
   'sdt_Q39JJ9', // Kushal Avvaru (/kushal)
   'sdt_QSzJJ2', // Aras Korkmaz (/aras)
