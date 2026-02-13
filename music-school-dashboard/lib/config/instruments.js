@@ -109,15 +109,17 @@ export const instrumentOverrides = {
   'sdt_cZsDJp': 'Guitar', // Katie Brown
 
   // Patrick's students
-  'sdt_Q39JJ9': 'Guitar', // Kushal Avvaru
   'sdt_QSzJJ2': 'Piano', // Aras Korkmaz
   'sdt_Qcm1JR': 'Guitar', // Canan Dogan
   'sdt_QfWBJx': 'Guitar', // Eddie Roarty
   'sdt_c44QJk': 'Guitar', // Tia Mustafayeva
   'sdt_cJDjJj': 'Guitar', // Suzanne Boyle
   'sdt_cYvdJp': 'Guitar', // Noah Hegde
-  'sdt_cqlvJb': 'Piano', // Shridhana Sathiyanarayanan
   'sdt_mBr8J6': 'Piano', // William McCormick
+  'sdt_L6LLJ3': 'Piano', // Ezra Ford
+  'sdt_L9tMJD': 'Guitar / Piano', // Rumbie M
+  'sdt_mv22J8': 'Guitar', // Ailsa Macfarlane
+  'sdt_LfgQJd': 'Piano', // Lynsey Lamond
 
   // Robbie's students
   'sdt_2s8CJk': 'Guitar', // Charlie Mcdougall
@@ -158,5 +160,9 @@ export const instrumentOverrides = {
   'sdt_w6TBJ3': 'Guitar', // Rowan Moore
   'sdt_417tJM': 'Guitar', // Ash Dallas Gray
   'sdt_DP20Js': 'Bass', // Evan Gibson
+
+  // Unknown's students
+  'sdt_Q39JJ9': 'Guitar', // Kushal Avvaru
+  'sdt_cqlvJb': 'Piano', // Shridhana Sathiyanarayanan
 
 };

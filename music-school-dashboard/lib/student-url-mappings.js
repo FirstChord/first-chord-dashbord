@@ -160,15 +160,17 @@ export const STUDENT_URL_MAPPINGS = {
   'katie': 'sdt_cZsDJp',             // Katie Brown
 
   // Patrick's students
-  'kushal': 'sdt_Q39JJ9',            // Kushal Avvaru
   'aras': 'sdt_QSzJJ2',              // Aras Korkmaz
   'canan': 'sdt_Qcm1JR',             // Canan Dogan
   'eddie': 'sdt_QfWBJx',             // Eddie Roarty
   'tia': 'sdt_c44QJk',               // Tia Mustafayeva
   'suzanne': 'sdt_cJDjJj',           // Suzanne Boyle
   'noah': 'sdt_cYvdJp',              // Noah Hegde
-  'shridhana': 'sdt_cqlvJb',         // Shridhana Sathiyanarayanan
   'william': 'sdt_mBr8J6',           // William McCormick
+  'ezra': 'sdt_L6LLJ3',              // Ezra Ford
+  'rumbie': 'sdt_L9tMJD',            // Rumbie M
+  'ailsa-m': 'sdt_mv22J8',           // Ailsa Macfarlane
+  'lynsey': 'sdt_LfgQJd',            // Lynsey Lamond
 
   // Robbie's students
   'charlie-m': 'sdt_2s8CJk',         // Charlie Mcdougall
@@ -212,6 +214,8 @@ export const STUDENT_URL_MAPPINGS = {
 
   // Unknown's students
   'teagan': 'sdt_BDsMJk',            // Teagan Samuel
+  'kushal': 'sdt_Q39JJ9',            // Kushal Avvaru
+  'shridhana': 'sdt_cqlvJb',         // Shridhana Sathiyanarayanan
 
 };
 

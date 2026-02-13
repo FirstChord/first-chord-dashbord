@@ -164,15 +164,17 @@ const VALID_STUDENT_IDS = [
   'sdt_cZsDJp', // Katie Brown (/katie)
 
   // Patrick's students
-  'sdt_Q39JJ9', // Kushal Avvaru (/kushal)
   'sdt_QSzJJ2', // Aras Korkmaz (/aras)
   'sdt_Qcm1JR', // Canan Dogan (/canan)
   'sdt_QfWBJx', // Eddie Roarty (/eddie)
   'sdt_c44QJk', // Tia Mustafayeva (/tia)
   'sdt_cJDjJj', // Suzanne Boyle (/suzanne)
   'sdt_cYvdJp', // Noah Hegde (/noah)
-  'sdt_cqlvJb', // Shridhana Sathiyanarayanan (/shridhana)
   'sdt_mBr8J6', // William McCormick (/william)
+  'sdt_L6LLJ3', // Ezra Ford (/ezra)
+  'sdt_L9tMJD', // Rumbie M (/rumbie)
+  'sdt_mv22J8', // Ailsa Macfarlane (/ailsa-m)
+  'sdt_LfgQJd', // Lynsey Lamond (/lynsey)
 
   // Robbie's students
   'sdt_2s8CJk', // Charlie Mcdougall (/charlie-m)
@@ -216,6 +218,8 @@ const VALID_STUDENT_IDS = [
 
   // Unknown's students
   'sdt_BDsMJk', // Teagan Samuel (/teagan)
+  'sdt_Q39JJ9', // Kushal Avvaru (/kushal)
+  'sdt_cqlvJb', // Shridhana Sathiyanarayanan (/shridhana)
 
 ];
 
