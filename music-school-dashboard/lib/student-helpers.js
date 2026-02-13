@@ -172,6 +172,7 @@ const VALID_STUDENT_IDS = [
   'sdt_cJDjJj', // Suzanne Boyle (/suzanne)
   'sdt_cYvdJp', // Noah Hegde (/noah)
   'sdt_cqlvJb', // Shridhana Sathiyanarayanan (/shridhana)
+  'sdt_mBr8J6', // William McCormick (/william)
 
   // Robbie's students
   'sdt_2s8CJk', // Charlie Mcdougall (/charlie-m)

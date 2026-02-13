@@ -1196,6 +1196,16 @@ export const STUDENTS_REGISTRY = {
     thetaUsername: 'shridhanafc',
   }, // Shridhana Sathiyanarayanan
 
+  'sdt_mBr8J6': {
+    firstName: 'William',
+    lastName: 'McCormick',
+    friendlyUrl: 'william',
+    tutor: 'Patrick',
+    instrument: 'Piano',
+    soundsliceUrl: 'https://www.soundslice.com/courses/18977/',
+    thetaUsername: 'williamfc',
+  }, // William McCormick
+
   'sdt_csfBJd': {
     firstName: 'Charlotte',
     lastName: 'Lawrie',

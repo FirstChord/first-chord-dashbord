@@ -168,6 +168,7 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_cJDjJj': 'https://www.soundslice.com/courses/15666/', // Suzanne Boyle
   'sdt_cYvdJp': 'https://www.soundslice.com/courses/16041/', // Noah Hegde
   'sdt_cqlvJb': 'https://www.soundslice.com/courses/15985/', // Shridhana Sathiyanarayanan
+  'sdt_mBr8J6': 'https://www.soundslice.com/courses/18977/', // William McCormick
 
   // Robbie's students
   'sdt_2s8CJk': 'https://www.soundslice.com/courses/12071/', // Charlie Mcdougall

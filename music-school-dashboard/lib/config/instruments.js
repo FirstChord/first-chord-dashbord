@@ -117,6 +117,7 @@ export const instrumentOverrides = {
   'sdt_cJDjJj': 'Guitar', // Suzanne Boyle
   'sdt_cYvdJp': 'Guitar', // Noah Hegde
   'sdt_cqlvJb': 'Piano', // Shridhana Sathiyanarayanan
+  'sdt_mBr8J6': 'Piano', // William McCormick
 
   // Robbie's students
   'sdt_2s8CJk': 'Guitar', // Charlie Mcdougall

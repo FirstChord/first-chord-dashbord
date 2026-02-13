@@ -172,6 +172,7 @@ export const thetaCredentials = {
   'sdt_cJDjJj': 'suzannefc', // Suzanne Boyle
   'sdt_cYvdJp': 'noahfc', // Noah Hegde
   'sdt_cqlvJb': 'shridhanafc', // Shridhana Sathiyanarayanan
+  'sdt_mBr8J6': 'williamfc', // William McCormick
 
   // Robbie's students
   'sdt_2s8CJk': 'charliefc', // Charlie Mcdougall

@@ -168,6 +168,7 @@ export const STUDENT_URL_MAPPINGS = {
   'suzanne': 'sdt_cJDjJj',           // Suzanne Boyle
   'noah': 'sdt_cYvdJp',              // Noah Hegde
   'shridhana': 'sdt_cqlvJb',         // Shridhana Sathiyanarayanan
+  'william': 'sdt_mBr8J6',           // William McCormick
 
   // Robbie's students
   'charlie-m': 'sdt_2s8CJk',         // Charlie Mcdougall
