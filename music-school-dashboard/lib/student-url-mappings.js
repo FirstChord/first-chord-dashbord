@@ -75,7 +75,6 @@ export const STUDENT_URL_MAPPINGS = {
   'fallou': 'sdt_MdD4JB',            // Fallou Ndiaye
   'anna': 'sdt_Mg2kJz',              // Anna Kennedy
   'tabitha': 'sdt_NS6bJW',           // Tabitha Slocombe
-  'yarah': 'sdt_QP01Jp',             // Yarah Love
   'alexander-m': 'sdt_QpGPJv',       // Alexander Murray
   'emma': 'sdt_c8fFJ3',              // Emma Snaraite
   'tormad': 'sdt_cB0YJd',            // Tormad MacRobert
@@ -96,6 +95,7 @@ export const STUDENT_URL_MAPPINGS = {
   'aisling': 'sdt_Ll4DJt',           // Aisling Mackenzie
   'patricia': 'sdt_mvhgJ3',          // Patricia Miranda
   'mavi': 'sdt_mqLVJ3',              // Mavi Ayhan
+  'yarah-fennella': 'sdt_mG3LJ2',    // Yarah Love
 
   // Finn's students
   'jo': 'sdt_2slYJ7',                // Jo Vardy

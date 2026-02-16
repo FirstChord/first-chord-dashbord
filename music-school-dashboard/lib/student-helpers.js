@@ -79,7 +79,6 @@ const VALID_STUDENT_IDS = [
   'sdt_MdD4JB', // Fallou Ndiaye (/fallou)
   'sdt_Mg2kJz', // Anna Kennedy (/anna)
   'sdt_NS6bJW', // Tabitha Slocombe (/tabitha)
-  'sdt_QP01Jp', // Yarah Love (/yarah)
   'sdt_QpGPJv', // Alexander Murray (/alexander-m)
   'sdt_c8fFJ3', // Emma Snaraite (/emma)
   'sdt_cB0YJd', // Tormad MacRobert (/tormad)
@@ -100,6 +99,7 @@ const VALID_STUDENT_IDS = [
   'sdt_Ll4DJt', // Aisling Mackenzie (/aisling)
   'sdt_mvhgJ3', // Patricia Miranda (/patricia)
   'sdt_mqLVJ3', // Mavi Ayhan (/mavi)
+  'sdt_mG3LJ2', // Yarah Love (/yarah-fennella)
 
   // Finn's students
   'sdt_2slYJ7', // Jo Vardy (/jo)

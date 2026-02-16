@@ -79,7 +79,6 @@ export const thetaCredentials = {
   'sdt_MdD4JB': 'falloufc', // Fallou Ndiaye
   'sdt_Mg2kJz': 'annafc', // Anna Kennedy
   'sdt_NS6bJW': 'tabithafc', // Tabitha Slocombe
-  'sdt_QP01Jp': 'yarahfc', // Yarah Love
   'sdt_QpGPJv': 'alexanderfc', // Alexander Murray
   'sdt_c8fFJ3': 'emmafc', // Emma Snaraite
   'sdt_cB0YJd': 'tormadfc', // Tormad MacRobert
@@ -100,6 +99,7 @@ export const thetaCredentials = {
   'sdt_Ll4DJt': 'aislingfc', // Aisling Mackenzie
   'sdt_mvhgJ3': 'patriciafc', // Patricia Miranda
   'sdt_mqLVJ3': 'mavifc', // Mavi Ayhan
+  'sdt_mG3LJ2': 'yarahfc', // Yarah Love
 
   // Finn's students
   'sdt_2slYJ7': 'jofc', // Jo Vardy

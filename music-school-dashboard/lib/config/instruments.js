@@ -56,7 +56,6 @@ export const instrumentOverrides = {
   'sdt_MdD4JB': 'Piano', // Fallou Ndiaye
   'sdt_Mg2kJz': 'Piano', // Anna Kennedy
   'sdt_NS6bJW': 'Voice', // Tabitha Slocombe
-  'sdt_QP01Jp': 'Piano', // Yarah Love
   'sdt_QpGPJv': 'Piano', // Alexander Murray
   'sdt_c8fFJ3': 'Piano', // Emma Snaraite
   'sdt_cB0YJd': 'Piano', // Tormad MacRobert
@@ -77,6 +76,7 @@ export const instrumentOverrides = {
   'sdt_Ll4DJt': 'Voice', // Aisling Mackenzie
   'sdt_mvhgJ3': 'Voice', // Patricia Miranda
   'sdt_mqLVJ3': 'Piano', // Mavi Ayhan
+  'sdt_mG3LJ2': 'Piano', // Yarah Love
 
   // Ines's students
   'sdt_LP9GJp': 'Piano', // Mark Mitchell

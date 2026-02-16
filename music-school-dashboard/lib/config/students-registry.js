@@ -857,11 +857,11 @@ export const STUDENTS_REGISTRY = {
     firstName: 'Yarah',
     lastName: 'Love',
     friendlyUrl: 'yarah',
-    tutors: ['Patrick', 'Fennella'], // Dual-tutor student
+    tutor: 'Patrick',
     instrument: 'Piano',
     soundsliceUrl: 'https://www.soundslice.com/courses/16894/',
     thetaUsername: 'yarahfc',
-  }, // Yarah Love
+  }, // Yarah Love (Patrick's lessons)
 
   'sdt_QSzJJ2': {
     firstName: 'Aras',
@@ -1705,6 +1705,16 @@ export const STUDENTS_REGISTRY = {
     soundsliceUrl: 'https://www.soundslice.com/courses/18663/',
     thetaUsername: 'mavifc',
   }, // Mavi Ayhan
+
+  'sdt_mG3LJ2': {
+    firstName: 'Yarah',
+    lastName: 'Love',
+    friendlyUrl: 'yarah-fennella',
+    tutor: 'Fennella',
+    instrument: 'Piano',
+    soundsliceUrl: 'https://www.soundslice.com/courses/16894/',
+    thetaUsername: 'yarahfc',
+  }, // Yarah Love (Fennella's lessons)
 
   'sdt_yhJTJ0': {
     firstName: 'Vaidik',

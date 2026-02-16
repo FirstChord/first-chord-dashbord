@@ -75,7 +75,6 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_MdD4JB': 'https://www.soundslice.com/courses/18680/', // Fallou Ndiaye
   'sdt_Mg2kJz': 'https://www.soundslice.com/courses/16889/', // Anna Kennedy
   'sdt_NS6bJW': 'https://www.soundslice.com/courses/18678/', // Tabitha Slocombe
-  'sdt_QP01Jp': 'https://www.soundslice.com/courses/16894/', // Yarah Love
   'sdt_QpGPJv': 'https://www.soundslice.com/courses/16883/', // Alexander Murray
   'sdt_c8fFJ3': 'https://www.soundslice.com/courses/16907/', // Emma Snaraite
   'sdt_cB0YJd': 'https://www.soundslice.com/courses/16886/', // Tormad MacRobert
@@ -96,6 +95,7 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_Ll4DJt': 'https://www.soundslice.com/courses/17893/', // Aisling Mackenzie
   'sdt_mvhgJ3': 'https://www.soundslice.com/courses/18636/', // Patricia Miranda
   'sdt_mqLVJ3': 'https://www.soundslice.com/courses/18663/', // Mavi Ayhan
+  'sdt_mG3LJ2': 'https://www.soundslice.com/courses/16894/', // Yarah Love
 
   // Finn's students
   'sdt_2slYJ7': 'https://www.soundslice.com/courses/11672/', // Jo Vardy
