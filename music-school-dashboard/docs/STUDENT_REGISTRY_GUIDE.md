@@ -245,6 +245,7 @@ When adding students, use these exact tutor names:
 - `Fennella`
 - `Patrick`
 - `Eléna`
+- `Ines`
 - `Kenny`
 - `David`
 - `Kim`
