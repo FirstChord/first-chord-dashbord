@@ -46,10 +46,19 @@ export const STUDENT_URL_MAPPINGS = {
   'daniel': 'sdt_yHtZJ8',            // Daniel Murray
 
   // Eléna's students
+  'ryan': 'sdt_2grxJL',              // Ryan Ofee
   'cecilia': 'sdt_60gYJ7',           // Cecilia Zhuansun
+  'ritisha': 'sdt_635GJ0',           // Ritisha Paryani
+  'omar': 'sdt_6RJkJp',              // Omar Mukhtar
+  'rohan': 'sdt_D9rnJT',             // Rohan Nazir
   'sophia': 'sdt_HlXyJl',            // Sophia Papadakis
   'pablo': 'sdt_Kq3RJW',             // Pablo Cunningham
   'athena': 'sdt_M3RnJG',            // Athena Papadakis
+  'tomasso': 'sdt_N0z0Jq',           // Tomasso Fossati
+  'alessandro': 'sdt_NSmFJh',        // Alessandro Matassoni
+  'zia': 'sdt_NSmyJ3',               // Zia Permall
+  'eva': 'sdt_NXNKJJ',               // Eva Lindsay
+  'mateo': 'sdt_c794J5',             // Mateo Alonso
   'katerina': 'sdt_vcJPJj',          // Katerina Skouras
   'irruj': 'sdt_yFzkJ6',             // Irruj Chander
   'aram': 'sdt_yR33J4',              // Aram Dogan
@@ -119,19 +128,6 @@ export const STUDENT_URL_MAPPINGS = {
   'stella-c': 'sdt_x48LJT',          // Stella Cook
   'saketh': 'sdt_yLv3J7',            // Saketh Pamidimarry
   'norman': 'sdt_yLvlJx',            // Norman Boyle
-
-  // Jungyoun's students
-  'ryan': 'sdt_2grxJL',              // Ryan Ofee
-  'ritisha': 'sdt_635GJ0',           // Ritisha Paryani
-  'omar': 'sdt_6RJkJp',              // Omar Mukhtar
-  'rohan': 'sdt_D9rnJT',             // Rohan Nazir
-  'sumer': 'sdt_DdZxJQ',             // Sumer Rami
-  'alexander-p': 'sdt_L5tgJX',       // Alexander Palmer
-  'tomasso': 'sdt_N0z0Jq',           // Tomasso Fossati
-  'alessandro': 'sdt_NSmFJh',        // Alessandro Matassoni
-  'zia': 'sdt_NSmyJ3',               // Zia Permall
-  'eva': 'sdt_NXNKJJ',               // Eva Lindsay
-  'mateo': 'sdt_c794J5',             // Mateo Alonso
 
   // Kenny's students
   'craig': 'sdt_L9nZJs',             // Craig Mcaulay

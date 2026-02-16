@@ -1,11 +1,16 @@
 /**
- * Student Registry - Single Source of Truth
+ * Student Registry - Portal Configuration Source
  *
- * This file contains ALL student data in one place.
+ * This file contains student portal configuration data.
  * Use `npm run generate-configs` to auto-generate the 5 config files from this registry.
  *
- * Last generated: 2025-10-04
- * Total students: 168
+ * IMPORTANT: The 'tutor' field here is for organizational grouping only.
+ * The live tutor dashboard uses MMS API as the source of truth for tutor assignments.
+ * When tutors change in MMS, manually update this registry to keep it in sync.
+ *
+ * Last updated: 2026-02-16
+ * Total students: 183
+ * Active tutors: 14
  */
 
 export const STUDENTS_REGISTRY = {
@@ -13,7 +18,7 @@ export const STUDENTS_REGISTRY = {
     firstName: 'Ryan',
     lastName: 'Ofee',
     friendlyUrl: 'ryan',
-    tutor: 'Jungyoun',
+    tutor: 'Eléna',
     instrument: 'Piano',
     soundsliceUrl: 'https://www.soundslice.com/courses/16914/',
     thetaUsername: 'ryanfc',
@@ -138,7 +143,7 @@ export const STUDENTS_REGISTRY = {
     firstName: 'Ritisha',
     lastName: 'Paryani',
     friendlyUrl: 'ritisha',
-    tutor: 'Jungyoun',
+    tutor: 'Eléna',
     instrument: 'Piano',
     soundsliceUrl: 'https://www.soundslice.com/courses/17489/',
     thetaUsername: 'ritishafc',
@@ -166,7 +171,7 @@ export const STUDENTS_REGISTRY = {
     firstName: 'Omar',
     lastName: 'Mukhtar',
     friendlyUrl: 'omar',
-    tutor: 'Jungyoun',
+    tutor: 'Eléna',
     instrument: 'Piano',
     soundsliceUrl: 'https://www.soundslice.com/courses/17097/',
     thetaUsername: 'omarfc',
@@ -363,21 +368,11 @@ export const STUDENTS_REGISTRY = {
     firstName: 'Rohan',
     lastName: 'Nazir',
     friendlyUrl: 'rohan',
-    tutor: 'Jungyoun',
+    tutor: 'Eléna',
     instrument: 'Piano',
     soundsliceUrl: 'https://www.soundslice.com/courses/16911/',
     thetaUsername: 'rohanfc',
   }, // Rohan Nazir
-
-  'sdt_DdZxJQ': {
-    firstName: 'Sumer',
-    lastName: 'Rami',
-    friendlyUrl: 'sumer',
-    tutor: 'Jungyoun',
-    instrument: 'Piano',
-    soundsliceUrl: 'https://www.soundslice.com/courses/16880/',
-    thetaUsername: 'sumerfc',
-  }, // Sumer Rami
 
   'sdt_DdxtJZ': {
     firstName: 'Rosie',
@@ -661,16 +656,6 @@ export const STUDENTS_REGISTRY = {
     thetaUsername: 'dimitrafc',
   }, // Dimitra Ntarmou
 
-  'sdt_L5tgJX': {
-    firstName: 'Alexander',
-    lastName: 'Palmer',
-    friendlyUrl: 'alexander-p',
-    tutor: 'Jungyoun',
-    instrument: 'Piano',
-    soundsliceUrl: 'https://www.soundslice.com/courses/17255/',
-    thetaUsername: 'alexanderfc',
-  }, // Alexander Palmer
-
   'sdt_L9nZJs': {
     firstName: 'Craig',
     lastName: 'Mcaulay',
@@ -756,7 +741,7 @@ export const STUDENTS_REGISTRY = {
     firstName: 'Tomasso',
     lastName: 'Fossati',
     friendlyUrl: 'tomasso',
-    tutor: 'Jungyoun',
+    tutor: 'Eléna',
     instrument: 'Piano',
     soundsliceUrl: 'https://www.soundslice.com/courses/16912/',
     thetaUsername: 'tomassofc',
@@ -785,7 +770,7 @@ export const STUDENTS_REGISTRY = {
     firstName: 'Alessandro',
     lastName: 'Matassoni',
     friendlyUrl: 'alessandro',
-    tutor: 'Jungyoun',
+    tutor: 'Eléna',
     instrument: 'Piano',
     soundsliceUrl: 'https://www.soundslice.com/courses/16909/',
     thetaUsername: 'alessandrofc',
@@ -805,7 +790,7 @@ export const STUDENTS_REGISTRY = {
     firstName: 'Zia',
     lastName: 'Permall',
     friendlyUrl: 'zia',
-    tutor: 'Jungyoun',
+    tutor: 'Eléna',
     instrument: 'Piano',
     soundsliceUrl: 'https://www.soundslice.com/courses/16913/',
     thetaUsername: 'ziafc',
@@ -815,7 +800,7 @@ export const STUDENTS_REGISTRY = {
     firstName: 'Eva',
     lastName: 'Lindsay',
     friendlyUrl: 'eva',
-    tutor: 'Jungyoun',
+    tutor: 'Eléna',
     instrument: 'Piano',
     soundsliceUrl: 'https://www.soundslice.com/courses/16910/',
     thetaUsername: 'evafc',
@@ -981,7 +966,7 @@ export const STUDENTS_REGISTRY = {
     firstName: 'Mateo',
     lastName: 'Alonso',
     friendlyUrl: 'mateo',
-    tutor: 'Jungyoun',
+    tutor: 'Eléna',
     instrument: 'Piano',
     soundsliceUrl: 'https://www.soundslice.com/courses/16908/',
     thetaUsername: 'mateofc',

@@ -180,6 +180,62 @@ npm run generate-configs
 }, // Ritisha Paryani
 ```
 
+## ⚠️ Understanding the `tutor` Field
+
+### What It Controls
+
+The `tutor` field in `students-registry.js` is **for organizational purposes only**:
+
+✅ **DOES**:
+- Groups students into sections in generated config files
+- Adds helpful comments like `// Finn's students`
+- Makes maintenance easier (finding students by tutor)
+- Helps organize the codebase
+
+❌ **DOES NOT**:
+- Control which tutor sees which students on the **live dashboard**
+- Affect MMS API responses
+- Automatically update when tutors change in MMS
+- Determine actual tutor assignments
+
+### The Two Data Sources
+
+**1. Student Registry** (`students-registry.js`):
+- **Purpose**: Portal configuration and code organization
+- **Updates**: Manual edits by developers
+- **Used For**: Student portal pages, Soundslice links, Theta credentials
+
+**2. MMS API** (Live data from My Music Staff):
+- **Purpose**: Live tutor dashboard and billing
+- **Updates**: Automatic via MMS system
+- **Used For**: Tutor dashboards, student lists, lesson tracking
+
+### When Tutors Change
+
+If a student's tutor changes in MMS:
+
+1. **Dashboard Updates Automatically** - No code changes needed
+2. **Registry Needs Manual Update** - To keep code organized
+
+**Example**: When Jungyoun left and students moved to Eléna:
+- ✅ Dashboard showed new tutor immediately (via MMS API)
+- ❌ Registry still showed old tutor until manually updated
+- ⚠️ This caused confusion but didn't break functionality
+
+### How to Detect Stale Tutor Assignments
+
+Check for mismatches between registry and live MMS data:
+
+1. Open the live dashboard at https://firstchord.co.uk/dashboard
+2. Select a tutor and view their students
+3. Compare with registry file groupings
+4. Update registry `tutor` field if mismatched
+5. Run `npm run generate-configs`
+
+### Best Practice
+
+**Update the registry when tutors change** to keep the codebase organized and prevent confusion for future developers/agents working on the code.
+
 ## 📊 Available Tutors
 
 When adding students, use these exact tutor names:
@@ -187,7 +243,6 @@ When adding students, use these exact tutor names:
 - `Dean`
 - `Tom`
 - `Fennella`
-- `Jungyoun`
 - `Patrick`
 - `Eléna`
 - `Kenny`
@@ -196,7 +251,10 @@ When adding students, use these exact tutor names:
 - `Robbie`
 - `Stef`
 - `Arion`
+- `Maks`
 - `Unknown` (for students without assigned tutor)
+
+**Note**: Jungyoun has left (students moved to Eléna)
 
 ## 🔄 Generator Script Details
 

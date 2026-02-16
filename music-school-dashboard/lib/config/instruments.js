@@ -27,10 +27,19 @@ export const instrumentOverrides = {
   'sdt_BDHqJv': 'Guitar', // Alice Drew
 
   // Eléna's students
+  'sdt_2grxJL': 'Piano', // Ryan Ofee
   'sdt_60gYJ7': 'Piano', // Cecilia Zhuansun
+  'sdt_635GJ0': 'Piano', // Ritisha Paryani
+  'sdt_6RJkJp': 'Piano', // Omar Mukhtar
+  'sdt_D9rnJT': 'Piano', // Rohan Nazir
   'sdt_HlXyJl': 'Piano', // Sophia Papadakis
   'sdt_Kq3RJW': 'Piano', // Pablo Cunningham
   'sdt_M3RnJG': 'Piano', // Athena Papadakis
+  'sdt_N0z0Jq': 'Piano', // Tomasso Fossati
+  'sdt_NSmFJh': 'Piano', // Alessandro Matassoni
+  'sdt_NSmyJ3': 'Piano', // Zia Permall
+  'sdt_NXNKJJ': 'Piano', // Eva Lindsay
+  'sdt_c794J5': 'Piano', // Mateo Alonso
   'sdt_vcJPJj': 'Piano', // Katerina Skouras
   'sdt_yFzkJ6': 'Piano', // Irruj Chander
   'sdt_yR33J4': 'Piano', // Aram Dogan
@@ -68,19 +77,6 @@ export const instrumentOverrides = {
   'sdt_Ll4DJt': 'Voice', // Aisling Mackenzie
   'sdt_mvhgJ3': 'Voice', // Patricia Miranda
   'sdt_mqLVJ3': 'Piano', // Mavi Ayhan
-
-  // Jungyoun's students
-  'sdt_2grxJL': 'Piano', // Ryan Ofee
-  'sdt_635GJ0': 'Piano', // Ritisha Paryani
-  'sdt_6RJkJp': 'Piano', // Omar Mukhtar
-  'sdt_D9rnJT': 'Piano', // Rohan Nazir
-  'sdt_DdZxJQ': 'Piano', // Sumer Rami
-  'sdt_L5tgJX': 'Piano', // Alexander Palmer
-  'sdt_N0z0Jq': 'Piano', // Tomasso Fossati
-  'sdt_NSmFJh': 'Piano', // Alessandro Matassoni
-  'sdt_NSmyJ3': 'Piano', // Zia Permall
-  'sdt_NXNKJJ': 'Piano', // Eva Lindsay
-  'sdt_c794J5': 'Piano', // Mateo Alonso
 
   // Kenny's students
   'sdt_L9nZJs': 'Guitar', // Craig Mcaulay

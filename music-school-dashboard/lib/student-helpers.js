@@ -50,10 +50,19 @@ const VALID_STUDENT_IDS = [
   'sdt_yHtZJ8', // Daniel Murray (/daniel)
 
   // Eléna's students
+  'sdt_2grxJL', // Ryan Ofee (/ryan)
   'sdt_60gYJ7', // Cecilia Zhuansun (/cecilia)
+  'sdt_635GJ0', // Ritisha Paryani (/ritisha)
+  'sdt_6RJkJp', // Omar Mukhtar (/omar)
+  'sdt_D9rnJT', // Rohan Nazir (/rohan)
   'sdt_HlXyJl', // Sophia Papadakis (/sophia)
   'sdt_Kq3RJW', // Pablo Cunningham (/pablo)
   'sdt_M3RnJG', // Athena Papadakis (/athena)
+  'sdt_N0z0Jq', // Tomasso Fossati (/tomasso)
+  'sdt_NSmFJh', // Alessandro Matassoni (/alessandro)
+  'sdt_NSmyJ3', // Zia Permall (/zia)
+  'sdt_NXNKJJ', // Eva Lindsay (/eva)
+  'sdt_c794J5', // Mateo Alonso (/mateo)
   'sdt_vcJPJj', // Katerina Skouras (/katerina)
   'sdt_yFzkJ6', // Irruj Chander (/irruj)
   'sdt_yR33J4', // Aram Dogan (/aram)
@@ -123,19 +132,6 @@ const VALID_STUDENT_IDS = [
   'sdt_x48LJT', // Stella Cook (/stella-c)
   'sdt_yLv3J7', // Saketh Pamidimarry (/saketh)
   'sdt_yLvlJx', // Norman Boyle (/norman)
-
-  // Jungyoun's students
-  'sdt_2grxJL', // Ryan Ofee (/ryan)
-  'sdt_635GJ0', // Ritisha Paryani (/ritisha)
-  'sdt_6RJkJp', // Omar Mukhtar (/omar)
-  'sdt_D9rnJT', // Rohan Nazir (/rohan)
-  'sdt_DdZxJQ', // Sumer Rami (/sumer)
-  'sdt_L5tgJX', // Alexander Palmer (/alexander-p)
-  'sdt_N0z0Jq', // Tomasso Fossati (/tomasso)
-  'sdt_NSmFJh', // Alessandro Matassoni (/alessandro)
-  'sdt_NSmyJ3', // Zia Permall (/zia)
-  'sdt_NXNKJJ', // Eva Lindsay (/eva)
-  'sdt_c794J5', // Mateo Alonso (/mateo)
 
   // Kenny's students
   'sdt_L9nZJs', // Craig Mcaulay (/craig)

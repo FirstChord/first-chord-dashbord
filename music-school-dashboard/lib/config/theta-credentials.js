@@ -50,10 +50,19 @@ export const thetaCredentials = {
   'sdt_yHtZJ8': 'danielfc', // Daniel Murray
 
   // Eléna's students
+  'sdt_2grxJL': 'ryanfc', // Ryan Ofee
   'sdt_60gYJ7': 'ceciliafc', // Cecilia Zhuansun
+  'sdt_635GJ0': 'ritishafc', // Ritisha Paryani
+  'sdt_6RJkJp': 'omarfc', // Omar Mukhtar
+  'sdt_D9rnJT': 'rohanfc', // Rohan Nazir
   'sdt_HlXyJl': 'sophiafc', // Sophia Papadakis
   'sdt_Kq3RJW': 'pablofc', // Pablo Cunningham
   'sdt_M3RnJG': 'athenafc', // Athena Papadakis
+  'sdt_N0z0Jq': 'tomassofc', // Tomasso Fossati
+  'sdt_NSmFJh': 'alessandrofc', // Alessandro Matassoni
+  'sdt_NSmyJ3': 'ziafc', // Zia Permall
+  'sdt_NXNKJJ': 'evafc', // Eva Lindsay
+  'sdt_c794J5': 'mateofc', // Mateo Alonso
   'sdt_vcJPJj': 'katerinafc', // Katerina Skouras
   'sdt_yFzkJ6': 'irrujfc', // Irruj Chander
   'sdt_yR33J4': 'aramfc', // Aram Dogan
@@ -123,19 +132,6 @@ export const thetaCredentials = {
   'sdt_x48LJT': 'stellafc', // Stella Cook
   'sdt_yLv3J7': 'sakethfc', // Saketh Pamidimarry
   'sdt_yLvlJx': 'normanfc', // Norman Boyle
-
-  // Jungyoun's students
-  'sdt_2grxJL': 'ryanfc', // Ryan Ofee
-  'sdt_635GJ0': 'ritishafc', // Ritisha Paryani
-  'sdt_6RJkJp': 'omarfc', // Omar Mukhtar
-  'sdt_D9rnJT': 'rohanfc', // Rohan Nazir
-  'sdt_DdZxJQ': 'sumerfc', // Sumer Rami
-  'sdt_L5tgJX': 'alexanderfc', // Alexander Palmer
-  'sdt_N0z0Jq': 'tomassofc', // Tomasso Fossati
-  'sdt_NSmFJh': 'alessandrofc', // Alessandro Matassoni
-  'sdt_NSmyJ3': 'ziafc', // Zia Permall
-  'sdt_NXNKJJ': 'evafc', // Eva Lindsay
-  'sdt_c794J5': 'mateofc', // Mateo Alonso
 
   // Kenny's students
   'sdt_L9nZJs': 'craigfc', // Craig Mcaulay
