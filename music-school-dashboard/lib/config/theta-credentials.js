@@ -166,6 +166,7 @@ export const thetaCredentials = {
   'sdt_cZsDJp': 'katiefc', // Katie Brown
 
   // Patrick's students
+  'sdt_QP01Jp': 'yarahfc', // Yarah Love
   'sdt_QSzJJ2': 'arasfc', // Aras Korkmaz
   'sdt_Qcm1JR': 'cananfc', // Canan Dogan
   'sdt_QfWBJx': 'eddiefc', // Eddie Roarty

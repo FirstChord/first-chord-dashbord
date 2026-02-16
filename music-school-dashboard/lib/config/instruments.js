@@ -111,6 +111,7 @@ export const instrumentOverrides = {
   'sdt_cZsDJp': 'Guitar', // Katie Brown
 
   // Patrick's students
+  'sdt_QP01Jp': 'Piano', // Yarah Love
   'sdt_QSzJJ2': 'Piano', // Aras Korkmaz
   'sdt_Qcm1JR': 'Guitar', // Canan Dogan
   'sdt_QfWBJx': 'Guitar', // Eddie Roarty

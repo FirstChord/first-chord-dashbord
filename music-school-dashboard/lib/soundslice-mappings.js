@@ -162,6 +162,7 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_cZsDJp': 'https://www.soundslice.com/courses/17317/', // Katie Brown
 
   // Patrick's students
+  'sdt_QP01Jp': 'https://www.soundslice.com/courses/16894/', // Yarah Love
   'sdt_QSzJJ2': 'https://www.soundslice.com/courses/17067/', // Aras Korkmaz
   'sdt_Qcm1JR': 'https://www.soundslice.com/courses/15468/', // Canan Dogan
   'sdt_QfWBJx': 'https://www.soundslice.com/courses/15555/', // Eddie Roarty

@@ -162,6 +162,7 @@ export const STUDENT_URL_MAPPINGS = {
   'katie': 'sdt_cZsDJp',             // Katie Brown
 
   // Patrick's students
+  'yarah': 'sdt_QP01Jp',             // Yarah Love
   'aras': 'sdt_QSzJJ2',              // Aras Korkmaz
   'canan': 'sdt_Qcm1JR',             // Canan Dogan
   'eddie': 'sdt_QfWBJx',             // Eddie Roarty

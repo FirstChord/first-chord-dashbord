@@ -857,7 +857,7 @@ export const STUDENTS_REGISTRY = {
     firstName: 'Yarah',
     lastName: 'Love',
     friendlyUrl: 'yarah',
-    tutor: 'Fennella',
+    tutors: ['Patrick', 'Fennella'], // Dual-tutor student
     instrument: 'Piano',
     soundsliceUrl: 'https://www.soundslice.com/courses/16894/',
     thetaUsername: 'yarahfc',

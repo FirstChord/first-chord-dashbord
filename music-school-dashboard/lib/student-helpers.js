@@ -166,6 +166,7 @@ const VALID_STUDENT_IDS = [
   'sdt_cZsDJp', // Katie Brown (/katie)
 
   // Patrick's students
+  'sdt_QP01Jp', // Yarah Love (/yarah)
   'sdt_QSzJJ2', // Aras Korkmaz (/aras)
   'sdt_Qcm1JR', // Canan Dogan (/canan)
   'sdt_QfWBJx', // Eddie Roarty (/eddie)

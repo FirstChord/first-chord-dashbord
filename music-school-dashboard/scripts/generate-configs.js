@@ -48,6 +48,7 @@ function loadRegistry() {
       lastName: extractProperty(properties, 'lastName') || '',
       friendlyUrl: extractProperty(properties, 'friendlyUrl') || '',
       tutor: extractProperty(properties, 'tutor') || '',
+      tutors: extractArrayProperty(properties, 'tutors') || null,
       instrument: extractProperty(properties, 'instrument') || null,
       soundsliceUrl: extractProperty(properties, 'soundsliceUrl') || null,
       thetaUsername: extractProperty(properties, 'thetaUsername') || null,
@@ -69,17 +70,56 @@ function extractProperty(propertiesText, propertyName) {
 }
 
 /**
+ * Extract an array property value from a string of object properties
+ */
+function extractArrayProperty(propertiesText, propertyName) {
+  // Match pattern like: tutors: ['Patrick', 'Fennella']
+  const regex = new RegExp(`${propertyName}:\\s*\\[([^\\]]+)\\]`);
+  const match = propertiesText.match(regex);
+
+  if (!match) return null;
+
+  // Extract individual quoted strings from the array
+  const arrayContent = match[1];
+  const stringRegex = /'([^']+)'/g;
+  const values = [];
+  let stringMatch;
+
+  while ((stringMatch = stringRegex.exec(arrayContent)) !== null) {
+    values.push(stringMatch[1]);
+  }
+
+  return values.length > 0 ? values : null;
+}
+
+/**
  * Group students by tutor
+ * Supports both single tutor (string) and multiple tutors (array)
  */
 function groupByTutor(registry) {
   const tutorGroups = {};
 
   Object.entries(registry).forEach(([studentId, data]) => {
-    const tutor = data.tutor || 'Unknown';
-    if (!tutorGroups[tutor]) {
-      tutorGroups[tutor] = [];
+    // Handle both formats: tutor (string) and tutors (array)
+    let tutorList;
+    if (Array.isArray(data.tutors)) {
+      // New format: tutors array for dual-tutor students
+      tutorList = data.tutors;
+    } else if (data.tutor) {
+      // Old format: single tutor string (backward compatible)
+      tutorList = [data.tutor];
+    } else {
+      // No tutor specified
+      tutorList = ['Unknown'];
     }
-    tutorGroups[tutor].push({ studentId, ...data });
+
+    // Add student to EACH tutor's group
+    tutorList.forEach(tutor => {
+      if (!tutorGroups[tutor]) {
+        tutorGroups[tutor] = [];
+      }
+      tutorGroups[tutor].push({ studentId, ...data });
+    });
   });
 
   return tutorGroups;
