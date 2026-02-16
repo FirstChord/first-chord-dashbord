@@ -9,8 +9,8 @@
  * When tutors change in MMS, manually update this registry to keep it in sync.
  *
  * Last updated: 2026-02-16
- * Total students: 183
- * Active tutors: 14
+ * Total students: 187
+ * Active tutors: 15 (newest: Ines)
  */
 
 export const STUDENTS_REGISTRY = {
@@ -1785,4 +1785,44 @@ export const STUDENTS_REGISTRY = {
     soundsliceUrl: 'https://www.soundslice.com/courses/17317/',
     thetaUsername: 'katiefc',
   }, // Katie Brown
+
+  'sdt_LP9GJp': {
+    firstName: 'Mark',
+    lastName: 'Mitchell',
+    friendlyUrl: 'mark-m',
+    tutor: 'Ines',
+    instrument: 'Piano',
+    soundsliceUrl: 'https://www.soundslice.com/courses/17926/',
+    thetaUsername: 'markmfc',
+  }, // Mark Mitchell
+
+  'sdt_mqL5JN': {
+    firstName: 'Liam',
+    lastName: 'Hopton',
+    friendlyUrl: 'liam',
+    tutor: 'Ines',
+    instrument: 'Piano',
+    soundsliceUrl: 'https://www.soundslice.com/courses/18454/',
+    thetaUsername: 'liamfc',
+  }, // Liam Hopton
+
+  'sdt_m3mmJB': {
+    firstName: 'Fadime',
+    lastName: 'Kara',
+    friendlyUrl: 'fadime',
+    tutor: 'Ines',
+    instrument: 'Piano',
+    soundsliceUrl: 'https://www.soundslice.com/courses/18762/',
+    thetaUsername: 'fadimefc',
+  }, // Fadime Kara
+
+  'sdt_my8xJB': {
+    firstName: 'Innes',
+    lastName: 'Morton',
+    friendlyUrl: 'innes',
+    tutor: 'Ines',
+    instrument: 'Piano',
+    soundsliceUrl: 'https://www.soundslice.com/courses/18812/',
+    thetaUsername: 'innesfc',
+  }, // Innes Morton
 };

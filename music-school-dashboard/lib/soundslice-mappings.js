@@ -129,6 +129,12 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_yLv3J7': 'https://www.soundslice.com/courses/11720/', // Saketh Pamidimarry
   'sdt_yLvlJx': 'https://www.soundslice.com/courses/13639/', // Norman Boyle
 
+  // Ines's students
+  'sdt_LP9GJp': 'https://www.soundslice.com/courses/17926/', // Mark Mitchell
+  'sdt_mqL5JN': 'https://www.soundslice.com/courses/18454/', // Liam Hopton
+  'sdt_m3mmJB': 'https://www.soundslice.com/courses/18762/', // Fadime Kara
+  'sdt_my8xJB': 'https://www.soundslice.com/courses/18812/', // Innes Morton
+
   // Kenny's students
   'sdt_L9nZJs': 'https://www.soundslice.com/courses/17288/', // Craig Mcaulay
   'sdt_cZsMJD': 'https://www.soundslice.com/courses/17318/', // Nina Brown

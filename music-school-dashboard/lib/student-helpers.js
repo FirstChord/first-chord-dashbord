@@ -133,6 +133,12 @@ const VALID_STUDENT_IDS = [
   'sdt_yLv3J7', // Saketh Pamidimarry (/saketh)
   'sdt_yLvlJx', // Norman Boyle (/norman)
 
+  // Ines's students
+  'sdt_LP9GJp', // Mark Mitchell (/mark-m)
+  'sdt_mqL5JN', // Liam Hopton (/liam)
+  'sdt_m3mmJB', // Fadime Kara (/fadime)
+  'sdt_my8xJB', // Innes Morton (/innes)
+
   // Kenny's students
   'sdt_L9nZJs', // Craig Mcaulay (/craig)
   'sdt_cZsMJD', // Nina Brown (/nina)

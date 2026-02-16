@@ -133,6 +133,12 @@ export const thetaCredentials = {
   'sdt_yLv3J7': 'sakethfc', // Saketh Pamidimarry
   'sdt_yLvlJx': 'normanfc', // Norman Boyle
 
+  // Ines's students
+  'sdt_LP9GJp': 'markmfc', // Mark Mitchell
+  'sdt_mqL5JN': 'liamfc', // Liam Hopton
+  'sdt_m3mmJB': 'fadimefc', // Fadime Kara
+  'sdt_my8xJB': 'innesfc', // Innes Morton
+
   // Kenny's students
   'sdt_L9nZJs': 'craigfc', // Craig Mcaulay
   'sdt_cZsMJD': 'ninabfc', // Nina Brown

@@ -129,6 +129,12 @@ export const STUDENT_URL_MAPPINGS = {
   'saketh': 'sdt_yLv3J7',            // Saketh Pamidimarry
   'norman': 'sdt_yLvlJx',            // Norman Boyle
 
+  // Ines's students
+  'mark-m': 'sdt_LP9GJp',            // Mark Mitchell
+  'liam': 'sdt_mqL5JN',              // Liam Hopton
+  'fadime': 'sdt_m3mmJB',            // Fadime Kara
+  'innes': 'sdt_my8xJB',             // Innes Morton
+
   // Kenny's students
   'craig': 'sdt_L9nZJs',             // Craig Mcaulay
   'nina': 'sdt_cZsMJD',              // Nina Brown

@@ -78,6 +78,12 @@ export const instrumentOverrides = {
   'sdt_mvhgJ3': 'Voice', // Patricia Miranda
   'sdt_mqLVJ3': 'Piano', // Mavi Ayhan
 
+  // Ines's students
+  'sdt_LP9GJp': 'Piano', // Mark Mitchell
+  'sdt_mqL5JN': 'Piano', // Liam Hopton
+  'sdt_m3mmJB': 'Piano', // Fadime Kara
+  'sdt_my8xJB': 'Piano', // Innes Morton
+
   // Kenny's students
   'sdt_L9nZJs': 'Guitar', // Craig Mcaulay
   'sdt_cZsMJD': 'Guitar', // Nina Brown
