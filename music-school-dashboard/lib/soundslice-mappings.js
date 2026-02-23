@@ -15,6 +15,7 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_L8Y3JY': 'https://www.soundslice.com/courses/18662/', // Sadie Lindop
   'sdt_mGY6JY': 'https://www.soundslice.com/courses/19017/', // Enol Pardo-Alguero
   'sdt_mvK6JZ': 'https://www.soundslice.com/courses/18637/', // Julie Donaldson
+  'sdt_m90dJj': 'https://www.soundslice.com/courses/18487/', // Adam Brooks
 
   // David's students
   'sdt_638hJ9': 'https://www.soundslice.com/courses/16881/', // Vanessa
@@ -48,6 +49,7 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_vHS3JK': 'https://www.soundslice.com/courses/8658/', // Sandy Morgan
   'sdt_vLG0JL': 'https://www.soundslice.com/courses/8658/', // Sonny H
   'sdt_yHtZJ8': 'https://www.soundslice.com/courses/13981/', // Daniel Murray
+  'sdt_mNY8JF': 'https://www.soundslice.com/courses/18763/', // Poyraz Demirci
 
   // Eléna's students
   'sdt_2grxJL': 'https://www.soundslice.com/courses/16914/', // Ryan Ofee
@@ -67,6 +69,7 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_yFzkJ6': 'https://www.soundslice.com/courses/13901/', // Irruj Chander
   'sdt_yR33J4': 'https://www.soundslice.com/courses/17210/', // Aram Dogan
   'sdt_yhJTJ0': 'https://www.soundslice.com/courses/13507/', // Vaidik Gupta
+  'sdt_LpvnJ9': 'https://www.soundslice.com/courses/17444/', // Astrid Jonsson
 
   // Fennella's students
   'sdt_39hsJY': 'https://www.soundslice.com/courses/16898/', // Chiara Cavanna
@@ -107,6 +110,7 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_BDHJJF': 'https://www.soundslice.com/courses/8101/', // Claire McGinniss
   'sdt_BDHKJs': 'https://www.soundslice.com/courses/13888/', // Archie Toner
   'sdt_BDHdJ4': 'https://www.soundslice.com/courses/4303/', // Thomas Ward
+  'sdt_BDsMJk': 'https://www.soundslice.com/courses/13200/', // Teagan Samuel
   'sdt_BDsRJ9': 'https://www.soundslice.com/courses/6753/', // Rose Drew
   'sdt_BpDPJZ': 'https://www.soundslice.com/courses/6917/', // Calan Clacherty
   'sdt_H6CvJv': 'https://www.soundslice.com/courses/9009/', // Mathilde thallon
@@ -132,6 +136,7 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_x48LJT': 'https://www.soundslice.com/courses/12954/', // Stella Cook
   'sdt_yLv3J7': 'https://www.soundslice.com/courses/11720/', // Saketh Pamidimarry
   'sdt_yLvlJx': 'https://www.soundslice.com/courses/13639/', // Norman Boyle
+  'sdt_L15vJh': 'https://www.soundslice.com/courses/17436/', // Guy Pilsworth
 
   // Ines's students
   'sdt_LP9GJp': 'https://www.soundslice.com/courses/17926/', // Mark Mitchell

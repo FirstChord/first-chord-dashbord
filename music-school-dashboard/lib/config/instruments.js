@@ -19,6 +19,7 @@ export const instrumentOverrides = {
   'sdt_L8Y3JY': 'Guitar', // Sadie Lindop
   'sdt_mGY6JY': 'Guitar', // Enol Pardo-Alguero
   'sdt_mvK6JZ': 'Guitar', // Julie Donaldson
+  'sdt_m90dJj': 'Guitar', // Adam Brooks
 
   // David's students
   'sdt_L5l5JD': 'Piano', // Dimitra Ntarmou
@@ -29,6 +30,7 @@ export const instrumentOverrides = {
 
   // Dean's students
   'sdt_BDHqJv': 'Guitar', // Alice Drew
+  'sdt_mNY8JF': 'Guitar', // Poyraz Demirci
 
   // Eléna's students
   'sdt_2grxJL': 'Piano', // Ryan Ofee
@@ -48,6 +50,7 @@ export const instrumentOverrides = {
   'sdt_yFzkJ6': 'Piano', // Irruj Chander
   'sdt_yR33J4': 'Piano', // Aram Dogan
   'sdt_yhJTJ0': 'Piano', // Vaidik Gupta
+  'sdt_LpvnJ9': 'Piano', // Astrid Jonsson
 
   // Fennella's students
   'sdt_39hsJY': 'Piano', // Chiara Cavanna
@@ -81,6 +84,10 @@ export const instrumentOverrides = {
   'sdt_mvhgJ3': 'Voice', // Patricia Miranda
   'sdt_mqLVJ3': 'Piano', // Mavi Ayhan
   'sdt_mG3LJ2': 'Piano', // Yarah Love
+
+  // Finn's students
+  'sdt_BDsMJk': 'Guitar', // Teagan Samuel
+  'sdt_L15vJh': 'Guitar', // Guy Pilsworth
 
   // Ines's students
   'sdt_LP9GJp': 'Piano', // Mark Mitchell

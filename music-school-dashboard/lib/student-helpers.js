@@ -19,6 +19,7 @@ const VALID_STUDENT_IDS = [
   'sdt_L8Y3JY', // Sadie Lindop (/sadielin)
   'sdt_mGY6JY', // Enol Pardo-Alguero (/enol)
   'sdt_mvK6JZ', // Julie Donaldson (/julied)
+  'sdt_m90dJj', // Adam Brooks (/adamb)
 
   // David's students
   'sdt_638hJ9', // Vanessa (/vanessa)
@@ -52,6 +53,7 @@ const VALID_STUDENT_IDS = [
   'sdt_vHS3JK', // Sandy Morgan (/sandy)
   'sdt_vLG0JL', // Sonny H (/sonny-h)
   'sdt_yHtZJ8', // Daniel Murray (/daniel)
+  'sdt_mNY8JF', // Poyraz Demirci (/poyraz)
 
   // Eléna's students
   'sdt_2grxJL', // Ryan Ofee (/ryan)
@@ -71,6 +73,7 @@ const VALID_STUDENT_IDS = [
   'sdt_yFzkJ6', // Irruj Chander (/irruj)
   'sdt_yR33J4', // Aram Dogan (/aram)
   'sdt_yhJTJ0', // Vaidik Gupta (/vaidik)
+  'sdt_LpvnJ9', // Astrid Jonsson (/astrid)
 
   // Fennella's students
   'sdt_39hsJY', // Chiara Cavanna (/chiara)
@@ -111,6 +114,7 @@ const VALID_STUDENT_IDS = [
   'sdt_BDHJJF', // Claire McGinniss (/claire-m)
   'sdt_BDHKJs', // Archie Toner (/archie)
   'sdt_BDHdJ4', // Thomas Ward (/thomas)
+  'sdt_BDsMJk', // Teagan Samuel (/teagan)
   'sdt_BDsRJ9', // Rose Drew (/rose)
   'sdt_BpDPJZ', // Calan Clacherty (/calan)
   'sdt_H6CvJv', // Mathilde thallon (/mathilde)
@@ -136,6 +140,7 @@ const VALID_STUDENT_IDS = [
   'sdt_x48LJT', // Stella Cook (/stella-c)
   'sdt_yLv3J7', // Saketh Pamidimarry (/saketh)
   'sdt_yLvlJx', // Norman Boyle (/norman)
+  'sdt_L15vJh', // Guy Pilsworth (/guy)
 
   // Ines's students
   'sdt_LP9GJp', // Mark Mitchell (/mark-m)
@@ -222,7 +227,6 @@ const VALID_STUDENT_IDS = [
   'sdt_DP20Js', // Evan Gibson (/evan-g)
 
   // Unknown's students
-  'sdt_BDsMJk', // Teagan Samuel (/teagan)
   'sdt_Q39JJ9', // Kushal Avvaru (/kushal)
   'sdt_cqlvJb', // Shridhana Sathiyanarayanan (/shridhana)
 

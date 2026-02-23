@@ -9,7 +9,7 @@
  * When tutors change in MMS, manually update this registry to keep it in sync.
  *
  * Last updated: 2026-02-23
- * Total students: 190
+ * Total students: 194
  * Active tutors: 15 (newest: Scott, replacing Maks)
  */
 
@@ -286,6 +286,10 @@ export const STUDENTS_REGISTRY = {
     firstName: 'Teagan',
     lastName: 'Samuel',
     friendlyUrl: 'teagan',
+    tutor: 'Finn',
+    instrument: 'Guitar',
+    soundsliceUrl: 'https://www.soundslice.com/courses/13200/',
+    thetaUsername: 'teaganfc',
   }, // Teagan Samuel
 
   'sdt_BDsRJ9': {
@@ -1855,4 +1859,43 @@ export const STUDENTS_REGISTRY = {
     soundsliceUrl: 'https://www.soundslice.com/courses/18812/',
     thetaUsername: 'innesfc',
   }, // Innes Morton
+
+  'sdt_m90dJj': {
+    firstName: 'Adam',
+    lastName: 'Brooks',
+    friendlyUrl: 'adamb',
+    tutor: 'Arion',
+    instrument: 'Guitar',
+    soundsliceUrl: 'https://www.soundslice.com/courses/18487/',
+    thetaUsername: 'adambfc',
+  }, // Adam Brooks
+
+  'sdt_mNY8JF': {
+    firstName: 'Poyraz',
+    lastName: 'Demirci',
+    friendlyUrl: 'poyraz',
+    tutor: 'Dean',
+    instrument: 'Guitar',
+    soundsliceUrl: 'https://www.soundslice.com/courses/18763/',
+  }, // Poyraz Demirci
+
+  'sdt_LpvnJ9': {
+    firstName: 'Astrid',
+    lastName: 'Jonsson',
+    friendlyUrl: 'astrid',
+    tutor: 'Eléna',
+    instrument: 'Piano',
+    soundsliceUrl: 'https://www.soundslice.com/courses/17444/',
+    thetaUsername: 'astridfc',
+  }, // Astrid Jonsson
+
+  'sdt_L15vJh': {
+    firstName: 'Guy',
+    lastName: 'Pilsworth',
+    friendlyUrl: 'guy',
+    tutor: 'Finn',
+    instrument: 'Guitar',
+    soundsliceUrl: 'https://www.soundslice.com/courses/17436/',
+    thetaUsername: 'guyfc',
+  }, // Guy Pilsworth
 };

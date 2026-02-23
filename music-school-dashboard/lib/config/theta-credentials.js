@@ -19,6 +19,7 @@ export const thetaCredentials = {
   'sdt_L8Y3JY': 'sadielinfc', // Sadie Lindop
   'sdt_mGY6JY': 'enolfc', // Enol Pardo-Alguero
   'sdt_mvK6JZ': 'juliedfc', // Julie Donaldson
+  'sdt_m90dJj': 'adambfc', // Adam Brooks
 
   // David's students
   'sdt_638hJ9': 'vanessafc', // Vanessa
@@ -71,6 +72,7 @@ export const thetaCredentials = {
   'sdt_yFzkJ6': 'irrujfc', // Irruj Chander
   'sdt_yR33J4': 'aramfc', // Aram Dogan
   'sdt_yhJTJ0': 'vaidikfc', // Vaidik Gupta
+  'sdt_LpvnJ9': 'astridfc', // Astrid Jonsson
 
   // Fennella's students
   'sdt_39hsJY': 'chiarafc', // Chiara Cavanna
@@ -111,6 +113,7 @@ export const thetaCredentials = {
   'sdt_BDHJJF': 'clairefc', // Claire McGinniss
   'sdt_BDHKJs': 'archiefc', // Archie Toner
   'sdt_BDHdJ4': 'thomasfc', // Thomas Ward
+  'sdt_BDsMJk': 'teaganfc', // Teagan Samuel
   'sdt_BDsRJ9': 'rosefc', // Rose Drew
   'sdt_BpDPJZ': 'calanfc', // Calan Clacherty
   'sdt_H6CvJv': 'mathildefc', // Mathilde thallon
@@ -136,6 +139,7 @@ export const thetaCredentials = {
   'sdt_x48LJT': 'stellafc', // Stella Cook
   'sdt_yLv3J7': 'sakethfc', // Saketh Pamidimarry
   'sdt_yLvlJx': 'normanfc', // Norman Boyle
+  'sdt_L15vJh': 'guyfc', // Guy Pilsworth
 
   // Ines's students
   'sdt_LP9GJp': 'markmfc', // Mark Mitchell

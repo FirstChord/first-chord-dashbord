@@ -15,6 +15,7 @@ export const STUDENT_URL_MAPPINGS = {
   'sadielin': 'sdt_L8Y3JY',          // Sadie Lindop
   'enol': 'sdt_mGY6JY',              // Enol Pardo-Alguero
   'julied': 'sdt_mvK6JZ',            // Julie Donaldson
+  'adamb': 'sdt_m90dJj',             // Adam Brooks
 
   // David's students
   'vanessa': 'sdt_638hJ9',           // Vanessa
@@ -48,6 +49,7 @@ export const STUDENT_URL_MAPPINGS = {
   'sandy': 'sdt_vHS3JK',             // Sandy Morgan
   'sonny-h': 'sdt_vLG0JL',           // Sonny H
   'daniel': 'sdt_yHtZJ8',            // Daniel Murray
+  'poyraz': 'sdt_mNY8JF',            // Poyraz Demirci
 
   // Eléna's students
   'ryan': 'sdt_2grxJL',              // Ryan Ofee
@@ -67,6 +69,7 @@ export const STUDENT_URL_MAPPINGS = {
   'irruj': 'sdt_yFzkJ6',             // Irruj Chander
   'aram': 'sdt_yR33J4',              // Aram Dogan
   'vaidik': 'sdt_yhJTJ0',            // Vaidik Gupta
+  'astrid': 'sdt_LpvnJ9',            // Astrid Jonsson
 
   // Fennella's students
   'chiara': 'sdt_39hsJY',            // Chiara Cavanna
@@ -107,6 +110,7 @@ export const STUDENT_URL_MAPPINGS = {
   'claire-m': 'sdt_BDHJJF',          // Claire McGinniss
   'archie': 'sdt_BDHKJs',            // Archie Toner
   'thomas': 'sdt_BDHdJ4',            // Thomas Ward
+  'teagan': 'sdt_BDsMJk',            // Teagan Samuel
   'rose': 'sdt_BDsRJ9',              // Rose Drew
   'calan': 'sdt_BpDPJZ',             // Calan Clacherty
   'mathilde': 'sdt_H6CvJv',          // Mathilde thallon
@@ -132,6 +136,7 @@ export const STUDENT_URL_MAPPINGS = {
   'stella-c': 'sdt_x48LJT',          // Stella Cook
   'saketh': 'sdt_yLv3J7',            // Saketh Pamidimarry
   'norman': 'sdt_yLvlJx',            // Norman Boyle
+  'guy': 'sdt_L15vJh',               // Guy Pilsworth
 
   // Ines's students
   'mark-m': 'sdt_LP9GJp',            // Mark Mitchell
@@ -218,7 +223,6 @@ export const STUDENT_URL_MAPPINGS = {
   'evan-g': 'sdt_DP20Js',            // Evan Gibson
 
   // Unknown's students
-  'teagan': 'sdt_BDsMJk',            // Teagan Samuel
   'kushal': 'sdt_Q39JJ9',            // Kushal Avvaru
   'shridhana': 'sdt_cqlvJb',         // Shridhana Sathiyanarayanan
 
