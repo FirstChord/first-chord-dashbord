@@ -1199,6 +1199,7 @@ export const STUDENTS_REGISTRY = {
     friendlyUrl: 'ezra',
     tutor: 'Patrick',
     instrument: 'Piano',
+    soundsliceUrl: 'https://www.soundslice.com/courses/19082/',
     thetaUsername: 'ezrafc',
   }, // Ezra Ford
 

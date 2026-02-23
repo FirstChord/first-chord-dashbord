@@ -171,6 +171,7 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_cJDjJj': 'https://www.soundslice.com/courses/15666/', // Suzanne Boyle
   'sdt_cYvdJp': 'https://www.soundslice.com/courses/16041/', // Noah Hegde
   'sdt_mBr8J6': 'https://www.soundslice.com/courses/18977/', // William McCormick
+  'sdt_L6LLJ3': 'https://www.soundslice.com/courses/19082/', // Ezra Ford
   'sdt_L9tMJD': 'https://www.soundslice.com/courses/17289/', // Rumbie M
   'sdt_mv22J8': 'https://www.soundslice.com/courses/18709/', // Ailsa Macfarlane
   'sdt_LfgQJd': 'https://www.soundslice.com/courses/18710/', // Lynsey Lamond
