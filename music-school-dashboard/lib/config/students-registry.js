@@ -1643,7 +1643,7 @@ export const STUDENTS_REGISTRY = {
     friendlyUrl: 'julied',
     tutor: 'Arion',
     instrument: 'Guitar',
-    soundsliceUrl: 'https://www.soundslice.com/courses/18636/',
+    soundsliceUrl: 'https://www.soundslice.com/courses/18637/',
     thetaUsername: 'juliedfc',
   }, // Julie Donaldson
 

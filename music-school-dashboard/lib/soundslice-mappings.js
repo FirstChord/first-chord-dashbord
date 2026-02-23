@@ -14,7 +14,7 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_mZHMJH': 'https://www.soundslice.com/courses/19080/', // Saja Elfaki
   'sdt_L8Y3JY': 'https://www.soundslice.com/courses/18662/', // Sadie Lindop
   'sdt_mGY6JY': 'https://www.soundslice.com/courses/19017/', // Enol Pardo-Alguero
-  'sdt_mvK6JZ': 'https://www.soundslice.com/courses/18636/', // Julie Donaldson
+  'sdt_mvK6JZ': 'https://www.soundslice.com/courses/18637/', // Julie Donaldson
 
   // David's students
   'sdt_638hJ9': 'https://www.soundslice.com/courses/16881/', // Vanessa
