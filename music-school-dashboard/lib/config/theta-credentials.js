@@ -161,14 +161,6 @@ export const thetaCredentials = {
   'sdt_QbBNJq': 'carolinefc', // Caroline Bingley
   'sdt_QcCtJT': 'marcofc', // Marco Sarconi
 
-  // Maks's students
-  'sdt_LYflJY': 'lamfc', // Lam Wa Zeng
-  'sdt_6ZrzJq': 'icarofc', // Icaro Segnini-Hernandez
-  'sdt_LsWTJR': 'dharafc', // Anuraha Dhara
-  'sdt_LpXfJQ': 'ninahfc', // Nina Hamilton
-  'sdt_LNvQJ7': 'albafc', // Alba McMillan
-  'sdt_cZsDJp': 'katiefc', // Katie Brown
-
   // Patrick's students
   'sdt_QP01Jp': 'yarahfc', // Yarah Love
   'sdt_QSzJJ2': 'arasfc', // Aras Korkmaz
@@ -191,6 +183,12 @@ export const thetaCredentials = {
   'sdt_vrbPJL': 'foxfc', // Fox Slocombe
   'sdt_w6T7Jd': 'vailafc', // Vaila Donaghey
   'sdt_w6TSJX': 'arjunfc', // Arjun Darshini
+
+  // Scott's students
+  'sdt_6ZrzJq': 'icarofc', // Icaro Segnini-Hernandez
+  'sdt_LpXfJQ': 'ninahfc', // Nina Hamilton
+  'sdt_LNvQJ7': 'albafc', // Alba McMillan
+  'sdt_cZsDJp': 'katiefc', // Katie Brown
 
   // Stef's students
   'sdt_6llSJ8': 'jamiefc', // Jamie Welsh

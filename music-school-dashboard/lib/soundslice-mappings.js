@@ -157,14 +157,6 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_QbBNJq': 'https://www.soundslice.com/courses/15543/', // Caroline Bingley
   'sdt_QcCtJT': 'https://www.soundslice.com/courses/15425/', // Marco Sarconi
 
-  // Maks's students
-  'sdt_LYflJY': 'https://www.soundslice.com/courses/17809/', // Lam Wa Zeng
-  'sdt_6ZrzJq': 'https://www.soundslice.com/courses/17058/', // Icaro Segnini-Hernandez
-  'sdt_LsWTJR': 'https://www.soundslice.com/courses/17808/', // Anuraha Dhara
-  'sdt_LpXfJQ': 'https://www.soundslice.com/courses/17807/', // Nina Hamilton
-  'sdt_LNvQJ7': 'https://www.soundslice.com/courses/17810/', // Alba McMillan
-  'sdt_cZsDJp': 'https://www.soundslice.com/courses/17317/', // Katie Brown
-
   // Patrick's students
   'sdt_QP01Jp': 'https://www.soundslice.com/courses/16894/', // Yarah Love
   'sdt_QSzJJ2': 'https://www.soundslice.com/courses/17067/', // Aras Korkmaz
@@ -186,6 +178,12 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_vrbPJL': 'https://www.soundslice.com/courses/8864/', // Fox Slocombe
   'sdt_w6T7Jd': 'https://www.soundslice.com/courses/8670/', // Vaila Donaghey
   'sdt_w6TSJX': 'https://www.soundslice.com/courses/8669/', // Arjun Darshini
+
+  // Scott's students
+  'sdt_6ZrzJq': 'https://www.soundslice.com/courses/17058/', // Icaro Segnini-Hernandez
+  'sdt_LpXfJQ': 'https://www.soundslice.com/courses/17807/', // Nina Hamilton
+  'sdt_LNvQJ7': 'https://www.soundslice.com/courses/17810/', // Alba McMillan
+  'sdt_cZsDJp': 'https://www.soundslice.com/courses/17317/', // Katie Brown
 
   // Stef's students
   'sdt_6llSJ8': 'https://www.soundslice.com/courses/16983/', // Jamie Welsh

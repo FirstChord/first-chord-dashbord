@@ -157,14 +157,6 @@ export const STUDENT_URL_MAPPINGS = {
   'caroline': 'sdt_QbBNJq',          // Caroline Bingley
   'marco': 'sdt_QcCtJT',             // Marco Sarconi
 
-  // Maks's students
-  'lamwa': 'sdt_LYflJY',             // Lam Wa Zeng
-  'icaro': 'sdt_6ZrzJq',             // Icaro Segnini-Hernandez
-  'anuraha': 'sdt_LsWTJR',           // Anuraha Dhara
-  'nina-h': 'sdt_LpXfJQ',            // Nina Hamilton
-  'alba': 'sdt_LNvQJ7',              // Alba McMillan
-  'katie': 'sdt_cZsDJp',             // Katie Brown
-
   // Patrick's students
   'yarah': 'sdt_QP01Jp',             // Yarah Love
   'aras': 'sdt_QSzJJ2',              // Aras Korkmaz
@@ -187,6 +179,12 @@ export const STUDENT_URL_MAPPINGS = {
   'fox': 'sdt_vrbPJL',               // Fox Slocombe
   'vaila': 'sdt_w6T7Jd',             // Vaila Donaghey
   'arjun': 'sdt_w6TSJX',             // Arjun Darshini
+
+  // Scott's students
+  'icaro': 'sdt_6ZrzJq',             // Icaro Segnini-Hernandez
+  'nina-h': 'sdt_LpXfJQ',            // Nina Hamilton
+  'alba': 'sdt_LNvQJ7',              // Alba McMillan
+  'katie': 'sdt_cZsDJp',             // Katie Brown
 
   // Stef's students
   'jamie': 'sdt_6llSJ8',             // Jamie Welsh

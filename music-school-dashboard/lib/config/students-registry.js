@@ -9,8 +9,8 @@
  * When tutors change in MMS, manually update this registry to keep it in sync.
  *
  * Last updated: 2026-02-23
- * Total students: 192
- * Active tutors: 15 (newest: Ines)
+ * Total students: 190
+ * Active tutors: 15 (newest: Scott, replacing Maks)
  */
 
 export const STUDENTS_REGISTRY = {
@@ -1776,41 +1776,21 @@ export const STUDENTS_REGISTRY = {
     thetaUsername: 'evanfc',
   }, // Evan Gibson
 
-  'sdt_LYflJY': {
-    firstName: 'Lam Wa',
-    lastName: 'Zeng',
-    friendlyUrl: 'lamwa',
-    tutor: 'Maks',
-    instrument: 'Bass',
-    soundsliceUrl: 'https://www.soundslice.com/courses/17809/',
-    thetaUsername: 'lamfc',
-  }, // Lam Wa Zeng
-
   'sdt_6ZrzJq': {
     firstName: 'Icaro',
     lastName: 'Segnini-Hernandez',
     friendlyUrl: 'icaro',
-    tutor: 'Maks',
+    tutor: 'Scott',
     instrument: 'Guitar',
     soundsliceUrl: 'https://www.soundslice.com/courses/17058/',
     thetaUsername: 'icarofc',
   }, // Icaro Segnini-Hernandez
 
-  'sdt_LsWTJR': {
-    firstName: 'Anuraha',
-    lastName: 'Dhara',
-    friendlyUrl: 'anuraha',
-    tutor: 'Maks',
-    instrument: 'Guitar',
-    soundsliceUrl: 'https://www.soundslice.com/courses/17808/',
-    thetaUsername: 'dharafc',
-  }, // Anuraha Dhara
-
   'sdt_LpXfJQ': {
     firstName: 'Nina',
     lastName: 'Hamilton',
     friendlyUrl: 'nina-h',
-    tutor: 'Maks',
+    tutor: 'Scott',
     instrument: 'Guitar',
     soundsliceUrl: 'https://www.soundslice.com/courses/17807/',
     thetaUsername: 'ninahfc',
@@ -1820,7 +1800,7 @@ export const STUDENTS_REGISTRY = {
     firstName: 'Alba',
     lastName: 'McMillan',
     friendlyUrl: 'alba',
-    tutor: 'Maks',
+    tutor: 'Scott',
     instrument: 'Guitar',
     soundsliceUrl: 'https://www.soundslice.com/courses/17810/',
     thetaUsername: 'albafc',
@@ -1830,7 +1810,7 @@ export const STUDENTS_REGISTRY = {
     firstName: 'Katie',
     lastName: 'Brown',
     friendlyUrl: 'katie',
-    tutor: 'Maks',
+    tutor: 'Scott',
     instrument: 'Guitar',
     soundsliceUrl: 'https://www.soundslice.com/courses/17317/',
     thetaUsername: 'katiefc',

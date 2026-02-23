@@ -106,14 +106,6 @@ export const instrumentOverrides = {
   'sdt_QbBNJq': 'Guitar', // Caroline Bingley
   'sdt_QcCtJT': 'Guitar', // Marco Sarconi
 
-  // Maks's students
-  'sdt_LYflJY': 'Bass', // Lam Wa Zeng
-  'sdt_6ZrzJq': 'Guitar', // Icaro Segnini-Hernandez
-  'sdt_LsWTJR': 'Guitar', // Anuraha Dhara
-  'sdt_LpXfJQ': 'Guitar', // Nina Hamilton
-  'sdt_LNvQJ7': 'Guitar', // Alba McMillan
-  'sdt_cZsDJp': 'Guitar', // Katie Brown
-
   // Patrick's students
   'sdt_QP01Jp': 'Piano', // Yarah Love
   'sdt_QSzJJ2': 'Piano', // Aras Korkmaz
@@ -136,6 +128,12 @@ export const instrumentOverrides = {
   'sdt_vrbPJL': 'Guitar', // Fox Slocombe
   'sdt_w6T7Jd': 'Guitar', // Vaila Donaghey
   'sdt_w6TSJX': 'Guitar', // Arjun Darshini
+
+  // Scott's students
+  'sdt_6ZrzJq': 'Guitar', // Icaro Segnini-Hernandez
+  'sdt_LpXfJQ': 'Guitar', // Nina Hamilton
+  'sdt_LNvQJ7': 'Guitar', // Alba McMillan
+  'sdt_cZsDJp': 'Guitar', // Katie Brown
 
   // Stef's students
   'sdt_6llSJ8': 'Guitar', // Jamie Welsh
