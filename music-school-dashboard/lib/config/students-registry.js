@@ -9,7 +9,7 @@
  * When tutors change in MMS, manually update this registry to keep it in sync.
  *
  * Last updated: 2026-02-23
- * Total students: 189
+ * Total students: 192
  * Active tutors: 15 (newest: Ines)
  */
 
@@ -1616,6 +1616,36 @@ export const STUDENTS_REGISTRY = {
     soundsliceUrl: 'https://www.soundslice.com/courses/19080/',
     thetaUsername: 'sajafc',
   }, // Saja Elfaki
+
+  'sdt_L8Y3JY': {
+    firstName: 'Sadie',
+    lastName: 'Lindop',
+    friendlyUrl: 'sadielin',
+    tutor: 'Arion',
+    instrument: 'Guitar',
+    soundsliceUrl: 'https://www.soundslice.com/courses/18662/',
+    thetaUsername: 'sadielinfc',
+  }, // Sadie Lindop
+
+  'sdt_mGY6JY': {
+    firstName: 'Enol',
+    lastName: 'Pardo-Alguero',
+    friendlyUrl: 'enol',
+    tutor: 'Arion',
+    instrument: 'Guitar',
+    soundsliceUrl: 'https://www.soundslice.com/courses/19017/',
+    thetaUsername: 'enolfc',
+  }, // Enol Pardo-Alguero
+
+  'sdt_mvK6JZ': {
+    firstName: 'Julie',
+    lastName: 'Donaldson',
+    friendlyUrl: 'julied',
+    tutor: 'Arion',
+    instrument: 'Guitar',
+    soundsliceUrl: 'https://www.soundslice.com/courses/18636/',
+    thetaUsername: 'juliedfc',
+  }, // Julie Donaldson
 
   'sdt_ybcdJ7': {
     firstName: 'Elizabeth',

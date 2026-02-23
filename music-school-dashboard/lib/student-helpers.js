@@ -16,6 +16,9 @@ const VALID_STUDENT_IDS = [
   'sdt_m1P8Js', // Coban Kousourou (/coban)
   'sdt_m941JY', // Peyton Okorodudu (/peyton)
   'sdt_mZHMJH', // Saja Elfaki (/saja)
+  'sdt_L8Y3JY', // Sadie Lindop (/sadielin)
+  'sdt_mGY6JY', // Enol Pardo-Alguero (/enol)
+  'sdt_mvK6JZ', // Julie Donaldson (/julied)
 
   // David's students
   'sdt_638hJ9', // Vanessa (/vanessa)

@@ -16,6 +16,9 @@ export const instrumentOverrides = {
   'sdt_m1P8Js': 'Guitar', // Coban Kousourou
   'sdt_m941JY': 'Piano', // Peyton Okorodudu
   'sdt_mZHMJH': 'Piano', // Saja Elfaki
+  'sdt_L8Y3JY': 'Guitar', // Sadie Lindop
+  'sdt_mGY6JY': 'Guitar', // Enol Pardo-Alguero
+  'sdt_mvK6JZ': 'Guitar', // Julie Donaldson
 
   // David's students
   'sdt_L5l5JD': 'Piano', // Dimitra Ntarmou

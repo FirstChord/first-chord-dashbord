@@ -12,6 +12,9 @@ export const STUDENT_URL_MAPPINGS = {
   'coban': 'sdt_m1P8Js',             // Coban Kousourou
   'peyton': 'sdt_m941JY',            // Peyton Okorodudu
   'saja': 'sdt_mZHMJH',              // Saja Elfaki
+  'sadielin': 'sdt_L8Y3JY',          // Sadie Lindop
+  'enol': 'sdt_mGY6JY',              // Enol Pardo-Alguero
+  'julied': 'sdt_mvK6JZ',            // Julie Donaldson
 
   // David's students
   'vanessa': 'sdt_638hJ9',           // Vanessa

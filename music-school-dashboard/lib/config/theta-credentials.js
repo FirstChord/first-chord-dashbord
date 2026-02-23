@@ -16,6 +16,9 @@ export const thetaCredentials = {
   'sdt_m1P8Js': 'cobanfc', // Coban Kousourou
   'sdt_m941JY': 'peytonfc', // Peyton Okorodudu
   'sdt_mZHMJH': 'sajafc', // Saja Elfaki
+  'sdt_L8Y3JY': 'sadielinfc', // Sadie Lindop
+  'sdt_mGY6JY': 'enolfc', // Enol Pardo-Alguero
+  'sdt_mvK6JZ': 'juliedfc', // Julie Donaldson
 
   // David's students
   'sdt_638hJ9': 'vanessafc', // Vanessa
