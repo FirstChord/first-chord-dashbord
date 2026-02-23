@@ -15,6 +15,7 @@ const VALID_STUDENT_IDS = [
   'sdt_yXFnJm', // Roar Norman (/roar)
   'sdt_m1P8Js', // Coban Kousourou (/coban)
   'sdt_m941JY', // Peyton Okorodudu (/peyton)
+  'sdt_mZHMJH', // Saja Elfaki (/saja)
 
   // David's students
   'sdt_638hJ9', // Vanessa (/vanessa)

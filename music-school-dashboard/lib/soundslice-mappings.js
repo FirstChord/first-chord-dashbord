@@ -11,6 +11,7 @@ const SOUNDSLICE_MAPPINGS = {
   'sdt_yXFnJm': 'https://www.soundslice.com/courses/14428/', // Roar Norman
   'sdt_m1P8Js': 'https://www.soundslice.com/courses/18489/', // Coban Kousourou
   'sdt_m941JY': 'https://www.soundslice.com/courses/18488/', // Peyton Okorodudu
+  'sdt_mZHMJH': 'https://www.soundslice.com/courses/19080/', // Saja Elfaki
 
   // David's students
   'sdt_638hJ9': 'https://www.soundslice.com/courses/16881/', // Vanessa

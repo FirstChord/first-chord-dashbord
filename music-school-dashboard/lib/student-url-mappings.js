@@ -11,6 +11,7 @@ export const STUDENT_URL_MAPPINGS = {
   'roar': 'sdt_yXFnJm',              // Roar Norman
   'coban': 'sdt_m1P8Js',             // Coban Kousourou
   'peyton': 'sdt_m941JY',            // Peyton Okorodudu
+  'saja': 'sdt_mZHMJH',              // Saja Elfaki
 
   // David's students
   'vanessa': 'sdt_638hJ9',           // Vanessa

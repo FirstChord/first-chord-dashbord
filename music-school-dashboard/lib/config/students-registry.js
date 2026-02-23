@@ -8,8 +8,8 @@
  * The live tutor dashboard uses MMS API as the source of truth for tutor assignments.
  * When tutors change in MMS, manually update this registry to keep it in sync.
  *
- * Last updated: 2026-02-16
- * Total students: 187
+ * Last updated: 2026-02-23
+ * Total students: 189
  * Active tutors: 15 (newest: Ines)
  */
 
@@ -1606,6 +1606,16 @@ export const STUDENTS_REGISTRY = {
     soundsliceUrl: 'https://www.soundslice.com/courses/18488/',
     thetaUsername: 'peytonfc',
   }, // Peyton Okorodudu
+
+  'sdt_mZHMJH': {
+    firstName: 'Saja',
+    lastName: 'Elfaki',
+    friendlyUrl: 'saja',
+    tutor: 'Arion',
+    instrument: 'Piano',
+    soundsliceUrl: 'https://www.soundslice.com/courses/19080/',
+    thetaUsername: 'sajafc',
+  }, // Saja Elfaki
 
   'sdt_ybcdJ7': {
     firstName: 'Elizabeth',

@@ -15,6 +15,7 @@ export const instrumentOverrides = {
   'sdt_yXFnJm': 'Guitar', // Roar Norman
   'sdt_m1P8Js': 'Guitar', // Coban Kousourou
   'sdt_m941JY': 'Piano', // Peyton Okorodudu
+  'sdt_mZHMJH': 'Piano', // Saja Elfaki
 
   // David's students
   'sdt_L5l5JD': 'Piano', // Dimitra Ntarmou
