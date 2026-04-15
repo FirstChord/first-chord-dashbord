@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "app/api/mms/[...path]/route.js": {
+      "maxDuration": 30
+    }
+  }
+}
