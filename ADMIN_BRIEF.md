@@ -6,6 +6,38 @@
 
 ---
 
+## Architectural Clarifications (Overrides anything contradictory below)
+
+These answer specific implementation questions. Read before the rest of the brief.
+
+**1. Review flags source on Railway**
+Read from Google Sheets `Review_Flags` tab — not a filesystem path. `generate_fc_ids.py` now writes this tab automatically alongside the other FC tabs. Fields: `flag_type`, `mms_id`, `student_name`, `detail`, `generated_date`. No filesystem dependency anywhere in the admin dashboard.
+
+**2. FC Student ID rule**
+Do not generate FC IDs in the UI. Display whatever is stored in the `fcStudentId` field of `students-registry.js` or `FC Student ID` in Sheets. At onboarding time, generate using `sha256(forename:surname:email)[:8]` (pre-MMS seed). This ID may later change when `generate_fc_ids.py` runs and resolves it from the MMS ID — that is a known documented limitation, not a bug to fix.
+
+**3. Tutor source-of-truth (three explicit rules)**
+- **Display:** Sheets `Tutor` column is current truth for display
+- **Edits write to:** Sheets only (the registry `tutor` short name is for portal routing, not admin edits)
+- **When MMS disagrees with Sheets:** show a yellow info badge on the student card — do not auto-sync, do not block editing
+
+**4. Server-side shell exec: none in V1**
+No shell exec anywhere. The flags page reads from the `Review_Flags` Google Sheets tab. Remove the "Regenerate flags" button from the brief below — replace it with a static note: *"To refresh flags, run `python3 generate_fc_ids.py` locally in first-chord-brain."*
+
+**5. Onboarding completion model**
+"Registry write now, generate/deploy later" is the confirmed V1 model. After onboarding writes to Sheets + MMS + `students-registry.js`, show a persistent notice: *"Student added. Run `npm run generate-configs && git push` from the dashboard repo to activate their portal page."* This is expected behaviour, not an error state.
+
+**6. Next.js route structure**
+This app uses App Router. Use `app/api/admin/...` everywhere. The shorthand `api/admin/...` in the file structure section below is incorrect — treat `app/api/admin/...` as authoritative.
+
+**7. Duplicated logic (tutor list, welcome message)**
+Acceptable V1 stopgaps if placed in `lib/admin/` and each function carries a comment: `// TODO: replace with Brain API call when Brain is deployed`. Do not scatter logic into components.
+
+**8. Review flags UX**
+All flagged students are fully editable. No flag category restricts any action. Show a badge/warning — never a lock.
+
+---
+
 ## What This Is
 
 A private web dashboard for Finn and Tom to manage the school without needing terminal access. Replaces the `first-chord-brain` CLI for routine daily tasks.
