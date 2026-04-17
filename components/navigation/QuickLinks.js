@@ -57,7 +57,15 @@ export default function QuickLinks({ student }) {
       instruction: smartUrls.myMusicStaff.instruction,
       requiresAuth: smartUrls.myMusicStaff.requiresAuth,
       color: "bg-blue-500"
-    }
+    },
+    ...(student.instrument === 'Piano' ? [{
+      name: "Piano Handbook",
+      icon: <FileText className="w-5 h-5" />,
+      url: "https://canva.link/fkczhbdl8kv75d7",
+      instruction: "Tutor resource for piano lessons",
+      requiresAuth: false,
+      color: "bg-pink-500"
+    }] : [])
     // UNCOMMENT FOR SUMMER SHOW: Update name, url, instruction, and date
     // {
     //   name: "Christmas Show!",
