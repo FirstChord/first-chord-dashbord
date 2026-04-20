@@ -1,7 +1,7 @@
 # First Chord Admin Dashboard — V1 Brief
 
 **For:** Codex / any agent implementing the admin dashboard
-**Read first:** `../first-chord-brain/CONTEXT.md` and `../first-chord-brain/DATA_DICTIONARY.md`
+**Read first:** `../first-chord-brain/CONTEXT.md`, `../first-chord-brain/DATA_DICTIONARY.md`, and `./OWNERSHIP_MATRIX.md`
 **Stack:** Next.js (this repo), deployed on Railway. Admin is a new `/admin` route group added to this existing app.
 
 ---

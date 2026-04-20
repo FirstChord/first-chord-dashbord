@@ -9,6 +9,7 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
+    "test:admin": "node --test tests/admin/*.test.mjs tests/admin/**/*.test.mjs",
     "lint": "next lint",
     "analyze": "ANALYZE=true npm run build",
     "validate": "node scripts/validate-students.js",
@@ -20,6 +21,7 @@
     "googleapis": "^161.0.0",
     "lucide-react": "^0.539.0",
     "next": "^15.5.9",
+    "next-auth": "^4.24.14",
     "react": "19.1.0",
     "react-dom": "19.1.0"
   },
