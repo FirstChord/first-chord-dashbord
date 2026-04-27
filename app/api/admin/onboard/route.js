@@ -30,16 +30,26 @@ function deriveWeekday(value) {
   });
 }
 
+function firstNameOnly(value, fallback = '') {
+  const trimmed = `${value || ''}`.trim();
+  if (!trimmed) return fallback;
+  return trimmed.split(/\s+/)[0] || fallback;
+}
+
 function buildWelcomeMessage(data) {
-  const paymentLink = process.env.STRIPE_PAYMENT_LINK || '';
-  const handbookUrl = process.env.HANDBOOK_URL || '';
+  const paymentLink = process.env.STRIPE_PAYMENT_LINK || process.env.PAYMENT_LINK || '[ADD PAYMENT LINK]';
+  const handbookUrl = process.env.HANDBOOK_URL || 'https://firstchord.co.uk/handbook';
+  const recipientFirstName = data.isAdult
+    ? firstNameOnly(data.studentName, data.studentName)
+    : firstNameOnly(data.parentName, data.parentName);
+  const tutorFirstName = firstNameOnly(data.tutorFullName, data.tutorFullName);
 
   if (data.isAdult) {
-    return `Hey ${data.studentName}, we've got you down for ${data.lessonTime} on ${data.lessonDay} ${data.lessonDate} with ${data.tutorFullName}. ✨🎶
+    return `Hey ${recipientFirstName}, we've got you down for ${data.lessonTime} on ${data.lessonDay} ${data.lessonDate} with ${tutorFirstName}. ✨🎶
 
-To give ${data.tutorFullName} some context, you're ${data.experienceLevel} and love ${data.interests}!
+To give ${tutorFirstName} some context, you're ${data.experienceLevel} and love ${data.interests}!
 
-📍The school is inside CC Music Shop at 33 Otago Street G12 8JJ. Just take a seat on the couch by the door when you arrive and ${data.tutorFullName} will come meet you.
+📍The school is inside CC Music Shop at 33 Otago Street G12 8JJ. Just take a seat on the couch by the door when you arrive and ${tutorFirstName} will come meet you.
 
 Below is the payment link for your lessons, please note that your first payment confirms the lesson slot, for next week.🚨Please let us know when you have done this!
 
@@ -54,11 +64,11 @@ ${paymentLink}
 ${handbookUrl}`;
   }
 
-  return `Hey ${data.parentName}, we've got ${data.studentName} down for ${data.lessonTime} on ${data.lessonDay} ${data.lessonDate} with ${data.tutorFullName}. ✨🎶
+  return `Hey ${recipientFirstName}, we've got ${data.studentName} down for ${data.lessonTime} on ${data.lessonDay} ${data.lessonDate} with ${tutorFirstName}. ✨🎶
 
-To give ${data.tutorFullName} some context, ${data.studentName} is ${data.age || '—'} and ${data.experienceLevel}. They love ${data.interests}!
+To give ${tutorFirstName} some context, ${data.studentName} is ${data.age || '—'} and ${data.experienceLevel}. They love ${data.interests}!
 
-📍The school is inside CC Music Shop at 33 Otago Street G12 8JJ. Just take a seat on the couch by the door when you arrive and ${data.tutorFullName} will come meet you.
+📍The school is inside CC Music Shop at 33 Otago Street G12 8JJ. Just take a seat on the couch by the door when you arrive and ${tutorFirstName} will come meet you.
 
 Below is the payment link for your lessons, please note that your first payment confirms the lesson slot, for next week.🚨Please let us know when you have done this!
 
@@ -74,7 +84,8 @@ ${handbookUrl}`;
 }
 
 function buildSoundsliceFollowup({ soundsliceCode, studentName, tutorFullName }) {
-  return `Oo one last important thing to do. If you could head to soundslice.com and make a free account, then head to soundslice.com/coursecode and pop in this code *${soundsliceCode}* that will make a folder that ${studentName} can access and ${tutorFullName} can put in all the songs they are learning 💥`;
+  const tutorFirstName = firstNameOnly(tutorFullName, tutorFullName);
+  return `Oo one last important thing to do. If you could head to soundslice.com and make a free account, then head to soundslice.com/coursecode and pop in this code *${soundsliceCode}* that will make a folder that ${studentName} can access and ${tutorFirstName} can put in all the songs they are learning 💥`;
 }
 
 export async function POST(request) {
@@ -181,11 +192,16 @@ export async function POST(request) {
     };
 
     try {
-      await activateStudent({
+      const activation = await activateStudent({
         studentId: payload.mmsId,
       });
       mmsStatus.activated = true;
-      steps = markOnboardingStep(steps, 'mmsActivation', 'succeeded', 'Student activated in MMS.');
+      steps = markOnboardingStep(
+        steps,
+        'mmsActivation',
+        activation?.alreadyActive ? 'skipped' : 'succeeded',
+        activation?.alreadyActive ? 'Student was already active in MMS.' : 'Student activated in MMS.',
+      );
 
       const billingProfile = await ensureBillingProfile({
         studentId: payload.mmsId,
@@ -193,7 +209,12 @@ export async function POST(request) {
         lessonDuration: Number(payload.lessonLength || 30),
       });
       mmsStatus.billingProfileReady = true;
-      steps = markOnboardingStep(steps, 'mmsBillingProfile', 'succeeded', 'Billing profile is ready in MMS.');
+      steps = markOnboardingStep(
+        steps,
+        'mmsBillingProfile',
+        billingProfile?.alreadyExists ? 'skipped' : 'succeeded',
+        billingProfile?.alreadyExists ? 'Existing billing profile reused in MMS.' : 'Billing profile is ready in MMS.',
+      );
 
       lesson = await createFirstLesson({
         studentId: payload.mmsId,
@@ -207,7 +228,7 @@ export async function POST(request) {
       steps = markOnboardingStep(
         steps,
         'mmsFirstLesson',
-        'succeeded',
+        lesson?.duplicateSkipped ? 'skipped' : 'succeeded',
         lesson?.duplicateSkipped
           ? `Matching ${payload.isRecurring !== false ? 'recurring lesson series' : 'lesson'} already existed in MMS${lesson?.ID ? ` (${lesson.ID})` : ''}`
           : `${payload.isRecurring !== false ? 'Created recurring lesson series' : 'Created single lesson'}${lesson?.ID ? ` (${lesson.ID})` : ''}`,

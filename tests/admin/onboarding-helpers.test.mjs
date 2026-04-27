@@ -124,3 +124,17 @@ test('buildOnboardingCompletionStatus marks canonical and MMS state separately',
   assert.equal(status.fcIdentityRefresh.status, 'pending');
   assert.equal(status.portalActivation.status, 'pending');
 });
+
+test('buildOnboardingCompletionStatus treats skipped idempotent MMS steps as ready', () => {
+  let steps = createOnboardingSteps();
+  steps = markOnboardingStep(steps, 'sheetsWrite', 'succeeded', 'Inserted into Students sheet at row 10.');
+  steps = markOnboardingStep(steps, 'registryWrite', 'skipped', 'Existing registry entry retained.');
+  steps = markOnboardingStep(steps, 'mmsActivation', 'skipped', 'Student was already active in MMS.');
+  steps = markOnboardingStep(steps, 'mmsBillingProfile', 'skipped', 'Existing billing profile reused in MMS.');
+  steps = markOnboardingStep(steps, 'mmsFirstLesson', 'skipped', 'Matching recurring lesson series already existed in MMS.');
+
+  const status = buildOnboardingCompletionStatus({ steps });
+
+  assert.equal(status.canonicalRecord.status, 'complete');
+  assert.equal(status.mmsOperationalState.status, 'complete');
+});

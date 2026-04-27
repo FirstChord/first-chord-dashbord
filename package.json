@@ -10,6 +10,7 @@
     "build": "next build",
     "start": "next start",
     "test:admin": "node --test tests/admin/*.test.mjs tests/admin/**/*.test.mjs",
+    "sync-admin-tutors": "node scripts/sync-admin-tutors.js",
     "lint": "next lint",
     "analyze": "ANALYZE=true npm run build",
     "validate": "node scripts/validate-students.js",

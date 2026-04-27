@@ -2,6 +2,8 @@
 
 import { useState, useTransition } from 'react';
 
+const INSTRUMENT_OPTIONS = ['Guitar', 'Piano', 'Bass', 'Singing', 'Ukulele', 'Ukulele Orchestra'];
+
 function Field({ label, children, hint }) {
   return (
     <label className="block">
@@ -159,7 +161,14 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
                 </Select>
               </Field>
               <Field label="Instrument">
-                <Input value={form.instrument} onChange={(event) => updateField('instrument', event.target.value)} />
+                <Select value={form.instrument} onChange={(event) => updateField('instrument', event.target.value)}>
+                  <option value="">Select instrument</option>
+                  {INSTRUMENT_OPTIONS.map((instrument) => (
+                    <option key={instrument} value={instrument}>
+                      {instrument}
+                    </option>
+                  ))}
+                </Select>
               </Field>
               <Field label="Lesson length">
                 <Input value={form.lessonLength} onChange={(event) => updateField('lessonLength', event.target.value)} />

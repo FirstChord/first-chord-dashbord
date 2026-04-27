@@ -1,5 +1,6 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
+import { normaliseInstrument } from '@/lib/admin/fc';
 import { getAdminStudentByMmsId, updateAdminStudent } from '@/lib/admin/students';
 
 const SHEETS_FIELD_MAP = {
@@ -16,6 +17,7 @@ const SHEETS_FIELD_MAP = {
 
 const REGISTRY_FIELD_MAP = {
   registryTutor: 'tutor',
+  instrument: 'instrument',
   soundsliceUrl: 'soundsliceUrl',
   thetaUsername: 'thetaUsername',
 };
@@ -41,7 +43,7 @@ function validatePayload(payload) {
 function mapUpdates(payload, mapping) {
   return Object.entries(mapping).reduce((acc, [inputKey, outputKey]) => {
     if (Object.prototype.hasOwnProperty.call(payload, inputKey)) {
-      acc[outputKey] = payload[inputKey];
+      acc[outputKey] = inputKey === 'instrument' ? normaliseInstrument(payload[inputKey]) : payload[inputKey];
     }
     return acc;
   }, {});

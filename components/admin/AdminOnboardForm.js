@@ -64,10 +64,19 @@ function statusClasses(status) {
   return 'border-red-200 bg-red-50 text-red-900';
 }
 
+function preflightClasses(status) {
+  if (status === 'ready' || status === 'clear') return 'border-emerald-200 bg-emerald-50 text-emerald-900';
+  if (status === 'warning' || status === 'pending') return 'border-amber-200 bg-amber-50 text-amber-900';
+  if (status === 'blocked') return 'border-red-200 bg-red-50 text-red-900';
+  return 'border-slate-200 bg-slate-50 text-slate-700';
+}
+
 export default function AdminOnboardForm({ initialData, tutorOptions, initialDuplicateState = null }) {
   const [form, setForm] = useState(initialData);
   const [result, setResult] = useState(null);
   const [errorState, setErrorState] = useState(null);
+  const [preflightState, setPreflightState] = useState(null);
+  const [preflightError, setPreflightError] = useState('');
   const [isPending, startTransition] = useTransition();
 
   const filteredTutors = useMemo(() => {
@@ -80,6 +89,28 @@ export default function AdminOnboardForm({ initialData, tutorOptions, initialDup
 
   function updateField(key, value) {
     setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function handlePreflight() {
+    setPreflightError('');
+
+    startTransition(async () => {
+      const response = await fetch('/api/admin/onboard/preflight', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok) {
+        setPreflightState(null);
+        setPreflightError(payload.error || 'Preflight check failed');
+        return;
+      }
+
+      setPreflightState(payload);
+    });
   }
 
   function handleSubmit(event) {
@@ -221,6 +252,61 @@ export default function AdminOnboardForm({ initialData, tutorOptions, initialDup
               <TextArea value={form.interests} onChange={(e) => updateField('interests', e.target.value)} />
             </Field>
           </div>
+        </section>
+
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900">Onboarding preflight</h3>
+              <p className="mt-1 text-sm text-slate-600">
+                Check Sheets, registry, and MMS state before the final onboarding write.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handlePreflight}
+              disabled={isPending || !form.tutorShortName}
+              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isPending ? 'Checking…' : 'Run preflight'}
+            </button>
+          </div>
+
+          {preflightError ? <p className="mt-4 text-sm text-red-700">{preflightError}</p> : null}
+
+          {preflightState?.duplicateState?.warnings?.length ? (
+            <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              <p className="font-semibold">Warnings</p>
+              <ul className="mt-2 list-disc pl-5">
+                {preflightState.duplicateState.warnings.map((warning) => (
+                  <li key={warning}>{warning}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {preflightState?.duplicateState?.blockingReasons?.length ? (
+            <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+              <p className="font-semibold">Blocking duplicate state</p>
+              <ul className="mt-2 list-disc pl-5">
+                {preflightState.duplicateState.blockingReasons.map((reason) => (
+                  <li key={reason}>{reason}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {preflightState?.summary ? (
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {Object.entries(preflightState.summary).map(([key, item]) => (
+                <div key={key} className={`rounded-xl border p-4 ${preflightClasses(item.status)}`}>
+                  <p className="text-xs uppercase tracking-wide">{item.label}</p>
+                  <p className="mt-2 text-sm font-semibold">{item.status}</p>
+                  <p className="mt-2 text-sm">{item.detail}</p>
+                </div>
+              ))}
+            </div>
+          ) : null}
         </section>
 
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">

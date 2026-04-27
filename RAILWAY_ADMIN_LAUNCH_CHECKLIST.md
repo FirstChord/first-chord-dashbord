@@ -16,7 +16,7 @@ What should work after deploy:
 
 What is still intentionally manual in V1:
 - `generate_fc_ids.py`
-- `generate-configs && git push`
+- GitHub push/deploy of repo changes when working locally
 
 ## 2. Railway Service
 
@@ -57,8 +57,17 @@ Set these in Railway before testing the admin surface:
 - `GITHUB_TOKEN`
 
 ### Existing optional envs used by onboarding output
-- `STRIPE_PAYMENT_LINK`
+- `STRIPE_PAYMENT_LINK` or `PAYMENT_LINK`
 - `HANDBOOK_URL`
+
+### Existing tutor/student dashboard compatibility
+These are still used by older non-admin routes in the same Next.js app:
+- `MMS_DEFAULT_TOKEN`
+
+### Notes
+- `GITHUB_TOKEN` is required for production registry writes from the admin dashboard.
+- `MMS_BILLING_EVENT_CATEGORY_ID` is strongly recommended even though the code has a fallback default.
+- `NEXTAUTH_URL` should be the full Railway app URL.
 
 ## 4. Google OAuth Configuration
 
@@ -125,7 +134,7 @@ After deploy, test in this order:
 
 These are still expected after Railway launch:
 - post-onboarding FC regeneration is manual
-- post-onboarding dashboard config regeneration is manual
+- post-onboarding dashboard config regeneration is handled by GitHub Actions after registry changes are pushed
 - issue state is not yet persistent
 - onboarding recovery/resume is not yet implemented
 - `Review_Flags` freshness is not yet surfaced clearly
@@ -144,5 +153,5 @@ This is appropriate for current V1 maturity.
 
 1. recurring lesson dedup live verification
 2. registry write retry live verification
-3. automate `generate-configs` via GitHub Actions
+3. verify the `generate-configs` GitHub Action runs on registry changes
 4. prepare `generate_fc_ids.py` for GitHub Actions

@@ -2,6 +2,37 @@
 
 This file tracks the admin dashboard build so work can be handed between agents cleanly.
 
+## 2026-04-27 — V2 Safety + Automation Start
+
+### What changed
+- Added onboarding preflight support:
+  - `POST /api/admin/onboard/preflight`
+  - UI preflight panel on `/admin/onboard`
+  - live checks for Sheets, registry, MMS activation, billing profile, and lesson-slot collisions
+- Hardened MMS onboarding behavior so idempotent states are tracked cleanly:
+  - already-active student => activation step marked as skipped/ready
+  - existing billing profile => billing step marked as skipped/ready
+  - matching lesson/series already in MMS => lesson step marked as skipped/ready
+- Removed the production build dependency on `next/font/google` in `app/layout.js`.
+- Started the V2 architectural cleanup for tutor ownership:
+  - added generated tutor data file: `lib/admin/tutors-data.js`
+  - added sync script: `npm run sync-admin-tutors`
+  - canonical tutor source now comes from `../first-chord-brain/generate_fc_ids.py`
+  - fixed canonical Chloe mapping in Brain to `singing + piano`
+- Added first hosted-job workflow:
+  - `.github/workflows/generate-configs.yml`
+  - runs `npm run generate-configs` on pushes to `lib/config/students-registry.js`
+  - commits regenerated config files back to the repo automatically
+
+### Validation
+- `npm run test:admin` passes
+- `npm run build` passes
+
+### Notes for next handover
+- Tutor drift is now reduced, but only if future tutor changes are made in Brain and then synced into the dashboard via `npm run sync-admin-tutors`.
+- The `generate-configs` GitHub Action will not run until these changes are pushed to GitHub.
+- The V2 spec document still contains some now-resolved “current gaps”; update it before the next planning pass if you want it to reflect the latest implementation state exactly.
+
 ## 2026-04-16
 
 ### Scope for initial slice
