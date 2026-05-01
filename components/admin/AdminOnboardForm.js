@@ -210,10 +210,10 @@ export default function AdminOnboardForm({ initialData, tutorOptions, initialDup
                 <Input value={derivedWeekday} readOnly />
               </Field>
               <Field label="Lesson time">
-                <Input type="time" value={form.lessonTime} onChange={(e) => updateField('lessonTime', e.target.value)} />
+                <Input type="time" required value={form.lessonTime} onChange={(e) => updateField('lessonTime', e.target.value)} />
               </Field>
               <Field label="First lesson date">
-                <Input type="date" value={form.lessonDate} onChange={(e) => updateField('lessonDate', e.target.value)} />
+                <Input type="date" required value={form.lessonDate} onChange={(e) => updateField('lessonDate', e.target.value)} />
               </Field>
               <Field label="Recurring lesson">
                 <div className="mt-3 flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
@@ -222,7 +222,7 @@ export default function AdminOnboardForm({ initialData, tutorOptions, initialDup
                 </div>
               </Field>
               <Field label="Tutor">
-                <Select value={form.tutorShortName} onChange={(e) => updateField('tutorShortName', e.target.value)}>
+                <Select required value={form.tutorShortName} onChange={(e) => updateField('tutorShortName', e.target.value)}>
                   <option value="">Select tutor</option>
                   {filteredTutors.map((tutor) => (
                     <option key={tutor.shortName} value={tutor.shortName}>

@@ -23,6 +23,30 @@ function formatLessonDateForMessage(value) {
   });
 }
 
+function formatLessonTimeForMessage(value) {
+  const trimmed = `${value || ''}`.trim();
+  if (!trimmed) {
+    throw new Error('Lesson time is required');
+  }
+
+  const match = trimmed.match(/^(\d{2}):(\d{2})(?::\d{2})?$/);
+  if (!match) {
+    throw new Error('Lesson time is invalid');
+  }
+
+  const [, hours, minutes] = match;
+  const parsed = new Date(`2000-01-01T${hours}:${minutes}:00`);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new Error('Lesson time is invalid');
+  }
+
+  return parsed.toLocaleTimeString('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+}
+
 function deriveWeekday(value) {
   const parsed = new Date(`${value}T12:00:00`);
   return parsed.toLocaleDateString('en-GB', {
@@ -111,6 +135,7 @@ export async function POST(request) {
   const experienceLevel = normaliseExperienceLevel(payload.experienceLevel);
   const lessonDay = deriveWeekday(payload.lessonDate);
   const lessonDateLabel = formatLessonDateForMessage(payload.lessonDate);
+  const lessonTimeLabel = formatLessonTimeForMessage(payload.lessonTime);
   const studentName = `${payload.studentFirstName} ${payload.studentLastName}`.trim();
   const parentName = `${payload.parentFirstName || ''} ${payload.parentLastName || ''}`.trim() || payload.studentFirstName;
   const duplicateState = await getOnboardingDuplicateState({
@@ -264,7 +289,7 @@ export async function POST(request) {
         welcomeMessage: buildWelcomeMessage({
           studentName,
           parentName,
-          lessonTime: payload.lessonTime,
+          lessonTime: lessonTimeLabel,
           lessonDay,
           lessonDate: lessonDateLabel,
           tutorFullName: tutor.fullName,
