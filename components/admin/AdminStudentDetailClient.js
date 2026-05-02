@@ -74,6 +74,13 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
     error: '',
     success: '',
   });
+  const [stripeState, setStripeState] = useState({
+    error: '',
+    loading: false,
+    snapshot: null,
+    issues: [],
+    skippedReason: '',
+  });
   const [isPending, startTransition] = useTransition();
 
   function updateField(key, value) {
@@ -120,6 +127,46 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
     });
   }
 
+  async function handleRefreshStripeStatus() {
+    setStripeState((current) => ({
+      ...current,
+      error: '',
+      loading: true,
+    }));
+
+    try {
+      const response = await fetch(`/api/admin/students/${student.mmsId}/stripe`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        setStripeState({
+          error: data.error || 'Stripe refresh failed',
+          loading: false,
+          snapshot: null,
+          issues: [],
+          skippedReason: '',
+        });
+        return;
+      }
+
+      setStripeState({
+        error: '',
+        loading: false,
+        snapshot: data.snapshot || null,
+        issues: data.issues || [],
+        skippedReason: data.skippedReason || '',
+      });
+    } catch (error) {
+      setStripeState({
+        error: error.message || 'Stripe refresh failed',
+        loading: false,
+        snapshot: null,
+        issues: [],
+        skippedReason: '',
+      });
+    }
+  }
+
   return (
     <div className="space-y-8">
       <section>
@@ -163,6 +210,54 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
           </div>
         </section>
       ) : null}
+
+      <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900">Live Stripe status</h3>
+            <p className="mt-1 text-sm text-slate-600">Manual refresh only. This checks live Stripe state for this student without scanning the whole cohort.</p>
+          </div>
+          <button
+            type="button"
+            onClick={handleRefreshStripeStatus}
+            disabled={stripeState.loading}
+            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {stripeState.loading ? 'Checking…' : 'Refresh Stripe status'}
+          </button>
+        </div>
+
+        {stripeState.error ? <p className="mt-3 text-sm text-red-700">{stripeState.error}</p> : null}
+        {stripeState.skippedReason ? <p className="mt-3 text-sm text-slate-600">{stripeState.skippedReason}</p> : null}
+
+        {stripeState.snapshot ? (
+          <div className="mt-4 space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <ReadOnlyField label="Customer found" value={stripeState.snapshot.customerFound ? 'Yes' : 'No'} />
+              <ReadOnlyField label="Subscription found" value={stripeState.snapshot.subscriptionFound ? 'Yes' : 'No'} />
+              <ReadOnlyField label="Subscription status" value={stripeState.snapshot.subscriptionStatus} />
+              <ReadOnlyField label="Pause state" value={stripeState.snapshot.pauseState} />
+              <ReadOnlyField label="Actively billing" value={stripeState.snapshot.activelyBilling ? 'Yes' : 'No'} />
+              <ReadOnlyField label="Latest invoice status" value={stripeState.snapshot.latestInvoiceStatus} />
+              <ReadOnlyField label="Latest payment intent" value={stripeState.snapshot.latestPaymentIntentStatus} />
+              <ReadOnlyField label="Last checked" value={stripeState.snapshot.lastCheckedAt} />
+            </div>
+
+            {stripeState.issues.length ? (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <p className="text-xs uppercase tracking-wide text-amber-700">Live Stripe issues</p>
+                <ul className="mt-2 space-y-1 text-sm text-amber-950">
+                  {stripeState.issues.map((issue) => (
+                    <li key={issue}>{issue}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <p className="text-sm text-emerald-700">No live Stripe issues detected for the current rule set.</p>
+            )}
+          </div>
+        ) : null}
+      </section>
 
       <form className="space-y-8" onSubmit={handleSubmit}>
         <section className="grid gap-6 lg:grid-cols-2">

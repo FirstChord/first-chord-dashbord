@@ -28,6 +28,48 @@ This file tracks the admin dashboard build so work can be handed between agents 
 - `npm run test:admin` passes
 - `npm run build` passes
 
+## 2026-05-02 — Live Stripe Snapshot (Manual Per Student)
+
+### Scope
+- Start live Stripe comparison without turning the admin dashboard into a cohort-wide Stripe poller.
+- Reuse the Payment Pause Stripe model, but keep the first admin read path manual and per-student to control hosting cost.
+
+### What changed
+- Added a manual Stripe snapshot route:
+  - `GET /api/admin/students/[mmsId]/stripe`
+- Added normalized Stripe snapshot helpers for:
+  - customer found
+  - subscription found
+  - subscription status
+  - pause state
+  - actively billing
+  - latest invoice status
+  - latest payment intent status
+  - last checked timestamp
+- Added rule evaluation for first live Stripe mismatch types:
+  - `ACTIVE_WITHOUT_SUBSCRIPTION`
+  - `SUBSCRIPTION_CANCELLED_UNEXPECTEDLY`
+  - `SUBSCRIPTION_STATE_MISMATCH`
+  - `INACTIVE_STILL_BILLING`
+  - `PAYMENT_FAILED`
+- Added a manual `Refresh Stripe status` panel to the admin student detail page.
+
+### Why this matters
+- This gives live Stripe truth without making `/admin/flags` or `/admin/students` expensive on every page load.
+- It keeps the Stripe rules explicit and deterministic, which is important for future smaller-agent or local-model assistance.
+- It creates the reusable snapshot layer that can later be promoted into:
+  - scheduled sync
+  - cached issue generation
+  - webhook-backed payment monitoring
+
+### Operational note
+- This route requires `STRIPE_API_KEY` in the dashboard environment.
+- The intent is to reuse the same Stripe access model as `payment-pause-pwa`, but not yet to centralize all Stripe reads through that app.
+
+### Validation
+- `npm run test:admin` passes
+- `npm run build` passes
+
 ## 2026-05-02 — Pause History Read Path
 
 ### Scope
