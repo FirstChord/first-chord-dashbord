@@ -157,9 +157,9 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
           <h3 className="text-sm font-semibold text-slate-900">Pause state</h3>
           <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <ReadOnlyField label="Currently paused" value={student.pauseSummary.currentlyPaused ? 'Yes' : 'No'} />
-            <ReadOnlyField label="Pause start" value={student.pauseSummary.latestPause?.startDate} />
-            <ReadOnlyField label="Pause end" value={student.pauseSummary.latestPause?.endDate} />
-            <ReadOnlyField label="Stripe pause status" value={student.pauseSummary.latestPause?.stripeStatus} />
+            <ReadOnlyField label="Latest pause start" value={student.pauseSummary.latestPause?.startDate} />
+            <ReadOnlyField label="Latest pause end" value={student.pauseSummary.latestPause?.endDate} />
+            <ReadOnlyField label="Latest recorded Stripe pause status" value={student.pauseSummary.latestPause?.stripeStatus} />
           </div>
         </section>
       ) : null}
