@@ -6,6 +6,26 @@
 
 ---
 
+## Current State Addendum (May 2026)
+
+This brief started as a V1 implementation guide. Several important parts are now outdated unless overridden here.
+
+- The admin dashboard is now live on Railway and in active internal use.
+- `generate-configs` is automated through GitHub Actions and production onboarding already updates the tutor/student dashboard pipeline successfully.
+- `generate_fc_ids.py` is now automated in the `first-chord-brain` repo via GitHub Actions, using env-based Sheets credentials and a cross-repo checkout of `first-chord-dashbord`.
+- `/admin` now includes an operational health panel covering:
+  - MMS API health
+  - latest `generate-configs` workflow status
+  - latest `regenerate-fc-ids` workflow status
+  - review-flags freshness
+- `/admin/flags` now shows review-flags freshness and includes the first Stripe-derived issue rules.
+- `payment_mode` now exists in the admin student model and should be treated as canonical payment intent in the `Students` sheet.
+
+For latest implementation detail, prefer:
+- `ADMIN_IMPLEMENTATION_LOG.md`
+- `V2_SPEC_DRAFT.md`
+- `OWNERSHIP_MATRIX.md`
+
 ## Architectural Clarifications (Overrides anything contradictory below)
 
 These answer specific implementation questions. Read before the rest of the brief.
@@ -21,11 +41,14 @@ Do not generate FC IDs in the UI. Display whatever is stored in the `fcStudentId
 - **Edits write to:** Sheets only (the registry `tutor` short name is for portal routing, not admin edits)
 - **When MMS disagrees with Sheets:** show a yellow info badge on the student card — do not auto-sync, do not block editing
 
-**4. Server-side shell exec: none in V1**
-No shell exec anywhere. The flags page reads from the `Review_Flags` Google Sheets tab. Remove the "Regenerate flags" button from the brief below — replace it with a static note: *"To refresh flags, run `python3 generate_fc_ids.py` locally in first-chord-brain."*
+**4. Server-side shell exec: none**
+No shell exec in the dashboard app. Flag freshness and FC regeneration now come from the hosted GitHub Actions workflow in `first-chord-brain`, not from local browser-triggered shell commands.
 
 **5. Onboarding completion model**
-"Registry write now, generate/deploy later" is the confirmed V1 model. After onboarding writes to Sheets + MMS + `students-registry.js`, show a persistent notice: *"Student added. Run `npm run generate-configs && git push` from the dashboard repo to activate their portal page."* This is expected behaviour, not an error state.
+"Registry write now, hosted jobs complete the rest" is the current model.
+- dashboard-side config regeneration is hosted via GitHub Actions
+- FC regeneration is hosted via GitHub Actions in `first-chord-brain`
+- the admin UI should surface status/freshness rather than rely on manual terminal reminders where possible
 
 **6. Next.js route structure**
 This app uses App Router. Use `app/api/admin/...` everywhere. The shorthand `api/admin/...` in the file structure section below is incorrect — treat `app/api/admin/...` as authoritative.
@@ -35,6 +58,15 @@ Acceptable V1 stopgaps if placed in `lib/admin/` and each function carries a com
 
 **8. Review flags UX**
 All flagged students are fully editable. No flag category restricts any action. Show a badge/warning — never a lock.
+
+**9. Payment mode**
+`payment_mode` in the `Students` sheet is now the canonical payment-intent field for the admin dashboard.
+- allowed values:
+  - `stripe`
+  - `manual`
+  - `unknown`
+- only `stripe` students should receive Stripe setup/failure issues
+- `manual` is for approved cash/bank-transfer exceptions and should suppress Stripe alarms
 
 ---
 
