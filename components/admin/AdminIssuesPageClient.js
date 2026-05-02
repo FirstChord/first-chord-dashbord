@@ -153,6 +153,9 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
             { value: 'TUTOR CONFLICT', label: 'Tutor conflict' },
             { value: 'SHEETS ONLY', label: 'Sheets only' },
             { value: 'REGISTRY ONLY', label: 'Registry only' },
+            { value: 'STRIPE SETUP INCOMPLETE', label: 'Stripe setup incomplete' },
+            { value: 'STRIPE CUSTOMER MISSING', label: 'Stripe customer missing' },
+            { value: 'STRIPE SUBSCRIPTION MISSING', label: 'Stripe subscription missing' },
           ]}
         />
         <Select
@@ -174,6 +177,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
             { value: 'all', label: 'All systems' },
             { value: 'Sheets', label: 'Sheets' },
             { value: 'Registry', label: 'Registry' },
+            { value: 'Stripe', label: 'Stripe' },
           ]}
         />
       </section>
@@ -220,6 +224,9 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                     <p>Registry entry: {issue.hasRegistryEntry ? 'Present' : 'Missing'}</p>
                     <p>Sheets tutor: {issue.sheetTutor || '—'}</p>
                     <p>Registry tutor: {issue.registryTutor || '—'}</p>
+                    <p>Payment mode: {issue.paymentMode || '—'}</p>
+                    <p>Stripe customer: {issue.stripeCustomerId || '—'}</p>
+                    <p>Stripe subscription: {issue.stripeSubscriptionId || '—'}</p>
                   </div>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">

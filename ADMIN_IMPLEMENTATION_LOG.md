@@ -28,6 +28,32 @@ This file tracks the admin dashboard build so work can be handed between agents 
 - `npm run test:admin` passes
 - `npm run build` passes
 
+## 2026-05-02 — Initial Stripe Review Issues
+
+### Scope
+- Surface the first safe Stripe-related admin issues using existing sheet data only.
+- Avoid false alarms for approved manual-payment exceptions.
+
+### What changed
+- Added payment-derived issue generation on `/admin/flags` for students with `payment_mode = stripe`.
+- Current issue types:
+  - `STRIPE SETUP INCOMPLETE`
+  - `STRIPE CUSTOMER MISSING`
+  - `STRIPE SUBSCRIPTION MISSING`
+- Added Stripe-aware issue filters and current-state display:
+  - payment mode
+  - Stripe customer ID
+  - Stripe subscription ID
+
+### Why this matters
+- The admin dashboard can now catch the first class of Stripe setup gaps without needing live Stripe API integration yet.
+- Manual-payment students are excluded from Stripe warnings by design.
+- This creates a clean bridge toward later live Stripe failure and cancellation detection.
+
+### Validation
+- `npm run test:admin` passes
+- `npm run build` passes
+
 ## 2026-05-02 — Payment Mode Foundation
 
 ### Scope

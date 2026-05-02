@@ -1,12 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildIssueRecord, classifyIssue, isIssueActive } from '../../lib/admin/issues-helpers.mjs';
+import { buildIssueRecord, buildPaymentIssueRecord, classifyIssue, isIssueActive } from '../../lib/admin/issues-helpers.mjs';
 
 test('classifyIssue maps current review flag types into actionable admin metadata', () => {
   assert.deepEqual(classifyIssue('TUTOR CONFLICT').severity, 'Needs action');
   assert.deepEqual(classifyIssue('SHEETS ONLY').systemsAffected, ['Sheets']);
   assert.deepEqual(classifyIssue('REGISTRY ONLY').systemsAffected, ['Registry']);
+  assert.deepEqual(classifyIssue('STRIPE SUBSCRIPTION MISSING').systemsAffected, ['Sheets', 'Stripe']);
 });
 
 test('buildIssueRecord enriches live review flag rows with linked-system state', () => {
@@ -54,4 +55,26 @@ test('isIssueActive returns false once a sheets-only issue gains a registry entr
   });
 
   assert.equal(active, false);
+});
+
+test('buildPaymentIssueRecord creates a Stripe issue with current payment linkage state', () => {
+  const issue = buildPaymentIssueRecord({
+    type: 'STRIPE SUBSCRIPTION MISSING',
+    student: {
+      mmsId: 'sdt_test',
+      fullName: 'Owen Example',
+      tutor: 'Chloe Mak',
+      registryTutor: 'Chloe',
+      paymentMode: 'stripe',
+      stripeCustomerId: 'cus_123',
+      stripeSubscriptionId: '',
+      registryEntry: { mmsId: 'sdt_test' },
+    },
+  });
+
+  assert.equal(issue.type, 'STRIPE SUBSCRIPTION MISSING');
+  assert.equal(issue.paymentMode, 'stripe');
+  assert.equal(issue.stripeCustomerId, 'cus_123');
+  assert.equal(issue.stripeSubscriptionId, '');
+  assert.equal(issue.adminStudentPath, '/admin/students/sdt_test');
 });
