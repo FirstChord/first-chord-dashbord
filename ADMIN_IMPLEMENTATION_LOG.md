@@ -28,6 +28,33 @@ This file tracks the admin dashboard build so work can be handed between agents 
 - `npm run test:admin` passes
 - `npm run build` passes
 
+## 2026-05-02 — Payment Expectation Field
+
+### Scope
+- Add a separate expected-payment-state field before implementing live Stripe status comparison.
+- Keep `payment_mode` and `payment_expectation` distinct so smaller agents and cheap rule checks can reason deterministically.
+
+### What changed
+- Added `paymentExpectation` support to the admin student model and student edit API.
+- Added a `Payment expectation` dropdown to the student detail page with:
+  - `setup_pending`
+  - `stripe_active_expected`
+  - `stripe_paused_expected`
+  - `inactive_or_stopped`
+- Added conservative fallback logic:
+  - `stripe` → `stripe_active_expected`
+  - `unknown` → `setup_pending`
+  - `manual` → blank / not forced
+- Surfaced `paymentExpectation` in issue details for future Stripe mismatch work.
+
+### Why this matters
+- The dashboard now has a clear “what should Stripe look like?” field rather than inferring everything from payment mode.
+- This is the rule anchor needed before live Stripe failure, pause, and cancellation checks are added.
+
+### Validation
+- `npm run test:admin` passes
+- `npm run build` passes
+
 ## 2026-05-02 — Initial Stripe Review Issues
 
 ### Scope

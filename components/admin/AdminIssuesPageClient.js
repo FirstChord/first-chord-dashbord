@@ -225,6 +225,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                     <p>Sheets tutor: {issue.sheetTutor || '—'}</p>
                     <p>Registry tutor: {issue.registryTutor || '—'}</p>
                     <p>Payment mode: {issue.paymentMode || '—'}</p>
+                    <p>Payment expectation: {issue.paymentExpectation || '—'}</p>
                     <p>Stripe customer: {issue.stripeCustomerId || '—'}</p>
                     <p>Stripe subscription: {issue.stripeSubscriptionId || '—'}</p>
                   </div>

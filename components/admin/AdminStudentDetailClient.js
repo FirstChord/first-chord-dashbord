@@ -8,6 +8,13 @@ const PAYMENT_MODE_OPTIONS = [
   { value: 'manual', label: 'Manual' },
   { value: 'unknown', label: 'Unknown' },
 ];
+const PAYMENT_EXPECTATION_OPTIONS = [
+  { value: '', label: 'Not set' },
+  { value: 'setup_pending', label: 'Setup pending' },
+  { value: 'stripe_active_expected', label: 'Stripe active expected' },
+  { value: 'stripe_paused_expected', label: 'Stripe paused expected' },
+  { value: 'inactive_or_stopped', label: 'Inactive or stopped' },
+];
 
 function Field({ label, children, hint }) {
   return (
@@ -59,6 +66,7 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
     email: student.email || '',
     contactNumber: student.contactNumber || '',
     paymentMode: student.paymentMode || 'stripe',
+    paymentExpectation: student.paymentExpectation || '',
     soundsliceUrl: student.registry?.soundsliceUrl || '',
     thetaUsername: student.registry?.thetaUsername || '',
   });
@@ -104,6 +112,7 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
         email: data.student.email || '',
         contactNumber: data.student.contactNumber || '',
         paymentMode: data.student.paymentMode || 'stripe',
+        paymentExpectation: data.student.paymentExpectation || '',
         soundsliceUrl: data.student.registry?.soundsliceUrl || '',
         thetaUsername: data.student.registry?.thetaUsername || '',
       });
@@ -205,6 +214,15 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
                 <Select value={form.paymentMode} onChange={(event) => updateField('paymentMode', event.target.value)}>
                   {PAYMENT_MODE_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="Payment expectation" hint="Use this to express whether Stripe should be active, paused, pending, or not currently expected.">
+                <Select value={form.paymentExpectation} onChange={(event) => updateField('paymentExpectation', event.target.value)}>
+                  {PAYMENT_EXPECTATION_OPTIONS.map((option) => (
+                    <option key={option.value || 'blank'} value={option.value}>
                       {option.label}
                     </option>
                   ))}

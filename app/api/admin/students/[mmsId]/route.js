@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import { normaliseInstrument } from '@/lib/admin/fc';
-import { normalisePaymentMode } from '@/lib/admin/payments-helpers.mjs';
+import { normalisePaymentExpectation, normalisePaymentMode } from '@/lib/admin/payments-helpers.mjs';
 import { getAdminStudentByMmsId, updateAdminStudent } from '@/lib/admin/students';
 
 const SHEETS_FIELD_MAP = {
@@ -15,6 +15,7 @@ const SHEETS_FIELD_MAP = {
   email: 'Email',
   contactNumber: 'Contact Number',
   paymentMode: 'payment_mode',
+  paymentExpectation: 'payment_expectation',
 };
 
 const REGISTRY_FIELD_MAP = {
@@ -43,6 +44,14 @@ function validatePayload(payload) {
     errors.push('Payment mode must be stripe, manual, or unknown');
   }
 
+  if (
+    Object.prototype.hasOwnProperty.call(payload, 'paymentExpectation') &&
+    payload.paymentExpectation &&
+    !normalisePaymentExpectation(payload.paymentExpectation)
+  ) {
+    errors.push('Payment expectation must be setup_pending, stripe_active_expected, stripe_paused_expected, or inactive_or_stopped');
+  }
+
   return errors;
 }
 
@@ -53,6 +62,8 @@ function mapUpdates(payload, mapping) {
         acc[outputKey] = normaliseInstrument(payload[inputKey]);
       } else if (inputKey === 'paymentMode') {
         acc[outputKey] = normalisePaymentMode(payload[inputKey]);
+      } else if (inputKey === 'paymentExpectation') {
+        acc[outputKey] = normalisePaymentExpectation(payload[inputKey]);
       } else {
         acc[outputKey] = payload[inputKey];
       }
