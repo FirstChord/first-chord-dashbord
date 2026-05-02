@@ -28,6 +28,30 @@ This file tracks the admin dashboard build so work can be handed between agents 
 - `npm run test:admin` passes
 - `npm run build` passes
 
+## 2026-05-02 — Pause History Read Path
+
+### Scope
+- Make intentional pauses visible in the admin student model before comparing live Stripe state.
+- Reuse `Pause History` from the First Chord Database sheet as the business source for pause intent.
+
+### What changed
+- Added `Pause History` sheet reads to the admin server-side data layer.
+- Added pause-history normalization and derived pause summary helpers.
+- Added a `Pause state` section to the student detail page showing:
+  - currently paused or not
+  - latest pause start
+  - latest pause end
+  - latest stored Stripe pause status
+- Matching works by Stripe subscription ID first, then by email fallback.
+
+### Why this matters
+- The dashboard now has a real pause-intent layer before live Stripe mismatch rules are added.
+- Future Stripe checks can suppress warnings for correctly paused students using business-recorded pause state rather than raw Stripe facts alone.
+
+### Validation
+- `npm run test:admin` passes
+- `npm run build` passes
+
 ## 2026-05-02 — Payment Expectation Field
 
 ### Scope

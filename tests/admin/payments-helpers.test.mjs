@@ -22,7 +22,7 @@ test('derivePaymentMode respects an explicit sheet value first', () => {
 
 test('derivePaymentMode falls back to known manual-payment exceptions', () => {
   assert.equal(derivePaymentMode({ explicitMode: '', fullName: 'Katrina Caldwell' }), 'manual');
-  assert.equal(derivePaymentMode({ explicitMode: '', fullName: 'Angie Godard' }), 'manual');
+  assert.equal(derivePaymentMode({ explicitMode: '', fullName: 'Anji Godard' }), 'manual');
   assert.equal(derivePaymentMode({ explicitMode: '', fullName: 'Owen Example' }), 'stripe');
 });
 

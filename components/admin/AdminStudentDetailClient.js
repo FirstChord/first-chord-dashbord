@@ -152,6 +152,18 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
         </section>
       ) : null}
 
+      {student.pauseSummary?.hasPauseHistory ? (
+        <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+          <h3 className="text-sm font-semibold text-slate-900">Pause state</h3>
+          <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <ReadOnlyField label="Currently paused" value={student.pauseSummary.currentlyPaused ? 'Yes' : 'No'} />
+            <ReadOnlyField label="Pause start" value={student.pauseSummary.latestPause?.startDate} />
+            <ReadOnlyField label="Pause end" value={student.pauseSummary.latestPause?.endDate} />
+            <ReadOnlyField label="Stripe pause status" value={student.pauseSummary.latestPause?.stripeStatus} />
+          </div>
+        </section>
+      ) : null}
+
       <form className="space-y-8" onSubmit={handleSubmit}>
         <section className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">

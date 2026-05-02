@@ -78,7 +78,7 @@ This should be used alongside `payment_mode`, not instead of it.
 
 | Expected state | When to use it | Stripe should look like | Flag? | Notes |
 |---|---|---|---|---|
-| `manual_payment` | Cash or bank transfer exceptions | Ignore Stripe state | No | Katrina Caldwell, Kenny, Hayleigh, Hudson, Angie Godard |
+| `manual_payment` | Cash or bank transfer exceptions | Ignore Stripe state | No | Katrina Caldwell, Kenny, Hayleigh, Hudson, Anji Godard |
 | `setup_pending` | New student not fully set up yet | Customer/subscription may be missing | Usually no | Info-only at most |
 | `stripe_active_expected` | Normal active paying student | Active subscription, not intentionally paused | Yes if broken | Main default state |
 | `stripe_paused_expected` | Payment intentionally paused | Subscription paused or equivalent expected state | Yes only if mismatch | Should suppress failure alarms |
