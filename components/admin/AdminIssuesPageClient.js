@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
+import { formatDateTime } from '@/lib/admin/health-helpers.mjs';
 
 function severityClasses(severity) {
   if (severity === 'Needs action') return 'border-red-200 bg-red-50 text-red-800';
@@ -28,7 +29,14 @@ function Select({ label, value, onChange, options }) {
   );
 }
 
-export default function AdminIssuesPageClient({ issues }) {
+function freshnessClasses(status) {
+  if (status === 'Fresh') return 'border-emerald-200 bg-emerald-50 text-emerald-800';
+  if (status === 'Aging') return 'border-amber-200 bg-amber-50 text-amber-800';
+  if (status === 'Stale') return 'border-red-200 bg-red-50 text-red-800';
+  return 'border-slate-200 bg-slate-50 text-slate-700';
+}
+
+export default function AdminIssuesPageClient({ issues, freshness }) {
   const [issueList, setIssueList] = useState(issues);
   const [typeFilter, setTypeFilter] = useState('all');
   const [severityFilter, setSeverityFilter] = useState('all');
@@ -80,6 +88,34 @@ export default function AdminIssuesPageClient({ issues }) {
         <p className="mt-2 text-sm text-slate-600">
           Operational issues queue for data drift, tutor mismatches, and missing cross-system records. This page is intended to become the main review surface for human and future agent triage.
         </p>
+      </section>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900">Review flags freshness</h3>
+            <p className="mt-1 text-sm text-slate-600">{freshness?.statusDetail || 'Freshness unknown.'}</p>
+          </div>
+          <span className={`rounded-full border px-3 py-1 text-xs font-medium ${freshnessClasses(freshness?.status)}`}>
+            {freshness?.status || 'Unknown'}
+          </span>
+        </div>
+        <div className="mt-4 grid gap-4 md:grid-cols-3">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-slate-500">Latest generated</p>
+            <p className="mt-1 text-sm text-slate-800">{formatDateTime(freshness?.latestGeneratedAt)}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-slate-500">Age</p>
+            <p className="mt-1 text-sm text-slate-800">
+              {typeof freshness?.ageDays === 'number' ? `${freshness.ageDays} day${freshness.ageDays === 1 ? '' : 's'}` : '—'}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-slate-500">Distinct generated dates</p>
+            <p className="mt-1 text-sm text-slate-800">{freshness?.distinctGeneratedDates?.length || 0}</p>
+          </div>
+        </div>
       </section>
 
       <section className="grid gap-4 md:grid-cols-4">

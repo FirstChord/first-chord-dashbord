@@ -28,6 +28,39 @@ This file tracks the admin dashboard build so work can be handed between agents 
 - `npm run test:admin` passes
 - `npm run build` passes
 
+## 2026-05-02 — Review Flags Freshness + Admin Health
+
+### Scope
+- Make `Review_Flags` freshness visible in the admin UI.
+- Add a lightweight operational health panel on the admin home page.
+- Reduce hidden staleness around MMS and the two hosted workflows now involved in the admin/dashboard pipeline.
+
+### What changed
+- Added a `Review flags freshness` panel to `/admin/flags` driven by live `generated_date` values.
+- Added freshness classification states:
+  - `Fresh`
+  - `Aging`
+  - `Stale`
+  - `Unknown`
+- Added an admin home `Operational health` section covering:
+  - MMS API health
+  - latest `generate-configs` workflow status
+  - latest `regenerate-fc-ids` workflow status
+  - latest review-flags freshness state
+- Added supporting health helpers and tests.
+
+### Why this matters
+- Admins can now see when `Review_Flags` are current versus stale.
+- The dashboard makes the hidden automation chain more legible:
+  - admin write
+  - config generation
+  - FC regeneration
+- This is a cleaner foundation before adding persistent issue state and Stripe-related issue detection.
+
+### Validation
+- `npm run test:admin` passes
+- `npm run build` passes
+
 ### Notes for next handover
 - Tutor drift is now reduced, but only if future tutor changes are made in Brain and then synced into the dashboard via `npm run sync-admin-tutors`.
 - The `generate-configs` GitHub Action will not run until these changes are pushed to GitHub.
