@@ -3,6 +3,11 @@
 import { useState, useTransition } from 'react';
 
 const INSTRUMENT_OPTIONS = ['Guitar', 'Piano', 'Bass', 'Singing', 'Ukulele', 'Ukulele Orchestra'];
+const PAYMENT_MODE_OPTIONS = [
+  { value: 'stripe', label: 'Stripe' },
+  { value: 'manual', label: 'Manual' },
+  { value: 'unknown', label: 'Unknown' },
+];
 
 function Field({ label, children, hint }) {
   return (
@@ -53,6 +58,7 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
     parentLastName: student.parentLastName || '',
     email: student.email || '',
     contactNumber: student.contactNumber || '',
+    paymentMode: student.paymentMode || 'stripe',
     soundsliceUrl: student.registry?.soundsliceUrl || '',
     thetaUsername: student.registry?.thetaUsername || '',
   });
@@ -97,6 +103,7 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
         parentLastName: data.student.parentLastName || '',
         email: data.student.email || '',
         contactNumber: data.student.contactNumber || '',
+        paymentMode: data.student.paymentMode || 'stripe',
         soundsliceUrl: data.student.registry?.soundsliceUrl || '',
         thetaUsername: data.student.registry?.thetaUsername || '',
       });
@@ -193,6 +200,15 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
                   value={form.contactNumber}
                   onChange={(event) => updateField('contactNumber', event.target.value)}
                 />
+              </Field>
+              <Field label="Payment mode" hint="Stripe is the normal default. Use manual only for approved cash/bank-transfer exceptions.">
+                <Select value={form.paymentMode} onChange={(event) => updateField('paymentMode', event.target.value)}>
+                  {PAYMENT_MODE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </Select>
               </Field>
             </div>
           </div>

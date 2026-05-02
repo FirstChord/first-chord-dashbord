@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import { normaliseInstrument } from '@/lib/admin/fc';
+import { normalisePaymentMode } from '@/lib/admin/payments-helpers.mjs';
 import { getAdminStudentByMmsId, updateAdminStudent } from '@/lib/admin/students';
 
 const SHEETS_FIELD_MAP = {
@@ -13,6 +14,7 @@ const SHEETS_FIELD_MAP = {
   parentLastName: 'Parent surname',
   email: 'Email',
   contactNumber: 'Contact Number',
+  paymentMode: 'payment_mode',
 };
 
 const REGISTRY_FIELD_MAP = {
@@ -37,13 +39,23 @@ function validatePayload(payload) {
     errors.push('Soundslice URL must be a valid Soundslice course URL');
   }
 
+  if (Object.prototype.hasOwnProperty.call(payload, 'paymentMode') && !normalisePaymentMode(payload.paymentMode)) {
+    errors.push('Payment mode must be stripe, manual, or unknown');
+  }
+
   return errors;
 }
 
 function mapUpdates(payload, mapping) {
   return Object.entries(mapping).reduce((acc, [inputKey, outputKey]) => {
     if (Object.prototype.hasOwnProperty.call(payload, inputKey)) {
-      acc[outputKey] = inputKey === 'instrument' ? normaliseInstrument(payload[inputKey]) : payload[inputKey];
+      if (inputKey === 'instrument') {
+        acc[outputKey] = normaliseInstrument(payload[inputKey]);
+      } else if (inputKey === 'paymentMode') {
+        acc[outputKey] = normalisePaymentMode(payload[inputKey]);
+      } else {
+        acc[outputKey] = payload[inputKey];
+      }
     }
     return acc;
   }, {});

@@ -28,6 +28,31 @@ This file tracks the admin dashboard build so work can be handed between agents 
 - `npm run test:admin` passes
 - `npm run build` passes
 
+## 2026-05-02 — Payment Mode Foundation
+
+### Scope
+- Add an explicit payment-mode concept to the admin student model before live Stripe issue detection.
+- Keep `Students` sheet as the canonical source for payment linkage and payment-mode state.
+
+### What changed
+- Added `paymentMode` support to the admin student model and student edit API.
+- Added a `Payment mode` dropdown to the student detail page with:
+  - `stripe`
+  - `manual`
+  - `unknown`
+- Added fallback logic for known non-Stripe exceptions when the sheet value is blank.
+- Improved Sheets writes so missing headers such as `payment_mode` can be created automatically instead of silently dropping new canonical fields.
+
+### Why this matters
+- Stripe issue detection now has a clean policy boundary:
+  - normal students should be checked against Stripe
+  - approved cash/bank-transfer exceptions should not create false alarms
+- The admin UI can now express payment intent explicitly instead of inferring everything from Stripe IDs alone.
+
+### Validation
+- `npm run test:admin` passes
+- `npm run build` passes
+
 ## 2026-05-02 — Review Flags Freshness + Admin Health
 
 ### Scope
