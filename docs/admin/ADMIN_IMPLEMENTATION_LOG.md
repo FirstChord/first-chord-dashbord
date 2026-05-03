@@ -611,7 +611,7 @@ This file tracks the admin dashboard build so work can be handed between agents 
 ## 2026-04-18 — Ownership Matrix
 
 ### What changed
-- Added `OWNERSHIP_MATRIX.md` at the repo root.
+- Added `OWNERSHIP_MATRIX.md` as the current admin ownership reference.
 - This is now the compact reference for:
   - action ownership
   - field ownership

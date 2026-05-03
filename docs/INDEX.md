@@ -3,6 +3,7 @@
 ## 📚 Quick Start
 
 - **[Main README](README.md)** - Overview and getting started
+- **[Admin Docs Index](admin/INDEX.md)** - Current admin/V2 handoff, ownership, and deployment docs
 - **[Agent Quick Start](guides/AGENT_QUICK_START.md)** - For Claude agents working on this project
 - **[Claude Guide](guides/CLAUDE.md)** - Claude-specific instructions
 

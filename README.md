@@ -18,6 +18,7 @@ Visit `http://localhost:3000`
 👉 **[Start here: Documentation Index](docs/INDEX.md)**
 
 ### Quick Links
+- [Admin Docs Index](docs/admin/INDEX.md)
 - [Adding New Students](docs/workflows/01-adding-students.md)
 - [Agent Quick Start](docs/guides/AGENT_QUICK_START.md) (for AI assistants)
 - [Troubleshooting Guide](docs/TROUBLESHOOTING_GUIDE.md)
