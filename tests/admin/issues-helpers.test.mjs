@@ -8,6 +8,8 @@ test('classifyIssue maps current review flag types into actionable admin metadat
   assert.deepEqual(classifyIssue('SHEETS ONLY').systemsAffected, ['Sheets']);
   assert.deepEqual(classifyIssue('REGISTRY ONLY').systemsAffected, ['Registry']);
   assert.deepEqual(classifyIssue('STRIPE SUBSCRIPTION MISSING').systemsAffected, ['Sheets', 'Stripe']);
+  assert.deepEqual(classifyIssue('PAYMENT_FAILED').severity, 'Needs action');
+  assert.deepEqual(classifyIssue('SUBSCRIPTION_STATE_MISMATCH').systemsAffected, ['Sheets', 'Stripe']);
 });
 
 test('buildIssueRecord enriches live review flag rows with linked-system state', () => {

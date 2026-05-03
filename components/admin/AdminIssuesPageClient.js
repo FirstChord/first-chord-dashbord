@@ -42,6 +42,15 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
   const [severityFilter, setSeverityFilter] = useState('all');
   const [systemFilter, setSystemFilter] = useState('all');
   const [actionState, setActionState] = useState({ pendingId: '', error: '' });
+  const [stripeScanState, setStripeScanState] = useState({ pending: false, error: '', scannedAt: '', scannedCount: 0 });
+
+  const LIVE_STRIPE_TYPES = [
+    'ACTIVE_WITHOUT_SUBSCRIPTION',
+    'SUBSCRIPTION_CANCELLED_UNEXPECTEDLY',
+    'SUBSCRIPTION_STATE_MISMATCH',
+    'INACTIVE_STILL_BILLING',
+    'PAYMENT_FAILED',
+  ];
 
   const filteredIssues = useMemo(
     () =>
@@ -78,6 +87,37 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
       setActionState({ pendingId: '', error: '' });
     } catch (error) {
       setActionState({ pendingId: '', error: error.message || 'Delete failed' });
+    }
+  }
+
+  async function handleRunStripeScan() {
+    setStripeScanState({ pending: true, error: '', scannedAt: '', scannedCount: 0 });
+
+    try {
+      const response = await fetch('/api/admin/flags/stripe-scan', {
+        method: 'POST',
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok) {
+        setStripeScanState({ pending: false, error: payload.error || 'Stripe scan failed', scannedAt: '', scannedCount: 0 });
+        return;
+      }
+
+      setIssueList((current) => {
+        const withoutLiveStripe = current.filter((issue) => !LIVE_STRIPE_TYPES.includes(issue.type));
+        return [...withoutLiveStripe, ...(payload.issues || [])];
+      });
+
+      setStripeScanState({
+        pending: false,
+        error: '',
+        scannedAt: payload.scannedAt || '',
+        scannedCount: payload.scannedCount || 0,
+      });
+    } catch (error) {
+      setStripeScanState({ pending: false, error: error.message || 'Stripe scan failed', scannedAt: '', scannedCount: 0 });
     }
   }
 
@@ -118,6 +158,31 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
         </div>
       </section>
 
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900">Live Stripe scan</h3>
+            <p className="mt-1 text-sm text-slate-600">
+              Manual only. This checks Stripe-managed students against the current rule set and adds live payment issues to the queue without polling Stripe on every page load.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleRunStripeScan}
+            disabled={stripeScanState.pending}
+            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {stripeScanState.pending ? 'Scanning…' : 'Run Stripe scan'}
+          </button>
+        </div>
+        {stripeScanState.error ? <p className="mt-3 text-sm text-red-700">{stripeScanState.error}</p> : null}
+        {stripeScanState.scannedAt ? (
+          <p className="mt-3 text-sm text-slate-600">
+            Last Stripe scan: {formatDateTime(stripeScanState.scannedAt)} • Students checked: {stripeScanState.scannedCount}
+          </p>
+        ) : null}
+      </section>
+
       <section className="grid gap-4 md:grid-cols-4">
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <p className="text-sm text-slate-500">Open issues</p>
@@ -156,6 +221,11 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
             { value: 'STRIPE SETUP INCOMPLETE', label: 'Stripe setup incomplete' },
             { value: 'STRIPE CUSTOMER MISSING', label: 'Stripe customer missing' },
             { value: 'STRIPE SUBSCRIPTION MISSING', label: 'Stripe subscription missing' },
+            { value: 'ACTIVE_WITHOUT_SUBSCRIPTION', label: 'Active without subscription' },
+            { value: 'SUBSCRIPTION_CANCELLED_UNEXPECTEDLY', label: 'Subscription cancelled unexpectedly' },
+            { value: 'SUBSCRIPTION_STATE_MISMATCH', label: 'Subscription state mismatch' },
+            { value: 'INACTIVE_STILL_BILLING', label: 'Inactive still billing' },
+            { value: 'PAYMENT_FAILED', label: 'Payment failed' },
           ]}
         />
         <Select
