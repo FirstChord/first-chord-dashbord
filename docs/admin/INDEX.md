@@ -15,6 +15,8 @@
   Current source-of-truth and action-ownership model.
 - [PAYMENTS_RULES.md](./PAYMENTS_RULES.md)
   Payment-mode, payment-expectation, and Stripe issue rules.
+- [BRAIN_CAPABILITY_ROADMAP.md](./BRAIN_CAPABILITY_ROADMAP.md)
+  Forward-looking roadmap for Brain as an admin assistant and thought partner.
 
 ## Operations
 
@@ -28,3 +30,4 @@
 3. Check [OWNERSHIP_MATRIX.md](./OWNERSHIP_MATRIX.md)
 4. Review [PAYMENTS_RULES.md](./PAYMENTS_RULES.md) if working on Stripe or pauses
 5. Use [V2_SPEC_DRAFT.md](./V2_SPEC_DRAFT.md) for roadmap context
+6. Read [BRAIN_CAPABILITY_ROADMAP.md](./BRAIN_CAPABILITY_ROADMAP.md) for longer-term assistant design
