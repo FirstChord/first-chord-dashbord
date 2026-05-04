@@ -32,15 +32,21 @@ export default async function AdminWaitingPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold text-slate-900">Waiting List</h2>
+        <p className="text-xs uppercase tracking-[0.25em] text-slate-500">New enquiries</p>
+        <h2
+          className="mt-2 text-3xl font-bold uppercase tracking-wide text-slate-800"
+          style={{ fontFamily: '"Cooper Hewitt", "Nimbus Sans L", "Arial", sans-serif' }}
+        >
+          Waiting List
+        </h2>
         <p className="mt-2 text-sm text-slate-600">
           MMS students with status <code>Waiting</code>, newest first, limited to the last 120 days.
         </p>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-[1.6rem] border border-blue-100 bg-white/90 shadow-[0_12px_36px_rgba(15,23,42,0.06)] backdrop-blur-sm">
         <table className="min-w-full divide-y divide-slate-200">
-          <thead className="bg-slate-50">
+          <thead className="bg-blue-50/70">
             <tr>
               {['Student', 'Added', 'Age', 'Parent', 'Email', 'Action'].map((header) => (
                 <th
@@ -57,7 +63,7 @@ export default async function AdminWaitingPage() {
               const ageBadge = getAgeBadge(student.ageInDays);
 
               return (
-                <tr key={student.mmsId} className="hover:bg-slate-50">
+                <tr key={student.mmsId} className="transition hover:bg-blue-50/60">
                   <td className="px-4 py-3">
                     <div className="font-medium text-slate-900">{student.fullName || student.mmsId}</div>
                     <div className="text-xs text-slate-500">{student.mmsId}</div>

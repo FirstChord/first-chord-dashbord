@@ -22,15 +22,21 @@ export default async function AdminHomePage() {
   return (
     <div className="space-y-8">
       <section>
-        <h2 className="text-2xl font-semibold text-slate-900">Overview</h2>
+        <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Operational view</p>
+        <h2
+          className="mt-2 text-3xl font-bold uppercase tracking-wide text-slate-800"
+          style={{ fontFamily: '"Cooper Hewitt", "Nimbus Sans L", "Arial", sans-serif' }}
+        >
+          Overview
+        </h2>
         <p className="mt-2 text-sm text-slate-600">
-          Read-only first slice of the admin surface. Existing tutor and student dashboard routes are unchanged.
+          High-level admin control for onboarding, issues, and system health. Existing tutor and student dashboard routes are unchanged.
         </p>
       </section>
 
       <section className="grid gap-4 md:grid-cols-3">
         {stats.map((stat) => (
-          <div key={stat.label} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div key={stat.label} className="rounded-[1.6rem] border border-blue-100 bg-white/90 p-6 shadow-[0_12px_36px_rgba(15,23,42,0.06)] backdrop-blur-sm">
             <p className="text-sm text-slate-500">{stat.label}</p>
             <p className="mt-3 text-3xl font-semibold text-slate-900">{stat.value}</p>
           </div>
@@ -71,7 +77,7 @@ export default async function AdminHomePage() {
               updatedAt: health.flagsFreshness.latestGeneratedAt,
             },
           ].map((item) => (
-            <div key={item.label} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div key={item.label} className="rounded-[1.6rem] border border-blue-100 bg-white/90 p-6 shadow-[0_12px_36px_rgba(15,23,42,0.06)] backdrop-blur-sm">
               <div className="flex items-start justify-between gap-3">
                 <p className="text-sm text-slate-500">{item.label}</p>
                 <span className={`rounded-full border px-3 py-1 text-xs font-medium ${statusClasses(item.status)}`}>{item.status}</span>
