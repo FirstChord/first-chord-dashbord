@@ -77,6 +77,21 @@ test('buildCalendarEventPayload falls back to the billing profile event category
   assert.equal(payload.biller, billingProfile);
 });
 
+test('buildCalendarEventPayload supports group lessons with multiple student IDs', () => {
+  const payload = buildCalendarEventPayload({
+    studentIds: ['sdt_one', 'sdt_two'],
+    teacherId: 'tch_test',
+    lessonDate: '2026-05-03',
+    lessonTime: '13:00',
+    durationMinutes: 45,
+    eventCategoryId: 'ect_group',
+  });
+
+  assert.deepEqual(payload.StudentIDs, ['sdt_one', 'sdt_two']);
+  assert.equal(payload.MaximumNumberOfParticipants, 2);
+  assert.equal(payload.Duration, 45);
+});
+
 test('buildWeeklyRepeatDetails creates a weekly series on the selected weekday only', () => {
   const repeat = buildWeeklyRepeatDetails('2026-05-03');
 
@@ -138,6 +153,16 @@ test('buildCalendarEventSearchPayload builds the MMS search payload shape for de
   );
 });
 
+test('buildCalendarEventSearchPayload supports group lesson dedupe checks', () => {
+  const payload = buildCalendarEventSearchPayload({
+    studentIds: ['sdt_one', 'sdt_two'],
+    teacherId: 'tch_test',
+    lessonDate: '2026-05-03',
+  });
+
+  assert.deepEqual(payload.StudentIDs, ['sdt_one', 'sdt_two']);
+});
+
 test('findMatchingCalendarEvent returns a matching existing lesson by teacher, student, and start date', () => {
   const match = findMatchingCalendarEvent({
     events: [
@@ -174,6 +199,25 @@ test('findMatchingCalendarEvent ignores non-matching events', () => {
   });
 
   assert.equal(match, null);
+});
+
+test('findMatchingCalendarEvent requires all group students to be present', () => {
+  const match = findMatchingCalendarEvent({
+    events: [
+      {
+        ID: 'evt_group',
+        StartDate: '2026-05-03T12:00:00',
+        TeacherID: 'tch_test',
+        Attendances: [{ StudentID: 'sdt_one' }, { StudentID: 'sdt_two' }],
+      },
+    ],
+    studentIds: ['sdt_one', 'sdt_two'],
+    teacherId: 'tch_test',
+    lessonDate: '2026-05-03',
+    lessonTime: '13:00',
+  });
+
+  assert.equal(match?.ID, 'evt_group');
 });
 
 test('formatMmsErrorBody prefers structured MMS error messages', () => {

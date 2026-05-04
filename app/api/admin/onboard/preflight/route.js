@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth';
 
 import { authOptions } from '@/lib/admin/auth';
 import { getOnboardingPreflightState } from '@/lib/admin/onboarding';
+import { getStudentDetails } from '@/lib/admin/mms';
 import { ADMIN_TUTORS } from '@/lib/admin/tutors';
 
 function buildPreflightSummary({ duplicateState, operationalState, tutorFullName }) {
@@ -71,9 +72,35 @@ export async function POST(request) {
     lessonTime: payload.lessonTime || '',
   });
 
+  let secondary = null;
+  if (payload.lessonType === 'sibling_group' && payload.secondStudentMmsId) {
+    const secondDetails = await getStudentDetails(payload.secondStudentMmsId);
+    const secondaryState = await getOnboardingPreflightState({
+      mmsId: payload.secondStudentMmsId,
+      tutorFullName: tutor.fullName,
+      tutorShortName: payload.tutorShortName,
+      teacherId: tutor.teacherId,
+      lessonDate: payload.lessonDate || '',
+      lessonTime: payload.lessonTime || '',
+    });
+
+    secondary = {
+      mmsId: payload.secondStudentMmsId,
+      studentName: secondDetails.fullName || payload.secondStudentMmsId,
+      duplicateState: secondaryState.duplicateState,
+      operationalState: secondaryState.operationalState,
+      summary: buildPreflightSummary({
+        duplicateState: secondaryState.duplicateState,
+        operationalState: secondaryState.operationalState,
+        tutorFullName: tutor.fullName,
+      }),
+    };
+  }
+
   return Response.json({
     duplicateState,
     operationalState,
+    secondary,
     summary: buildPreflightSummary({
       duplicateState,
       operationalState,

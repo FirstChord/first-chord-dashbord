@@ -44,6 +44,8 @@ export default async function AdminOnboardPage({ searchParams }) {
         age: parsed.age || '',
         instrument,
         lessonLength: '30',
+        lessonType: 'individual',
+        secondStudentMmsId: '',
         lessonDay: '',
         lessonTime: '',
         lessonDate: '',
@@ -104,7 +106,14 @@ export default async function AdminOnboardPage({ searchParams }) {
         )}
       </section>
 
-      {initialData ? <AdminOnboardForm initialData={initialData} tutorOptions={tutorOptions} initialDuplicateState={duplicateState} /> : null}
+      {initialData ? (
+        <AdminOnboardForm
+          initialData={initialData}
+          tutorOptions={tutorOptions}
+          initialDuplicateState={duplicateState}
+          waitingStudents={waitingStudents}
+        />
+      ) : null}
     </div>
   );
 }

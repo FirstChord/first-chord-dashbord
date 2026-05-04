@@ -9,6 +9,19 @@ function deriveWeekday(dateValue) {
   return parsed.toLocaleDateString('en-GB', { weekday: 'long' });
 }
 
+function normalizeTimeValue(value) {
+  const trimmed = `${value || ''}`.trim();
+  if (!trimmed) return '';
+
+  const match = trimmed.match(/^(\d{2}):(\d{2})(?::\d{2})?$/);
+  if (!match) {
+    return trimmed;
+  }
+
+  const [, hours, minutes] = match;
+  return `${hours}:${minutes}`;
+}
+
 function Field({ label, children, hint }) {
   return (
     <label className="block">
@@ -71,7 +84,7 @@ function preflightClasses(status) {
   return 'border-slate-200 bg-slate-50 text-slate-700';
 }
 
-export default function AdminOnboardForm({ initialData, tutorOptions, initialDuplicateState = null }) {
+export default function AdminOnboardForm({ initialData, tutorOptions, initialDuplicateState = null, waitingStudents = [] }) {
   const [form, setForm] = useState(initialData);
   const [result, setResult] = useState(null);
   const [errorState, setErrorState] = useState(null);
@@ -83,12 +96,39 @@ export default function AdminOnboardForm({ initialData, tutorOptions, initialDup
     const instrument = (form.instrument || '').toLowerCase();
     return tutorOptions.filter((tutor) => !instrument || tutor.instruments.includes(instrument));
   }, [form.instrument, tutorOptions]);
+  const siblingCandidates = useMemo(() => {
+    const primaryEmail = `${form.parentEmail || ''}`.trim().toLowerCase();
+    return waitingStudents
+      .filter((student) => student.mmsId !== form.mmsId)
+      .sort((a, b) => {
+        const aMatch = primaryEmail && `${a.parentEmail || ''}`.trim().toLowerCase() === primaryEmail ? 0 : 1;
+        const bMatch = primaryEmail && `${b.parentEmail || ''}`.trim().toLowerCase() === primaryEmail ? 0 : 1;
+        if (aMatch !== bMatch) return aMatch - bMatch;
+        return a.fullName.localeCompare(b.fullName);
+      });
+  }, [form.mmsId, form.parentEmail, waitingStudents]);
+  const selectedSibling = useMemo(
+    () => siblingCandidates.find((student) => student.mmsId === form.secondStudentMmsId) || null,
+    [form.secondStudentMmsId, siblingCandidates],
+  );
 
   const derivedWeekday = useMemo(() => deriveWeekday(form.lessonDate), [form.lessonDate]);
   const initialWarnings = initialDuplicateState?.warnings || [];
 
   function updateField(key, value) {
-    setForm((current) => ({ ...current, [key]: value }));
+    setForm((current) => ({
+      ...current,
+      [key]: key === 'lessonTime' ? normalizeTimeValue(value) : value,
+    }));
+  }
+
+  function updateLessonType(value) {
+    setForm((current) => ({
+      ...current,
+      lessonType: value,
+      lessonLength: value === 'sibling_group' ? '45' : current.lessonLength,
+      secondStudentMmsId: value === 'sibling_group' ? current.secondStudentMmsId : '',
+    }));
   }
 
   function handlePreflight() {
@@ -160,6 +200,12 @@ export default function AdminOnboardForm({ initialData, tutorOptions, initialDup
               <Field label="MMS ID">
                 <Input value={form.mmsId} readOnly />
               </Field>
+              <Field label="Lesson type" hint="Sibling group onboards two students separately but creates one shared group lesson and one family-facing payment message.">
+                <Select value={form.lessonType || 'individual'} onChange={(e) => updateLessonType(e.target.value)}>
+                  <option value="individual">Individual</option>
+                  <option value="sibling_group">Sibling group</option>
+                </Select>
+              </Field>
               <Field label="Is adult?">
                 <Select value={form.isAdult ? 'yes' : 'no'} onChange={(e) => updateField('isAdult', e.target.value === 'yes')}>
                   <option value="no">No</option>
@@ -190,7 +236,32 @@ export default function AdminOnboardForm({ initialData, tutorOptions, initialDup
               <Field label="Age">
                 <Input value={form.age} onChange={(e) => updateField('age', e.target.value)} />
               </Field>
+              {form.lessonType === 'sibling_group' ? (
+                <div className="sm:col-span-2">
+                  <Field label="Second student from MMS" hint="Pick the sibling/second child. This will create separate records for both students but one shared group lesson and one shared family billing flow.">
+                    <Select required value={form.secondStudentMmsId || ''} onChange={(e) => updateField('secondStudentMmsId', e.target.value)}>
+                      <option value="">Select second student</option>
+                      {siblingCandidates.map((student) => (
+                        <option key={student.mmsId} value={student.mmsId}>
+                          {student.fullName} ({student.parentName || student.parentEmail || student.mmsId})
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                </div>
+              ) : null}
             </div>
+            {form.lessonType === 'sibling_group' && selectedSibling ? (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Second student summary</p>
+                <div className="mt-2 grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
+                  <p>Name: {selectedSibling.fullName}</p>
+                  <p>MMS ID: {selectedSibling.mmsId}</p>
+                  <p>Parent: {selectedSibling.parentName || '—'}</p>
+                  <p>Parent email: {selectedSibling.parentEmail || '—'}</p>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -210,7 +281,13 @@ export default function AdminOnboardForm({ initialData, tutorOptions, initialDup
                 <Input value={derivedWeekday} readOnly />
               </Field>
               <Field label="Lesson time">
-                <Input type="time" required value={form.lessonTime} onChange={(e) => updateField('lessonTime', e.target.value)} />
+                <Input
+                  type="time"
+                  step="60"
+                  required
+                  value={normalizeTimeValue(form.lessonTime)}
+                  onChange={(e) => updateField('lessonTime', e.target.value)}
+                />
               </Field>
               <Field label="First lesson date">
                 <Input type="date" required value={form.lessonDate} onChange={(e) => updateField('lessonDate', e.target.value)} />
@@ -305,6 +382,21 @@ export default function AdminOnboardForm({ initialData, tutorOptions, initialDup
                   <p className="mt-2 text-sm">{item.detail}</p>
                 </div>
               ))}
+            </div>
+          ) : null}
+
+          {preflightState?.secondary?.summary ? (
+            <div className="mt-6">
+              <p className="text-sm font-semibold text-slate-900">Second student preflight: {preflightState.secondary.studentName}</p>
+              <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {Object.entries(preflightState.secondary.summary).map(([key, item]) => (
+                  <div key={`secondary-${key}`} className={`rounded-xl border p-4 ${preflightClasses(item.status)}`}>
+                    <p className="text-xs uppercase tracking-wide">{item.label}</p>
+                    <p className="mt-2 text-sm font-semibold">{item.status}</p>
+                    <p className="mt-2 text-sm">{item.detail}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           ) : null}
         </section>
