@@ -23,7 +23,7 @@ export default async function AdminLayout({ children }) {
           alt=""
           width={192}
           height={128}
-          className="absolute top-14 right-6 opacity-80 -rotate-12"
+          className="absolute top-24 right-6 opacity-80 -rotate-12"
         />
       </div>
       <header className="sticky top-0 z-20 border-b border-blue-100/40 bg-blue-100/90 backdrop-blur-sm shadow-sm">
