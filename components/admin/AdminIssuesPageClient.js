@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { formatDateTime } from '@/lib/admin/health-helpers.mjs';
 
 function severityClasses(severity) {
@@ -37,6 +38,7 @@ function freshnessClasses(status) {
 }
 
 export default function AdminIssuesPageClient({ issues, freshness }) {
+  const router = useRouter();
   const [issueList, setIssueList] = useState(issues);
   const [typeFilter, setTypeFilter] = useState('all');
   const [severityFilter, setSeverityFilter] = useState('all');
@@ -52,6 +54,10 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
     'INACTIVE_STILL_BILLING',
     'PAYMENT_FAILED',
   ];
+
+  useEffect(() => {
+    setIssueList(issues);
+  }, [issues]);
 
   const filteredIssues = useMemo(
     () =>
@@ -176,6 +182,83 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
       setActionState({ pendingId: '', error: '' });
     } catch (error) {
       setActionState({ pendingId: '', error: error.message || 'Issue update failed' });
+    }
+  }
+
+  function getPaymentQuickActions(issue) {
+    if (issue.paymentMode !== 'stripe' && issue.type !== 'PAYMENT SETUP PENDING') {
+      return [];
+    }
+
+    if (issue.type === 'PAYMENT SETUP PENDING') {
+      return [
+        { label: 'Set Stripe active expected', payload: { paymentMode: 'stripe', paymentExpectation: 'stripe_active_expected' } },
+        { label: 'Mark manual payer', payload: { paymentMode: 'manual', paymentExpectation: '' } },
+      ];
+    }
+
+    if (['STRIPE SETUP INCOMPLETE', 'STRIPE CUSTOMER MISSING', 'STRIPE SUBSCRIPTION MISSING'].includes(issue.type)) {
+      return [
+        { label: 'Set setup pending', payload: { paymentExpectation: 'setup_pending' } },
+        { label: 'Mark manual payer', payload: { paymentMode: 'manual', paymentExpectation: '' } },
+      ];
+    }
+
+    if (issue.type === 'SUBSCRIPTION_STATE_MISMATCH') {
+      return [
+        { label: 'Set Stripe paused expected', payload: { paymentExpectation: 'stripe_paused_expected' } },
+        { label: 'Set Stripe active expected', payload: { paymentExpectation: 'stripe_active_expected' } },
+        { label: 'Set inactive / stopped', payload: { paymentExpectation: 'inactive_or_stopped' } },
+      ];
+    }
+
+    if (issue.type === 'INACTIVE_STILL_BILLING') {
+      return [
+        { label: 'Set Stripe paused expected', payload: { paymentExpectation: 'stripe_paused_expected' } },
+        { label: 'Set Stripe active expected', payload: { paymentExpectation: 'stripe_active_expected' } },
+      ];
+    }
+
+    if (['ACTIVE_WITHOUT_SUBSCRIPTION', 'SUBSCRIPTION_CANCELLED_UNEXPECTEDLY', 'PAYMENT_FAILED'].includes(issue.type)) {
+      return [
+        { label: 'Set setup pending', payload: { paymentExpectation: 'setup_pending' } },
+        { label: 'Mark manual payer', payload: { paymentMode: 'manual', paymentExpectation: '' } },
+      ];
+    }
+
+    return [];
+  }
+
+  async function handlePaymentQuickAction(issue, action) {
+    setActionState({ pendingId: issue.issueId, error: '' });
+
+    try {
+      const response = await fetch(`/api/admin/students/${issue.mmsId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(action.payload),
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok) {
+        setActionState({ pendingId: '', error: payload.error || 'Payment action failed' });
+        return;
+      }
+
+      setIssueList((current) => current.map((entry) => (
+        entry.issueId === issue.issueId
+          ? {
+            ...entry,
+            paymentMode: payload.student.paymentMode || entry.paymentMode,
+            paymentExpectation: payload.student.paymentExpectation || '',
+          }
+          : entry
+      )));
+      setActionState({ pendingId: '', error: '' });
+      router.refresh();
+    } catch (error) {
+      setActionState({ pendingId: '', error: error.message || 'Payment action failed' });
     }
   }
 
@@ -446,6 +529,17 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                 >
                   {actionState.pendingId === issue.issueId ? 'Saving…' : 'Resolve'}
                 </button>
+                {getPaymentQuickActions(issue).map((action) => (
+                  <button
+                    key={action.label}
+                    type="button"
+                    onClick={() => handlePaymentQuickAction(issue, action)}
+                    disabled={actionState.pendingId === issue.issueId}
+                    className="rounded-lg border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-medium text-sky-800 transition hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {actionState.pendingId === issue.issueId ? 'Saving…' : action.label}
+                  </button>
+                ))}
                 <span className="text-sm text-slate-500">
                   {issue.actionLabel}
                   {issue.messageable ? ' • future messageable issue' : ' • manual review for now'}

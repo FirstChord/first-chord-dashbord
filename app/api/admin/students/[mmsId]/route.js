@@ -1,8 +1,10 @@
+import { randomUUID } from 'node:crypto';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import { normaliseInstrument } from '@/lib/admin/fc';
 import { normalisePaymentExpectation, normalisePaymentMode } from '@/lib/admin/payments-helpers.mjs';
 import { getAdminStudentByMmsId, updateAdminStudent } from '@/lib/admin/students';
+import { appendEventLogRows } from '@/lib/admin/sheets';
 
 const SHEETS_FIELD_MAP = {
   firstName: 'Student forename',
@@ -103,6 +105,7 @@ export async function PATCH(request, { params }) {
   }
 
   try {
+    const previousStudent = await getAdminStudentByMmsId(params.mmsId);
     const student = await updateAdminStudent({
       mmsId: params.mmsId,
       sheetsUpdates: mapUpdates(payload, SHEETS_FIELD_MAP),
@@ -111,6 +114,55 @@ export async function PATCH(request, { params }) {
 
     if (!student) {
       return Response.json({ error: 'Not found' }, { status: 404 });
+    }
+
+    const eventRows = [];
+    const now = new Date().toISOString();
+
+    if (previousStudent && Object.prototype.hasOwnProperty.call(payload, 'paymentMode') && previousStudent.paymentMode !== student.paymentMode) {
+      eventRows.push({
+        eventId: randomUUID(),
+        occurredAt: now,
+        actorEmail: session.user.email || '',
+        entityType: 'student',
+        entityId: student.mmsId,
+        eventType: 'payment_mode_changed',
+        mmsId: student.mmsId,
+        studentName: student.fullName || student.mmsId,
+        issueId: '',
+        payloadJson: JSON.stringify({
+          previous_value: previousStudent.paymentMode || '',
+          next_value: student.paymentMode || '',
+          source: 'admin_student_update',
+        }),
+      });
+    }
+
+    if (
+      previousStudent &&
+      Object.prototype.hasOwnProperty.call(payload, 'paymentExpectation') &&
+      previousStudent.paymentExpectation !== student.paymentExpectation
+    ) {
+      eventRows.push({
+        eventId: randomUUID(),
+        occurredAt: now,
+        actorEmail: session.user.email || '',
+        entityType: 'student',
+        entityId: student.mmsId,
+        eventType: 'payment_expectation_changed',
+        mmsId: student.mmsId,
+        studentName: student.fullName || student.mmsId,
+        issueId: '',
+        payloadJson: JSON.stringify({
+          previous_value: previousStudent.paymentExpectation || '',
+          next_value: student.paymentExpectation || '',
+          source: 'admin_student_update',
+        }),
+      });
+    }
+
+    if (eventRows.length) {
+      await appendEventLogRows(eventRows);
     }
 
     return Response.json({ student });
