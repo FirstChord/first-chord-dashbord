@@ -19,6 +19,10 @@ This brief started as a V1 implementation guide. Several important parts are now
   - latest `regenerate-fc-ids` workflow status
   - review-flags freshness
 - `/admin/flags` now shows review-flags freshness and includes the first Stripe-derived issue rules.
+- `/admin/flags` is now moving from a pure detection surface toward a managed workflow layer:
+  - `Issue_Queue` is the new persistent issue-state tab in Sheets
+  - `Event_Log` is the new append-only audit/event tab in Sheets
+  - PR1 scope is limited to acknowledge / ignore / resolve state, source-presence tracking, and event logging for flags actions
 - `payment_mode` now exists in the admin student model and should be treated as canonical payment intent in the `Students` sheet.
 
 For latest implementation detail, prefer:

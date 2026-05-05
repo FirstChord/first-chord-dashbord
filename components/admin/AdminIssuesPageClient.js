@@ -41,6 +41,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
   const [typeFilter, setTypeFilter] = useState('all');
   const [severityFilter, setSeverityFilter] = useState('all');
   const [systemFilter, setSystemFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('active');
   const [actionState, setActionState] = useState({ pendingId: '', error: '' });
   const [stripeScanState, setStripeScanState] = useState({ pending: false, error: '', scannedAt: '', scannedCount: 0 });
 
@@ -58,9 +59,11 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
         if (typeFilter !== 'all' && issue.type !== typeFilter) return false;
         if (severityFilter !== 'all' && issue.severity !== severityFilter) return false;
         if (systemFilter !== 'all' && !issue.systemsAffected.includes(systemFilter)) return false;
+        if (statusFilter === 'active' && !['open', 'acknowledged'].includes(issue.status)) return false;
+        if (statusFilter !== 'all' && statusFilter !== 'active' && issue.status !== statusFilter) return false;
         return true;
       }),
-    [issueList, severityFilter, systemFilter, typeFilter],
+    [issueList, severityFilter, statusFilter, systemFilter, typeFilter],
   );
 
   async function handleDelete(issue) {
@@ -73,7 +76,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
       const response = await fetch(`/api/admin/issues/${issue.mmsId}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ issueType: issue.type }),
+        body: JSON.stringify({ issueType: issue.type, issueId: issue.issueId }),
       });
 
       const payload = await response.json();
@@ -83,7 +86,15 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
         return;
       }
 
-      setIssueList((current) => current.filter((entry) => entry.id !== issue.id));
+      setIssueList((current) => current.map((entry) => (
+        entry.issueId === issue.issueId
+          ? {
+            ...entry,
+            status: 'resolved',
+            sourcePresent: false,
+          }
+          : entry
+      )));
       setActionState({ pendingId: '', error: '' });
     } catch (error) {
       setActionState({ pendingId: '', error: error.message || 'Delete failed' });
@@ -120,6 +131,56 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
       setStripeScanState({ pending: false, error: error.message || 'Stripe scan failed', scannedAt: '', scannedCount: 0 });
     }
   }
+
+  async function handleStatusChange(issue, nextStatus) {
+    let note = '';
+    if (nextStatus === 'ignored') {
+      const prompted = window.prompt(`Optional note for ignoring ${issue.studentName || issue.mmsId}`, issue.resolutionNote || '');
+      if (prompted === null) {
+        return;
+      }
+      note = prompted.trim();
+    }
+
+    setActionState({ pendingId: issue.issueId, error: '' });
+
+    try {
+      const response = await fetch(`/api/admin/issues/${issue.mmsId}/state`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          issueId: issue.issueId,
+          nextStatus,
+          note,
+        }),
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok) {
+        setActionState({ pendingId: '', error: payload.error || 'Issue update failed' });
+        return;
+      }
+
+      setIssueList((current) => current.map((entry) => (
+        entry.issueId === issue.issueId
+          ? {
+            ...entry,
+            status: payload.issue.status,
+            resolutionNote: payload.issue.resolutionNote,
+            updatedAt: payload.issue.updatedAt,
+            sourcePresent: payload.issue.sourcePresent,
+          }
+          : entry
+      )));
+      setActionState({ pendingId: '', error: '' });
+    } catch (error) {
+      setActionState({ pendingId: '', error: error.message || 'Issue update failed' });
+    }
+  }
+
+  const activeIssueCount = issueList.filter((issue) => ['open', 'acknowledged'].includes(issue.status)).length;
+  const detectedIssueCount = issueList.filter((issue) => issue.sourcePresent).length;
 
   return (
     <div className="space-y-8">
@@ -185,12 +246,12 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
 
       <section className="grid gap-4 md:grid-cols-4">
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-sm text-slate-500">Open issues</p>
-          <p className="mt-3 text-3xl font-semibold text-slate-900">{issueList.length}</p>
+          <p className="text-sm text-slate-500">Active queue issues</p>
+          <p className="mt-3 text-3xl font-semibold text-slate-900">{activeIssueCount}</p>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-sm text-slate-500">Needs action</p>
-          <p className="mt-3 text-3xl font-semibold text-slate-900">{issueList.filter((issue) => issue.severity === 'Needs action').length}</p>
+          <p className="text-sm text-slate-500">Currently detected</p>
+          <p className="mt-3 text-3xl font-semibold text-slate-900">{detectedIssueCount}</p>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <p className="text-sm text-slate-500">Registry-related</p>
@@ -208,7 +269,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
         </section>
       ) : null}
 
-      <section className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:grid-cols-3">
+      <section className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:grid-cols-4">
         <Select
           label="Issue type"
           value={typeFilter}
@@ -218,6 +279,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
             { value: 'TUTOR CONFLICT', label: 'Tutor conflict' },
             { value: 'SHEETS ONLY', label: 'Sheets only' },
             { value: 'REGISTRY ONLY', label: 'Registry only' },
+            { value: 'PAYMENT SETUP PENDING', label: 'Payment setup pending' },
             { value: 'STRIPE SETUP INCOMPLETE', label: 'Stripe setup incomplete' },
             { value: 'STRIPE CUSTOMER MISSING', label: 'Stripe customer missing' },
             { value: 'STRIPE SUBSCRIPTION MISSING', label: 'Stripe subscription missing' },
@@ -250,6 +312,19 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
             { value: 'Stripe', label: 'Stripe' },
           ]}
         />
+        <Select
+          label="Queue status"
+          value={statusFilter}
+          onChange={(event) => setStatusFilter(event.target.value)}
+          options={[
+            { value: 'active', label: 'Open + acknowledged' },
+            { value: 'all', label: 'All statuses' },
+            { value: 'open', label: 'Open' },
+            { value: 'acknowledged', label: 'Acknowledged' },
+            { value: 'ignored', label: 'Ignored' },
+            { value: 'resolved', label: 'Resolved' },
+          ]}
+        />
       </section>
 
       <section className="space-y-4">
@@ -265,6 +340,22 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                   <div className="flex flex-wrap items-center gap-2">
                     <span className={`rounded-full border px-3 py-1 text-xs font-medium ${severityClasses(issue.severity)}`}>{issue.severity}</span>
                     <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">{issue.type}</span>
+                    <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700">
+                      {issue.status}
+                    </span>
+                    <span className={`rounded-full border px-3 py-1 text-xs font-medium ${issue.sourcePresent ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-slate-100 text-slate-700'}`}>
+                      {issue.sourcePresent ? 'Detected now' : 'Not currently detected'}
+                    </span>
+                    {issue.reappeared ? (
+                      <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-800">
+                        Reappeared
+                      </span>
+                    ) : null}
+                    {issue.status === 'resolved' && issue.sourcePresent ? (
+                      <span className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-medium text-red-800">
+                        Resolved but still detected
+                      </span>
+                    ) : null}
                     {issue.systemsAffected.map((system) => (
                       <span key={system} className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
                         {system}
@@ -278,6 +369,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                 </div>
                 <div className="text-sm text-slate-500">
                   <p>{issue.generatedDate || '—'}</p>
+                  <p className="mt-1">Last seen: {formatDateTime(issue.lastSeenAt)}</p>
                   <p className="mt-1 font-mono text-xs">{issue.mmsId || '—'}</p>
                 </div>
               </div>
@@ -303,6 +395,11 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                   <p className="text-xs uppercase tracking-wide text-slate-500">Recommended next action</p>
                   <p className="mt-2 text-sm text-slate-700">{issue.recommendedAction}</p>
+                  {issue.resolutionNote ? (
+                    <p className="mt-3 text-sm text-slate-600">
+                      Resolution note: {issue.resolutionNote}
+                    </p>
+                  ) : null}
                 </div>
               </div>
 
@@ -325,6 +422,30 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                     {actionState.pendingId === issue.id ? 'Deleting…' : 'Delete registry entry'}
                   </button>
                 ) : null}
+                <button
+                  type="button"
+                  onClick={() => handleStatusChange(issue, 'acknowledged')}
+                  disabled={actionState.pendingId === issue.issueId}
+                  className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {actionState.pendingId === issue.issueId ? 'Saving…' : 'Acknowledge'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleStatusChange(issue, 'ignored')}
+                  disabled={actionState.pendingId === issue.issueId}
+                  className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-800 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {actionState.pendingId === issue.issueId ? 'Saving…' : 'Ignore'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleStatusChange(issue, 'resolved')}
+                  disabled={actionState.pendingId === issue.issueId}
+                  className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {actionState.pendingId === issue.issueId ? 'Saving…' : 'Resolve'}
+                </button>
                 <span className="text-sm text-slate-500">
                   {issue.actionLabel}
                   {issue.messageable ? ' • future messageable issue' : ' • manual review for now'}

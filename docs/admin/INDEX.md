@@ -27,6 +27,13 @@
 - [RAILWAY_ADMIN_LAUNCH_CHECKLIST.md](./RAILWAY_ADMIN_LAUNCH_CHECKLIST.md)
   Railway deployment and environment setup checklist.
 
+## Current Workflow Layer
+
+- `/admin/flags` is now the first surface moving from detected issues to managed workflow.
+- `Issue_Queue` in Google Sheets stores persistent issue state.
+- `Event_Log` in Google Sheets stores append-only issue actions and reappearance events.
+- PR1 scope is intentionally narrow: stable IDs, acknowledge/ignore/resolve, source presence, and audit logging.
+
 ## Suggested Handoff Order
 
 1. Read [ADMIN_BRIEF.md](./ADMIN_BRIEF.md)

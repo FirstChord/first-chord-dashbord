@@ -33,6 +33,9 @@ test('buildIssueRecord enriches live review flag rows with linked-system state',
   });
 
   assert.equal(issue.severity, 'Needs action');
+  assert.equal(issue.source, 'review_flags');
+  assert.equal(issue.contextKey, 'registry_vs_sheets');
+  assert.equal(issue.issueId, 'review_flags:TUTOR_CONFLICT:sdt_test:registry_vs_sheets');
   assert.equal(issue.hasSheetRow, true);
   assert.equal(issue.hasRegistryEntry, true);
   assert.equal(issue.sheetTutor, 'Fennella McCallum');
@@ -76,6 +79,7 @@ test('buildPaymentIssueRecord creates a Stripe issue with current payment linkag
   });
 
   assert.equal(issue.type, 'STRIPE SUBSCRIPTION MISSING');
+  assert.equal(issue.source, 'payment_static');
   assert.equal(issue.paymentMode, 'stripe');
   assert.equal(issue.stripeCustomerId, 'cus_123');
   assert.equal(issue.stripeSubscriptionId, '');
