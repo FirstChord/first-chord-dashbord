@@ -37,6 +37,20 @@ function freshnessClasses(status) {
   return 'border-slate-200 bg-slate-50 text-slate-700';
 }
 
+function isPaymentIssue(issue) {
+  return [
+    'PAYMENT SETUP PENDING',
+    'STRIPE SETUP INCOMPLETE',
+    'STRIPE CUSTOMER MISSING',
+    'STRIPE SUBSCRIPTION MISSING',
+    'ACTIVE_WITHOUT_SUBSCRIPTION',
+    'SUBSCRIPTION_CANCELLED_UNEXPECTEDLY',
+    'SUBSCRIPTION_STATE_MISMATCH',
+    'INACTIVE_STILL_BILLING',
+    'PAYMENT_FAILED',
+  ].includes(issue.type);
+}
+
 export default function AdminIssuesPageClient({ issues, freshness }) {
   const router = useRouter();
   const [issueList, setIssueList] = useState(issues);
@@ -459,8 +473,10 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
 
               <div className="mt-5 grid gap-4 lg:grid-cols-3">
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-xs uppercase tracking-wide text-slate-500">Detail</p>
-                  <p className="mt-2 text-sm text-slate-700">{issue.detail || '—'}</p>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Why this issue exists</p>
+                  <p className="mt-2 text-sm text-slate-700">
+                    {isPaymentIssue(issue) ? (issue.paymentReason || issue.summary) : (issue.issueReason || issue.summary)}
+                  </p>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                   <p className="text-xs uppercase tracking-wide text-slate-500">Current record state</p>
@@ -469,10 +485,14 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                     <p>Registry entry: {issue.hasRegistryEntry ? 'Present' : 'Missing'}</p>
                     <p>Sheets tutor: {issue.sheetTutor || '—'}</p>
                     <p>Registry tutor: {issue.registryTutor || '—'}</p>
-                    <p>Payment mode: {issue.paymentMode || '—'}</p>
-                    <p>Payment expectation: {issue.paymentExpectation || '—'}</p>
-                    <p>Stripe customer: {issue.stripeCustomerId || '—'}</p>
-                    <p>Stripe subscription: {issue.stripeSubscriptionId || '—'}</p>
+                    {!isPaymentIssue(issue) ? (
+                      <>
+                        <p>Payment mode: {issue.paymentMode || '—'}</p>
+                        <p>Payment expectation: {issue.paymentExpectation || '—'}</p>
+                        <p>Stripe customer: {issue.stripeCustomerId || '—'}</p>
+                        <p>Stripe subscription: {issue.stripeSubscriptionId || '—'}</p>
+                      </>
+                    ) : null}
                   </div>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -483,8 +503,33 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                       Resolution note: {issue.resolutionNote}
                     </p>
                   ) : null}
+                  {issue.detail && !isPaymentIssue(issue) ? (
+                    <p className="mt-3 text-sm text-slate-600">
+                      Source detail: {issue.detail}
+                    </p>
+                  ) : null}
                 </div>
               </div>
+
+              {isPaymentIssue(issue) ? (
+                <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Payment context</p>
+                    <div className="mt-2 space-y-1 text-sm text-slate-700">
+                      <p>Payment mode: {issue.paymentMode || '—'}</p>
+                      <p>Payment expectation: {issue.paymentExpectation || '—'}</p>
+                      <p>Stripe customer: {issue.stripeCustomerId || '—'}</p>
+                      <p>Stripe subscription: {issue.stripeSubscriptionId || '—'}</p>
+                      <p>Currently paused: {issue.pauseSummary?.hasPauseHistory ? (issue.pauseSummary.currentlyPaused ? 'Yes' : 'No') : 'No pause history'}</p>
+                      {issue.pauseSummary?.latestPause ? (
+                        <p>
+                          Latest pause window: {issue.pauseSummary.latestPause.startDate || '—'} to {issue.pauseSummary.latestPause.endDate || '—'}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
 
               <div className="mt-5 flex flex-wrap items-center gap-3">
                 {issue.adminStudentPath ? (
@@ -511,7 +556,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                   disabled={actionState.pendingId === issue.issueId}
                   className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {actionState.pendingId === issue.issueId ? 'Saving…' : 'Acknowledge'}
+                  {actionState.pendingId === issue.issueId ? 'Saving…' : 'Keep active'}
                 </button>
                 <button
                   type="button"
@@ -527,7 +572,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                   disabled={actionState.pendingId === issue.issueId}
                   className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {actionState.pendingId === issue.issueId ? 'Saving…' : 'Resolve'}
+                  {actionState.pendingId === issue.issueId ? 'Saving…' : 'Mark resolved'}
                 </button>
                 {getPaymentQuickActions(issue).map((action) => (
                   <button
