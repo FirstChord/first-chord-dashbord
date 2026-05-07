@@ -121,6 +121,44 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
     }
   }
 
+  async function handleCreateRegistry(issue) {
+    setActionState({ pendingId: issue.issueId, error: '' });
+
+    try {
+      const response = await fetch(`/api/admin/issues/${issue.mmsId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          issueType: issue.type,
+          issueId: issue.issueId,
+          action: 'create_registry_entry',
+        }),
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok) {
+        setActionState({ pendingId: '', error: payload.error || 'Create registry entry failed' });
+        return;
+      }
+
+      setIssueList((current) => current.map((entry) => (
+        entry.issueId === issue.issueId
+          ? {
+            ...entry,
+            status: 'resolved',
+            sourcePresent: false,
+            hasRegistryEntry: true,
+            registryTutor: payload.student?.registryTutor || entry.registryTutor,
+          }
+          : entry
+      )));
+      setActionState({ pendingId: '', error: '' });
+    } catch (error) {
+      setActionState({ pendingId: '', error: error.message || 'Create registry entry failed' });
+    }
+  }
+
   async function handleRunStripeScan() {
     setStripeScanState({ pending: true, error: '', scannedAt: '', scannedCount: 0 });
 
@@ -564,6 +602,16 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                     className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-800 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {actionState.pendingId === issue.id ? 'Deleting…' : 'Delete registry entry'}
+                  </button>
+                ) : null}
+                {issue.type === 'SHEETS ONLY' ? (
+                  <button
+                    type="button"
+                    onClick={() => handleCreateRegistry(issue)}
+                    disabled={actionState.pendingId === issue.issueId}
+                    className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {actionState.pendingId === issue.issueId ? 'Creating…' : 'Create registry entry'}
                   </button>
                 ) : null}
                 <button
