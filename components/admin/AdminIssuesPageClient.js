@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { formatDateTime } from '@/lib/admin/health-helpers.mjs';
 
 function severityClasses(severity) {
@@ -48,11 +47,12 @@ function isPaymentIssue(issue) {
     'SUBSCRIPTION_STATE_MISMATCH',
     'INACTIVE_STILL_BILLING',
     'PAYMENT_FAILED',
+    'PAUSE EXPECTATION MISMATCH',
+    'PAUSE EXPECTATION STALE',
   ].includes(issue.type);
 }
 
 export default function AdminIssuesPageClient({ issues, freshness }) {
-  const router = useRouter();
   const [issueList, setIssueList] = useState(issues);
   const [typeFilter, setTypeFilter] = useState('all');
   const [severityFilter, setSeverityFilter] = useState('all');
@@ -226,6 +226,20 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
       ];
     }
 
+    if (issue.type === 'PAUSE EXPECTATION MISMATCH') {
+      return [
+        { label: 'Set Stripe paused expected', payload: { paymentExpectation: 'stripe_paused_expected' } },
+        { label: 'Set Stripe active expected', payload: { paymentExpectation: 'stripe_active_expected' } },
+      ];
+    }
+
+    if (issue.type === 'PAUSE EXPECTATION STALE') {
+      return [
+        { label: 'Set Stripe active expected', payload: { paymentExpectation: 'stripe_active_expected' } },
+        { label: 'Set inactive / stopped', payload: { paymentExpectation: 'inactive_or_stopped' } },
+      ];
+    }
+
     if (issue.type === 'INACTIVE_STILL_BILLING') {
       return [
         { label: 'Set Stripe paused expected', payload: { paymentExpectation: 'stripe_paused_expected' } },
@@ -270,7 +284,6 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
           : entry
       )));
       setActionState({ pendingId: '', error: '' });
-      router.refresh();
     } catch (error) {
       setActionState({ pendingId: '', error: error.message || 'Payment action failed' });
     }
@@ -383,6 +396,8 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
             { value: 'ACTIVE_WITHOUT_SUBSCRIPTION', label: 'Active without subscription' },
             { value: 'SUBSCRIPTION_CANCELLED_UNEXPECTEDLY', label: 'Subscription cancelled unexpectedly' },
             { value: 'SUBSCRIPTION_STATE_MISMATCH', label: 'Subscription state mismatch' },
+            { value: 'PAUSE EXPECTATION MISMATCH', label: 'Pause expectation mismatch' },
+            { value: 'PAUSE EXPECTATION STALE', label: 'Pause expectation stale' },
             { value: 'INACTIVE_STILL_BILLING', label: 'Inactive still billing' },
             { value: 'PAYMENT_FAILED', label: 'Payment failed' },
           ]}
@@ -407,6 +422,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
             { value: 'Sheets', label: 'Sheets' },
             { value: 'Registry', label: 'Registry' },
             { value: 'Stripe', label: 'Stripe' },
+            { value: 'Pause', label: 'Pause' },
           ]}
         />
         <Select
