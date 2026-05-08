@@ -67,14 +67,14 @@ export async function POST(request, { params }) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { issueType, issueId = '', action = '' } = await request.json();
+  const { issueType, issueId = '', action = '', registryOverrides = {} } = await request.json();
 
   if (issueType !== 'SHEETS ONLY' || action !== 'create_registry_entry') {
     return Response.json({ error: 'Create registry entry is only supported for SHEETS ONLY issues right now.' }, { status: 400 });
   }
 
   try {
-    const student = await createRegistryEntryForStudent(params.mmsId);
+    const student = await createRegistryEntryForStudent(params.mmsId, registryOverrides);
     if (issueId) {
       const queueRows = await getIssueQueueRows();
       const queueRow = queueRows.find((row) => row.issueId === issueId);

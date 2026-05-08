@@ -122,6 +122,32 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
   }
 
   async function handleCreateRegistry(issue) {
+    const fallbackInstrument = `${issue.instrument || ''}`.trim();
+    const instrumentPrompt = fallbackInstrument || 'Guitar';
+    const instrumentValue = window.prompt(
+      `Instrument for ${issue.studentName || issue.mmsId}. Required for registry creation.`,
+      instrumentPrompt,
+    );
+
+    if (instrumentValue === null) {
+      return;
+    }
+
+    const trimmedInstrument = instrumentValue.trim();
+    if (!trimmedInstrument) {
+      setActionState({ pendingId: '', error: 'Instrument is required to create a registry entry.' });
+      return;
+    }
+
+    const soundsliceValue = window.prompt(
+      `Soundslice URL for ${issue.studentName || issue.mmsId}. Leave blank only if you intentionally want to finish portal setup later.`,
+      '',
+    );
+
+    if (soundsliceValue === null) {
+      return;
+    }
+
     setActionState({ pendingId: issue.issueId, error: '' });
 
     try {
@@ -132,6 +158,10 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
           issueType: issue.type,
           issueId: issue.issueId,
           action: 'create_registry_entry',
+          registryOverrides: {
+            instrument: trimmedInstrument,
+            soundsliceUrl: soundsliceValue.trim(),
+          },
         }),
       });
 
