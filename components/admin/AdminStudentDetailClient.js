@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { buildPauseWorkflowSummary } from '@/lib/admin/pause-workflow-helpers.mjs';
 
 const INSTRUMENT_OPTIONS = ['Guitar', 'Piano', 'Bass', 'Singing', 'Ukulele', 'Ukulele Orchestra'];
 const PAYMENT_MODE_OPTIONS = [
@@ -82,6 +83,11 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
     skippedReason: '',
   });
   const [isPending, startTransition] = useTransition();
+  const pauseWorkflow = buildPauseWorkflowSummary({
+    pauseSummary: student.pauseSummary,
+    paymentExpectation: form.paymentExpectation,
+    stripeSnapshot: stripeState.snapshot,
+  });
 
   function updateField(key, value) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -167,6 +173,35 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
     }
   }
 
+  function handleQuickPaymentExpectation(nextExpectation) {
+    setServerState({ error: '', success: '' });
+
+    startTransition(async () => {
+      const response = await fetch(`/api/admin/students/${student.mmsId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          paymentExpectation: nextExpectation,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setServerState({ error: data.error || 'Update failed', success: '' });
+        return;
+      }
+
+      setForm((current) => ({
+        ...current,
+        paymentExpectation: data.student.paymentExpectation || '',
+      }));
+      setServerState({ error: '', success: 'Payment expectation updated.' });
+    });
+  }
+
   return (
     <div className="space-y-8">
       <section>
@@ -207,6 +242,53 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
             <ReadOnlyField label="Latest pause start" value={student.pauseSummary.latestPause?.startDate} />
             <ReadOnlyField label="Latest pause end" value={student.pauseSummary.latestPause?.endDate} />
             <ReadOnlyField label="Latest recorded Stripe pause status" value={student.pauseSummary.latestPause?.stripeStatus} />
+          </div>
+          <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+            <p className="text-xs uppercase tracking-wide text-slate-500">Pause workflow</p>
+            <p className="mt-2 text-sm text-slate-800">{pauseWorkflow.statusLine}</p>
+            <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <ReadOnlyField
+                label="Pause History says"
+                value={student.pauseSummary.currentlyPaused ? 'Paused now' : 'No active pause'}
+              />
+              <ReadOnlyField
+                label="Payment expectation"
+                value={form.paymentExpectation || 'Not set'}
+              />
+              <ReadOnlyField
+                label="Live Stripe check"
+                value={
+                  stripeState.snapshot
+                    ? stripeState.snapshot.activelyBilling
+                      ? 'Actively billing'
+                      : stripeState.snapshot.pauseState || 'Not billing'
+                    : 'Not checked yet'
+                }
+              />
+            </div>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => handleQuickPaymentExpectation('stripe_paused_expected')}
+                disabled={isPending}
+                className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Set Stripe paused expected
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQuickPaymentExpectation('stripe_active_expected')}
+                disabled={isPending}
+                className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Set Stripe active expected
+              </button>
+            </div>
+            {pauseWorkflow.liveStripeMismatch ? (
+              <p className="mt-3 text-sm text-amber-700">
+                Live Stripe still disagrees with the current expectation. Refreshing Stripe here is the quickest way to confirm whether the pause loop is actually closed.
+              </p>
+            ) : null}
           </div>
         </section>
       ) : null}
