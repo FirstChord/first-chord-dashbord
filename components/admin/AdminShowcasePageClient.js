@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Check, Copy, Loader2 } from 'lucide-react';
+import { Check, ChevronDown, Copy, Loader2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 function cardClasses() {
@@ -35,6 +35,11 @@ export default function AdminShowcasePageClient({ workflow }) {
   const [taskGroups, setTaskGroups] = useState(workflow.taskGroups);
   const [actionState, setActionState] = useState({ pendingTaskId: '', error: '' });
   const [copiedTemplate, setCopiedTemplate] = useState('');
+  const [openPanels, setOpenPanels] = useState({
+    timings: false,
+    assets: true,
+    messages: false,
+  });
 
   useEffect(() => {
     setTaskGroups(workflow.taskGroups);
@@ -123,6 +128,13 @@ export default function AdminShowcasePageClient({ workflow }) {
     window.setTimeout(() => setCopiedTemplate((current) => (current === label ? '' : current)), 1800);
   }
 
+  function togglePanel(panelKey) {
+    setOpenPanels((current) => ({
+      ...current,
+      [panelKey]: !current[panelKey],
+    }));
+  }
+
   return (
     <div className="space-y-8">
       <section>
@@ -182,65 +194,103 @@ export default function AdminShowcasePageClient({ workflow }) {
         </div>
       </section>
 
-      <section className={cardClasses()}>
-        <h3 className="text-lg font-semibold text-slate-900">Key Timings</h3>
-        <div className="mt-4 grid gap-4 md:grid-cols-3">
-          {workflow.timings.map((item) => (
-            <div key={item.label} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-500">{item.label}</p>
-              <p className="mt-2 text-sm text-slate-800">{item.value}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+      <section className="grid gap-4 xl:grid-cols-[1.1fr_1fr]">
+        <div className="space-y-4">
+          <section className={cardClasses()}>
+            <button
+              type="button"
+              onClick={() => togglePanel('assets')}
+              className="flex w-full items-center justify-between gap-4 text-left"
+            >
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900">Linked Assets</h3>
+                <p className="mt-1 text-sm text-slate-600">Compact reference links for the main files you actually open while building the show.</p>
+              </div>
+              <ChevronDown className={`h-5 w-5 text-slate-500 transition ${openPanels.assets ? 'rotate-180' : ''}`} />
+            </button>
+            {openPanels.assets ? (
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {[
+                  workflow.seasonalAssets.posterTemplate,
+                  workflow.seasonalAssets.bannerTemplate,
+                  workflow.commonLinks.eventbriteManage,
+                  workflow.commonLinks.performerForm,
+                  workflow.commonLinks.runningOrderTemplate,
+                  workflow.commonLinks.collageTemplate,
+                ]
+                  .filter(Boolean)
+                  .map((item) => (
+                    <div key={item.href} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-sm font-medium text-slate-900">{item.label}</p>
+                      <a href={item.href} target="_blank" rel="noreferrer" className="mt-2 inline-block text-sm text-slate-700 underline underline-offset-2">
+                        Open link
+                      </a>
+                    </div>
+                  ))}
+              </div>
+            ) : null}
+          </section>
 
-      <section className="grid gap-4 xl:grid-cols-2">
-        <div className={cardClasses()}>
-          <h3 className="text-lg font-semibold text-slate-900">Linked Assets</h3>
-          <div className="mt-4 space-y-4">
-            {[
-              workflow.seasonalAssets.posterTemplate,
-              workflow.seasonalAssets.bannerTemplate,
-              workflow.commonLinks.eventbriteManage,
-              workflow.commonLinks.performerForm,
-              workflow.commonLinks.runningOrderTemplate,
-              workflow.commonLinks.collageTemplate,
-            ]
-              .filter(Boolean)
-              .map((item) => (
-                <div key={item.href} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-sm font-medium text-slate-900">{item.label}</p>
-                  <a href={item.href} target="_blank" rel="noreferrer" className="mt-2 inline-block text-sm text-slate-700 underline underline-offset-2">
-                    Open link
-                  </a>
+          <section className={cardClasses()}>
+            <button
+              type="button"
+              onClick={() => togglePanel('timings')}
+              className="flex w-full items-center justify-between gap-4 text-left"
+            >
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900">Key Timings</h3>
+                <p className="mt-1 text-sm text-slate-600">Planning guidance rather than actions.</p>
+              </div>
+              <ChevronDown className={`h-5 w-5 text-slate-500 transition ${openPanels.timings ? 'rotate-180' : ''}`} />
+            </button>
+            {openPanels.timings ? (
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                {workflow.timings.map((item) => (
+                  <div key={item.label} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-xs uppercase tracking-wide text-slate-500">{item.label}</p>
+                    <p className="mt-2 text-sm text-slate-800">{item.value}</p>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </section>
+        </div>
+
+        <section className={cardClasses()}>
+          <button
+            type="button"
+            onClick={() => togglePanel('messages')}
+            className="flex w-full items-center justify-between gap-4 text-left"
+          >
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900">Core Messages</h3>
+              <p className="mt-1 text-sm text-slate-600">Copy-ready templates for WhatsApp and follow-up comms.</p>
+            </div>
+            <ChevronDown className={`h-5 w-5 text-slate-500 transition ${openPanels.messages ? 'rotate-180' : ''}`} />
+          </button>
+          {openPanels.messages ? (
+            <div className="mt-4 space-y-4">
+              {templateCards.map((template) => (
+                <div key={template.label} className="relative rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <button
+                    type="button"
+                    onClick={() => handleCopyTemplate(template.label, template.body)}
+                    className={`absolute right-4 top-4 inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition ${
+                      copiedTemplate === template.label
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:text-slate-900'
+                    }`}
+                  >
+                    {copiedTemplate === template.label ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                    {copiedTemplate === template.label ? 'Copied' : 'Copy'}
+                  </button>
+                  <p className="pr-20 text-sm font-medium text-slate-900">{template.label}</p>
+                  <pre className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">{template.body}</pre>
                 </div>
               ))}
-          </div>
-        </div>
-
-        <div className={cardClasses()}>
-          <h3 className="text-lg font-semibold text-slate-900">Core Messages</h3>
-          <div className="mt-4 space-y-4">
-            {templateCards.map((template) => (
-              <div key={template.label} className="relative rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <button
-                  type="button"
-                  onClick={() => handleCopyTemplate(template.label, template.body)}
-                  className={`absolute right-4 top-4 inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition ${
-                    copiedTemplate === template.label
-                      ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                      : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:text-slate-900'
-                  }`}
-                >
-                  {copiedTemplate === template.label ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                  {copiedTemplate === template.label ? 'Copied' : 'Copy'}
-                </button>
-                <p className="pr-20 text-sm font-medium text-slate-900">{template.label}</p>
-                <pre className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">{template.body}</pre>
-              </div>
-            ))}
-          </div>
-        </div>
+            </div>
+          ) : null}
+        </section>
       </section>
 
       <section className={cardClasses()}>
@@ -279,8 +329,21 @@ export default function AdminShowcasePageClient({ workflow }) {
                     </li>
                   ))}
                 </ul>
+                {group.guidance?.length ? (
+                  <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-white/80 p-4">
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Guidance</p>
+                    <ul className="mt-2 space-y-2 text-sm text-slate-600">
+                      {group.guidance.map((item) => (
+                        <li key={item} className="flex gap-2">
+                          <span className="mt-[0.15rem] h-1.5 w-1.5 rounded-full bg-slate-300" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
               </div>
-            );
+            ); 
           })}
         </div>
       </section>
