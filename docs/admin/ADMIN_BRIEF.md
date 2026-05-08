@@ -31,6 +31,17 @@ This brief started as a V1 implementation guide. Several important parts are now
     - `Core Messages`
   - the checklist is for true done/not-done actions only
   - softer judgement/planning items should live as guidance notes, not checkboxes
+- `/admin/holidays` is now a second recurring workflow surface for term/holiday operations:
+  - persistent checklist state is stored in the `Holiday_Workflow_State` tab in Sheets
+  - current workflow instances include:
+    - Christmas
+    - Easter
+    - Summer
+  - it stores:
+    - key timings
+    - policy reminders
+    - copy-ready holiday messages
+    - persistent operational checklists
 - `payment_mode` now exists in the admin student model and should be treated as canonical payment intent in the `Students` sheet.
 
 For latest implementation detail, prefer:

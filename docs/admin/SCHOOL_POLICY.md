@@ -95,6 +95,54 @@ So:
 - the system should not assume the first failure is final
 - payment failures should be reviewed by a human before any parent action is taken
 
+### First lesson payment policy
+
+The introductory lesson is billed at the normal half-hour lesson rate:
+
+- `£25.50`
+
+This payment must be taken before the first lesson in order to secure the lesson time.
+
+### Current lesson pricing
+
+One-to-one lessons:
+
+- `1 hour` — `£41.50`
+- `45 mins` — `£33`
+- `30 mins` — `£25.50`
+
+Group lessons:
+
+- `Adult Ukulele Group (1 hour 45 mins)` — `£42.50 per month`
+
+### How payments are collected
+
+Current default policy:
+
+- First Chord uses Stripe for secure recurring payments
+- a payment link is normally sent before the first lesson
+
+This should remain the operational default unless a student is explicitly marked as a manual-payment exception.
+
+### Missed lessons and cancellations
+
+If a student cannot attend an in-person lesson, the standard fallback options are:
+
+- a Zoom lesson in the usual slot
+- a tutor practice video with notes for next lesson
+
+Policy notes:
+
+- no-shows or same-day cancellations are not eligible for a practice video
+- if a family cancels with one week’s notice, the lesson should not be charged
+- if a tutor cancels, payment should be paused for that lesson
+
+### Ending lessons
+
+If lessons are ending:
+
+- ask for `2 lessons notice`
+
 ---
 
 ## Pause Policy
@@ -124,6 +172,36 @@ If a student is intentionally paused:
 If Stripe is still actively billing during a valid pause:
 
 - this should be flagged as a mismatch
+
+### Extended lesson break policy
+
+Outside the summer holiday period:
+
+- lessons can be paused for a maximum of `3 weeks`
+- on the `4th` and `5th` week, charges occur at the normal lesson rate
+- if a break reaches `6 weeks or more`, the default assumption is that the student should step back for now so the slot can be offered elsewhere
+
+Important exception:
+
+- this extended-break charging policy does **not** apply over `July / August`
+
+So summer-holiday handling needs operational tracking, but not the same pause-charge rule as the rest of the year.
+
+### Holiday operations
+
+The school normally operates:
+
+- through bank holidays
+- through the summer
+
+The standard school-wide closure is:
+
+- a `2 week` Christmas break
+
+This means holiday workflows should distinguish between:
+
+- true school closure at Christmas
+- student/tutor-specific absences at Easter and summer
 
 ---
 

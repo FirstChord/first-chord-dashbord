@@ -40,6 +40,13 @@
   - `Key Timings`
   - `Core Messages`
 - Checklist items should remain true done/not-done actions; softer planning points should stay as guidance.
+- `/admin/holidays` is now another recurring workflow surface for Christmas, Easter, and summer operations.
+- `Holiday_Workflow_State` in Google Sheets stores persistent checklist state per holiday workflow instance.
+- Holiday workflow cards combine:
+  - key timings
+  - policy reminders
+  - copy-ready messages
+  - persistent action checklists
 
 ## Suggested Handoff Order
 

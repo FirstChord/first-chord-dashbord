@@ -11,6 +11,7 @@ const navItems = [
   { href: '/admin/onboard', label: 'Onboarding' },
   { href: '/admin/flags', label: 'Flags & Issues' },
   { href: '/admin/showcase', label: 'Showcase' },
+  { href: '/admin/holidays', label: 'Holidays' },
 ];
 
 export default async function AdminLayout({ children }) {
