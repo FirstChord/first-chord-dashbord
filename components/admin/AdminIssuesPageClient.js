@@ -52,6 +52,34 @@ function isPaymentIssue(issue) {
   ].includes(issue.type);
 }
 
+function getPaymentActionHint(issue) {
+  if (issue.type === 'PAYMENT SETUP PENDING') {
+    return 'Usually not a broken billing case yet. Finish setup or deliberately move the student into a different payment mode/expectation.';
+  }
+
+  if (['STRIPE SETUP INCOMPLETE', 'STRIPE CUSTOMER MISSING', 'STRIPE SUBSCRIPTION MISSING'].includes(issue.type)) {
+    return 'Usually a linkage/setup problem rather than a live billing failure. Check whether setup is still pending before treating it as broken Stripe.';
+  }
+
+  if (issue.type === 'PAYMENT_FAILED') {
+    return 'This usually needs live Stripe review rather than only a sheet-field correction.';
+  }
+
+  if (issue.type === 'SUBSCRIPTION_STATE_MISMATCH') {
+    return 'This usually means either the expectation is wrong or Stripe pause/billing state is wrong. Compare both before changing anything else.';
+  }
+
+  if (issue.type === 'INACTIVE_STILL_BILLING') {
+    return 'The student state and billing state disagree. Keep this active until live Stripe no longer shows billing.';
+  }
+
+  if (issue.type === 'ACTIVE_WITHOUT_SUBSCRIPTION' || issue.type === 'SUBSCRIPTION_CANCELLED_UNEXPECTEDLY') {
+    return 'Treat this as a real live billing problem first, then use sheet-field changes only if the expectation itself is wrong.';
+  }
+
+  return '';
+}
+
 export default function AdminIssuesPageClient({ issues, freshness }) {
   const [issueList, setIssueList] = useState(issues);
   const [typeFilter, setTypeFilter] = useState('all');
@@ -582,6 +610,11 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                   <p className="text-xs uppercase tracking-wide text-slate-500">Recommended next action</p>
                   <p className="mt-2 text-sm text-slate-700">{issue.recommendedAction}</p>
+                  {isPaymentIssue(issue) && getPaymentActionHint(issue) ? (
+                    <p className="mt-3 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900">
+                      {getPaymentActionHint(issue)}
+                    </p>
+                  ) : null}
                   {issue.resolutionNote ? (
                     <p className="mt-3 text-sm text-slate-600">
                       Resolution note: {issue.resolutionNote}
@@ -596,23 +629,37 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
               </div>
 
               {isPaymentIssue(issue) ? (
-                <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-xs uppercase tracking-wide text-slate-500">Payment context</p>
-                    <div className="mt-2 space-y-1 text-sm text-slate-700">
-                      <p>Payment mode: {issue.paymentMode || '—'}</p>
-                      <p>Payment expectation: {issue.paymentExpectation || '—'}</p>
-                      <p>Stripe customer: {issue.stripeCustomerId || '—'}</p>
-                      <p>Stripe subscription: {issue.stripeSubscriptionId || '—'}</p>
-                      <p>Currently paused: {issue.pauseSummary?.hasPauseHistory ? (issue.pauseSummary.currentlyPaused ? 'Yes' : 'No') : 'No pause history'}</p>
-                      {issue.pauseSummary?.latestPause ? (
-                        <p>
-                          Latest pause window: {issue.pauseSummary.latestPause.startDate || '—'} to {issue.pauseSummary.latestPause.endDate || '—'}
-                        </p>
-                      ) : null}
+                <details className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <summary className="cursor-pointer list-none text-sm font-medium text-slate-900">
+                    More payment context
+                  </summary>
+                  <div className="mt-3 grid gap-4 lg:grid-cols-2">
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-slate-500">Payment context</p>
+                      <div className="mt-2 space-y-1 text-sm text-slate-700">
+                        <p>Payment mode: {issue.paymentMode || '—'}</p>
+                        <p>Payment expectation: {issue.paymentExpectation || '—'}</p>
+                        <p>Stripe customer: {issue.stripeCustomerId || '—'}</p>
+                        <p>Stripe subscription: {issue.stripeSubscriptionId || '—'}</p>
+                        <p>Currently paused: {issue.pauseSummary?.hasPauseHistory ? (issue.pauseSummary.currentlyPaused ? 'Yes' : 'No') : 'No pause history'}</p>
+                        {issue.pauseSummary?.latestPause ? (
+                          <p>
+                            Latest pause window: {issue.pauseSummary.latestPause.startDate || '—'} to {issue.pauseSummary.latestPause.endDate || '—'}
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-slate-500">Record state</p>
+                      <div className="mt-2 space-y-1 text-sm text-slate-700">
+                        <p>Sheets row: {issue.hasSheetRow ? 'Present' : 'Missing'}</p>
+                        <p>Registry entry: {issue.hasRegistryEntry ? 'Present' : 'Missing'}</p>
+                        <p>Sheets tutor: {issue.sheetTutor || '—'}</p>
+                        <p>Registry tutor: {issue.registryTutor || '—'}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </details>
               ) : null}
 
               <div className="mt-5 flex flex-wrap items-center gap-3">
@@ -666,19 +713,24 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                   disabled={actionState.pendingId === issue.issueId}
                   className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {actionState.pendingId === issue.issueId ? 'Saving…' : 'Mark resolved'}
-                </button>
-                {getPaymentQuickActions(issue).map((action) => (
-                  <button
-                    key={action.label}
-                    type="button"
-                    onClick={() => handlePaymentQuickAction(issue, action)}
-                    disabled={actionState.pendingId === issue.issueId}
-                    className="rounded-lg border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-medium text-sky-800 transition hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {actionState.pendingId === issue.issueId ? 'Saving…' : action.label}
+                    {actionState.pendingId === issue.issueId ? 'Saving…' : 'Mark resolved'}
                   </button>
-                ))}
+                {getPaymentQuickActions(issue).length ? (
+                  <div className="flex flex-wrap items-center gap-3 rounded-xl border border-sky-200 bg-sky-50/80 px-3 py-2">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-sky-800">Quick fixes</span>
+                    {getPaymentQuickActions(issue).map((action) => (
+                      <button
+                        key={action.label}
+                        type="button"
+                        onClick={() => handlePaymentQuickAction(issue, action)}
+                        disabled={actionState.pendingId === issue.issueId}
+                        className="rounded-lg border border-sky-200 bg-white px-4 py-2 text-sm font-medium text-sky-800 transition hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {actionState.pendingId === issue.issueId ? 'Saving…' : action.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
                 <span className="text-sm text-slate-500">
                   {issue.actionLabel}
                   {issue.messageable ? ' • future messageable issue' : ' • manual review for now'}
