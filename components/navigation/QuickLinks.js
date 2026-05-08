@@ -66,16 +66,16 @@ export default function QuickLinks({ student }) {
       requiresAuth: false,
       color: "bg-pink-500"
     }] : [])
-    // UNCOMMENT FOR SUMMER SHOW: Update name, url, instruction, and date
-    // {
-    //   name: "Christmas Show!",
-    //   icon: <Star className="w-5 h-5 fill-yellow-500" />,
-    //   url: "https://docs.google.com/forms/d/e/1FAIpQLSdeRcsR4NeghFc8KQeMa0jK5qU9nJjcIdcmwwo8qbfj8d87EA/viewform?usp=header",
-    //   instruction: "Let us know what song you would like to play at the First Chord Student Showcase (21st of December)",
-    //   requiresAuth: false,
-    //   color: "bg-gradient-to-r from-red-500 to-green-600",
-    //   isChristmas: true
-    // }
+    // COMMENT OUT AFTER SUMMER SHOW: To hide, re-comment this block
+    ,{
+      name: "Summer Show!",
+      icon: <Star className="w-5 h-5 fill-yellow-400" />,
+      url: "https://docs.google.com/forms/d/1fUaaHgOGDrpo-JWTxd9rYqDnfY6LQyyzx09rwqQilZM/viewform",
+      instruction: "Let us know what song you would like to play at the First Chord Summer Show (28th of June)!",
+      requiresAuth: false,
+      color: "bg-gradient-to-r from-yellow-400 to-orange-500",
+      isSummer: true
+    }
   ];
   
   const handleThetaMusicClick = (e, link) => {
