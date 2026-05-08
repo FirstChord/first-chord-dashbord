@@ -1,0 +1,241 @@
+'use client';
+
+import Link from 'next/link';
+import { Check, Copy, Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+
+const WAITING_STATUS_OPTIONS = [
+  { value: 'new', label: 'New' },
+  { value: 'contacted', label: 'Contacted' },
+  { value: 'welcome_group_added', label: 'Welcome group added' },
+  { value: 'welcome_call_booked', label: 'Welcome call booked' },
+  { value: 'call_completed', label: 'Call completed' },
+  { value: 'onboarding_ready', label: 'Onboarding ready' },
+  { value: 'onboarded', label: 'Onboarded' },
+  { value: 'no_response', label: 'No response' },
+  { value: 'closed', label: 'Closed' },
+];
+
+function getAgeBadge(ageInDays) {
+  if (ageInDays == null) {
+    return { label: 'Unknown age', className: 'bg-slate-100 text-slate-700' };
+  }
+
+  if (ageInDays >= 90) {
+    return { label: `${ageInDays} days`, className: 'bg-red-100 text-red-900' };
+  }
+
+  if (ageInDays >= 60) {
+    return { label: `${ageInDays} days`, className: 'bg-amber-100 text-amber-900' };
+  }
+
+  return { label: `${ageInDays} days`, className: 'bg-emerald-100 text-emerald-900' };
+}
+
+function formatDate(dateString) {
+  if (!dateString) return '—';
+  return new Date(dateString).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function formatDateTime(dateString) {
+  if (!dateString) return '—';
+  return new Date(dateString).toLocaleString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+export default function AdminWaitingPageClient({ initialStudents }) {
+  const [students, setStudents] = useState(initialStudents);
+  const [actionState, setActionState] = useState({ pendingId: '', error: '' });
+  const [copiedId, setCopiedId] = useState('');
+
+  useEffect(() => {
+    setStudents(initialStudents);
+  }, [initialStudents]);
+
+  async function handleCopy(student) {
+    try {
+      await navigator.clipboard.writeText(student.welcomeGroupMessage);
+    } catch {
+      const textArea = document.createElement('textarea');
+      textArea.value = student.welcomeGroupMessage;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    }
+
+    setCopiedId(student.mmsId);
+    window.setTimeout(() => setCopiedId((current) => (current === student.mmsId ? '' : current)), 1800);
+  }
+
+  async function handleSave(student, updates = {}) {
+    const nextStatus = updates.status ?? student.waitingStatus;
+    const nextNote = updates.note ?? student.waitingNote;
+    setActionState({ pendingId: student.mmsId, error: '' });
+
+    try {
+      const response = await fetch('/api/admin/waiting/state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mmsId: student.mmsId,
+          studentName: student.fullName,
+          parentName: student.parentName,
+          parentEmail: student.parentEmail,
+          dateStarted: student.dateStarted,
+          status: nextStatus,
+          note: nextNote,
+        }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        setActionState({ pendingId: '', error: payload.error || 'Waiting update failed' });
+        return;
+      }
+
+      setStudents((current) => current.map((entry) => (
+        entry.mmsId === student.mmsId
+          ? {
+            ...entry,
+            waitingStatus: payload.state.status,
+            waitingNote: payload.state.note,
+            waitingUpdatedAt: payload.state.updatedAt,
+          }
+          : entry
+      )));
+      setActionState({ pendingId: '', error: '' });
+    } catch (error) {
+      setActionState({ pendingId: '', error: error.message || 'Waiting update failed' });
+    }
+  }
+
+  function updateLocalStudent(mmsId, updates) {
+    setStudents((current) => current.map((entry) => (
+      entry.mmsId === mmsId
+        ? { ...entry, ...updates }
+        : entry
+    )));
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <p className="text-xs uppercase tracking-[0.25em] text-slate-500">New enquiries</p>
+        <h2
+          className="mt-2 text-3xl font-bold uppercase tracking-wide text-slate-800"
+          style={{ fontFamily: '"Cooper Hewitt", "Nimbus Sans L", "Arial", sans-serif' }}
+        >
+          Waiting List
+        </h2>
+        <p className="mt-2 text-sm text-slate-600">
+          MMS students with status <code>Waiting</code>, newest first, limited to the last 120 days.
+        </p>
+      </div>
+
+      {actionState.error ? (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {actionState.error}
+        </div>
+      ) : null}
+
+      <div className="space-y-4">
+        {students.map((student) => {
+          const ageBadge = getAgeBadge(student.ageInDays);
+          const pending = actionState.pendingId === student.mmsId;
+
+          return (
+            <div key={student.mmsId} className="rounded-[1.6rem] border border-blue-100 bg-white/90 p-5 shadow-[0_12px_36px_rgba(15,23,42,0.06)] backdrop-blur-sm">
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                <div className="min-w-0">
+                  <div className="font-medium text-slate-900">{student.fullName || student.mmsId}</div>
+                  <div className="text-xs text-slate-500">{student.mmsId}</div>
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                    <span className={`rounded-full px-2.5 py-1 font-medium ${ageBadge.className}`}>{ageBadge.label}</span>
+                    <span className="rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-700">Added: {formatDate(student.dateStarted)}</span>
+                    <span className="rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-700">Updated: {formatDateTime(student.waitingUpdatedAt)}</span>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(student)}
+                    className={`inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition ${
+                      copiedId === student.mmsId
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                        : 'border-slate-300 bg-white text-slate-900 hover:border-slate-400 hover:bg-slate-100'
+                    }`}
+                  >
+                    {copiedId === student.mmsId ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    {copiedId === student.mmsId ? 'Copied' : 'Copy welcome group message'}
+                  </button>
+                  <Link
+                    href={`/admin/onboard?mmsId=${encodeURIComponent(student.mmsId)}`}
+                    className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700"
+                  >
+                    Onboard
+                  </Link>
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-4 xl:grid-cols-[1.1fr_1.2fr_0.9fr]">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Parent contact</p>
+                  <p className="mt-2 text-sm text-slate-900">{student.parentName || '—'}</p>
+                  <p className="mt-1 text-sm text-slate-700">{student.parentEmail || '—'}</p>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <label className="block">
+                    <span className="text-xs uppercase tracking-wide text-slate-500">Waiting note</span>
+                    <textarea
+                      value={student.waitingNote}
+                      onChange={(event) => updateLocalStudent(student.mmsId, { waitingNote: event.target.value })}
+                      rows={4}
+                      className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                      placeholder="Called, left voicemail. Asked for Friday. Added to welcome group..."
+                    />
+                  </label>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <label className="block">
+                    <span className="text-xs uppercase tracking-wide text-slate-500">Status</span>
+                    <select
+                      value={student.waitingStatus}
+                      onChange={(event) => updateLocalStudent(student.mmsId, { waitingStatus: event.target.value })}
+                      className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                    >
+                      {WAITING_STATUS_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => handleSave(student)}
+                    disabled={pending}
+                    className="mt-3 inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                    {pending ? 'Saving…' : 'Save waiting state'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
