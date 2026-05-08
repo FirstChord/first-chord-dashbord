@@ -52,6 +52,16 @@ function isPaymentIssue(issue) {
   ].includes(issue.type);
 }
 
+function needsLiveStripeReview(issue) {
+  return [
+    'ACTIVE_WITHOUT_SUBSCRIPTION',
+    'SUBSCRIPTION_CANCELLED_UNEXPECTEDLY',
+    'SUBSCRIPTION_STATE_MISMATCH',
+    'INACTIVE_STILL_BILLING',
+    'PAYMENT_FAILED',
+  ].includes(issue.type);
+}
+
 function getPaymentActionHint(issue) {
   if (issue.type === 'PAYMENT SETUP PENDING') {
     return 'Usually not a broken billing case yet. Finish setup or deliberately move the student into a different payment mode/expectation.';
@@ -80,6 +90,88 @@ function getPaymentActionHint(issue) {
   return '';
 }
 
+function getPaymentActionPath(issue) {
+  if (issue.type === 'PAYMENT SETUP PENDING') {
+    return [
+      'Confirm this is genuinely still in setup rather than a broken active billing case.',
+      'If setup is complete, move the expectation to Stripe active expected.',
+      'If this student will not use Stripe, mark them as a manual payer instead.',
+    ];
+  }
+
+  if (['STRIPE SETUP INCOMPLETE', 'STRIPE CUSTOMER MISSING', 'STRIPE SUBSCRIPTION MISSING'].includes(issue.type)) {
+    return [
+      'Treat this as a linkage/setup issue before assuming Stripe itself is broken.',
+      'Use setup pending if the family is not fully live yet.',
+      'If they should already be billing, open the student record and confirm the missing Stripe linkage.',
+    ];
+  }
+
+  if (issue.type === 'PAYMENT_FAILED') {
+    return [
+      'Run a one-student live Stripe refresh first.',
+      'If the failure is still live, keep the issue active and review the parent/payment follow-up path.',
+      'Only downgrade this to setup pending if the student is not really live yet.',
+    ];
+  }
+
+  if (issue.type === 'SUBSCRIPTION_STATE_MISMATCH') {
+    return [
+      'Check whether Pause History and payment expectation are correct first.',
+      'If the school record is right, refresh live Stripe to confirm the remaining mismatch.',
+      'Keep the issue active until live Stripe agrees with the expectation.',
+    ];
+  }
+
+  if (issue.type === 'INACTIVE_STILL_BILLING') {
+    return [
+      'Confirm the student really should be inactive or stopped.',
+      'Refresh live Stripe to confirm billing is still active.',
+      'Keep this active until the billing state no longer contradicts the student state.',
+    ];
+  }
+
+  if (issue.type === 'ACTIVE_WITHOUT_SUBSCRIPTION' || issue.type === 'SUBSCRIPTION_CANCELLED_UNEXPECTEDLY') {
+    return [
+      'Treat this as a real live Stripe problem first.',
+      'Refresh the student Stripe status to confirm the current live state.',
+      'Only change the expectation if the school record itself is wrong.',
+    ];
+  }
+
+  return [];
+}
+
+function summariseStripeSnapshot(snapshot, issues = []) {
+  if (!snapshot) {
+    return '';
+  }
+
+  const parts = [];
+
+  if (snapshot.subscriptionFound) {
+    parts.push(`Subscription ${snapshot.subscriptionStatus || 'found'}`);
+  } else {
+    parts.push('No live subscription found');
+  }
+
+  if (snapshot.pauseState && snapshot.pauseState !== '—') {
+    parts.push(`Pause state: ${snapshot.pauseState}`);
+  }
+
+  parts.push(snapshot.activelyBilling ? 'Actively billing' : 'Not actively billing');
+
+  if (snapshot.latestInvoiceStatus && snapshot.latestInvoiceStatus !== '—') {
+    parts.push(`Invoice: ${snapshot.latestInvoiceStatus}`);
+  }
+
+  if (issues.length) {
+    parts.push(`Issues: ${issues.join(', ')}`);
+  }
+
+  return parts.join(' • ');
+}
+
 export default function AdminIssuesPageClient({ issues, freshness }) {
   const [issueList, setIssueList] = useState(issues);
   const [typeFilter, setTypeFilter] = useState('all');
@@ -88,6 +180,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
   const [statusFilter, setStatusFilter] = useState('active');
   const [actionState, setActionState] = useState({ pendingId: '', error: '' });
   const [stripeScanState, setStripeScanState] = useState({ pending: false, error: '', scannedAt: '', scannedCount: 0 });
+  const [stripeRefreshState, setStripeRefreshState] = useState({});
 
   const LIVE_STRIPE_TYPES = [
     'ACTIVE_WITHOUT_SUBSCRIPTION',
@@ -245,6 +338,58 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
       });
     } catch (error) {
       setStripeScanState({ pending: false, error: error.message || 'Stripe scan failed', scannedAt: '', scannedCount: 0 });
+    }
+  }
+
+  async function handleRefreshIssueStripe(issue) {
+    setStripeRefreshState((current) => ({
+      ...current,
+      [issue.issueId]: {
+        ...(current[issue.issueId] || {}),
+        loading: true,
+        error: '',
+      },
+    }));
+
+    try {
+      const response = await fetch(`/api/admin/students/${issue.mmsId}/stripe`);
+      const payload = await response.json();
+
+      if (!response.ok) {
+        setStripeRefreshState((current) => ({
+          ...current,
+          [issue.issueId]: {
+            loading: false,
+            error: payload.error || 'Stripe refresh failed',
+            snapshot: null,
+            issues: [],
+            skippedReason: '',
+          },
+        }));
+        return;
+      }
+
+      setStripeRefreshState((current) => ({
+        ...current,
+        [issue.issueId]: {
+          loading: false,
+          error: '',
+          snapshot: payload.snapshot || null,
+          issues: payload.issues || [],
+          skippedReason: payload.skippedReason || '',
+        },
+      }));
+    } catch (error) {
+      setStripeRefreshState((current) => ({
+        ...current,
+        [issue.issueId]: {
+          loading: false,
+          error: error.message || 'Stripe refresh failed',
+          snapshot: null,
+          issues: [],
+          skippedReason: '',
+        },
+      }));
     }
   }
 
@@ -544,6 +689,12 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
         ) : (
           filteredIssues.map((issue) => (
             <article key={issue.id} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              {(() => {
+                const paymentActionPath = isPaymentIssue(issue) ? getPaymentActionPath(issue) : [];
+                const liveStripeState = stripeRefreshState[issue.issueId] || null;
+
+                return (
+                  <>
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div className="space-y-3">
                   <div className="flex flex-wrap items-center gap-2">
@@ -614,6 +765,21 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                     <p className="mt-3 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900">
                       {getPaymentActionHint(issue)}
                     </p>
+                  ) : null}
+                  {paymentActionPath.length ? (
+                    <div className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-3">
+                      <p className="text-xs uppercase tracking-wide text-slate-500">Suggested path</p>
+                      <ol className="mt-2 space-y-2 text-sm text-slate-700">
+                        {paymentActionPath.map((step, index) => (
+                          <li key={step} className="flex gap-2">
+                            <span className="mt-[2px] inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[11px] font-semibold text-white">
+                              {index + 1}
+                            </span>
+                            <span>{step}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
                   ) : null}
                   {issue.resolutionNote ? (
                     <p className="mt-3 text-sm text-slate-600">
@@ -715,6 +881,16 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                 >
                     {actionState.pendingId === issue.issueId ? 'Saving…' : 'Mark resolved'}
                   </button>
+                {needsLiveStripeReview(issue) ? (
+                  <button
+                    type="button"
+                    onClick={() => handleRefreshIssueStripe(issue)}
+                    disabled={Boolean(liveStripeState?.loading)}
+                    className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-900 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {liveStripeState?.loading ? 'Checking…' : 'Refresh Stripe here'}
+                  </button>
+                ) : null}
                 {getPaymentQuickActions(issue).length ? (
                   <div className="flex flex-wrap items-center gap-3 rounded-xl border border-sky-200 bg-sky-50/80 px-3 py-2">
                     <span className="text-xs font-semibold uppercase tracking-wide text-sky-800">Quick fixes</span>
@@ -736,6 +912,23 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                   {issue.messageable ? ' • future messageable issue' : ' • manual review for now'}
                 </span>
               </div>
+              {needsLiveStripeReview(issue) && (liveStripeState?.error || liveStripeState?.skippedReason || liveStripeState?.snapshot) ? (
+                <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50/70 p-4">
+                  <p className="text-xs uppercase tracking-wide text-blue-800">Latest live Stripe check</p>
+                  {liveStripeState?.error ? (
+                    <p className="mt-2 text-sm text-red-700">{liveStripeState.error}</p>
+                  ) : liveStripeState?.skippedReason ? (
+                    <p className="mt-2 text-sm text-slate-700">{liveStripeState.skippedReason}</p>
+                  ) : (
+                    <p className="mt-2 text-sm text-slate-800">
+                      {summariseStripeSnapshot(liveStripeState?.snapshot, liveStripeState?.issues)}
+                    </p>
+                  )}
+                </div>
+              ) : null}
+                  </>
+                );
+              })()}
             </article>
           ))
         )}
