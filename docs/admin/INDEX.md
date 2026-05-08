@@ -33,6 +33,13 @@
 - `Issue_Queue` in Google Sheets stores persistent issue state.
 - `Event_Log` in Google Sheets stores append-only issue actions and reappearance events.
 - PR1 scope is intentionally narrow: stable IDs, acknowledge/ignore/resolve, source presence, and audit logging.
+- `/admin/showcase` is now a second workflow surface for recurring student-show operations.
+- `Showcase_Task_State` in Google Sheets stores persistent checklist state per showcase instance.
+- Showcase reference content is intentionally split from the checklist:
+  - `Linked Assets`
+  - `Key Timings`
+  - `Core Messages`
+- Checklist items should remain true done/not-done actions; softer planning points should stay as guidance.
 
 ## Suggested Handoff Order
 

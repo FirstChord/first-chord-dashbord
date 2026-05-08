@@ -28,6 +28,40 @@ This file tracks the admin dashboard build so work can be handed between agents 
 - `npm run test:admin` passes
 - `npm run build` passes
 
+## 2026-05-08 — Showcase Workflow Surface
+
+### Scope
+- Add the first recurring non-student workflow surface inside the admin dashboard.
+- Treat the student showcase process as part of the dashboard’s operating model rather than as an external memory-based checklist.
+
+### What changed
+- Added `/admin/showcase` as a real admin workflow page.
+- Added persistent checklist state stored in the `Showcase_Task_State` Google Sheets tab.
+- Added copy-to-clipboard controls for the core reusable message templates.
+- Added seasonal showcase asset links for:
+  - poster templates
+  - Eventbrite banner templates
+  - Eventbrite/manage link
+  - performer form
+  - running-order Canva
+  - collage Canva
+- Refined the page structure so that:
+  - the checklist is reserved for true done/not-done actions
+  - softer planning/judgement items appear as guidance notes instead
+  - long reference sections (`Linked Assets`, `Key Timings`, `Core Messages`) are collapsible
+
+### Why this matters
+- This is the first example of the dashboard acting as a recurring operations workbench beyond student records, onboarding, and flags.
+- It creates a cleaner pattern for future workflow templates:
+  - persistent state
+  - linked assets
+  - reusable copy
+  - lightweight operational structure
+
+### Validation
+- `npm run test:admin` passes
+- `npm run build` passes
+
 ## 2026-05-02 — Live Stripe Snapshot (Manual Per Student)
 
 ### Scope

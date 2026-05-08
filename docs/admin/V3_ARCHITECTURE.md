@@ -37,6 +37,7 @@ The next bottlenecks are no longer basic CRUD or deployment.
 They are:
 
 - issue state and resolution workflow
+- recurring operational workflow structure
 - communication workflow
 - finance visibility
 - policy enforcement
@@ -84,6 +85,8 @@ Move from payment checks into a more complete finance layer:
 Support Finn and Tom with:
 
 - queue visibility
+- recurring workflow templates
+- tracked seasonal operations
 - priorities
 - weekly planning
 - short/mid/long-term goals
@@ -127,6 +130,7 @@ V2 already provides:
 - Stripe setup and live Stripe scan workflow
 - payment policy fields
 - pause-state visibility
+- showcase workflow support with persistent task state
 - generated config automation
 - FC regeneration automation
 - review-flag freshness visibility
@@ -208,6 +212,7 @@ V3 should add a message workflow layer with:
 This should support:
 
 - weekly priorities
+- recurring workflow instances such as showcases
 - backlog summaries
 - school goals
 - operational targets

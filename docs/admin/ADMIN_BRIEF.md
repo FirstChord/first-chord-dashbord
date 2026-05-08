@@ -23,6 +23,14 @@ This brief started as a V1 implementation guide. Several important parts are now
   - `Issue_Queue` is the new persistent issue-state tab in Sheets
   - `Event_Log` is the new append-only audit/event tab in Sheets
   - PR1 scope is limited to acknowledge / ignore / resolve state, source-presence tracking, and event logging for flags actions
+- `/admin/showcase` is now a real admin workflow surface for recurring student-show operations:
+  - persistent checklist state is stored in the `Showcase_Task_State` tab in Sheets
+  - reference panels are intentionally separate from the checklist:
+    - `Linked Assets`
+    - `Key Timings`
+    - `Core Messages`
+  - the checklist is for true done/not-done actions only
+  - softer judgement/planning items should live as guidance notes, not checkboxes
 - `payment_mode` now exists in the admin student model and should be treated as canonical payment intent in the `Students` sheet.
 
 For latest implementation detail, prefer:
@@ -79,6 +87,11 @@ All flagged students are fully editable. No flag category restricts any action. 
 A private web dashboard for Finn and Tom to manage the school without needing terminal access. Replaces the `first-chord-brain` CLI for routine daily tasks.
 
 Both users see everything. No role separation in V1.
+
+The admin dashboard is now broader than student CRUD plus onboarding.
+It also includes workflow surfaces where the dashboard acts as an operational workbench:
+- `/admin/flags` for persistent issue handling
+- `/admin/showcase` for recurring showcase planning and execution
 
 ---
 
