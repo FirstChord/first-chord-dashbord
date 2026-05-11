@@ -7,6 +7,8 @@ This document defines the intended direction of V3.
 V3 is not a rewrite for its own sake.
 It is the next architectural layer after V2, built from real operational use.
 
+For the current practical closed-loop implementation pattern, read `V3_LOOP_ARCHITECTURE.md` alongside this document.
+
 The goal is to move from:
 
 - a strong internal admin dashboard

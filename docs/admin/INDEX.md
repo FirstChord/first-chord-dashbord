@@ -10,6 +10,8 @@
   Current V2 plan and sequencing.
 - [V3_ARCHITECTURE.md](./V3_ARCHITECTURE.md)
   Target direction for persistent issue state, communication workflows, planning support, and Brain’s bounded role.
+- [V3_LOOP_ARCHITECTURE.md](./V3_LOOP_ARCHITECTURE.md)
+  Current V3 loop pattern for issues, payments, pauses, waiting list, recurring workflows, and audit logging.
 
 ## Ownership And Rules
 
@@ -57,4 +59,5 @@
 5. Review [PAYMENTS_RULES.md](./PAYMENTS_RULES.md) if working on Stripe or pauses
 6. Use [V2_SPEC_DRAFT.md](./V2_SPEC_DRAFT.md) for V2 roadmap context
 7. Read [V3_ARCHITECTURE.md](./V3_ARCHITECTURE.md) for next-phase system direction
-8. Read [BRAIN_CAPABILITY_ROADMAP.md](./BRAIN_CAPABILITY_ROADMAP.md) for longer-term assistant design
+8. Read [V3_LOOP_ARCHITECTURE.md](./V3_LOOP_ARCHITECTURE.md) before adding or expanding closed-loop workflows
+9. Read [BRAIN_CAPABILITY_ROADMAP.md](./BRAIN_CAPABILITY_ROADMAP.md) for longer-term assistant design

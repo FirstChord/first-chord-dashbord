@@ -178,7 +178,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
   const [severityFilter, setSeverityFilter] = useState('all');
   const [systemFilter, setSystemFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('active');
-  const [actionState, setActionState] = useState({ pendingId: '', error: '' });
+  const [actionState, setActionState] = useState({ pendingId: '', error: '', success: '' });
   const [stripeScanState, setStripeScanState] = useState({ pending: false, error: '', scannedAt: '', scannedCount: 0 });
   const [stripeRefreshState, setStripeRefreshState] = useState({});
 
@@ -211,7 +211,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
     const confirmed = window.confirm(`Delete the registry entry for ${issue.studentName || issue.mmsId}? This will remove their portal-side record but will not touch MMS.`);
     if (!confirmed) return;
 
-    setActionState({ pendingId: issue.id, error: '' });
+    setActionState({ pendingId: issue.id, error: '', success: '' });
 
     try {
       const response = await fetch(`/api/admin/issues/${issue.mmsId}`, {
@@ -223,7 +223,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
       const payload = await response.json();
 
       if (!response.ok) {
-        setActionState({ pendingId: '', error: payload.error || 'Delete failed' });
+        setActionState({ pendingId: '', error: payload.error || 'Delete failed', success: '' });
         return;
       }
 
@@ -236,9 +236,9 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
           }
           : entry
       )));
-      setActionState({ pendingId: '', error: '' });
+      setActionState({ pendingId: '', error: '', success: '' });
     } catch (error) {
-      setActionState({ pendingId: '', error: error.message || 'Delete failed' });
+      setActionState({ pendingId: '', error: error.message || 'Delete failed', success: '' });
     }
   }
 
@@ -256,7 +256,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
 
     const trimmedInstrument = instrumentValue.trim();
     if (!trimmedInstrument) {
-      setActionState({ pendingId: '', error: 'Instrument is required to create a registry entry.' });
+      setActionState({ pendingId: '', error: 'Instrument is required to create a registry entry.', success: '' });
       return;
     }
 
@@ -269,7 +269,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
       return;
     }
 
-    setActionState({ pendingId: issue.issueId, error: '' });
+    setActionState({ pendingId: issue.issueId, error: '', success: '' });
 
     try {
       const response = await fetch(`/api/admin/issues/${issue.mmsId}`, {
@@ -289,7 +289,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
       const payload = await response.json();
 
       if (!response.ok) {
-        setActionState({ pendingId: '', error: payload.error || 'Create registry entry failed' });
+        setActionState({ pendingId: '', error: payload.error || 'Create registry entry failed', success: '' });
         return;
       }
 
@@ -304,9 +304,9 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
           }
           : entry
       )));
-      setActionState({ pendingId: '', error: '' });
+      setActionState({ pendingId: '', error: '', success: '' });
     } catch (error) {
-      setActionState({ pendingId: '', error: error.message || 'Create registry entry failed' });
+      setActionState({ pendingId: '', error: error.message || 'Create registry entry failed', success: '' });
     }
   }
 
@@ -403,7 +403,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
       note = prompted.trim();
     }
 
-    setActionState({ pendingId: issue.issueId, error: '' });
+    setActionState({ pendingId: issue.issueId, error: '', success: '' });
 
     try {
       const response = await fetch(`/api/admin/issues/${issue.mmsId}/state`, {
@@ -419,7 +419,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
       const payload = await response.json();
 
       if (!response.ok) {
-        setActionState({ pendingId: '', error: payload.error || 'Issue update failed' });
+        setActionState({ pendingId: '', error: payload.error || 'Issue update failed', success: '' });
         return;
       }
 
@@ -434,9 +434,9 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
           }
           : entry
       )));
-      setActionState({ pendingId: '', error: '' });
+      setActionState({ pendingId: '', error: '', success: '' });
     } catch (error) {
-      setActionState({ pendingId: '', error: error.message || 'Issue update failed' });
+      setActionState({ pendingId: '', error: error.message || 'Issue update failed', success: '' });
     }
   }
 
@@ -499,19 +499,43 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
   }
 
   async function handlePaymentQuickAction(issue, action) {
-    setActionState({ pendingId: issue.issueId, error: '' });
+    const note = window.prompt(
+      `Why are you taking "${action.label}" for ${issue.studentName || issue.mmsId}? This note is saved to the payment audit log.`,
+      '',
+    );
+
+    if (note === null) {
+      return;
+    }
+
+    const trimmedNote = note.trim();
+    if (!trimmedNote) {
+      setActionState({ pendingId: '', error: 'A short note is required for payment actions from the issues page.', success: '' });
+      return;
+    }
+
+    setActionState({ pendingId: issue.issueId, error: '', success: '' });
 
     try {
       const response = await fetch(`/api/admin/students/${issue.mmsId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(action.payload),
+        body: JSON.stringify({
+          ...action.payload,
+          auditContext: {
+            source: 'admin_flags_payment_action',
+            issueId: issue.issueId,
+            issueType: issue.type,
+            actionLabel: action.label,
+            note: trimmedNote,
+          },
+        }),
       });
 
       const payload = await response.json();
 
       if (!response.ok) {
-        setActionState({ pendingId: '', error: payload.error || 'Payment action failed' });
+        setActionState({ pendingId: '', error: payload.error || 'Payment action failed', success: '' });
         return;
       }
 
@@ -524,9 +548,16 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
           }
           : entry
       )));
-      setActionState({ pendingId: '', error: '' });
+      const actionLogged = Boolean(payload.audit?.issueActionLogged);
+      setActionState({
+        pendingId: '',
+        error: '',
+        success: actionLogged
+          ? `Payment action logged for ${issue.studentName || issue.mmsId}. The issue remains active until the source check clears it or you resolve it.`
+          : `No payment field changed for ${issue.studentName || issue.mmsId}; the issue remains active.`,
+      });
     } catch (error) {
-      setActionState({ pendingId: '', error: error.message || 'Payment action failed' });
+      setActionState({ pendingId: '', error: error.message || 'Payment action failed', success: '' });
     }
   }
 
@@ -617,6 +648,11 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
       {actionState.error ? (
         <section className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
           {actionState.error}
+        </section>
+      ) : null}
+      {actionState.success ? (
+        <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+          {actionState.success}
         </section>
       ) : null}
 

@@ -1,7 +1,13 @@
-import { randomUUID } from 'node:crypto';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import { normaliseInstrument } from '@/lib/admin/fc';
+import {
+  buildPaymentFieldChangeEvent,
+  buildPaymentIssueActionEvent,
+  normaliseAuditContext,
+  shouldLogPaymentIssueAction,
+  validatePaymentAuditContext,
+} from '@/lib/admin/payment-audit-helpers.mjs';
 import { normalisePaymentExpectation, normalisePaymentMode } from '@/lib/admin/payments-helpers.mjs';
 import { getAdminStudentByMmsId, updateAdminStudent } from '@/lib/admin/students';
 import { appendEventLogRows } from '@/lib/admin/sheets';
@@ -54,6 +60,11 @@ function validatePayload(payload) {
     errors.push('Payment expectation must be setup_pending, stripe_active_expected, stripe_paused_expected, or inactive_or_stopped');
   }
 
+  const auditContextError = validatePaymentAuditContext(payload);
+  if (auditContextError) {
+    errors.push(auditContextError);
+  }
+
   return errors;
 }
 
@@ -76,12 +87,13 @@ function mapUpdates(payload, mapping) {
 
 export async function GET(_request, { params }) {
   const session = await getServerSession(authOptions);
+  const { mmsId } = await params;
 
   if (!session?.user?.isAdmin) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const student = await getAdminStudentByMmsId(params.mmsId);
+  const student = await getAdminStudentByMmsId(mmsId);
 
   if (!student) {
     return Response.json({ error: 'Not found' }, { status: 404 });
@@ -92,6 +104,7 @@ export async function GET(_request, { params }) {
 
 export async function PATCH(request, { params }) {
   const session = await getServerSession(authOptions);
+  const { mmsId } = await params;
 
   if (!session?.user?.isAdmin) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
@@ -105,9 +118,9 @@ export async function PATCH(request, { params }) {
   }
 
   try {
-    const previousStudent = await getAdminStudentByMmsId(params.mmsId);
+    const previousStudent = await getAdminStudentByMmsId(mmsId);
     const student = await updateAdminStudent({
-      mmsId: params.mmsId,
+      mmsId,
       sheetsUpdates: mapUpdates(payload, SHEETS_FIELD_MAP),
       registryUpdates: mapUpdates(payload, REGISTRY_FIELD_MAP),
     });
@@ -117,25 +130,22 @@ export async function PATCH(request, { params }) {
     }
 
     const eventRows = [];
+    const changedPaymentFields = [];
     const now = new Date().toISOString();
+    const auditContext = normaliseAuditContext(payload.auditContext);
 
     if (previousStudent && Object.prototype.hasOwnProperty.call(payload, 'paymentMode') && previousStudent.paymentMode !== student.paymentMode) {
-      eventRows.push({
-        eventId: randomUUID(),
-        occurredAt: now,
-        actorEmail: session.user.email || '',
-        entityType: 'student',
-        entityId: student.mmsId,
+      changedPaymentFields.push('payment_mode');
+      eventRows.push(buildPaymentFieldChangeEvent({
+        student,
+        previousValue: previousStudent.paymentMode || '',
+        nextValue: student.paymentMode || '',
+        fieldName: 'payment_mode',
         eventType: 'payment_mode_changed',
-        mmsId: student.mmsId,
-        studentName: student.fullName || student.mmsId,
-        issueId: '',
-        payloadJson: JSON.stringify({
-          previous_value: previousStudent.paymentMode || '',
-          next_value: student.paymentMode || '',
-          source: 'admin_student_update',
-        }),
-      });
+        actorEmail: session.user.email || '',
+        occurredAt: now,
+        auditContext,
+      }));
     }
 
     if (
@@ -143,29 +153,42 @@ export async function PATCH(request, { params }) {
       Object.prototype.hasOwnProperty.call(payload, 'paymentExpectation') &&
       previousStudent.paymentExpectation !== student.paymentExpectation
     ) {
-      eventRows.push({
-        eventId: randomUUID(),
-        occurredAt: now,
-        actorEmail: session.user.email || '',
-        entityType: 'student',
-        entityId: student.mmsId,
+      changedPaymentFields.push('payment_expectation');
+      eventRows.push(buildPaymentFieldChangeEvent({
+        student,
+        previousValue: previousStudent.paymentExpectation || '',
+        nextValue: student.paymentExpectation || '',
+        fieldName: 'payment_expectation',
         eventType: 'payment_expectation_changed',
-        mmsId: student.mmsId,
-        studentName: student.fullName || student.mmsId,
-        issueId: '',
-        payloadJson: JSON.stringify({
-          previous_value: previousStudent.paymentExpectation || '',
-          next_value: student.paymentExpectation || '',
-          source: 'admin_student_update',
-        }),
-      });
+        actorEmail: session.user.email || '',
+        occurredAt: now,
+        auditContext,
+      }));
+    }
+
+    const issueActionLogged = shouldLogPaymentIssueAction(auditContext, changedPaymentFields);
+
+    if (issueActionLogged) {
+      eventRows.push(buildPaymentIssueActionEvent({
+        student,
+        actorEmail: session.user.email || '',
+        occurredAt: now,
+        auditContext,
+        changedFields: changedPaymentFields,
+      }));
     }
 
     if (eventRows.length) {
       await appendEventLogRows(eventRows);
     }
 
-    return Response.json({ student });
+    return Response.json({
+      student,
+      audit: {
+        changedPaymentFields,
+        issueActionLogged,
+      },
+    });
   } catch (error) {
     return Response.json({ error: error.message || 'Update failed' }, { status: 500 });
   }
