@@ -1,7 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildIssueRecord, buildPaymentIssueRecord, classifyIssue, isIssueActive } from '../../lib/admin/issues-helpers.mjs';
+import {
+  buildIdentityMismatchHint,
+  buildIssueRecord,
+  buildPaymentIssueRecord,
+  classifyIssue,
+  isIssueActive,
+} from '../../lib/admin/issues-helpers.mjs';
 
 test('classifyIssue maps current review flag types into actionable admin metadata', () => {
   assert.deepEqual(classifyIssue('TUTOR CONFLICT').severity, 'Needs action');
@@ -63,6 +69,41 @@ test('isIssueActive returns false once a sheets-only issue gains a registry entr
   });
 
   assert.equal(active, false);
+});
+
+test('buildIdentityMismatchHint finds registry matches for sheets-only issues', () => {
+  const hint = buildIdentityMismatchHint({
+    issueType: 'SHEETS ONLY',
+    mmsId: 'sdt_sheet',
+    studentName: 'Tabitha Slocombe',
+    registryEntries: [{
+      mmsId: 'sdt_registry',
+      firstName: 'Tabitha',
+      lastName: 'Slocombe',
+      tutor: 'Chloe',
+    }],
+  });
+
+  assert.equal(hint.system, 'Registry');
+  assert.equal(hint.mmsId, 'sdt_registry');
+  assert.match(hint.description, /Possible same-name match/);
+});
+
+test('buildIdentityMismatchHint finds sheet matches for registry-only issues', () => {
+  const hint = buildIdentityMismatchHint({
+    issueType: 'REGISTRY ONLY',
+    mmsId: 'sdt_registry',
+    studentName: 'Tabitha Slocombe',
+    sheetStudents: [{
+      mmsId: 'sdt_sheet',
+      fullName: 'Tabitha Slocombe',
+      tutor: 'Stef McGlinchey',
+    }],
+  });
+
+  assert.equal(hint.system, 'Sheets');
+  assert.equal(hint.mmsId, 'sdt_sheet');
+  assert.equal(hint.tutor, 'Stef McGlinchey');
 });
 
 test('buildPaymentIssueRecord creates a Stripe issue with current payment linkage state', () => {

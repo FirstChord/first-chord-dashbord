@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { formatDateTime } from '@/lib/admin/health-helpers.mjs';
+import { buildIssueEvidenceSummary, formatDateTime } from '@/lib/admin/health-helpers.mjs';
 import { buildPauseWorkflowSummary } from '@/lib/admin/pause-workflow-helpers.mjs';
 
 function severityClasses(severity) {
@@ -34,6 +34,9 @@ function freshnessClasses(status) {
   if (status === 'Fresh') return 'border-emerald-200 bg-emerald-50 text-emerald-800';
   if (status === 'Aging') return 'border-amber-200 bg-amber-50 text-amber-800';
   if (status === 'Stale') return 'border-red-200 bg-red-50 text-red-800';
+  if (status === 'Current') return 'border-emerald-200 bg-emerald-50 text-emerald-800';
+  if (status === 'Manual') return 'border-blue-200 bg-blue-50 text-blue-800';
+  if (status === 'Cleared') return 'border-slate-200 bg-slate-100 text-slate-700';
   return 'border-slate-200 bg-slate-50 text-slate-700';
 }
 
@@ -122,6 +125,10 @@ function getIssueReasonText(issue) {
 function getRecommendedActionText(issue) {
   if (!issue.sourcePresent) {
     return 'If this matches the current record, mark it resolved. Keep it active only if you want to monitor it manually.';
+  }
+
+  if (issue.identityMismatchHint) {
+    return `${issue.recommendedAction} Check the possible same-name match before creating or deleting records.`;
   }
 
   return issue.recommendedAction;
@@ -719,14 +726,16 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-slate-900">Review flags freshness</h3>
-            <p className="mt-1 text-sm text-slate-600">{freshness?.statusDetail || 'Freshness unknown.'}</p>
+            <h3 className="text-sm font-semibold text-slate-900">Evidence freshness</h3>
+            <p className="mt-1 text-sm text-slate-600">
+              Review flags are generated; Sheets/payment issues are checked from the current page load; live Stripe issues come from manual scans.
+            </p>
           </div>
           <span className={`rounded-full border px-3 py-1 text-xs font-medium ${freshnessClasses(freshness?.status)}`}>
-            {freshness?.status || 'Unknown'}
+            Review flags: {freshness?.status || 'Unknown'}
           </span>
         </div>
-        <div className="mt-4 grid gap-4 md:grid-cols-3">
+        <div className="mt-4 grid gap-4 md:grid-cols-4">
           <div>
             <p className="text-xs uppercase tracking-wide text-slate-500">Latest generated</p>
             <p className="mt-1 text-sm text-slate-800">{formatDateTime(freshness?.latestGeneratedAt)}</p>
@@ -740,6 +749,10 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
           <div>
             <p className="text-xs uppercase tracking-wide text-slate-500">Distinct generated dates</p>
             <p className="mt-1 text-sm text-slate-800">{freshness?.distinctGeneratedDates?.length || 0}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-slate-500">How to read cards</p>
+            <p className="mt-1 text-sm text-slate-800">Use each card&apos;s evidence badge before deciding whether to fix, refresh, or resolve.</p>
           </div>
         </div>
       </section>
@@ -901,6 +914,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                 const refreshStripeFirst = issue.sourcePresent && shouldRefreshStripeFirst(issue);
                 const reasonText = getIssueReasonText(issue);
                 const recommendedActionText = getRecommendedActionText(issue);
+                const evidence = buildIssueEvidenceSummary(issue, freshness);
                 const pauseWorkflow = isPauseIssue(issue)
                   ? buildPauseWorkflowSummary({
                     pauseSummary: issue.pauseSummary,
@@ -932,6 +946,9 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                           Resolved but still detected
                         </span>
                       ) : null}
+                      <span className={`rounded-full border px-3 py-1 text-xs font-medium ${freshnessClasses(evidence.status)}`}>
+                        {evidence.label}: {evidence.status}
+                      </span>
                     </div>
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{issue.type}</p>
@@ -961,6 +978,11 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                   {issue.detail && !isPaymentIssue(issue) ? (
                     <p className="mt-3 text-sm text-slate-600">
                       Source detail: {issue.detail}
+                    </p>
+                  ) : null}
+                  {issue.identityMismatchHint ? (
+                    <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                      {issue.identityMismatchHint.description}
                     </p>
                   ) : null}
                 </div>
@@ -1135,6 +1157,26 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                           <p>Issue ID: <span className="font-mono text-xs">{issue.issueId || '—'}</span></p>
                         </div>
                       </div>
+                      <div>
+                        <p className="text-xs uppercase tracking-wide text-slate-500">Evidence</p>
+                        <div className="mt-2 space-y-1 text-sm text-slate-700">
+                          <p>Source: {evidence.label}</p>
+                          <p>Status: {evidence.status}</p>
+                          <p>Updated: {formatDateTime(evidence.updatedAt)}</p>
+                          <p>{evidence.detail}</p>
+                        </div>
+                      </div>
+                      {issue.identityMismatchHint ? (
+                        <div>
+                          <p className="text-xs uppercase tracking-wide text-slate-500">Possible identity match</p>
+                          <div className="mt-2 space-y-1 text-sm text-slate-700">
+                            <p>System: {issue.identityMismatchHint.system}</p>
+                            <p>Name: {issue.identityMismatchHint.studentName || '—'}</p>
+                            <p>MMS ID: <span className="font-mono text-xs">{issue.identityMismatchHint.mmsId || '—'}</span></p>
+                            <p>Tutor: {issue.identityMismatchHint.tutor || '—'}</p>
+                          </div>
+                        </div>
+                      ) : null}
                       <div>
                         <p className="text-xs uppercase tracking-wide text-slate-500">Systems involved</p>
                         <div className="mt-2 flex flex-wrap gap-2">
