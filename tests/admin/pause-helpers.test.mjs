@@ -24,11 +24,12 @@ test('buildPauseSummary finds a current pause by subscription id', () => {
   const summary = buildPauseSummary({
     studentEmail: 'parent@example.com',
     stripeSubscriptionId: 'sub_123',
+    currentDate: '2026-05-05',
     pauseRows: [
       {
         subscriptionId: 'sub_123',
         startDate: '2026-05-01',
-        endDate: '2099-05-10',
+        endDate: '2026-05-10',
         stripeStatus: 'paused',
       },
     ],
@@ -36,6 +37,7 @@ test('buildPauseSummary finds a current pause by subscription id', () => {
 
   assert.equal(summary.hasPauseHistory, true);
   assert.equal(summary.currentlyPaused, true);
+  assert.equal(summary.upcomingPause, false);
   assert.equal(summary.latestPause.subscriptionId, 'sub_123');
 });
 
@@ -55,4 +57,26 @@ test('buildPauseSummary falls back to email matching and expired pauses are not 
 
   assert.equal(summary.hasPauseHistory, true);
   assert.equal(summary.currentlyPaused, false);
+  assert.equal(summary.upcomingPause, false);
+});
+
+test('buildPauseSummary treats future pause windows as upcoming, not current', () => {
+  const summary = buildPauseSummary({
+    studentEmail: 'parent@example.com',
+    stripeSubscriptionId: 'sub_123',
+    currentDate: '2026-05-12',
+    pauseRows: [
+      {
+        subscriptionId: 'sub_123',
+        startDate: '2026-05-28',
+        endDate: '2026-06-03',
+        stripeStatus: 'scheduled',
+      },
+    ],
+  });
+
+  assert.equal(summary.hasPauseHistory, true);
+  assert.equal(summary.currentlyPaused, false);
+  assert.equal(summary.upcomingPause, true);
+  assert.equal(summary.latestPause.startDate, '2026-05-28');
 });

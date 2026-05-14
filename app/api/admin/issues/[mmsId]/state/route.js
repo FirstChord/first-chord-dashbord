@@ -5,6 +5,7 @@ import { getIssueQueueRows, appendEventLogRow, upsertIssueQueueRow } from '@/lib
 
 export async function POST(request, { params }) {
   const session = await getServerSession(authOptions);
+  const { mmsId } = await params;
 
   if (!session?.user?.isAdmin) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
@@ -25,7 +26,7 @@ export async function POST(request, { params }) {
 
   try {
     const queueRows = await getIssueQueueRows();
-    const issueRow = queueRows.find((row) => row.issueId === issueId && row.mmsId === params.mmsId);
+    const issueRow = queueRows.find((row) => row.issueId === issueId && row.mmsId === mmsId);
 
     if (!issueRow) {
       return Response.json({ error: 'Issue was not found in the queue' }, { status: 404 });

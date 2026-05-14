@@ -4,8 +4,10 @@ import assert from 'node:assert/strict';
 import {
   buildPaymentFieldChangeEvent,
   buildPaymentIssueActionEvent,
+  buildPauseWorkflowActionEvent,
   normaliseAuditContext,
   shouldLogPaymentIssueAction,
+  shouldLogPauseWorkflowAction,
   validatePaymentAuditContext,
 } from '../../lib/admin/payment-audit-helpers.mjs';
 
@@ -22,6 +24,32 @@ test('validatePaymentAuditContext requires a note for flags payment actions', ()
       },
     }),
     'A short note is required for payment actions from the issues page.',
+  );
+});
+
+test('validatePaymentAuditContext requires a note for pause workflow payment actions', () => {
+  assert.equal(
+    validatePaymentAuditContext({
+      paymentExpectation: 'stripe_paused_expected',
+      auditContext: {
+        source: 'admin_pause_workflow_action',
+        actionLabel: 'Set Stripe paused expected',
+        note: ' ',
+      },
+    }),
+    'A short note is required for pause workflow payment actions.',
+  );
+
+  assert.equal(
+    validatePaymentAuditContext({
+      paymentExpectation: 'stripe_paused_expected',
+      auditContext: {
+        source: 'admin_pause_workflow_action',
+        actionLabel: 'Set Stripe paused expected',
+        note: 'Pause History shows this student is currently paused.',
+      },
+    }),
+    '',
   );
 });
 
@@ -118,6 +146,32 @@ test('buildPaymentIssueActionEvent records the issue-level payment outcome', () 
   assert.equal(payload.note, 'Family has not completed setup yet.');
 });
 
+test('buildPauseWorkflowActionEvent records pause workflow outcomes', () => {
+  const event = buildPauseWorkflowActionEvent({
+    student: {
+      mmsId: 'sdt_123',
+      fullName: 'Owen Example',
+    },
+    actorEmail: 'admin@example.com',
+    occurredAt: '2026-05-11T12:00:00.000Z',
+    auditContext: {
+      source: 'admin_pause_workflow_action',
+      actionLabel: 'Set Stripe paused expected',
+      note: 'Pause History shows an active pause.',
+    },
+    changedFields: ['payment_expectation'],
+  });
+
+  const payload = JSON.parse(event.payloadJson);
+
+  assert.equal(event.eventType, 'pause_workflow_action_taken');
+  assert.equal(event.entityType, 'student');
+  assert.equal(event.entityId, 'sdt_123');
+  assert.deepEqual(payload.changed_fields, ['payment_expectation']);
+  assert.equal(payload.action_label, 'Set Stripe paused expected');
+  assert.equal(payload.note, 'Pause History shows an active pause.');
+});
+
 test('shouldLogPaymentIssueAction only logs changed issue-originated payment actions', () => {
   assert.equal(
     shouldLogPaymentIssueAction({ source: 'admin_flags_payment_action' }, ['payment_mode']),
@@ -131,4 +185,9 @@ test('shouldLogPaymentIssueAction only logs changed issue-originated payment act
     shouldLogPaymentIssueAction({ source: 'admin_student_update' }, ['payment_mode']),
     false,
   );
+});
+
+test('shouldLogPauseWorkflowAction logs pause workflow actions even when no field changed', () => {
+  assert.equal(shouldLogPauseWorkflowAction({ source: 'admin_pause_workflow_action' }), true);
+  assert.equal(shouldLogPauseWorkflowAction({ source: 'admin_flags_payment_action' }), false);
 });

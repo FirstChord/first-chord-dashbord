@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { formatDateTime } from '@/lib/admin/health-helpers.mjs';
+import { buildPauseWorkflowSummary } from '@/lib/admin/pause-workflow-helpers.mjs';
 
 function severityClasses(severity) {
   if (severity === 'Needs action') return 'border-red-200 bg-red-50 text-red-800';
@@ -59,7 +60,71 @@ function needsLiveStripeReview(issue) {
     'SUBSCRIPTION_STATE_MISMATCH',
     'INACTIVE_STILL_BILLING',
     'PAYMENT_FAILED',
+    'PAUSE EXPECTATION MISMATCH',
+    'PAUSE EXPECTATION STALE',
   ].includes(issue.type);
+}
+
+function isPauseIssue(issue) {
+  return [
+    'SUBSCRIPTION_STATE_MISMATCH',
+    'PAUSE EXPECTATION MISMATCH',
+    'PAUSE EXPECTATION STALE',
+  ].includes(issue.type);
+}
+
+function shouldRefreshStripeFirst(issue) {
+  return [
+    'ACTIVE_WITHOUT_SUBSCRIPTION',
+    'SUBSCRIPTION_CANCELLED_UNEXPECTEDLY',
+    'SUBSCRIPTION_STATE_MISMATCH',
+    'INACTIVE_STILL_BILLING',
+    'PAYMENT_FAILED',
+  ].includes(issue.type);
+}
+
+function getPrimaryPaymentQuickAction(issue, actions = []) {
+  if (issue.type === 'PAUSE EXPECTATION MISMATCH') {
+    return actions.find((action) => action.label === 'Set Stripe paused expected') || null;
+  }
+
+  if (issue.type === 'PAUSE EXPECTATION STALE') {
+    return actions.find((action) => action.label === 'Set Stripe active expected') || null;
+  }
+
+  return null;
+}
+
+function getIssueKeyFact(issue) {
+  if (issue.pauseSummary?.latestPause) {
+    return `Pause window: ${issue.pauseSummary.latestPause.startDate || '—'} to ${issue.pauseSummary.latestPause.endDate || '—'}`;
+  }
+
+  if (issue.type === 'PAYMENT_FAILED' && issue.detail) {
+    return issue.detail;
+  }
+
+  if (issue.lastSeenAt) {
+    return `Last seen: ${formatDateTime(issue.lastSeenAt)}`;
+  }
+
+  return '';
+}
+
+function getIssueReasonText(issue) {
+  if (!issue.sourcePresent) {
+    return 'This issue was detected previously, but the latest source check no longer sees it.';
+  }
+
+  return isPaymentIssue(issue) ? (issue.paymentReason || issue.summary) : (issue.issueReason || issue.summary);
+}
+
+function getRecommendedActionText(issue) {
+  if (!issue.sourcePresent) {
+    return 'If this matches the current record, mark it resolved. Keep it active only if you want to monitor it manually.';
+  }
+
+  return issue.recommendedAction;
 }
 
 function getPaymentActionHint(issue) {
@@ -120,6 +185,22 @@ function getPaymentActionPath(issue) {
       'Check whether Pause History and payment expectation are correct first.',
       'If the school record is right, refresh live Stripe to confirm the remaining mismatch.',
       'Keep the issue active until live Stripe agrees with the expectation.',
+    ];
+  }
+
+  if (issue.type === 'PAUSE EXPECTATION MISMATCH') {
+    return [
+      'Confirm Pause History really means the student is paused now.',
+      'If the pause is correct, set payment expectation to Stripe paused expected.',
+      'Refresh Stripe if you need to confirm billing has stopped before resolving.',
+    ];
+  }
+
+  if (issue.type === 'PAUSE EXPECTATION STALE') {
+    return [
+      'Confirm the latest pause window has actually ended.',
+      'If lessons and billing should be active again, set payment expectation to Stripe active expected.',
+      'Refresh Stripe if you need to confirm the subscription is no longer paused.',
     ];
   }
 
@@ -205,6 +286,9 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
         return true;
       }),
     [issueList, severityFilter, statusFilter, systemFilter, typeFilter],
+  );
+  const visibleSystemClearedIssues = filteredIssues.filter(
+    (issue) => ['open', 'acknowledged'].includes(issue.status) && !issue.sourcePresent,
   );
 
   async function handleDelete(issue) {
@@ -440,6 +524,62 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
     }
   }
 
+  async function handleResolveVisibleSystemCleared() {
+    if (!visibleSystemClearedIssues.length) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Mark ${visibleSystemClearedIssues.length} system-cleared issue${visibleSystemClearedIssues.length === 1 ? '' : 's'} as resolved? These issues are not currently detected and will reappear if a future source check finds them again.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setActionState({ pendingId: 'bulk-system-cleared', error: '', success: '' });
+
+    try {
+      const response = await fetch('/api/admin/issues/system-cleared/resolve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          issueIds: visibleSystemClearedIssues.map((issue) => issue.issueId),
+        }),
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok) {
+        setActionState({ pendingId: '', error: payload.error || 'Bulk issue update failed', success: '' });
+        return;
+      }
+
+      const resolvedIssues = payload.issues || [];
+
+      setIssueList((current) => current.map((entry) => {
+        const resolved = resolvedIssues.find((issue) => issue.issueId === entry.issueId);
+        return resolved
+          ? {
+            ...entry,
+            status: resolved.status,
+            resolutionNote: resolved.resolutionNote,
+            updatedAt: resolved.updatedAt,
+            sourcePresent: resolved.sourcePresent,
+          }
+          : entry;
+      }));
+
+      setActionState({
+        pendingId: '',
+        error: '',
+        success: `Resolved ${payload.resolvedCount || 0} system-cleared issue${payload.resolvedCount === 1 ? '' : 's'}.`,
+      });
+    } catch (error) {
+      setActionState({ pendingId: '', error: error.message || 'Bulk issue update failed', success: '' });
+    }
+  }
+
   function getPaymentQuickActions(issue) {
     if (issue.paymentMode !== 'stripe' && issue.type !== 'PAYMENT SETUP PENDING') {
       return [];
@@ -561,8 +701,11 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
     }
   }
 
-  const activeIssueCount = issueList.filter((issue) => ['open', 'acknowledged'].includes(issue.status)).length;
-  const detectedIssueCount = issueList.filter((issue) => issue.sourcePresent).length;
+  const activeIssues = issueList.filter((issue) => ['open', 'acknowledged'].includes(issue.status));
+  const activeIssueCount = activeIssues.length;
+  const activeDetectedIssueCount = activeIssues.filter((issue) => issue.sourcePresent).length;
+  const activeRegistryIssueCount = activeIssues.filter((issue) => issue.systemsAffected.includes('Registry')).length;
+  const activeSheetsIssueCount = activeIssues.filter((issue) => issue.systemsAffected.includes('Sheets')).length;
 
   return (
     <div className="space-y-8">
@@ -632,18 +775,39 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
           <p className="mt-3 text-3xl font-semibold text-slate-900">{activeIssueCount}</p>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-sm text-slate-500">Currently detected</p>
-          <p className="mt-3 text-3xl font-semibold text-slate-900">{detectedIssueCount}</p>
+          <p className="text-sm text-slate-500">Active + detected</p>
+          <p className="mt-3 text-3xl font-semibold text-slate-900">{activeDetectedIssueCount}</p>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-sm text-slate-500">Registry-related</p>
-          <p className="mt-3 text-3xl font-semibold text-slate-900">{issueList.filter((issue) => issue.systemsAffected.includes('Registry')).length}</p>
+          <p className="text-sm text-slate-500">Active Registry-related</p>
+          <p className="mt-3 text-3xl font-semibold text-slate-900">{activeRegistryIssueCount}</p>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-sm text-slate-500">Sheets-related</p>
-          <p className="mt-3 text-3xl font-semibold text-slate-900">{issueList.filter((issue) => issue.systemsAffected.includes('Sheets')).length}</p>
+          <p className="text-sm text-slate-500">Active Sheets-related</p>
+          <p className="mt-3 text-3xl font-semibold text-slate-900">{activeSheetsIssueCount}</p>
         </div>
       </section>
+
+      {visibleSystemClearedIssues.length ? (
+        <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-emerald-950">System-cleared issues ready to remove</h3>
+              <p className="mt-1 text-sm text-emerald-900">
+                {visibleSystemClearedIssues.length} visible issue{visibleSystemClearedIssues.length === 1 ? '' : 's'} are no longer detected by the latest source check. Marking them resolved clears them from the active queue; they will reappear if detected again.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleResolveVisibleSystemCleared}
+              disabled={actionState.pendingId === 'bulk-system-cleared'}
+              className="rounded-lg border border-emerald-300 bg-white px-4 py-2 text-sm font-medium text-emerald-900 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {actionState.pendingId === 'bulk-system-cleared' ? 'Resolving…' : 'Resolve system-cleared'}
+            </button>
+          </div>
+        </section>
+      ) : null}
 
       {actionState.error ? (
         <section className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
@@ -728,95 +892,67 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
               {(() => {
                 const paymentActionPath = isPaymentIssue(issue) ? getPaymentActionPath(issue) : [];
                 const liveStripeState = stripeRefreshState[issue.issueId] || null;
+                const paymentQuickActions = getPaymentQuickActions(issue);
+                const primaryQuickAction = issue.sourcePresent ? getPrimaryPaymentQuickAction(issue, paymentQuickActions) : null;
+                const secondaryQuickActions = issue.sourcePresent
+                  ? paymentQuickActions.filter((action) => action.label !== primaryQuickAction?.label)
+                  : [];
+                const keyFact = getIssueKeyFact(issue);
+                const refreshStripeFirst = issue.sourcePresent && shouldRefreshStripeFirst(issue);
+                const reasonText = getIssueReasonText(issue);
+                const recommendedActionText = getRecommendedActionText(issue);
+                const pauseWorkflow = isPauseIssue(issue)
+                  ? buildPauseWorkflowSummary({
+                    pauseSummary: issue.pauseSummary,
+                    paymentExpectation: issue.paymentExpectation || '',
+                    stripeSnapshot: liveStripeState?.snapshot || null,
+                  })
+                  : null;
 
                 return (
                   <>
-              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                <div className="space-y-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className={`rounded-full border px-3 py-1 text-xs font-medium ${severityClasses(issue.severity)}`}>{issue.severity}</span>
-                    <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">{issue.type}</span>
-                    <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700">
-                      {issue.status}
-                    </span>
-                    <span className={`rounded-full border px-3 py-1 text-xs font-medium ${issue.sourcePresent ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-slate-100 text-slate-700'}`}>
-                      {issue.sourcePresent ? 'Detected now' : 'Not currently detected'}
-                    </span>
-                    {issue.reappeared ? (
-                      <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-800">
-                        Reappeared
+              <div className="space-y-4">
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`rounded-full border px-3 py-1 text-xs font-medium ${severityClasses(issue.severity)}`}>{issue.severity}</span>
+                      <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700">
+                        {issue.status}
                       </span>
-                    ) : null}
-                    {issue.status === 'resolved' && issue.sourcePresent ? (
-                      <span className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-medium text-red-800">
-                        Resolved but still detected
+                      <span className={`rounded-full border px-3 py-1 text-xs font-medium ${issue.sourcePresent ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-slate-100 text-slate-700'}`}>
+                        {issue.sourcePresent ? 'Detected now' : 'Not currently detected'}
                       </span>
-                    ) : null}
-                    {issue.systemsAffected.map((system) => (
-                      <span key={system} className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
-                        {system}
-                      </span>
-                    ))}
+                      {issue.reappeared ? (
+                        <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-800">
+                          Reappeared
+                        </span>
+                      ) : null}
+                      {issue.status === 'resolved' && issue.sourcePresent ? (
+                        <span className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-medium text-red-800">
+                          Resolved but still detected
+                        </span>
+                      ) : null}
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{issue.type}</p>
+                      <h3 className="mt-2 text-lg font-semibold text-slate-900">{issue.studentName || issue.mmsId}</h3>
+                      <p className="mt-1 text-sm text-slate-700">
+                        {reasonText}
+                      </p>
+                      {keyFact ? (
+                        <p className="mt-3 text-sm font-medium text-slate-900">{keyFact}</p>
+                      ) : null}
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-slate-900">{issue.studentName || issue.mmsId}</h3>
-                    <p className="mt-1 text-sm text-slate-600">{issue.summary}</p>
+                  <div className="text-sm text-slate-500">
+                    <p>{issue.generatedDate || '—'}</p>
+                    <p className="mt-1">Last seen: {formatDateTime(issue.lastSeenAt)}</p>
                   </div>
                 </div>
-                <div className="text-sm text-slate-500">
-                  <p>{issue.generatedDate || '—'}</p>
-                  <p className="mt-1">Last seen: {formatDateTime(issue.lastSeenAt)}</p>
-                  <p className="mt-1 font-mono text-xs">{issue.mmsId || '—'}</p>
-                </div>
-              </div>
 
-              <div className="mt-5 grid gap-4 lg:grid-cols-3">
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-xs uppercase tracking-wide text-slate-500">Why this issue exists</p>
-                  <p className="mt-2 text-sm text-slate-700">
-                    {isPaymentIssue(issue) ? (issue.paymentReason || issue.summary) : (issue.issueReason || issue.summary)}
-                  </p>
-                </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-xs uppercase tracking-wide text-slate-500">Current record state</p>
-                  <div className="mt-2 space-y-1 text-sm text-slate-700">
-                    <p>Sheets row: {issue.hasSheetRow ? 'Present' : 'Missing'}</p>
-                    <p>Registry entry: {issue.hasRegistryEntry ? 'Present' : 'Missing'}</p>
-                    <p>Sheets tutor: {issue.sheetTutor || '—'}</p>
-                    <p>Registry tutor: {issue.registryTutor || '—'}</p>
-                    {!isPaymentIssue(issue) ? (
-                      <>
-                        <p>Payment mode: {issue.paymentMode || '—'}</p>
-                        <p>Payment expectation: {issue.paymentExpectation || '—'}</p>
-                        <p>Stripe customer: {issue.stripeCustomerId || '—'}</p>
-                        <p>Stripe subscription: {issue.stripeSubscriptionId || '—'}</p>
-                      </>
-                    ) : null}
-                  </div>
-                </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                   <p className="text-xs uppercase tracking-wide text-slate-500">Recommended next action</p>
-                  <p className="mt-2 text-sm text-slate-700">{issue.recommendedAction}</p>
-                  {isPaymentIssue(issue) && getPaymentActionHint(issue) ? (
-                    <p className="mt-3 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900">
-                      {getPaymentActionHint(issue)}
-                    </p>
-                  ) : null}
-                  {paymentActionPath.length ? (
-                    <div className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-3">
-                      <p className="text-xs uppercase tracking-wide text-slate-500">Suggested path</p>
-                      <ol className="mt-2 space-y-2 text-sm text-slate-700">
-                        {paymentActionPath.map((step, index) => (
-                          <li key={step} className="flex gap-2">
-                            <span className="mt-[2px] inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[11px] font-semibold text-white">
-                              {index + 1}
-                            </span>
-                            <span>{step}</span>
-                          </li>
-                        ))}
-                      </ol>
-                    </div>
-                  ) : null}
+                  <p className="mt-2 text-sm text-slate-700">{recommendedActionText}</p>
                   {issue.resolutionNote ? (
                     <p className="mt-3 text-sm text-slate-600">
                       Resolution note: {issue.resolutionNote}
@@ -830,41 +966,28 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                 </div>
               </div>
 
-              {isPaymentIssue(issue) ? (
-                <details className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
-                  <summary className="cursor-pointer list-none text-sm font-medium text-slate-900">
-                    More payment context
-                  </summary>
-                  <div className="mt-3 grid gap-4 lg:grid-cols-2">
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-slate-500">Payment context</p>
-                      <div className="mt-2 space-y-1 text-sm text-slate-700">
-                        <p>Payment mode: {issue.paymentMode || '—'}</p>
-                        <p>Payment expectation: {issue.paymentExpectation || '—'}</p>
-                        <p>Stripe customer: {issue.stripeCustomerId || '—'}</p>
-                        <p>Stripe subscription: {issue.stripeSubscriptionId || '—'}</p>
-                        <p>Currently paused: {issue.pauseSummary?.hasPauseHistory ? (issue.pauseSummary.currentlyPaused ? 'Yes' : 'No') : 'No pause history'}</p>
-                        {issue.pauseSummary?.latestPause ? (
-                          <p>
-                            Latest pause window: {issue.pauseSummary.latestPause.startDate || '—'} to {issue.pauseSummary.latestPause.endDate || '—'}
-                          </p>
-                        ) : null}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-slate-500">Record state</p>
-                      <div className="mt-2 space-y-1 text-sm text-slate-700">
-                        <p>Sheets row: {issue.hasSheetRow ? 'Present' : 'Missing'}</p>
-                        <p>Registry entry: {issue.hasRegistryEntry ? 'Present' : 'Missing'}</p>
-                        <p>Sheets tutor: {issue.sheetTutor || '—'}</p>
-                        <p>Registry tutor: {issue.registryTutor || '—'}</p>
-                      </div>
-                    </div>
-                  </div>
-                </details>
-              ) : null}
-
-              <div className="mt-5 flex flex-wrap items-center gap-3">
+              <div className="mt-5 space-y-3">
+                <div className="flex flex-wrap items-center gap-3">
+                {refreshStripeFirst ? (
+                  <button
+                    type="button"
+                    onClick={() => handleRefreshIssueStripe(issue)}
+                    disabled={Boolean(liveStripeState?.loading)}
+                    className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-900 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {liveStripeState?.loading ? 'Checking…' : 'Refresh Stripe'}
+                  </button>
+                ) : null}
+                {primaryQuickAction ? (
+                  <button
+                    type="button"
+                    onClick={() => handlePaymentQuickAction(issue, primaryQuickAction)}
+                    disabled={actionState.pendingId === issue.issueId}
+                    className="rounded-lg border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-medium text-sky-900 transition hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {actionState.pendingId === issue.issueId ? 'Saving…' : primaryQuickAction.label}
+                  </button>
+                ) : null}
                 {issue.adminStudentPath ? (
                   <Link
                     href={issue.adminStudentPath}
@@ -898,39 +1021,62 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                   onClick={() => handleStatusChange(issue, 'acknowledged')}
                   disabled={actionState.pendingId === issue.issueId}
                   className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {actionState.pendingId === issue.issueId ? 'Saving…' : 'Keep active'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleStatusChange(issue, 'ignored')}
-                  disabled={actionState.pendingId === issue.issueId}
-                  className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-800 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {actionState.pendingId === issue.issueId ? 'Saving…' : 'Ignore'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleStatusChange(issue, 'resolved')}
-                  disabled={actionState.pendingId === issue.issueId}
-                  className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
-                >
+                  >
+                    {actionState.pendingId === issue.issueId ? 'Saving…' : 'Keep active'}
+                  </button>
+                {!issue.sourcePresent ? (
+                  <button
+                    type="button"
+                    onClick={() => handleStatusChange(issue, 'resolved')}
+                    disabled={actionState.pendingId === issue.issueId}
+                    className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
                     {actionState.pendingId === issue.issueId ? 'Saving…' : 'Mark resolved'}
                   </button>
-                {needsLiveStripeReview(issue) ? (
+                ) : null}
+                {!refreshStripeFirst && needsLiveStripeReview(issue) && !primaryQuickAction ? (
                   <button
                     type="button"
                     onClick={() => handleRefreshIssueStripe(issue)}
                     disabled={Boolean(liveStripeState?.loading)}
                     className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-900 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {liveStripeState?.loading ? 'Checking…' : 'Refresh Stripe here'}
+                    {liveStripeState?.loading ? 'Checking…' : 'Refresh Stripe'}
                   </button>
                 ) : null}
-                {getPaymentQuickActions(issue).length ? (
-                  <div className="flex flex-wrap items-center gap-3 rounded-xl border border-sky-200 bg-sky-50/80 px-3 py-2">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-sky-800">Quick fixes</span>
-                    {getPaymentQuickActions(issue).map((action) => (
+                <details className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700">
+                  <summary className="cursor-pointer list-none font-medium text-slate-900">More details</summary>
+                  <div className="mt-4 space-y-4">
+                    <div className="flex flex-wrap gap-3">
+                      <button
+                        type="button"
+                        onClick={() => handleStatusChange(issue, 'ignored')}
+                        disabled={actionState.pendingId === issue.issueId}
+                        className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-800 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {actionState.pendingId === issue.issueId ? 'Saving…' : 'Ignore'}
+                      </button>
+                      {issue.sourcePresent ? (
+                      <button
+                        type="button"
+                        onClick={() => handleStatusChange(issue, 'resolved')}
+                        disabled={actionState.pendingId === issue.issueId}
+                        className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {actionState.pendingId === issue.issueId ? 'Saving…' : 'Mark resolved'}
+                      </button>
+                      ) : null}
+                      {!refreshStripeFirst && needsLiveStripeReview(issue) && primaryQuickAction ? (
+                        <button
+                          type="button"
+                          onClick={() => handleRefreshIssueStripe(issue)}
+                          disabled={Boolean(liveStripeState?.loading)}
+                          className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-900 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {liveStripeState?.loading ? 'Checking…' : 'Refresh Stripe'}
+                        </button>
+                      ) : null}
+                      {secondaryQuickActions.map((action) => (
                       <button
                         key={action.label}
                         type="button"
@@ -940,13 +1086,86 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                       >
                         {actionState.pendingId === issue.issueId ? 'Saving…' : action.label}
                       </button>
-                    ))}
+                      ))}
+                    </div>
+                    {isPaymentIssue(issue) && getPaymentActionHint(issue) ? (
+                      <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900">
+                        {getPaymentActionHint(issue)}
+                      </p>
+                    ) : null}
+                    {paymentActionPath.length ? (
+                      <div className="rounded-lg border border-slate-200 bg-white px-3 py-3">
+                        <p className="text-xs uppercase tracking-wide text-slate-500">Suggested path</p>
+                        <ol className="mt-2 space-y-2 text-sm text-slate-700">
+                          {paymentActionPath.map((step, index) => (
+                            <li key={step} className="flex gap-2">
+                              <span className="mt-[2px] inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[11px] font-semibold text-white">
+                                {index + 1}
+                              </span>
+                              <span>{step}</span>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                    ) : null}
+                    {pauseWorkflow ? (
+                      <div className="rounded-lg border border-violet-200 bg-violet-50 px-3 py-3">
+                        <p className="text-xs uppercase tracking-wide text-violet-800">Pause loop</p>
+                        <p className="mt-2 text-sm font-medium text-violet-950">{pauseWorkflow.state}</p>
+                        <p className="mt-2 text-sm text-violet-950">{pauseWorkflow.nextAction}</p>
+                        <p className="mt-2 text-xs text-violet-900">Closes when: {pauseWorkflow.closureCondition}</p>
+                      </div>
+                    ) : null}
+                    <div className="grid gap-4 lg:grid-cols-3">
+                      <div>
+                        <p className="text-xs uppercase tracking-wide text-slate-500">Record state</p>
+                        <div className="mt-2 space-y-1 text-sm text-slate-700">
+                          <p>Sheets row: {issue.hasSheetRow ? 'Present' : 'Missing'}</p>
+                          <p>Registry entry: {issue.hasRegistryEntry ? 'Present' : 'Missing'}</p>
+                          <p>Sheets tutor: {issue.sheetTutor || '—'}</p>
+                          <p>Registry tutor: {issue.registryTutor || '—'}</p>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-xs uppercase tracking-wide text-slate-500">Source context</p>
+                        <div className="mt-2 space-y-1 text-sm text-slate-700">
+                          <p>Generated: {issue.generatedDate || '—'}</p>
+                          <p>Last seen: {formatDateTime(issue.lastSeenAt)}</p>
+                          <p>MMS ID: <span className="font-mono text-xs">{issue.mmsId || '—'}</span></p>
+                          <p>Issue ID: <span className="font-mono text-xs">{issue.issueId || '—'}</span></p>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-xs uppercase tracking-wide text-slate-500">Systems involved</p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {issue.systemsAffected.map((system) => (
+                            <span key={system} className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
+                              {system}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      {isPaymentIssue(issue) ? (
+                        <div>
+                          <p className="text-xs uppercase tracking-wide text-slate-500">Payment context</p>
+                          <div className="mt-2 space-y-1 text-sm text-slate-700">
+                            <p>Payment mode: {issue.paymentMode || '—'}</p>
+                            <p>Payment expectation: {issue.paymentExpectation || '—'}</p>
+                            <p>Stripe customer: {issue.stripeCustomerId || '—'}</p>
+                            <p>Stripe subscription: {issue.stripeSubscriptionId || '—'}</p>
+                            <p>Currently paused: {issue.pauseSummary?.hasPauseHistory ? (issue.pauseSummary.currentlyPaused ? 'Yes' : 'No') : 'No pause history'}</p>
+                            {issue.pauseSummary?.latestPause ? (
+                              <p>
+                                Latest pause window: {issue.pauseSummary.latestPause.startDate || '—'} to {issue.pauseSummary.latestPause.endDate || '—'}
+                              </p>
+                            ) : null}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
-                ) : null}
-                <span className="text-sm text-slate-500">
-                  {issue.actionLabel}
-                  {issue.messageable ? ' • future messageable issue' : ' • manual review for now'}
-                </span>
+                </details>
+                </div>
               </div>
               {needsLiveStripeReview(issue) && (liveStripeState?.error || liveStripeState?.skippedReason || liveStripeState?.snapshot) ? (
                 <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50/70 p-4">

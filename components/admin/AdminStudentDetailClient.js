@@ -173,7 +173,22 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
     }
   }
 
-  function handleQuickPaymentExpectation(nextExpectation) {
+  function handleQuickPaymentExpectation(nextExpectation, actionLabel) {
+    const note = window.prompt(
+      `Why are you taking "${actionLabel}" for ${student.fullName || student.mmsId}? This note is saved to the payment audit log.`,
+      '',
+    );
+
+    if (note === null) {
+      return;
+    }
+
+    const trimmedNote = note.trim();
+    if (!trimmedNote) {
+      setServerState({ error: 'A short note is required for pause workflow payment actions.', success: '' });
+      return;
+    }
+
     setServerState({ error: '', success: '' });
 
     startTransition(async () => {
@@ -184,6 +199,11 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
         },
         body: JSON.stringify({
           paymentExpectation: nextExpectation,
+          auditContext: {
+            source: 'admin_pause_workflow_action',
+            actionLabel,
+            note: trimmedNote,
+          },
         }),
       });
 
@@ -198,7 +218,12 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
         ...current,
         paymentExpectation: data.student.paymentExpectation || '',
       }));
-      setServerState({ error: '', success: 'Payment expectation updated.' });
+      setServerState({
+        error: '',
+        success: data.audit?.pauseWorkflowActionLogged
+          ? 'Pause workflow action logged.'
+          : 'No payment expectation change was needed.',
+      });
     });
   }
 
@@ -239,6 +264,7 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
           <h3 className="text-sm font-semibold text-slate-900">Pause state</h3>
           <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <ReadOnlyField label="Currently paused" value={student.pauseSummary.currentlyPaused ? 'Yes' : 'No'} />
+            <ReadOnlyField label="Upcoming pause" value={student.pauseSummary.upcomingPause ? 'Yes' : 'No'} />
             <ReadOnlyField label="Latest pause start" value={student.pauseSummary.latestPause?.startDate} />
             <ReadOnlyField label="Latest pause end" value={student.pauseSummary.latestPause?.endDate} />
             <ReadOnlyField label="Latest recorded Stripe pause status" value={student.pauseSummary.latestPause?.stripeStatus} />
@@ -248,8 +274,12 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
             <p className="mt-2 text-sm text-slate-800">{pauseWorkflow.statusLine}</p>
             <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <ReadOnlyField
+                label="Loop state"
+                value={pauseWorkflow.state}
+              />
+              <ReadOnlyField
                 label="Pause History says"
-                value={student.pauseSummary.currentlyPaused ? 'Paused now' : 'No active pause'}
+                value={student.pauseSummary.currentlyPaused ? 'Paused now' : student.pauseSummary.upcomingPause ? 'Upcoming pause' : 'No active pause'}
               />
               <ReadOnlyField
                 label="Payment expectation"
@@ -266,10 +296,14 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
                 }
               />
             </div>
+            <div className="mt-4 grid gap-4 lg:grid-cols-2">
+              <ReadOnlyField label="Next action" value={pauseWorkflow.nextAction} />
+              <ReadOnlyField label="What closes it" value={pauseWorkflow.closureCondition} />
+            </div>
             <div className="mt-4 flex flex-wrap gap-3">
               <button
                 type="button"
-                onClick={() => handleQuickPaymentExpectation('stripe_paused_expected')}
+                onClick={() => handleQuickPaymentExpectation('stripe_paused_expected', 'Set Stripe paused expected')}
                 disabled={isPending}
                 className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
@@ -277,7 +311,7 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
               </button>
               <button
                 type="button"
-                onClick={() => handleQuickPaymentExpectation('stripe_active_expected')}
+                onClick={() => handleQuickPaymentExpectation('stripe_active_expected', 'Set Stripe active expected')}
                 disabled={isPending}
                 className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
               >

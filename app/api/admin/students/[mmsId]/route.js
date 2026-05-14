@@ -4,8 +4,10 @@ import { normaliseInstrument } from '@/lib/admin/fc';
 import {
   buildPaymentFieldChangeEvent,
   buildPaymentIssueActionEvent,
+  buildPauseWorkflowActionEvent,
   normaliseAuditContext,
   shouldLogPaymentIssueAction,
+  shouldLogPauseWorkflowAction,
   validatePaymentAuditContext,
 } from '@/lib/admin/payment-audit-helpers.mjs';
 import { normalisePaymentExpectation, normalisePaymentMode } from '@/lib/admin/payments-helpers.mjs';
@@ -178,6 +180,18 @@ export async function PATCH(request, { params }) {
       }));
     }
 
+    const pauseWorkflowActionLogged = shouldLogPauseWorkflowAction(auditContext);
+
+    if (pauseWorkflowActionLogged) {
+      eventRows.push(buildPauseWorkflowActionEvent({
+        student,
+        actorEmail: session.user.email || '',
+        occurredAt: now,
+        auditContext,
+        changedFields: changedPaymentFields,
+      }));
+    }
+
     if (eventRows.length) {
       await appendEventLogRows(eventRows);
     }
@@ -187,6 +201,7 @@ export async function PATCH(request, { params }) {
       audit: {
         changedPaymentFields,
         issueActionLogged,
+        pauseWorkflowActionLogged,
       },
     });
   } catch (error) {
