@@ -1,8 +1,12 @@
 # Music School Dashboard - Documentation Index
 
+If you are an agent continuing current dashboard work, start with `admin/CURRENT_STATUS.md`.
+This index is a project documentation map, not the current-status authority.
+
 ## 📚 Quick Start
 
 - **[Main README](README.md)** - Overview and getting started
+- **[Current Admin Status](admin/CURRENT_STATUS.md)** - Current V3 admin direction, recent work, and next slices
 - **[Admin Docs Index](admin/INDEX.md)** - Current admin/V2 handoff, ownership, and deployment docs
 - **[Agent Quick Start](guides/AGENT_QUICK_START.md)** - For Claude agents working on this project
 - **[Claude Guide](guides/CLAUDE.md)** - Claude-specific instructions
@@ -51,4 +55,4 @@ Located in `archives/`:
 
 ---
 
-**Last Updated**: January 2026
+**Last Updated**: May 2026

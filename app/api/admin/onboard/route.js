@@ -9,11 +9,12 @@ import {
   getOnboardingDuplicateState,
   markOnboardingStep,
 } from '@/lib/admin/onboarding';
-import { addStudentSheetRow } from '@/lib/admin/sheets';
+import { addStudentSheetRow, appendEventLogRows } from '@/lib/admin/sheets';
 import { appendRegistryEntry } from '@/lib/admin/registry';
 import { activateStudent, createFirstLesson, ensureBillingProfile, getStudentDetails } from '@/lib/admin/mms';
 import { generateFcStudentId, generateFriendlyUrl, normaliseExperienceLevel, normaliseInstrument } from '@/lib/admin/fc';
 import { ADMIN_TUTORS } from '@/lib/admin/tutors';
+import { markWaitingWorkflowStudentsOnboarded } from '@/lib/admin/waiting-workflow';
 
 function formatLessonDateForMessage(value) {
   const parsed = new Date(`${value}T12:00:00`);
@@ -400,6 +401,57 @@ export async function POST(request) {
       }
     }
 
+    let waitingCloseout = [];
+    let waitingCloseoutWarning = '';
+
+    try {
+      const now = new Date().toISOString();
+      waitingCloseout = await markWaitingWorkflowStudentsOnboarded({
+        students: [
+          {
+            mmsId: payload.mmsId,
+            studentName,
+            parentName,
+            parentEmail,
+          },
+          secondStudentDetails
+            ? {
+                mmsId: secondStudentDetails.mmsId,
+                studentName: secondStudentName,
+                parentName: `${secondStudentDetails.parentFirstName || payload.parentFirstName || ''} ${secondStudentDetails.parentLastName || payload.parentLastName || ''}`.trim(),
+                parentEmail: secondStudentDetails.parentEmail || parentEmail,
+              }
+            : null,
+        ].filter(Boolean),
+        tutorName: tutor.fullName,
+        lessonDate: payload.lessonDate,
+        lessonTime: lessonTimeLabel,
+        lessonWarning,
+        now,
+      });
+
+      if (waitingCloseout.length > 0) {
+        await appendEventLogRows(waitingCloseout.map((state) => ({
+          eventId: crypto.randomUUID(),
+          occurredAt: now,
+          actorEmail: session.user.email || '',
+          entityType: 'waiting',
+          entityId: state.mmsId,
+          eventType: 'waiting_onboarded_by_onboarding',
+          mmsId: state.mmsId,
+          studentName: state.mmsId === payload.mmsId ? studentName : secondStudentName || state.mmsId,
+          issueId: '',
+          payloadJson: JSON.stringify({
+            next_status: state.status,
+            lesson_id: lesson?.ID || '',
+            lesson_warning: lessonWarning,
+          }),
+        })));
+      }
+    } catch (error) {
+      waitingCloseoutWarning = error.message || 'Waiting-list closeout failed';
+    }
+
     return Response.json({
       success: true,
       steps,
@@ -411,6 +463,8 @@ export async function POST(request) {
       fcStudentId: primaryRecord.fcStudentId,
       friendlyUrl: primaryRecord.friendlyUrl,
       registryAction,
+      waitingCloseout,
+      waitingCloseoutWarning,
       duplicateWarnings: duplicateState.warnings,
       siblingGroup: secondStudentDetails
         ? {

@@ -2,6 +2,26 @@
 
 This file tracks the admin dashboard build so work can be handed between agents cleanly.
 
+## 2026-05-14 — Waiting-List Closeout + Handover Consolidation
+
+### Scope
+- Close the waiting-list loop when onboarding succeeds.
+- Make current admin handover context durable inside the dashboard repo rather than relying on local-only workspace docs.
+
+### What changed
+- Successful onboarding now marks matching waiting-list records as `onboarded`.
+- Sibling-group onboarding closes both waiting records.
+- Existing waiting notes are preserved and an auto-close line is appended.
+- Waiting closeout appends an `Event_Log` row with `waiting_onboarded_by_onboarding`.
+- Onboarding success UI confirms which MMS IDs were marked onboarded.
+- Waiting closeout failures are shown as warnings without hiding a successful onboarding run.
+- Added `docs/admin/CURRENT_STATUS.md` as the tracked current-status entrypoint for future agents.
+- Updated dashboard README and docs indexes so `CURRENT_STATUS.md` is the durable first stop for current admin work.
+
+### Validation
+- `npm run test:admin` passes
+- `npm run build` passes
+
 ## 2026-04-27 — V2 Safety + Automation Start
 
 ### What changed

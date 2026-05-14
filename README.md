@@ -1,6 +1,13 @@
 # Music School Dashboard
 
-A comprehensive Next.js dashboard for managing music school operations, student portals, and teacher workflows.
+Next.js app for the First Chord student portal, tutor dashboard, and internal admin operating dashboard.
+
+For current active admin-dashboard work, start at:
+
+```text
+docs/admin/CURRENT_STATUS.md
+docs/admin/V3_LOOP_ARCHITECTURE.md
+```
 
 ## 🚀 Quick Start
 
@@ -28,6 +35,7 @@ Visit `http://localhost:3000`
 
 - **Student Portal Management** - Individual student portals with custom resources
 - **Teacher Dashboard** - Class management and student tracking
+- **Admin Operating Dashboard** - Waiting list, onboarding, issue loops, payment checks, pause checks, and recurring workflows
 - **MMS Integration** - My Music Staff API integration
 - **Google Sheets Sync** - Automated data synchronization
 - **Student Registry** - CSV-based student configuration system
@@ -64,4 +72,4 @@ See the [Troubleshooting Guide](docs/TROUBLESHOOTING_GUIDE.md) or [Documentation
 
 ---
 
-**Last Updated**: January 2026
+**Last Updated**: May 2026

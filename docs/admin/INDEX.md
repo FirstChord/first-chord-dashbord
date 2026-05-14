@@ -1,17 +1,25 @@
 # Admin Docs Index
 
+For current active work and recommended next slices, start with:
+
+- [CURRENT_STATUS.md](./CURRENT_STATUS.md)
+
+This admin index is the map of durable admin documentation. Older V1/V2 drafts are retained for history and should not override `CURRENT_STATUS.md` or `V3_LOOP_ARCHITECTURE.md`.
+
 ## Start Here
 
+- [CURRENT_STATUS.md](./CURRENT_STATUS.md)
+  Current V3 admin direction, recent work, and next recommended slices.
+- [V3_LOOP_ARCHITECTURE.md](./V3_LOOP_ARCHITECTURE.md)
+  Current V3 loop pattern for issues, payments, pauses, waiting list, recurring workflows, and audit logging.
 - [ADMIN_BRIEF.md](./ADMIN_BRIEF.md)
-  Current architecture, boundaries, and implementation guidance for the admin dashboard.
+  Historical V1 brief with current-state addenda. Useful for background, but not the current planning authority.
 - [ADMIN_IMPLEMENTATION_LOG.md](./ADMIN_IMPLEMENTATION_LOG.md)
   Chronological record of what has actually been built.
 - [V2_SPEC_DRAFT.md](./V2_SPEC_DRAFT.md)
-  Current V2 plan and sequencing.
+  Historical V2 plan and sequencing.
 - [V3_ARCHITECTURE.md](./V3_ARCHITECTURE.md)
   Target direction for persistent issue state, communication workflows, planning support, and Brain’s bounded role.
-- [V3_LOOP_ARCHITECTURE.md](./V3_LOOP_ARCHITECTURE.md)
-  Current V3 loop pattern for issues, payments, pauses, waiting list, recurring workflows, and audit logging.
 
 ## Ownership And Rules
 
@@ -52,12 +60,12 @@
 
 ## Suggested Handoff Order
 
-1. Read [ADMIN_BRIEF.md](./ADMIN_BRIEF.md)
-2. Skim [ADMIN_IMPLEMENTATION_LOG.md](./ADMIN_IMPLEMENTATION_LOG.md)
-3. Check [OWNERSHIP_MATRIX.md](./OWNERSHIP_MATRIX.md)
-4. Read [SCHOOL_POLICY.md](./SCHOOL_POLICY.md)
-5. Review [PAYMENTS_RULES.md](./PAYMENTS_RULES.md) if working on Stripe or pauses
-6. Use [V2_SPEC_DRAFT.md](./V2_SPEC_DRAFT.md) for V2 roadmap context
-7. Read [V3_ARCHITECTURE.md](./V3_ARCHITECTURE.md) for next-phase system direction
-8. Read [V3_LOOP_ARCHITECTURE.md](./V3_LOOP_ARCHITECTURE.md) before adding or expanding closed-loop workflows
-9. Read [BRAIN_CAPABILITY_ROADMAP.md](./BRAIN_CAPABILITY_ROADMAP.md) for longer-term assistant design
+1. Read [CURRENT_STATUS.md](./CURRENT_STATUS.md)
+2. Read [V3_LOOP_ARCHITECTURE.md](./V3_LOOP_ARCHITECTURE.md)
+3. Skim [ADMIN_IMPLEMENTATION_LOG.md](./ADMIN_IMPLEMENTATION_LOG.md)
+4. Check [OWNERSHIP_MATRIX.md](./OWNERSHIP_MATRIX.md)
+5. Read [SCHOOL_POLICY.md](./SCHOOL_POLICY.md)
+6. Review [PAYMENTS_RULES.md](./PAYMENTS_RULES.md) if working on Stripe or pauses
+7. Read [V3_ARCHITECTURE.md](./V3_ARCHITECTURE.md) for broader system direction
+8. Use [ADMIN_BRIEF.md](./ADMIN_BRIEF.md) and [V2_SPEC_DRAFT.md](./V2_SPEC_DRAFT.md) only as historical background
+9. Read [BRAIN_CAPABILITY_ROADMAP.md](./BRAIN_CAPABILITY_ROADMAP.md) only for longer-term assistant design
