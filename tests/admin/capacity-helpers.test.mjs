@@ -99,7 +99,7 @@ test('buildScheduleCacheSummary highlights stale, missing, and shared slots', ()
 });
 
 test('buildWaitingCapacityMatches suggests only instrument-compatible free slots', () => {
-  const [guitarSlot, pianoSlot] = [
+  const [guitarSlot, pianoSlot, secondPianoSlot] = [
     normaliseFreeCalendarSlot({
       ID: 'evt_guitar',
       StartDate: '2026-05-18T16:30:00',
@@ -116,11 +116,19 @@ test('buildWaitingCapacityMatches suggests only instrument-compatible free slots
       Teacher: { DisplayName: 'Chloe Mak' },
       EventCategory: { Name: 'Free' },
     }),
+    normaliseFreeCalendarSlot({
+      ID: 'evt_piano_2',
+      StartDate: '2026-05-19T17:30:00',
+      Duration: 30,
+      TeacherID: 'tch_piano',
+      Teacher: { DisplayName: 'Chloe Mak' },
+      EventCategory: { Name: 'Free' },
+    }),
   ];
 
   const [student] = buildWaitingCapacityMatches({
     waitingStudents: [{ mmsId: 'sdt_1', instruments: ['Piano'] }],
-    freeSlots: [guitarSlot, pianoSlot],
+    freeSlots: [guitarSlot, pianoSlot, secondPianoSlot],
     tutors: [
       { fullName: 'Scott Brice', teacherId: 'tch_guitar', instruments: ['guitar'] },
       { fullName: 'Chloe Mak', teacherId: 'tch_piano', instruments: ['singing', 'piano'] },
@@ -128,9 +136,25 @@ test('buildWaitingCapacityMatches suggests only instrument-compatible free slots
   });
 
   assert.equal(student.capacityMatchStatus, 'matched');
-  assert.equal(student.capacityMatches.length, 1);
+  assert.equal(student.capacityMatches.length, 2);
   assert.equal(student.capacityMatches[0].teacherName, 'Chloe Mak');
   assert.deepEqual(student.capacityMatches[0].matchedInstruments, ['piano']);
+  assert.deepEqual(student.capacityMatchDays, [
+    {
+      weekday: 'Tuesday',
+      tutors: [
+        {
+          teacherId: 'tch_piano',
+          teacherName: 'Chloe Mak',
+          matchedInstruments: ['piano'],
+          slots: [
+            { startTime: '17:00', durationMinutes: '30', occurrenceCount: 1 },
+            { startTime: '17:30', durationMinutes: '30', occurrenceCount: 1 },
+          ],
+        },
+      ],
+    },
+  ]);
 });
 
 test('buildWaitingCapacityMatches refuses to guess when instrument is unknown', () => {
@@ -142,4 +166,5 @@ test('buildWaitingCapacityMatches refuses to guess when instrument is unknown', 
 
   assert.equal(student.capacityMatchStatus, 'instrument_unknown');
   assert.deepEqual(student.capacityMatches, []);
+  assert.deepEqual(student.capacityMatchDays, []);
 });

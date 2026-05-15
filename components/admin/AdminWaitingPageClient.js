@@ -247,20 +247,29 @@ export default function AdminWaitingPageClient({ initialStudents }) {
                   <p className="text-xs uppercase tracking-wide text-sky-700">Possible slots</p>
                   <p className="text-xs text-sky-800">{student.capacityMatchReason}</p>
                 </div>
-                {student.capacityMatches?.length ? (
+                {student.capacityMatchDays?.length ? (
                   <div className="mt-3 grid gap-3 md:grid-cols-3">
-                    {student.capacityMatches.map((slot) => (
+                    {student.capacityMatchDays.map((day) => (
                       <div
-                        key={`${student.mmsId}-${slot.teacherId}-${slot.weekday}-${slot.startTime}-${slot.durationMinutes}`}
-                        className="rounded-xl border border-sky-200 bg-white/80 px-3 py-2"
+                        key={`${student.mmsId}-${day.weekday}`}
+                        className="rounded-xl border border-sky-200 bg-white/80 px-3 py-3"
                       >
-                        <p className="text-sm font-medium text-slate-900">{slot.teacherName}</p>
-                        <p className="mt-1 text-sm text-slate-700">
-                          {slot.weekday} {slot.startTime} · {slot.durationMinutes} mins
-                        </p>
-                        <p className="mt-1 text-xs text-slate-500">
-                          Match: {formatMatchedInstruments(slot.matchedInstruments)}
-                        </p>
+                        <p className="text-sm font-semibold text-slate-900">{day.weekday}</p>
+                        <div className="mt-2 space-y-2">
+                          {day.tutors.map((tutor) => (
+                            <div key={`${day.weekday}-${tutor.teacherId || tutor.teacherName}`} className="text-sm text-slate-700">
+                              <p>
+                                <span className="font-medium text-slate-900">{tutor.teacherName}</span>
+                                {tutor.matchedInstruments?.length ? (
+                                  <span className="text-xs text-slate-500"> ({formatMatchedInstruments(tutor.matchedInstruments)})</span>
+                                ) : null}
+                              </p>
+                              <p className="mt-1 text-xs text-slate-600">
+                                {tutor.slots.map((slot) => `${slot.startTime} (${slot.durationMinutes} mins)`).join(', ')}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     ))}
                   </div>
