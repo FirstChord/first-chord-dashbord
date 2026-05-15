@@ -34,19 +34,22 @@ test('normaliseFreeCalendarSlot extracts tutor, time, and duration', () => {
   assert.equal(slot.studentCount, 0);
 });
 
-test('buildFreeSlotSummary counts slots by tutor', () => {
+test('buildFreeSlotSummary counts usual weekly slots by tutor', () => {
   const summary = buildFreeSlotSummary([
-    { teacherName: 'Scott Brice', weekday: 'Monday' },
-    { teacherName: 'Scott Brice', weekday: 'Monday' },
-    { teacherName: 'Chloe Mak', weekday: 'Tuesday' },
+    { teacherName: 'Scott Brice', weekday: 'Monday', startTime: '16:00', durationMinutes: '30' },
+    { teacherName: 'Scott Brice', weekday: 'Monday', startTime: '16:00', durationMinutes: '30' },
+    { teacherName: 'Scott Brice', weekday: 'Monday', startTime: '16:30', durationMinutes: '30' },
+    { teacherName: 'Chloe Mak', weekday: 'Tuesday', startTime: '17:00', durationMinutes: '30' },
   ]);
 
-  assert.equal(summary.totalSlots, 3);
+  assert.equal(summary.totalEvents, 4);
+  assert.equal(summary.totalWeeklySlots, 3);
   assert.equal(summary.tutorCount, 2);
   assert.deepEqual(summary.byTeacher, [
-    { teacherName: 'Scott Brice', count: 2 },
-    { teacherName: 'Chloe Mak', count: 1 },
+    { teacherName: 'Scott Brice', weeklySlotCount: 2 },
+    { teacherName: 'Chloe Mak', weeklySlotCount: 1 },
   ]);
+  assert.equal(summary.weeklySlots.find((slot) => slot.teacherName === 'Scott Brice' && slot.startTime === '16:00').occurrenceCount, 2);
 });
 
 test('buildScheduleCacheSummary highlights stale, missing, and shared slots', () => {

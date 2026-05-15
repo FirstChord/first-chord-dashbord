@@ -48,14 +48,16 @@ export default async function AdminCapacityPage() {
           Tutor Capacity
         </h2>
         <p className="mt-2 max-w-3xl text-sm text-slate-600">
-          Read-only view of MMS calendar slots marked as Free, plus schedule-cache health. This is the first capacity layer; future-hire or tentative availability can be added later as a separate overlay.
+          Read-only view of MMS calendar slots marked as Free, grouped into usual weekly capacity, plus schedule-cache health. Future-hire or tentative availability can be added later as a separate overlay.
         </p>
       </section>
 
       <section className="space-y-4">
         <div>
           <h3 className="text-lg font-semibold text-slate-900">MMS free slots</h3>
-          <p className="mt-1 text-sm text-slate-600">Calendar events with category Free in the next 30 days, excluding events already linked to students.</p>
+          <p className="mt-1 text-sm text-slate-600">
+            Calendar events with category Free in the next 30 days, excluding events already linked to students. Summary counts are deduped into usual weekly slots.
+          </p>
         </div>
         {freeSlotResult.error ? (
           <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -63,19 +65,19 @@ export default async function AdminCapacityPage() {
           </div>
         ) : null}
         <div className="grid gap-4 md:grid-cols-3">
-          {statCard('Free slots', freeSlotSummary.totalSlots)}
+          {statCard('Weekly free slots', freeSlotSummary.totalWeeklySlots, `${freeSlotSummary.totalEvents} MMS events in the 30-day window.`)}
           {statCard('Tutors with space', freeSlotSummary.tutorCount)}
-          {statCard('Showing next', upcomingSlots.length, 'Earliest upcoming slots listed below.')}
+          {statCard('Upcoming events shown', upcomingSlots.length, 'Earliest dated MMS Free events listed below.')}
         </div>
 
         <div className="grid gap-4 xl:grid-cols-[0.8fr_1.2fr]">
           <div className="rounded-[1.6rem] border border-blue-100 bg-white/90 p-6 shadow-[0_12px_36px_rgba(15,23,42,0.06)] backdrop-blur-sm">
-            <h4 className="text-base font-semibold text-slate-900">By tutor</h4>
+            <h4 className="text-base font-semibold text-slate-900">Weekly slots by tutor</h4>
             <div className="mt-4 space-y-3">
               {freeSlotSummary.byTeacher.length ? freeSlotSummary.byTeacher.map((entry) => (
                 <div key={entry.teacherName} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                   <span className="text-sm text-slate-700">{entry.teacherName}</span>
-                  <span className="text-lg font-semibold text-slate-900">{entry.count}</span>
+                  <span className="text-lg font-semibold text-slate-900">{entry.weeklySlotCount}</span>
                 </div>
               )) : (
                 <p className="text-sm text-slate-600">No MMS Free slots found in this window.</p>
