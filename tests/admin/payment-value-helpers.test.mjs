@@ -35,6 +35,24 @@ test('derivePaymentValueContext prices group lessons per student', () => {
   assert.equal(value.confidence, 'high');
 });
 
+test('derivePaymentValueContext infers group pricing from shared MMS schedule slot', () => {
+  const value = derivePaymentValueContext({
+    instrument: 'Piano',
+    lessonLength: '45',
+    scheduleContext: {
+      status: 'found',
+      durationMinutes: '45',
+      sharedStudentCount: 2,
+      sharedStudentNames: ['Emily Grifa', 'Nina Gavlin'],
+    },
+  });
+
+  assert.equal(value.lessonKind, 'group');
+  assert.equal(value.baselineWeeklyLabel, '£20');
+  assert.equal(value.baselineMonthlyLabel, '£86.67');
+  assert.match(value.reasons.join(' '), /2 students sharing/);
+});
+
 test('derivePaymentValueContext prices Adult Ukulele Orchestra monthly', () => {
   const value = derivePaymentValueContext({
     instrument: 'Adult Ukulele Orchestra',

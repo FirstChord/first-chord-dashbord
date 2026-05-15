@@ -2,6 +2,33 @@
 
 This file tracks the admin dashboard build so work can be handed between agents cleanly.
 
+## 2026-05-15 — V4 Context Layers + Shared Group Pricing
+
+### Scope
+- Add lightweight V4 context without introducing a new editable lifecycle state machine or database.
+- Keep schedule and payment value context explainable and cached.
+- Fix shared group lesson pricing where MMS schedule context is more reliable than explicit group fields.
+
+### What changed
+- Added derived lifecycle context for student detail and relevant issue cards.
+- Added MMS schedule context cached in the `Schedule_Context` Sheets tab.
+- Added baseline payment value context using cached duration and current school pricing.
+- Added shared-slot enrichment for cached MMS schedules:
+  - students with the same teacher, next lesson start, and duration are treated as sharing a lesson slot
+  - shared 45 minute slots derive group pricing at `£20/week` per student
+  - student detail shows when a cached schedule slot is shared and lists the other names
+- Emily Grifa / Nina Gavlin is the motivating edge case: both share a 45 minute group slot, so the dashboard should not price either as a one-to-one 45 minute lesson.
+
+### Operational notes
+- Lifecycle and payment value context are read-only. They do not change issue generation, onboarding writes, Stripe actions, or payment mutations.
+- Schedule context is cached. Refresh from MMS when a student is new or the lesson slot changes, or use the bulk refresh route when a cohort-wide cache pass is needed.
+- Shared group pricing depends on `Schedule_Context` having both students' current MMS lesson rows. If only one student has a cached row, the dashboard will fall back to one-to-one unless an explicit group marker exists.
+
+### Validation
+- `node --test tests/admin/payment-value-helpers.test.mjs tests/admin/schedule-context-helpers.test.mjs` passes
+- `npm run test:admin` passes
+- `npm run build` passes
+
 ## 2026-05-14 — Waiting-List Closeout + Handover Consolidation
 
 ### Scope

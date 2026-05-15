@@ -1,6 +1,6 @@
 # Admin Current Status
 
-Last updated: 2026-05-14
+Last updated: 2026-05-15
 
 This is the tracked current-status entrypoint for agents working from the `music-school-dashboard` repository.
 
@@ -8,13 +8,15 @@ The local workspace file `../CURRENT_HANDOVER.md` may contain extra machine/sess
 
 ## Active Direction
 
-V3 is focused on closing loops:
+V3 established the dashboard's loop-closing pattern:
 
 1. detect or surface a recurring admin problem
 2. show enough context to make the right decision
 3. provide a bounded action path
 4. store the outcome
 5. log consequential actions
+
+V4 is now adding lightweight context layers on top of those loops. The goal is to make each student, issue, payment, and workflow easier to understand and delegate without adding a large state machine or new database.
 
 The active surface is the private admin dashboard under `/admin`.
 
@@ -31,17 +33,19 @@ The active surface is the private admin dashboard under `/admin`.
 - waiting-list state and notes
 - waiting-list closeout through successful onboarding
 - recurring workflow surfaces for showcase and holiday operations
+- V4 derived lifecycle context on student detail and relevant flags
+- V4 MMS schedule context cached into `Schedule_Context`
+- V4 baseline payment value context using schedule duration and current pricing
 
 ## Current Slice
 
-Waiting-list closeout has been added to onboarding:
+The active V4 slice is context layering, not new automation.
 
-- successful onboarding marks matching waiting-list records as `onboarded`
-- sibling-group onboarding closes both waiting records
-- existing waiting notes are preserved with an auto-close line appended
-- closeout writes an `Event_Log` row
-- onboarding success UI confirms which MMS IDs were closed out
-- closeout failure is reported as a warning without hiding successful onboarding
+- `deriveStudentLifecycleStatus()` is read-only context. It does not change issue generation, onboarding, Stripe actions, or stored state.
+- `Schedule_Context` is a cached Sheets tab populated from MMS calendar events. It is refreshed manually per student or by the bulk schedule refresh route, not on every page load.
+- Payment value context is baseline operational context only. It uses the cached schedule duration and school price table.
+- Shared MMS lesson slots are treated as group lessons when multiple students have the same teacher, next lesson start, and duration in `Schedule_Context`.
+- For example, Emily Grifa and Nina Gavlin share a 45 minute slot, so each should show group pricing: `£20/week`, not one-to-one 45 minute pricing.
 
 Before deployment, verify with:
 
@@ -52,20 +56,22 @@ npm run build
 
 ## Best Next Slices
 
-1. **Verify waiting-list closeout against real data**
-   - Test one real onboarding flow locally.
-   - Confirm `Waiting_List_State` shows `onboarded`.
-   - Confirm `Event_Log` records `waiting_onboarded_by_onboarding`.
+1. **Schedule context hardening**
+   - Confirm the bulk MMS schedule refresh is cheap enough operationally.
+   - Review edge cases: group lessons, substitute teachers, one-off lessons, missing future calendar events.
 
-2. **Identity mismatch clarity in `/admin/flags`**
-   - When a registry-only or sheets-only issue has a likely same-name/different-MMS-ID match, show that clue.
-   - Keep this as a diagnostic hint, not an auto-fix.
+2. **Payment value refinement**
+   - Keep values baseline, not accounting.
+   - Add only small explanations where value affects payment flags or prioritisation.
 
 3. **Pause loop maturity**
    - Make pause issue cards clearer about whether the mismatch comes from `Pause History`, sheet expectation, or live Stripe.
    - Keep Stripe pause/resume mutation commands out of scope.
 
-4. **Communication draft layer**
+4. **Contact role model**
+   - Clarify billing/admin contact roles before any message automation.
+
+5. **Communication draft layer**
    - Add draft and approval records before any WhatsApp Cloud API integration.
    - Do not auto-send.
 
@@ -84,6 +90,7 @@ npm run build
 - `lib/config/students-registry.js` = portal/dashboard registry truth
 - MMS = lesson and billing-profile operational truth
 - Stripe = payment-provider truth
+- `Schedule_Context` = dashboard cache of selected MMS lesson context
 - `Pause History` = intentional pause-window truth
 - generated FC tabs and generated dashboard config files = derived outputs
 

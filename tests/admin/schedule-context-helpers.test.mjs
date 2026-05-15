@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { deriveScheduleContextFromMms } from '../../lib/admin/schedule-context-helpers.mjs';
+import {
+  deriveScheduleContextFromMms,
+  enrichScheduleContextsWithSharedSlots,
+} from '../../lib/admin/schedule-context-helpers.mjs';
 
 test('deriveScheduleContextFromMms derives usual slot from upcoming MMS calendar events', () => {
   const context = deriveScheduleContextFromMms({
@@ -67,4 +70,37 @@ test('deriveScheduleContextFromMms falls back to low-confidence missing schedule
   assert.equal(context.confidence, 'low');
   assert.equal(context.durationMinutes, '45');
   assert.match(context.warnings.join(' '), /No upcoming MMS calendar events/);
+});
+
+test('enrichScheduleContextsWithSharedSlots marks students sharing the same MMS lesson slot', () => {
+  const byMmsId = enrichScheduleContextsWithSharedSlots([
+    {
+      mmsId: 'sdt_emily',
+      studentName: 'Emily Grifa',
+      status: 'found',
+      nextLessonAt: '2026-05-18 15:15:00',
+      durationMinutes: '45',
+      teacherId: 'tch_shared',
+    },
+    {
+      mmsId: 'sdt_nina',
+      studentName: 'Nina Gavlin',
+      status: 'found',
+      nextLessonAt: '2026-05-18 15:15:00',
+      durationMinutes: '45',
+      teacherId: 'tch_shared',
+    },
+    {
+      mmsId: 'sdt_solo',
+      studentName: 'Solo Student',
+      status: 'found',
+      nextLessonAt: '2026-05-18 16:00:00',
+      durationMinutes: '45',
+      teacherId: 'tch_shared',
+    },
+  ]);
+
+  assert.equal(byMmsId.get('sdt_emily').sharedStudentCount, 2);
+  assert.deepEqual(byMmsId.get('sdt_emily').sharedStudentNames, ['Emily Grifa', 'Nina Gavlin']);
+  assert.equal(byMmsId.get('sdt_solo').sharedStudentCount, 1);
 });

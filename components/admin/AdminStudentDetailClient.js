@@ -397,6 +397,12 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
               <ReadOnlyField label="Next lesson" value={formatDateTime(scheduleState.scheduleContext.nextLessonAt)} />
               <ReadOnlyField label="Teacher" value={scheduleState.scheduleContext.teacherName} />
               <ReadOnlyField label="Duration" value={scheduleState.scheduleContext.durationMinutes ? `${scheduleState.scheduleContext.durationMinutes} mins` : ''} />
+              <ReadOnlyField
+                label="Shared slot"
+                value={scheduleState.scheduleContext.sharedStudentCount > 1
+                  ? `${scheduleState.scheduleContext.sharedStudentCount} students`
+                  : 'No'}
+              />
               <ReadOnlyField label="MMS status" value={scheduleState.scheduleContext.status} />
               <ReadOnlyField label="Confidence" value={scheduleState.scheduleContext.confidence} />
               <ReadOnlyField label="Event category" value={scheduleState.scheduleContext.eventCategory} />
@@ -410,6 +416,14 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
                     <li key={warning}>{warning}</li>
                   ))}
                 </ul>
+              </div>
+            ) : null}
+            {scheduleState.scheduleContext.sharedStudentNames?.length > 1 ? (
+              <div className="rounded-xl border border-sky-200 bg-sky-50 p-4">
+                <p className="text-xs uppercase tracking-wide text-sky-700">Shared lesson slot</p>
+                <p className="mt-2 text-sm text-sky-950">
+                  {scheduleState.scheduleContext.sharedStudentNames.join(', ')}
+                </p>
               </div>
             ) : null}
           </div>

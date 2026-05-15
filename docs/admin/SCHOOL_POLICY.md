@@ -99,7 +99,7 @@ So:
 
 The introductory lesson is billed at the normal half-hour lesson rate:
 
-- `£25.50`
+- `£25`
 
 This payment must be taken before the first lesson in order to secure the lesson time.
 
@@ -109,10 +109,11 @@ One-to-one lessons:
 
 - `1 hour` — `£41.50`
 - `45 mins` — `£33`
-- `30 mins` — `£25.50`
+- `30 mins` — `£25`
 
 Group lessons:
 
+- `45 mins` — `£20 per person per week`
 - `Adult Ukulele Group (1 hour 45 mins)` — `£42.50 per month`
 
 ### How payments are collected
