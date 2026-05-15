@@ -36,6 +36,7 @@ The active surface is the private admin dashboard under `/admin`.
 - V4 derived lifecycle context on student detail and relevant flags
 - V4 MMS schedule context cached into `Schedule_Context`
 - V4 baseline payment value context using schedule duration and current pricing
+- first read-only capacity view at `/admin/capacity`
 
 ## Current Slice
 
@@ -46,6 +47,8 @@ The active V4 slice is context layering, not new automation.
 - Payment value context is baseline operational context only. It uses the cached schedule duration and school price table.
 - Shared MMS lesson slots are treated as group lessons when multiple students have the same teacher, next lesson start, and duration in `Schedule_Context`.
 - For example, Emily Grifa and Nina Gavlin share a 45 minute slot, so each should show group pricing: `£20/week`, not one-to-one 45 minute pricing.
+- `/admin/capacity` reads current free capacity from MMS calendar events with category `Free`. This is the right starting source for real available slots; do not duplicate those into a new Sheets tab unless a manual overlay becomes necessary.
+- The same capacity page also shows schedule-cache health so student schedule hardening remains visible.
 
 Before deployment, verify with:
 
@@ -59,6 +62,7 @@ npm run build
 1. **Schedule context hardening**
    - Confirm the bulk MMS schedule refresh is cheap enough operationally.
    - Review edge cases: group lessons, substitute teachers, one-off lessons, missing future calendar events.
+   - Use `/admin/capacity` to monitor stale, missing, low-confidence, and shared schedule cache records.
 
 2. **Payment value refinement**
    - Keep values baseline, not accounting.
@@ -71,7 +75,11 @@ npm run build
 4. **Contact role model**
    - Clarify billing/admin contact roles before any message automation.
 
-5. **Communication draft layer**
+5. **Future capacity overlay**
+   - Add future-hire or tentative availability only after the MMS `Free` slot view is useful.
+   - Keep this separate from real MMS calendar availability.
+
+6. **Communication draft layer**
    - Add draft and approval records before any WhatsApp Cloud API integration.
    - Do not auto-send.
 
@@ -89,6 +97,7 @@ npm run build
 - Google Sheets `Students` = operational school truth
 - `lib/config/students-registry.js` = portal/dashboard registry truth
 - MMS = lesson and billing-profile operational truth
+- MMS calendar category `Free` = current real free-slot truth
 - Stripe = payment-provider truth
 - `Schedule_Context` = dashboard cache of selected MMS lesson context
 - `Pause History` = intentional pause-window truth

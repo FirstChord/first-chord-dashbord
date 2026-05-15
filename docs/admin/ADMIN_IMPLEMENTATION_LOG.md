@@ -2,6 +2,38 @@
 
 This file tracks the admin dashboard build so work can be handed between agents cleanly.
 
+## 2026-05-15 — Capacity View From MMS Free Slots
+
+### Scope
+- Start the capacity context layer without adding a new manual availability database.
+- Keep student schedule hardening visible while beginning tutor capacity work.
+
+### What changed
+- Added `/admin/capacity` to the admin nav.
+- Added a read-only MMS free-slot view:
+  - searches upcoming calendar events
+  - filters to event category `Free`
+  - excludes events already linked to students
+  - groups counts by tutor
+  - lists the next available slots
+- Added schedule-cache health cards on the same page:
+  - cached students
+  - found/missing schedules
+  - stale or unchecked records
+  - low-confidence rows
+  - shared slot groups
+  - missing teacher/duration edge cases
+
+### Operational notes
+- MMS category `Free` is the current source for real tutor availability.
+- Do not add a `Tutor_Availability` Sheets tab for current slots unless MMS proves incomplete.
+- Future-hire or tentative capacity may still need a separate overlay later, but it should not be mixed into the real MMS free-slot source.
+
+### Validation
+- `node --test tests/admin/capacity-helpers.test.mjs` passes
+- `npm run test:admin` passes
+- `npm run build` passes
+
 ## 2026-05-15 — V4 Context Layers + Shared Group Pricing
 
 ### Scope
