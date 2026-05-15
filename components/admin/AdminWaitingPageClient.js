@@ -51,6 +51,14 @@ function formatDateTime(dateString) {
   });
 }
 
+function formatInstrumentList(instruments = []) {
+  return instruments.length ? instruments.join(', ') : 'Unknown';
+}
+
+function formatMatchedInstruments(instruments = []) {
+  return instruments.map((instrument) => instrument.charAt(0).toUpperCase() + instrument.slice(1)).join(', ');
+}
+
 export default function AdminWaitingPageClient({ initialStudents }) {
   const [students, setStudents] = useState(initialStudents);
   const [actionState, setActionState] = useState({ pendingId: '', error: '' });
@@ -160,6 +168,7 @@ export default function AdminWaitingPageClient({ initialStudents }) {
                   <div className="text-xs text-slate-500">{student.mmsId}</div>
                   <div className="mt-3 flex flex-wrap gap-2 text-xs">
                     <span className={`rounded-full px-2.5 py-1 font-medium ${ageBadge.className}`}>{ageBadge.label}</span>
+                    <span className="rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-700">Instrument: {formatInstrumentList(student.instruments)}</span>
                     <span className="rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-700">Added: {formatDate(student.dateStarted)}</span>
                     <span className="rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-700">Updated: {formatDateTime(student.waitingUpdatedAt)}</span>
                   </div>
@@ -231,6 +240,37 @@ export default function AdminWaitingPageClient({ initialStudents }) {
                     {pending ? 'Saving…' : 'Save waiting state'}
                   </button>
                 </div>
+              </div>
+
+              <div className="mt-4 rounded-2xl border border-sky-200 bg-sky-50 p-4">
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-xs uppercase tracking-wide text-sky-700">Possible slots</p>
+                  <p className="text-xs text-sky-800">{student.capacityMatchReason}</p>
+                </div>
+                {student.capacityMatches?.length ? (
+                  <div className="mt-3 grid gap-3 md:grid-cols-3">
+                    {student.capacityMatches.map((slot) => (
+                      <div
+                        key={`${student.mmsId}-${slot.teacherId}-${slot.weekday}-${slot.startTime}-${slot.durationMinutes}`}
+                        className="rounded-xl border border-sky-200 bg-white/80 px-3 py-2"
+                      >
+                        <p className="text-sm font-medium text-slate-900">{slot.teacherName}</p>
+                        <p className="mt-1 text-sm text-slate-700">
+                          {slot.weekday} {slot.startTime} · {slot.durationMinutes} mins
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          Match: {formatMatchedInstruments(slot.matchedInstruments)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-3 text-sm text-slate-700">
+                    {student.capacityMatchStatus === 'instrument_unknown'
+                      ? 'Add or clarify the instrument in the MMS sign-up note before trusting slot suggestions.'
+                      : 'No matching MMS Free slots found for the parsed instrument.'}
+                  </p>
+                )}
               </div>
             </div>
           );

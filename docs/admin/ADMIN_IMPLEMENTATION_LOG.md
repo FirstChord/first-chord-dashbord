@@ -2,6 +2,31 @@
 
 This file tracks the admin dashboard build so work can be handed between agents cleanly.
 
+## 2026-05-16 — Waiting List Capacity Hints
+
+### Scope
+- Connect MMS free-slot capacity to the waiting-list workflow without adding booking automation.
+- Keep instrument matching explicit and deterministic.
+
+### What changed
+- `/admin/waiting` now parses instrument interest from the MMS sign-up note.
+- Waiting cards show parsed instruments near the student metadata.
+- Waiting cards show a `Possible slots` panel with up to three matching weekly free slots.
+- Matching requires:
+  - a parsed waiting-list instrument
+  - an MMS `Free` calendar slot
+  - a tutor whose configured instrument list includes that instrument
+- If the instrument cannot be parsed, the card says that instead of guessing.
+
+### Operational notes
+- These are hints only. They do not reserve slots, assign tutors, send messages, or change onboarding state.
+- Current matching does not rank by student preference, age, or best tutor fit. It only filters by instrument compatibility.
+- Day/time preference parsing should only be added if MMS notes are consistent enough to support it safely.
+
+### Validation
+- `node --test tests/admin/capacity-helpers.test.mjs` passes
+- `npm run test:admin` passes
+
 ## 2026-05-15 — Capacity View From MMS Free Slots
 
 ### Scope

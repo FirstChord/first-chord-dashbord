@@ -37,6 +37,7 @@ The active surface is the private admin dashboard under `/admin`.
 - V4 MMS schedule context cached into `Schedule_Context`
 - V4 baseline payment value context using schedule duration and current pricing
 - first read-only capacity view at `/admin/capacity`
+- waiting-list capacity hints on `/admin/waiting`
 
 ## Current Slice
 
@@ -49,6 +50,7 @@ The active V4 slice is context layering, not new automation.
 - For example, Emily Grifa and Nina Gavlin share a 45 minute slot, so each should show group pricing: `£20/week`, not one-to-one 45 minute pricing.
 - `/admin/capacity` reads current free capacity from MMS calendar events with category `Free`. This is the right starting source for real available slots; do not duplicate those into a new Sheets tab unless a manual overlay becomes necessary.
 - The same capacity page also shows schedule-cache health so student schedule hardening remains visible.
+- `/admin/waiting` now parses instruments from the MMS sign-up note and shows possible free slots only when the tutor teaches the parsed instrument. These are hints only; they do not reserve slots, assign tutors, send messages, or start onboarding.
 
 Before deployment, verify with:
 
@@ -68,18 +70,23 @@ npm run build
    - Keep values baseline, not accounting.
    - Add only small explanations where value affects payment flags or prioritisation.
 
-3. **Pause loop maturity**
+3. **Waiting-list capacity matching refinement**
+   - Improve ranking for multi-instrument enquiries.
+   - Add day/time preference parsing only if the MMS notes reliably contain it.
+   - Keep matches as suggestions until the placement workflow is intentionally designed.
+
+4. **Pause loop maturity**
    - Make pause issue cards clearer about whether the mismatch comes from `Pause History`, sheet expectation, or live Stripe.
    - Keep Stripe pause/resume mutation commands out of scope.
 
-4. **Contact role model**
+5. **Contact role model**
    - Clarify billing/admin contact roles before any message automation.
 
-5. **Future capacity overlay**
+6. **Future capacity overlay**
    - Add future-hire or tentative availability only after the MMS `Free` slot view is useful.
    - Keep this separate from real MMS calendar availability.
 
-6. **Communication draft layer**
+7. **Communication draft layer**
    - Add draft and approval records before any WhatsApp Cloud API integration.
    - Do not auto-send.
 

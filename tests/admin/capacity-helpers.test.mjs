@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   buildFreeSlotSummary,
   buildScheduleCacheSummary,
+  buildWaitingCapacityMatches,
   isFreeCalendarEvent,
   normaliseFreeCalendarSlot,
 } from '../../lib/admin/capacity-helpers.mjs';
@@ -95,4 +96,50 @@ test('buildScheduleCacheSummary highlights stale, missing, and shared slots', ()
   assert.equal(summary.missingDuration, 1);
   assert.equal(summary.sharedSlotGroups, 1);
   assert.equal(summary.sharedStudents, 2);
+});
+
+test('buildWaitingCapacityMatches suggests only instrument-compatible free slots', () => {
+  const [guitarSlot, pianoSlot] = [
+    normaliseFreeCalendarSlot({
+      ID: 'evt_guitar',
+      StartDate: '2026-05-18T16:30:00',
+      Duration: 30,
+      TeacherID: 'tch_guitar',
+      Teacher: { DisplayName: 'Scott Brice' },
+      EventCategory: { Name: 'Free' },
+    }),
+    normaliseFreeCalendarSlot({
+      ID: 'evt_piano',
+      StartDate: '2026-05-19T17:00:00',
+      Duration: 30,
+      TeacherID: 'tch_piano',
+      Teacher: { DisplayName: 'Chloe Mak' },
+      EventCategory: { Name: 'Free' },
+    }),
+  ];
+
+  const [student] = buildWaitingCapacityMatches({
+    waitingStudents: [{ mmsId: 'sdt_1', instruments: ['Piano'] }],
+    freeSlots: [guitarSlot, pianoSlot],
+    tutors: [
+      { fullName: 'Scott Brice', teacherId: 'tch_guitar', instruments: ['guitar'] },
+      { fullName: 'Chloe Mak', teacherId: 'tch_piano', instruments: ['singing', 'piano'] },
+    ],
+  });
+
+  assert.equal(student.capacityMatchStatus, 'matched');
+  assert.equal(student.capacityMatches.length, 1);
+  assert.equal(student.capacityMatches[0].teacherName, 'Chloe Mak');
+  assert.deepEqual(student.capacityMatches[0].matchedInstruments, ['piano']);
+});
+
+test('buildWaitingCapacityMatches refuses to guess when instrument is unknown', () => {
+  const [student] = buildWaitingCapacityMatches({
+    waitingStudents: [{ mmsId: 'sdt_1', instruments: [] }],
+    freeSlots: [],
+    tutors: [],
+  });
+
+  assert.equal(student.capacityMatchStatus, 'instrument_unknown');
+  assert.deepEqual(student.capacityMatches, []);
 });
