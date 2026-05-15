@@ -248,14 +248,14 @@ export default function AdminWaitingPageClient({ initialStudents }) {
                   <p className="text-xs text-sky-800">{student.capacityMatchReason}</p>
                 </div>
                 {student.capacityMatchDays?.length ? (
-                  <div className="mt-3 grid gap-3 md:grid-cols-3">
+                  <div className="mt-3 grid gap-2 md:grid-cols-3 xl:grid-cols-5">
                     {student.capacityMatchDays.map((day) => (
                       <div
                         key={`${student.mmsId}-${day.weekday}`}
-                        className="rounded-xl border border-sky-200 bg-white/80 px-3 py-3"
+                        className="rounded-lg border border-sky-200 bg-white/80 px-3 py-2"
                       >
                         <p className="text-sm font-semibold text-slate-900">{day.weekday}</p>
-                        <div className="mt-2 space-y-2">
+                        <div className="mt-1.5 space-y-1.5">
                           {day.tutors.map((tutor) => (
                             <div key={`${day.weekday}-${tutor.teacherId || tutor.teacherName}`} className="text-sm text-slate-700">
                               <p>
@@ -264,7 +264,7 @@ export default function AdminWaitingPageClient({ initialStudents }) {
                                   <span className="text-xs text-slate-500"> ({formatMatchedInstruments(tutor.matchedInstruments)})</span>
                                 ) : null}
                               </p>
-                              <p className="mt-1 text-xs text-slate-600">
+                              <p className="text-xs text-slate-600">
                                 {tutor.slots.map((slot) => `${slot.startTime} (${slot.durationMinutes} mins)`).join(', ')}
                               </p>
                             </div>

@@ -168,3 +168,38 @@ test('buildWaitingCapacityMatches refuses to guess when instrument is unknown', 
   assert.deepEqual(student.capacityMatches, []);
   assert.deepEqual(student.capacityMatchDays, []);
 });
+
+test('buildWaitingCapacityMatches returns up to five compact matching days by default', () => {
+  const freeSlots = [
+    ['evt_1', '2026-05-18T16:00:00'],
+    ['evt_2', '2026-05-19T16:00:00'],
+    ['evt_3', '2026-05-20T16:00:00'],
+    ['evt_4', '2026-05-21T16:00:00'],
+    ['evt_5', '2026-05-22T16:00:00'],
+    ['evt_6', '2026-05-23T16:00:00'],
+  ].map(([id, start]) => normaliseFreeCalendarSlot({
+    ID: id,
+    StartDate: start,
+    Duration: 30,
+    TeacherID: 'tch_guitar',
+    Teacher: { DisplayName: 'Scott Brice' },
+    EventCategory: { Name: 'Free' },
+  }));
+
+  const [student] = buildWaitingCapacityMatches({
+    waitingStudents: [{ mmsId: 'sdt_1', instruments: ['Guitar'] }],
+    freeSlots,
+    tutors: [
+      { fullName: 'Scott Brice', teacherId: 'tch_guitar', instruments: ['guitar'] },
+    ],
+  });
+
+  assert.equal(student.capacityMatchDays.length, 5);
+  assert.deepEqual(student.capacityMatchDays.map((day) => day.weekday), [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+  ]);
+});
