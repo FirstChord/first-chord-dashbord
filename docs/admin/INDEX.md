@@ -9,7 +9,7 @@ This admin index is the map of durable admin documentation. Older V1/V2 drafts a
 ## Start Here
 
 - [CURRENT_STATUS.md](./CURRENT_STATUS.md)
-  Current V3 admin direction, recent work, and next recommended slices.
+  Current admin direction, recent work, and next recommended slices.
 - [V3_LOOP_ARCHITECTURE.md](./V3_LOOP_ARCHITECTURE.md)
   Current V3 loop pattern for issues, payments, pauses, waiting list, recurring workflows, and audit logging.
 - [ADMIN_BRIEF.md](./ADMIN_BRIEF.md)
