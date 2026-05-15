@@ -118,6 +118,15 @@ test('buildPaymentIssueRecord creates a Stripe issue with current payment linkag
       stripeCustomerId: 'cus_123',
       stripeSubscriptionId: '',
       registryEntry: { mmsId: 'sdt_test' },
+      lifecycleStatus: 'active',
+      lifecycleLabel: 'Active',
+      lifecycleConfidence: 'medium',
+      lifecycleReasons: ['Payment expectation is stripe_active_expected.'],
+      lifecycleWarnings: ['Stripe linkage is incomplete for an active-expected student.'],
+      paymentValueContext: {
+        baselineWeeklyLabel: '£25',
+        baselineMonthlyLabel: '£108.33',
+      },
     },
   });
 
@@ -126,5 +135,9 @@ test('buildPaymentIssueRecord creates a Stripe issue with current payment linkag
   assert.equal(issue.paymentMode, 'stripe');
   assert.equal(issue.stripeCustomerId, 'cus_123');
   assert.equal(issue.stripeSubscriptionId, '');
+  assert.equal(issue.lifecycleStatus, 'active');
+  assert.equal(issue.lifecycleLabel, 'Active');
+  assert.deepEqual(issue.lifecycleWarnings, ['Stripe linkage is incomplete for an active-expected student.']);
+  assert.equal(issue.paymentValueContext.baselineWeeklyLabel, '£25');
   assert.equal(issue.adminStudentPath, '/admin/students/sdt_test');
 });

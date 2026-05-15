@@ -54,6 +54,28 @@ function ReadOnlyField({ label, value }) {
   );
 }
 
+function formatDateTime(value) {
+  if (!value) return '—';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+
+  return parsed.toLocaleString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function lifecycleClasses(status) {
+  if (status === 'active') return 'border-emerald-200 bg-emerald-50 text-emerald-800';
+  if (status === 'paused') return 'border-violet-200 bg-violet-50 text-violet-800';
+  if (status === 'waiting' || status === 'onboarding' || status === 'setup_pending') return 'border-blue-200 bg-blue-50 text-blue-800';
+  if (status === 'stopped') return 'border-slate-200 bg-slate-100 text-slate-700';
+  return 'border-amber-200 bg-amber-50 text-amber-800';
+}
+
 export default function AdminStudentDetailClient({ student, tutorOptions }) {
   const [form, setForm] = useState({
     firstName: student.firstName || '',
@@ -82,6 +104,12 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
     issues: [],
     skippedReason: '',
   });
+  const [scheduleState, setScheduleState] = useState({
+    error: '',
+    loading: false,
+    scheduleContext: student.scheduleContext || null,
+  });
+  const [paymentValueContext, setPaymentValueContext] = useState(student.paymentValueContext || null);
   const [isPending, startTransition] = useTransition();
   const pauseWorkflow = buildPauseWorkflowSummary({
     pauseSummary: student.pauseSummary,
@@ -173,6 +201,43 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
     }
   }
 
+  async function handleRefreshSchedule() {
+    setScheduleState((current) => ({
+      ...current,
+      error: '',
+      loading: true,
+    }));
+
+    try {
+      const response = await fetch(`/api/admin/students/${student.mmsId}/schedule`, {
+        method: 'POST',
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        setScheduleState((current) => ({
+          ...current,
+          error: data.error || 'Schedule refresh failed',
+          loading: false,
+        }));
+        return;
+      }
+
+      setScheduleState({
+        error: '',
+        loading: false,
+        scheduleContext: data.scheduleContext || null,
+      });
+      setPaymentValueContext(data.paymentValueContext || null);
+    } catch (error) {
+      setScheduleState((current) => ({
+        ...current,
+        error: error.message || 'Schedule refresh failed',
+        loading: false,
+      }));
+    }
+  }
+
   function handleQuickPaymentExpectation(nextExpectation, actionLabel) {
     const note = window.prompt(
       `Why are you taking "${actionLabel}" for ${student.fullName || student.mmsId}? This note is saved to the payment audit log.`,
@@ -236,6 +301,49 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
         </p>
       </section>
 
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900">Lifecycle</h3>
+            <p className="mt-1 text-sm text-slate-600">Derived from current Sheets, waiting-list, pause, registry, and payment fields.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <span className={`rounded-full border px-3 py-1 text-xs font-medium ${lifecycleClasses(student.lifecycleStatus)}`}>
+              {student.lifecycleLabel || 'Needs review'}
+            </span>
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
+              {student.lifecycleConfidence || 'low'} confidence
+            </span>
+          </div>
+        </div>
+        <div className="mt-4 grid gap-6 border-t border-slate-200 pt-4 lg:grid-cols-2">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-slate-500">Why</p>
+            {student.lifecycleReasons?.length ? (
+              <ul className="mt-2 space-y-1 text-sm text-slate-700">
+                {student.lifecycleReasons.map((reason) => (
+                  <li key={reason}>{reason}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-2 text-sm text-slate-700">No lifecycle reason was derived.</p>
+            )}
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-slate-500">Warnings</p>
+            {student.lifecycleWarnings?.length ? (
+              <ul className="mt-2 space-y-1 text-sm text-amber-800">
+                {student.lifecycleWarnings.map((warning) => (
+                  <li key={warning}>{warning}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-2 text-sm text-slate-700">No lifecycle warnings.</p>
+            )}
+          </div>
+        </div>
+      </section>
+
       {student.hasFlags ? (
         <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
           <h3 className="text-sm font-semibold text-amber-900">Review flags</h3>
@@ -258,6 +366,107 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
           </div>
         </section>
       ) : null}
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900">Schedule</h3>
+            <p className="mt-1 text-sm text-slate-600">Cached from MMS calendar events. Refresh only when the student is new or the lesson slot changes.</p>
+          </div>
+          <button
+            type="button"
+            onClick={handleRefreshSchedule}
+            disabled={scheduleState.loading}
+            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {scheduleState.loading ? 'Refreshing…' : 'Refresh schedule from MMS'}
+          </button>
+        </div>
+        {scheduleState.error ? <p className="mt-3 text-sm text-red-700">{scheduleState.error}</p> : null}
+        {scheduleState.scheduleContext ? (
+          <div className="mt-4 space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <ReadOnlyField
+                label="Usual lesson"
+                value={
+                  scheduleState.scheduleContext.usualWeekday || scheduleState.scheduleContext.usualTime
+                    ? `${scheduleState.scheduleContext.usualWeekday || '—'} ${scheduleState.scheduleContext.usualTime || ''}`.trim()
+                    : 'Unknown'
+                }
+              />
+              <ReadOnlyField label="Next lesson" value={formatDateTime(scheduleState.scheduleContext.nextLessonAt)} />
+              <ReadOnlyField label="Teacher" value={scheduleState.scheduleContext.teacherName} />
+              <ReadOnlyField label="Duration" value={scheduleState.scheduleContext.durationMinutes ? `${scheduleState.scheduleContext.durationMinutes} mins` : ''} />
+              <ReadOnlyField label="MMS status" value={scheduleState.scheduleContext.status} />
+              <ReadOnlyField label="Confidence" value={scheduleState.scheduleContext.confidence} />
+              <ReadOnlyField label="Event category" value={scheduleState.scheduleContext.eventCategory} />
+              <ReadOnlyField label="Checked" value={formatDateTime(scheduleState.scheduleContext.checkedAt)} />
+            </div>
+            {scheduleState.scheduleContext.warnings?.length ? (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <p className="text-xs uppercase tracking-wide text-amber-700">Schedule warnings</p>
+                <ul className="mt-2 space-y-1 text-sm text-amber-950">
+                  {scheduleState.scheduleContext.warnings.map((warning) => (
+                    <li key={warning}>{warning}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          <p className="mt-4 text-sm text-slate-600">No cached schedule context yet.</p>
+        )}
+      </section>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900">Payment value</h3>
+            <p className="mt-1 text-sm text-slate-600">Estimated baseline operational value. Stripe remains the billing source of truth.</p>
+          </div>
+          {paymentValueContext ? (
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
+              {paymentValueContext.confidence || 'low'} confidence
+            </span>
+          ) : null}
+        </div>
+        {paymentValueContext ? (
+          <div className="mt-4 space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <ReadOnlyField label="Weekly baseline" value={paymentValueContext.baselineWeeklyLabel} />
+              <ReadOnlyField label="Monthly baseline" value={paymentValueContext.baselineMonthlyLabel} />
+              <ReadOnlyField label="Pricing type" value={paymentValueContext.lessonKind?.replaceAll('_', ' ')} />
+              <ReadOnlyField label="Duration used" value={paymentValueContext.durationMinutes ? `${paymentValueContext.durationMinutes} mins` : ''} />
+            </div>
+            {paymentValueContext.reasons?.length ? (
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Why</p>
+                  <ul className="mt-2 space-y-1 text-sm text-slate-700">
+                    {paymentValueContext.reasons.map((reason) => (
+                      <li key={reason}>{reason}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Warnings</p>
+                  {paymentValueContext.warnings?.length ? (
+                    <ul className="mt-2 space-y-1 text-sm text-amber-800">
+                      {paymentValueContext.warnings.map((warning) => (
+                        <li key={warning}>{warning}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-2 text-sm text-slate-700">No value warnings.</p>
+                  )}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          <p className="mt-4 text-sm text-slate-600">No payment value context could be derived.</p>
+        )}
+      </section>
 
       {student.pauseSummary?.hasPauseHistory ? (
         <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5">

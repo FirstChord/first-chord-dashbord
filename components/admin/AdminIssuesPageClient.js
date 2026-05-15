@@ -162,6 +162,42 @@ function getPaymentActionHint(issue) {
   return '';
 }
 
+function shouldShowLifecycleContext(issue) {
+  return Boolean(issue.lifecycleLabel) && (
+    isPaymentIssue(issue)
+    || ['SHEETS ONLY', 'REGISTRY ONLY'].includes(issue.type)
+  );
+}
+
+function getLifecycleContextText(issue) {
+  const firstWarning = issue.lifecycleWarnings?.[0] || '';
+  const firstReason = issue.lifecycleReasons?.[0] || '';
+  const explanation = firstWarning || firstReason;
+
+  return [
+    `Lifecycle: ${issue.lifecycleLabel}`,
+    issue.lifecycleConfidence ? `(${issue.lifecycleConfidence} confidence)` : '',
+    explanation ? `— ${explanation}` : '',
+  ].filter(Boolean).join(' ');
+}
+
+function shouldShowPaymentValueContext(issue) {
+  return isPaymentIssue(issue) && Boolean(issue.paymentValueContext?.baselineWeeklyLabel || issue.paymentValueContext?.baselineMonthlyLabel);
+}
+
+function getPaymentValueContextText(issue) {
+  const value = issue.paymentValueContext || {};
+  const weekly = value.baselineWeeklyLabel ? `${value.baselineWeeklyLabel}/week` : '';
+  const monthly = value.baselineMonthlyLabel ? `${value.baselineMonthlyLabel}/month` : '';
+  const confidence = value.confidence ? `${value.confidence} confidence` : '';
+
+  return [
+    'Baseline value:',
+    [weekly, monthly].filter(Boolean).join(' · '),
+    confidence ? `(${confidence})` : '',
+  ].filter(Boolean).join(' ');
+}
+
 function getPaymentActionPath(issue) {
   if (issue.type === 'PAYMENT SETUP PENDING') {
     return [
@@ -392,6 +428,11 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
             sourcePresent: false,
             hasRegistryEntry: true,
             registryTutor: payload.student?.registryTutor || entry.registryTutor,
+            lifecycleStatus: payload.student?.lifecycleStatus || entry.lifecycleStatus,
+            lifecycleLabel: payload.student?.lifecycleLabel || entry.lifecycleLabel,
+            lifecycleConfidence: payload.student?.lifecycleConfidence || entry.lifecycleConfidence,
+            lifecycleReasons: payload.student?.lifecycleReasons || entry.lifecycleReasons,
+            lifecycleWarnings: payload.student?.lifecycleWarnings || entry.lifecycleWarnings,
           }
           : entry
       )));
@@ -692,6 +733,11 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
             ...entry,
             paymentMode: payload.student.paymentMode || entry.paymentMode,
             paymentExpectation: payload.student.paymentExpectation || '',
+            lifecycleStatus: payload.student.lifecycleStatus || entry.lifecycleStatus,
+            lifecycleLabel: payload.student.lifecycleLabel || entry.lifecycleLabel,
+            lifecycleConfidence: payload.student.lifecycleConfidence || entry.lifecycleConfidence,
+            lifecycleReasons: payload.student.lifecycleReasons || entry.lifecycleReasons,
+            lifecycleWarnings: payload.student.lifecycleWarnings || entry.lifecycleWarnings,
           }
           : entry
       )));
@@ -985,6 +1031,16 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                       {issue.identityMismatchHint.description}
                     </p>
                   ) : null}
+                  {shouldShowLifecycleContext(issue) ? (
+                    <p className="mt-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-950">
+                      {getLifecycleContextText(issue)}
+                    </p>
+                  ) : null}
+                  {shouldShowPaymentValueContext(issue) ? (
+                    <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-950">
+                      {getPaymentValueContextText(issue)}
+                    </p>
+                  ) : null}
                 </div>
               </div>
 
@@ -1166,6 +1222,20 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                           <p>{evidence.detail}</p>
                         </div>
                       </div>
+                      {issue.lifecycleLabel ? (
+                        <div>
+                          <p className="text-xs uppercase tracking-wide text-slate-500">Lifecycle context</p>
+                          <div className="mt-2 space-y-1 text-sm text-slate-700">
+                            <p>{issue.lifecycleLabel} ({issue.lifecycleConfidence || 'low'} confidence)</p>
+                            {issue.lifecycleReasons?.map((reason) => (
+                              <p key={reason}>{reason}</p>
+                            ))}
+                            {issue.lifecycleWarnings?.map((warning) => (
+                              <p key={warning} className="text-amber-800">{warning}</p>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
                       {issue.identityMismatchHint ? (
                         <div>
                           <p className="text-xs uppercase tracking-wide text-slate-500">Possible identity match</p>
@@ -1196,6 +1266,11 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                             <p>Stripe customer: {issue.stripeCustomerId || '—'}</p>
                             <p>Stripe subscription: {issue.stripeSubscriptionId || '—'}</p>
                             <p>Currently paused: {issue.pauseSummary?.hasPauseHistory ? (issue.pauseSummary.currentlyPaused ? 'Yes' : 'No') : 'No pause history'}</p>
+                            {issue.paymentValueContext?.baselineWeeklyLabel || issue.paymentValueContext?.baselineMonthlyLabel ? (
+                              <p>
+                                Baseline value: {[issue.paymentValueContext.baselineWeeklyLabel ? `${issue.paymentValueContext.baselineWeeklyLabel}/week` : '', issue.paymentValueContext.baselineMonthlyLabel ? `${issue.paymentValueContext.baselineMonthlyLabel}/month` : ''].filter(Boolean).join(' · ')}
+                              </p>
+                            ) : null}
                             {issue.pauseSummary?.latestPause ? (
                               <p>
                                 Latest pause window: {issue.pauseSummary.latestPause.startDate || '—'} to {issue.pauseSummary.latestPause.endDate || '—'}
