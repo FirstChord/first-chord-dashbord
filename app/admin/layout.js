@@ -4,15 +4,31 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import { AdminSignOutButton } from '@/components/admin/AdminAuthButton';
 
-const navItems = [
+const dailyNavItems = [
   { href: '/admin', label: 'Overview' },
   { href: '/admin/students', label: 'Students' },
   { href: '/admin/waiting', label: 'Waiting' },
+  { href: '/admin/flags', label: 'Issues' },
+];
+
+const planningNavItems = [
   { href: '/admin/capacity', label: 'Capacity' },
-  { href: '/admin/flags', label: 'Flags & Issues' },
   { href: '/admin/showcase', label: 'Showcase' },
   { href: '/admin/holidays', label: 'Holidays' },
 ];
+
+function NavLink({ href, label, compact = false }) {
+  return (
+    <Link
+      href={href}
+      className={`rounded-full border border-blue-200/70 bg-white/75 font-medium text-slate-700 shadow-sm transition hover:border-blue-300 hover:bg-white hover:text-slate-900 ${
+        compact ? 'px-3 py-1.5 text-xs' : 'px-4 py-2 text-sm'
+      }`}
+    >
+      {label}
+    </Link>
+  );
+}
 
 export default async function AdminLayout({ children }) {
   const session = await getServerSession(authOptions);
@@ -46,16 +62,16 @@ export default async function AdminLayout({ children }) {
             <AdminSignOutButton />
           </div>
         </div>
-        <nav className="mx-auto flex max-w-7xl flex-wrap gap-3 px-6 pb-5">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="rounded-full border border-blue-200/70 bg-white/75 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-blue-300 hover:bg-white hover:text-slate-900"
-            >
-              {item.label}
-            </Link>
+        <nav className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-6 pb-5">
+          {dailyNavItems.map((item) => (
+            <NavLink key={item.href} href={item.href} label={item.label} />
           ))}
+          <div className="flex flex-wrap items-center gap-2 border-l border-blue-200/80 pl-3">
+            <span className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-slate-500">Planning</span>
+            {planningNavItems.map((item) => (
+              <NavLink key={item.href} href={item.href} label={item.label} compact />
+            ))}
+          </div>
         </nav>
       </header>
       <main className="relative z-10 mx-auto max-w-7xl px-6 py-8">{children}</main>

@@ -1,4 +1,4 @@
-import { getMmsFreeCalendarSlots } from '@/lib/admin/mms';
+import { getMmsFreeCalendarSlotContext } from '@/lib/admin/mms';
 import { getScheduleContextRows } from '@/lib/admin/sheets';
 import { buildFreeSlotSummary, buildScheduleCacheSummary } from '@/lib/admin/capacity-helpers.mjs';
 
@@ -26,8 +26,8 @@ function statCard(label, value, detail = '') {
 export default async function AdminCapacityPage() {
   const [scheduleRows, freeSlotResult] = await Promise.all([
     getScheduleContextRows(),
-    getMmsFreeCalendarSlots({ lookaheadDays: 30 }).then(
-      (slots) => ({ slots, error: '' }),
+    getMmsFreeCalendarSlotContext({ lookaheadDays: 30 }).then(
+      (context) => ({ ...context, error: '' }),
       (error) => ({ slots: [], error: error.message || 'Could not load MMS free slots' }),
     ),
   ]);
@@ -67,7 +67,11 @@ export default async function AdminCapacityPage() {
         <div className="grid gap-4 md:grid-cols-3">
           {statCard('Weekly free slots', freeSlotSummary.totalWeeklySlots, `${freeSlotSummary.totalEvents} MMS events in the 30-day window.`)}
           {statCard('Tutors with space', freeSlotSummary.tutorCount)}
-          {statCard('Upcoming events shown', upcomingSlots.length, 'Earliest dated MMS Free events listed below.')}
+          {statCard(
+            freeSlotResult.fromCache ? 'MMS cache' : 'MMS refresh',
+            freeSlotResult.fromCache ? 'Cached' : 'Fresh',
+            freeSlotResult.fetchedAt ? `Checked ${formatDateTime(freeSlotResult.fetchedAt)}.` : 'Free-slot cache not available.',
+          )}
         </div>
 
         <div className="grid gap-4 xl:grid-cols-[0.8fr_1.2fr]">

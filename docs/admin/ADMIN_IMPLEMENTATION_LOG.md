@@ -2,6 +2,30 @@
 
 This file tracks the admin dashboard build so work can be handed between agents cleanly.
 
+## 2026-05-16 — V4.1 Performance And Navigation Pass
+
+### Scope
+- Start improving dashboard speed and information architecture without changing core workflows.
+- Reduce repeated MMS calendar calls now that Capacity and Waiting both use Free-slot context.
+
+### What changed
+- Added `getMmsFreeCalendarSlotContext()` with a short-lived server-side cache for MMS calendar events marked `Free`.
+- Kept `getMmsFreeCalendarSlots()` as a compatibility wrapper so existing code can still request only the slot array.
+- Updated `/admin/capacity` to show whether Free-slot data came from a fresh MMS refresh or the cache.
+- Updated `/admin/waiting` to use the same cached Free-slot context for capacity hints.
+- Grouped admin navigation into daily operating pages and planning tools:
+  - daily: Overview, Students, Waiting, Issues
+  - planning: Capacity, Showcase, Holidays
+
+### Operational notes
+- The cache is process-local and intentionally short-lived. It reduces repeat MMS calls while navigating the dashboard, but it is not a durable source of truth.
+- MMS remains the source of truth for real free slots.
+- This is the first V4.1 pass only. Further speed work should focus on expensive overview health checks and any cohort-wide calls that still run automatically.
+
+### Validation
+- `npm run test:admin` passes
+- `npm run build` passes
+
 ## 2026-05-16 — Waiting List Capacity Hints
 
 ### Scope

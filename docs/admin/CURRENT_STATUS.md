@@ -1,6 +1,6 @@
 # Admin Current Status
 
-Last updated: 2026-05-15
+Last updated: 2026-05-16
 
 This is the tracked current-status entrypoint for agents working from the `music-school-dashboard` repository.
 
@@ -38,6 +38,7 @@ The active surface is the private admin dashboard under `/admin`.
 - V4 baseline payment value context using schedule duration and current pricing
 - first read-only capacity view at `/admin/capacity`
 - waiting-list capacity hints on `/admin/waiting`
+- V4.1 first performance/navigation pass: shared MMS free-slot cache plus grouped admin nav
 
 ## Current Slice
 
@@ -49,8 +50,10 @@ The active V4 slice is context layering, not new automation.
 - Shared MMS lesson slots are treated as group lessons when multiple students have the same teacher, next lesson start, and duration in `Schedule_Context`.
 - For example, Emily Grifa and Nina Gavlin share a 45 minute slot, so each should show group pricing: `£20/week`, not one-to-one 45 minute pricing.
 - `/admin/capacity` reads current free capacity from MMS calendar events with category `Free`. This is the right starting source for real available slots; do not duplicate those into a new Sheets tab unless a manual overlay becomes necessary.
+- `/admin/capacity` and `/admin/waiting` share a short-lived server cache for MMS `Free` calendar slots via `getMmsFreeCalendarSlotContext()`, so navigating between those pages should not trigger repeated MMS calendar searches inside the cache window.
 - The same capacity page also shows schedule-cache health so student schedule hardening remains visible.
 - `/admin/waiting` now parses instruments from the MMS sign-up note and shows possible free slots only when the tutor teaches the parsed instrument. These are hints only; they do not reserve slots, assign tutors, send messages, or start onboarding.
+- Admin navigation is lightly grouped: daily operating surfaces stay prominent, while Capacity, Showcase, and Holidays sit under Planning.
 
 Before deployment, verify with:
 
@@ -61,32 +64,37 @@ npm run build
 
 ## Best Next Slices
 
-1. **Schedule context hardening**
+1. **V4.1 performance hardening**
+   - Add TTL caching to other expensive overview checks if they still feel slow, especially MMS/GitHub health.
+   - Keep automatic cohort-wide API calls rare; prefer cached summaries plus explicit refresh actions.
+   - Review which admin pages should be daily top-level navigation versus planning/background tools.
+
+2. **Schedule context hardening**
    - Confirm the bulk MMS schedule refresh is cheap enough operationally.
    - Review edge cases: group lessons, substitute teachers, one-off lessons, missing future calendar events.
    - Use `/admin/capacity` to monitor stale, missing, low-confidence, and shared schedule cache records.
 
-2. **Payment value refinement**
+3. **Payment value refinement**
    - Keep values baseline, not accounting.
    - Add only small explanations where value affects payment flags or prioritisation.
 
-3. **Waiting-list capacity matching refinement**
+4. **Waiting-list capacity matching refinement**
    - Improve ranking for multi-instrument enquiries.
    - Add day/time preference parsing only if the MMS notes reliably contain it.
    - Keep matches as suggestions until the placement workflow is intentionally designed.
 
-4. **Pause loop maturity**
+5. **Pause loop maturity**
    - Make pause issue cards clearer about whether the mismatch comes from `Pause History`, sheet expectation, or live Stripe.
    - Keep Stripe pause/resume mutation commands out of scope.
 
-5. **Contact role model**
+6. **Contact role model**
    - Clarify billing/admin contact roles before any message automation.
 
-6. **Future capacity overlay**
+7. **Future capacity overlay**
    - Add future-hire or tentative availability only after the MMS `Free` slot view is useful.
    - Keep this separate from real MMS calendar availability.
 
-7. **Communication draft layer**
+8. **Communication draft layer**
    - Add draft and approval records before any WhatsApp Cloud API integration.
    - Do not auto-send.
 
