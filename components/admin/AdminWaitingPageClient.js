@@ -59,6 +59,16 @@ function formatMatchedInstruments(instruments = []) {
   return instruments.map((instrument) => instrument.charAt(0).toUpperCase() + instrument.slice(1)).join(', ');
 }
 
+function buildMmsNoteFacts(student) {
+  const parsed = student.parsedNote || {};
+  return [
+    parsed.age ? { label: 'Age', value: parsed.age } : null,
+    parsed.experience ? { label: 'Experience', value: parsed.experience } : null,
+    parsed.genres ? { label: 'Genres', value: parsed.genres } : null,
+    parsed.songs ? { label: 'Songs', value: parsed.songs } : null,
+  ].filter(Boolean);
+}
+
 export default function AdminWaitingPageClient({ initialStudents }) {
   const [students, setStudents] = useState(initialStudents);
   const [actionState, setActionState] = useState({ pendingId: '', error: '' });
@@ -159,6 +169,7 @@ export default function AdminWaitingPageClient({ initialStudents }) {
         {students.map((student) => {
           const ageBadge = getAgeBadge(student.ageInDays);
           const pending = actionState.pendingId === student.mmsId;
+          const mmsNoteFacts = buildMmsNoteFacts(student);
 
           return (
             <div key={student.mmsId} className="rounded-[1.6rem] border border-blue-100 bg-white/90 p-5 shadow-[0_12px_36px_rgba(15,23,42,0.06)] backdrop-blur-sm">
@@ -200,6 +211,7 @@ export default function AdminWaitingPageClient({ initialStudents }) {
                   <p className="text-xs uppercase tracking-wide text-slate-500">Parent contact</p>
                   <p className="mt-2 text-sm text-slate-900">{student.parentName || '—'}</p>
                   <p className="mt-1 text-sm text-slate-700">{student.parentEmail || '—'}</p>
+                  <p className="mt-1 text-sm text-slate-700">{student.contactNumber || '—'}</p>
                 </div>
 
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -240,6 +252,37 @@ export default function AdminWaitingPageClient({ initialStudents }) {
                     {pending ? 'Saving…' : 'Save waiting state'}
                   </button>
                 </div>
+              </div>
+
+              <div className="mt-4 rounded-2xl border border-slate-200 bg-white/80 p-4">
+                <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-slate-500">MMS sign-up context</p>
+                    <p className="mt-2 text-sm text-slate-700">
+                      Instrument source: {student.instrumentRaw || 'No instrument found in MMS note'}
+                    </p>
+                  </div>
+                  {student.note ? (
+                    <details className="md:max-w-xl">
+                      <summary className="cursor-pointer text-sm font-medium text-slate-700 hover:text-slate-900">
+                        Full MMS note
+                      </summary>
+                      <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
+                        {student.note}
+                      </pre>
+                    </details>
+                  ) : null}
+                </div>
+                {mmsNoteFacts.length ? (
+                  <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+                    {mmsNoteFacts.map((fact) => (
+                      <div key={fact.label} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                        <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500">{fact.label}</p>
+                        <p className="mt-1 text-sm text-slate-700">{fact.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
               </div>
 
               <div className="mt-4 rounded-2xl border border-sky-200 bg-sky-50 p-4">
