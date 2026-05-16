@@ -4,26 +4,18 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import { AdminSignOutButton } from '@/components/admin/AdminAuthButton';
 
-const dailyNavItems = [
+const navItems = [
   { href: '/admin', label: 'Overview' },
-  { href: '/admin/students', label: 'Students' },
-  { href: '/admin/waiting', label: 'Waiting' },
   { href: '/admin/flags', label: 'Issues' },
+  { href: '/admin/workflows', label: 'Workflows' },
+  { href: '/admin/planning', label: 'Planning' },
 ];
 
-const planningNavItems = [
-  { href: '/admin/capacity', label: 'Capacity' },
-  { href: '/admin/showcase', label: 'Showcase' },
-  { href: '/admin/holidays', label: 'Holidays' },
-];
-
-function NavLink({ href, label, compact = false }) {
+function NavLink({ href, label }) {
   return (
     <Link
       href={href}
-      className={`rounded-full border border-blue-200/70 bg-white/75 font-medium text-slate-700 shadow-sm transition hover:border-blue-300 hover:bg-white hover:text-slate-900 ${
-        compact ? 'px-3 py-1.5 text-xs' : 'px-4 py-2 text-sm'
-      }`}
+      className="rounded-full border border-blue-200/70 bg-white/75 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-blue-300 hover:bg-white hover:text-slate-900"
     >
       {label}
     </Link>
@@ -62,16 +54,26 @@ export default async function AdminLayout({ children }) {
             <AdminSignOutButton />
           </div>
         </div>
-        <nav className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-6 pb-5">
-          {dailyNavItems.map((item) => (
-            <NavLink key={item.href} href={item.href} label={item.label} />
-          ))}
-          <div className="flex flex-wrap items-center gap-2 border-l border-blue-200/80 pl-3">
-            <span className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-slate-500">Planning</span>
-            {planningNavItems.map((item) => (
-              <NavLink key={item.href} href={item.href} label={item.label} compact />
+        <nav className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-6 pb-5">
+          <div className="flex flex-wrap items-center gap-3">
+            {navItems.map((item) => (
+              <NavLink key={item.href} href={item.href} label={item.label} />
             ))}
           </div>
+          <form action="/admin/students" className="flex min-w-0 items-center gap-2">
+            <input
+              type="search"
+              name="q"
+              placeholder="Find student"
+              className="h-9 w-44 rounded-full border border-blue-200/70 bg-white/80 px-4 text-sm text-slate-700 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:bg-white md:w-56"
+            />
+            <button
+              type="submit"
+              className="h-9 rounded-full border border-blue-200/70 bg-white/80 px-4 text-sm font-medium text-slate-700 shadow-sm transition hover:border-blue-300 hover:bg-white hover:text-slate-900"
+            >
+              Search
+            </button>
+          </form>
         </nav>
       </header>
       <main className="relative z-10 mx-auto max-w-7xl px-6 py-8">{children}</main>

@@ -39,6 +39,7 @@ The active surface is the private admin dashboard under `/admin`.
 - first read-only capacity view at `/admin/capacity`
 - waiting-list capacity hints on `/admin/waiting`
 - V4.1 first performance/navigation pass: shared MMS free-slot cache plus grouped admin nav
+- V4.1 scalable navigation model: top nav is now Overview, Issues, Workflows, and Planning, with student lookup as a header utility
 
 ## Current Slice
 
@@ -53,7 +54,12 @@ The active V4 slice is context layering, not new automation.
 - `/admin/capacity` and `/admin/waiting` share a short-lived server cache for MMS `Free` calendar slots via `getMmsFreeCalendarSlotContext()`, so navigating between those pages should not trigger repeated MMS calendar searches inside the cache window.
 - The same capacity page also shows schedule-cache health so student schedule hardening remains visible.
 - `/admin/waiting` now parses instruments from the MMS sign-up note and shows possible free slots only when the tutor teaches the parsed instrument. These are hints only; they do not reserve slots, assign tutors, send messages, or start onboarding.
-- Admin navigation is lightly grouped: daily operating surfaces stay prominent, while Capacity, Showcase, and Holidays sit under Planning.
+- Admin navigation is intentionally action-led:
+  - `Overview` = today's operating summary
+  - `Issues` = detected problems and issue-loop actions
+  - `Workflows` = waiting list, onboarding, showcase, holidays, and future task/communication flows
+  - `Planning` = capacity, schedule health, seasonal planning, and future finance/capacity layers
+- Student records remain important context, but they are accessed through header search, issue links, workflow links, or `/admin/students`; they are not a primary top-nav mode.
 
 Before deployment, verify with:
 

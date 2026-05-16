@@ -2,6 +2,31 @@
 
 This file tracks the admin dashboard build so work can be handed between agents cleanly.
 
+## 2026-05-16 — V4.1 Scalable Navigation
+
+### Scope
+- Keep the admin top nav short enough to survive V4 growth.
+- Treat student records as searchable context rather than a primary operating mode.
+
+### What changed
+- Changed the top nav to four stable modes:
+  - Overview
+  - Issues
+  - Workflows
+  - Planning
+- Added a persistent header student search that lands on `/admin/students?q=...`.
+- Turned `/admin/students` into a lookup route with filtering by name, tutor, instrument, email, phone, or MMS ID.
+- Added `/admin/workflows` as a hub for Waiting List, Onboarding, Showcase, and Holidays.
+- Added `/admin/planning` as a hub for Capacity, Holidays, Showcase, and future planning layers.
+
+### Operational notes
+- Student detail pages remain central to context, but most users should arrive there from a search, issue, or workflow.
+- Keep future top-level nav additions rare. Prefer adding items inside Workflows or Planning unless the area is a true operating mode.
+
+### Validation
+- `npm run test:admin` passes
+- `npm run build` passes, with existing slow static-generation retry warnings on some admin/static pages
+
 ## 2026-05-16 — V4.1 Performance And Navigation Pass
 
 ### Scope
