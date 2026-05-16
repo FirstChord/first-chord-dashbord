@@ -48,6 +48,7 @@ Student records remain important, but they are reached through header search, is
 - [Admin Current Status](./admin/CURRENT_STATUS.md)
 - [Admin Docs Index](./admin/INDEX.md)
 - [Admin Implementation Log](./admin/ADMIN_IMPLEMENTATION_LOG.md)
+- [Operating Dashboard Build Blueprint](./admin/OPERATING_DASHBOARD_BUILD_BLUEPRINT.md)
 - [V3 Loop Architecture](./admin/V3_LOOP_ARCHITECTURE.md)
 - [Ownership Matrix](./admin/OWNERSHIP_MATRIX.md)
 - [Payments Rules](./admin/PAYMENTS_RULES.md)

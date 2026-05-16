@@ -12,6 +12,8 @@ This admin index is the map of durable admin documentation. Older V1/V2 drafts a
   Current admin direction, recent work, and next recommended slices.
 - [V3_LOOP_ARCHITECTURE.md](./V3_LOOP_ARCHITECTURE.md)
   Current V3 loop pattern for issues, payments, pauses, waiting list, recurring workflows, and audit logging.
+- [OPERATING_DASHBOARD_BUILD_BLUEPRINT.md](./OPERATING_DASHBOARD_BUILD_BLUEPRINT.md)
+  Reusable playbook for building a similar internal operating dashboard, including loop design, state/audit patterns, navigation, caching, and automation guardrails.
 - [ADMIN_BRIEF.md](./ADMIN_BRIEF.md)
   Historical V1 brief with current-state addenda. Useful for background, but not the current planning authority.
 - [ADMIN_IMPLEMENTATION_LOG.md](./ADMIN_IMPLEMENTATION_LOG.md)
