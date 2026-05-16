@@ -2,6 +2,29 @@
 
 This file tracks the admin dashboard build so work can be handed between agents cleanly.
 
+## 2026-05-16 — Waiting Cards MMS Context
+
+### Scope
+- Reduce the messy split between waiting-list placement decisions and onboarding execution.
+- Keep `/admin/waiting` useful before a student is ready to onboard.
+
+### What changed
+- Waiting-list MMS rows now carry:
+  - parent/contact phone when MMS returns it
+  - raw MMS note text
+  - parsed note facts such as age, experience, genres, songs, and instrument source
+- Waiting cards show parent phone alongside parent name/email.
+- Waiting cards show MMS sign-up context directly on the card.
+- Full MMS notes are available behind a collapsed detail toggle.
+
+### Operational notes
+- `/admin/waiting` should be the place to decide contact/placement.
+- `/admin/onboard` should remain the execution form once the student is ready to be created across Sheets, registry, MMS, and portal setup.
+
+### Validation
+- `npm run test:admin` passes
+- `npm run build` passes
+
 ## 2026-05-16 — V4.1 Scalable Navigation
 
 ### Scope

@@ -39,18 +39,31 @@ This admin index is the map of durable admin documentation. Older V1/V2 drafts a
 
 ## Current Workflow Layer
 
-- `/admin/flags` is now the first surface moving from detected issues to managed workflow.
+- Admin top navigation is intentionally short and action-led:
+  - `/admin` = Overview
+  - `/admin/flags` = Issues
+  - `/admin/workflows` = Waiting List, Onboarding, Showcase, Holidays
+  - `/admin/planning` = Capacity, schedule health, seasonal planning, and future planning layers
+- Student records are important context, but they are reached through header search, issue links, workflow links, or `/admin/students`; they are not a primary top-nav mode.
+- `/admin/flags` moves detected issues into managed workflow.
 - `Issue_Queue` in Google Sheets stores persistent issue state.
 - `Event_Log` in Google Sheets stores append-only issue actions and reappearance events.
-- PR1 scope is intentionally narrow: stable IDs, acknowledge/ignore/resolve, source presence, and audit logging.
-- `/admin/showcase` is now a second workflow surface for recurring student-show operations.
+- `/admin/waiting` is the waiting-list placement/contact decision surface:
+  - MMS waiting students
+  - parent/contact details
+  - parsed MMS sign-up context and full note detail
+  - waiting state and notes
+  - possible capacity matches from MMS `Free` slots filtered by tutor instrument coverage
+- `/admin/onboard` is the execution form once a waiting-list student is ready to create across Sheets, registry, MMS, and portal setup.
+- `/admin/capacity` reads MMS calendar category `Free`, shows weekly tutor capacity, and keeps schedule-cache health visible.
+- `/admin/showcase` is a recurring student-show workflow surface.
 - `Showcase_Task_State` in Google Sheets stores persistent checklist state per showcase instance.
 - Showcase reference content is intentionally split from the checklist:
   - `Linked Assets`
   - `Key Timings`
   - `Core Messages`
 - Checklist items should remain true done/not-done actions; softer planning points should stay as guidance.
-- `/admin/holidays` is now another recurring workflow surface for Christmas, Easter, and summer operations.
+- `/admin/holidays` is another recurring workflow surface for Christmas, Easter, and summer operations.
 - `Holiday_Workflow_State` in Google Sheets stores persistent checklist state per holiday workflow instance.
 - Holiday workflow cards combine:
   - key timings
