@@ -8,6 +8,7 @@ This index is a project documentation map, not the current-status authority.
 - **[Main README](README.md)** - Overview and getting started
 - **[Current Admin Status](admin/CURRENT_STATUS.md)** - Current admin direction, recent work, and next slices
 - **[Admin Docs Index](admin/INDEX.md)** - Current admin handoff, ownership, and deployment docs
+- **[Learning Log](LEARNING_LOG.md)** - Short architectural lessons and reusable build decisions
 - **[Agent Quick Start](guides/AGENT_QUICK_START.md)** - For Claude agents working on this project
 - **[Claude Guide](guides/CLAUDE.md)** - Claude-specific instructions
 

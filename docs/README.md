@@ -48,6 +48,7 @@ Student records remain important, but they are reached through header search, is
 - [Admin Current Status](./admin/CURRENT_STATUS.md)
 - [Admin Docs Index](./admin/INDEX.md)
 - [Admin Implementation Log](./admin/ADMIN_IMPLEMENTATION_LOG.md)
+- [Learning Log](./LEARNING_LOG.md)
 - [Operating Dashboard Build Blueprint](./admin/OPERATING_DASHBOARD_BUILD_BLUEPRINT.md)
 - [V3 Loop Architecture](./admin/V3_LOOP_ARCHITECTURE.md)
 - [Ownership Matrix](./admin/OWNERSHIP_MATRIX.md)
@@ -87,6 +88,7 @@ Student records remain important, but they are reached through header search, is
 
 - Keep `admin/CURRENT_STATUS.md` current after each meaningful admin slice.
 - Use `admin/ADMIN_IMPLEMENTATION_LOG.md` for chronological implementation detail.
+- Suggest a short `LEARNING_LOG.md` entry for meaningful architectural changes.
 - Treat old V1/V2 admin docs and older student-portal docs as background unless current docs explicitly point to them.
 - Before deployment, run:
 
