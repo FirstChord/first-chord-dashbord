@@ -29,8 +29,12 @@ Please use the below box to voice any questions or concerns: (Not Provided)`;
   });
 });
 
-test('parseLessonDateTime creates a valid ISO timestamp from structured inputs', () => {
-  assert.equal(parseLessonDateTime('2026-05-03', '13:00'), '2026-05-03T12:00:00.000Z');
+test('parseLessonDateTime preserves the MMS calendar wall-clock time', () => {
+  assert.equal(parseLessonDateTime('2026-05-03', '13:00'), '2026-05-03T13:00:00');
+});
+
+test('parseLessonDateTime does not shift summer lesson times back by one hour', () => {
+  assert.equal(parseLessonDateTime('2026-06-03', '18:30'), '2026-06-03T18:30:00');
 });
 
 test('buildBillingProfilePayload matches the observed MMS write shape', () => {
@@ -168,7 +172,7 @@ test('findMatchingCalendarEvent returns a matching existing lesson by teacher, s
     events: [
       {
         ID: 'evt_existing',
-        StartDate: '2026-05-03T12:00:00',
+        StartDate: '2026-05-03T13:00:00',
         TeacherID: 'tch_test',
         Attendances: [{ StudentID: 'sdt_test' }],
       },
@@ -187,7 +191,7 @@ test('findMatchingCalendarEvent ignores non-matching events', () => {
     events: [
       {
         ID: 'evt_other',
-        StartDate: '2026-05-03T12:00:00',
+        StartDate: '2026-05-03T13:00:00',
         TeacherID: 'tch_other',
         Attendances: [{ StudentID: 'sdt_test' }],
       },
@@ -206,7 +210,7 @@ test('findMatchingCalendarEvent requires all group students to be present', () =
     events: [
       {
         ID: 'evt_group',
-        StartDate: '2026-05-03T12:00:00',
+        StartDate: '2026-05-03T13:00:00',
         TeacherID: 'tch_test',
         Attendances: [{ StudentID: 'sdt_one' }, { StudentID: 'sdt_two' }],
       },
