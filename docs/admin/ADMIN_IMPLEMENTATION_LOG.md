@@ -2,6 +2,27 @@
 
 This file tracks the admin dashboard build so work can be handed between agents cleanly.
 
+## 2026-05-18 — Manual Waiting Free-Slot Refresh
+
+### Scope
+- Let admins immediately check newly created MMS `Free` slots from the waiting-list placement surface.
+- Keep normal page loads cheap by preserving cached MMS reads.
+
+### What changed
+- Added `getWaitingStudentsWithCapacity()` as a shared loader for waiting students plus capacity matches.
+- Added `POST /api/admin/waiting/capacity` to force-refresh MMS `Free` slots and recalculate waiting-list capacity hints.
+- Added a `Refresh free slots` button to `/admin/waiting`.
+- Waiting cards update in place after refresh while preserving locally edited waiting note/status values.
+
+### Operational notes
+- MMS remains the source of truth for real free slots.
+- Refreshing free slots does not reserve slots, assign tutors, onboard students, or write capacity data.
+- Keep this as an explicit refresh rather than automatic polling.
+
+### Validation
+- `npm run test:admin` passes
+- `npm run build` passes
+
 ## 2026-05-16 — Waiting Cards MMS Context
 
 ### Scope

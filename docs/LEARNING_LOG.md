@@ -19,6 +19,24 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-05-18 — Explicit Waiting Capacity Refresh
+
+**Feature/change:** Added a manual `Refresh free slots` button on `/admin/waiting` that force-refreshes MMS `Free` calendar slots and recalculates waiting-list capacity matches.
+
+**Why it exists:** MMS free-slot data is cached to avoid repeated vendor calls, but placement work sometimes needs an immediate refresh after creating a new Free slot in MMS. The button keeps normal page loads cheap while giving admins an explicit “check now” action.
+
+**Source-of-truth impact:** MMS remains the source of truth for real free slots. The dashboard does not reserve, assign, or write capacity records. It only refreshes cached read context and recalculates hints.
+
+**Files/functions involved:**
+
+- `app/admin/waiting/page.js`
+- `app/api/admin/waiting/capacity/route.js`
+- `components/admin/AdminWaitingPageClient.js`
+- `lib/admin/waiting-capacity.js`
+- `getMmsFreeCalendarSlotContext()`
+
+**What to watch out for:** Keep this as an explicit refresh, not an automatic poll. Capacity matches are still hints only; do not turn this into slot reservation or tutor assignment without designing a proper placement workflow.
+
 ### 2026-05-17 — Learning Log Convention
 
 **Feature/change:** Added `docs/LEARNING_LOG.md` as a lightweight place to capture architectural lessons as the dashboard evolves.

@@ -69,14 +69,42 @@ function buildMmsNoteFacts(student) {
   ].filter(Boolean);
 }
 
-export default function AdminWaitingPageClient({ initialStudents }) {
+function mergeRefreshedStudents(currentStudents, refreshedStudents) {
+  const currentByMmsId = new Map(currentStudents.map((student) => [student.mmsId, student]));
+
+  return refreshedStudents.map((student) => {
+    const current = currentByMmsId.get(student.mmsId);
+    if (!current) return student;
+
+    return {
+      ...student,
+      waitingNote: current.waitingNote,
+      waitingStatus: current.waitingStatus,
+      waitingUpdatedAt: current.waitingUpdatedAt,
+    };
+  });
+}
+
+export default function AdminWaitingPageClient({ initialStudents, initialCapacityContext = null }) {
   const [students, setStudents] = useState(initialStudents);
   const [actionState, setActionState] = useState({ pendingId: '', error: '' });
+  const [refreshState, setRefreshState] = useState({
+    pending: false,
+    error: '',
+    capacityContext: initialCapacityContext,
+  });
   const [copiedId, setCopiedId] = useState('');
 
   useEffect(() => {
     setStudents(initialStudents);
   }, [initialStudents]);
+
+  useEffect(() => {
+    setRefreshState((current) => ({
+      ...current,
+      capacityContext: initialCapacityContext,
+    }));
+  }, [initialCapacityContext]);
 
   async function handleCopy(student) {
     try {
@@ -136,6 +164,39 @@ export default function AdminWaitingPageClient({ initialStudents }) {
     }
   }
 
+  async function handleRefreshCapacity() {
+    setRefreshState((current) => ({ ...current, pending: true, error: '' }));
+
+    try {
+      const response = await fetch('/api/admin/waiting/capacity', {
+        method: 'POST',
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        setRefreshState((current) => ({
+          ...current,
+          pending: false,
+          error: payload.error || 'Capacity refresh failed',
+        }));
+        return;
+      }
+
+      setStudents((current) => mergeRefreshedStudents(current, payload.students || []));
+      setRefreshState({
+        pending: false,
+        error: '',
+        capacityContext: payload.capacityContext || null,
+      });
+    } catch (error) {
+      setRefreshState((current) => ({
+        ...current,
+        pending: false,
+        error: error.message || 'Capacity refresh failed',
+      }));
+    }
+  }
+
   function updateLocalStudent(mmsId, updates) {
     setStudents((current) => current.map((entry) => (
       entry.mmsId === mmsId
@@ -147,16 +208,50 @@ export default function AdminWaitingPageClient({ initialStudents }) {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-xs uppercase tracking-[0.25em] text-slate-500">New enquiries</p>
-        <h2
-          className="mt-2 text-3xl font-bold uppercase tracking-wide text-slate-800"
-          style={{ fontFamily: '"Cooper Hewitt", "Nimbus Sans L", "Arial", sans-serif' }}
-        >
-          Waiting List
-        </h2>
-        <p className="mt-2 text-sm text-slate-600">
-          MMS students with status <code>Waiting</code>, newest first, limited to the last 120 days.
-        </p>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.25em] text-slate-500">New enquiries</p>
+            <h2
+              className="mt-2 text-3xl font-bold uppercase tracking-wide text-slate-800"
+              style={{ fontFamily: '"Cooper Hewitt", "Nimbus Sans L", "Arial", sans-serif' }}
+            >
+              Waiting List
+            </h2>
+            <p className="mt-2 text-sm text-slate-600">
+              MMS students with status <code>Waiting</code>, newest first, limited to the last 120 days.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-blue-100 bg-white/80 p-4 shadow-[0_12px_36px_rgba(15,23,42,0.05)]">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-slate-500">Free-slot matches</p>
+                <p className="mt-1 text-sm text-slate-600">
+                  {refreshState.capacityContext?.fetchedAt
+                    ? `Checked ${formatDateTime(refreshState.capacityContext.fetchedAt)}`
+                    : 'Not checked yet'}
+                  {refreshState.capacityContext?.slotCount != null
+                    ? ` · ${refreshState.capacityContext.slotCount} MMS Free events`
+                    : ''}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleRefreshCapacity}
+                disabled={refreshState.pending}
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {refreshState.pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                {refreshState.pending ? 'Refreshing…' : 'Refresh free slots'}
+              </button>
+            </div>
+            {refreshState.error ? (
+              <p className="mt-2 text-sm text-red-700">{refreshState.error}</p>
+            ) : null}
+            {!refreshState.error && refreshState.capacityContext?.error ? (
+              <p className="mt-2 text-sm text-amber-700">{refreshState.capacityContext.error}</p>
+            ) : null}
+          </div>
+        </div>
       </div>
 
       {actionState.error ? (
