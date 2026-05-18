@@ -35,6 +35,21 @@ test('normaliseFreeCalendarSlot extracts tutor, time, and duration', () => {
   assert.equal(slot.studentCount, 0);
 });
 
+test('normaliseFreeCalendarSlot preserves MMS calendar wall-clock time', () => {
+  const slot = normaliseFreeCalendarSlot({
+    ID: 'evt_david',
+    StartDate: '2026-05-19T18:30:00Z',
+    Duration: 30,
+    TeacherID: 'tch_david',
+    Teacher: { DisplayName: 'David Husz' },
+    EventCategory: { Name: 'Free' },
+    Students: [],
+  });
+
+  assert.equal(slot.weekday, 'Tuesday');
+  assert.equal(slot.startTime, '18:30');
+});
+
 test('buildFreeSlotSummary counts usual weekly slots by tutor', () => {
   const summary = buildFreeSlotSummary([
     { teacherName: 'Scott Brice', weekday: 'Monday', startTime: '16:00', durationMinutes: '30' },
