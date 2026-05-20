@@ -38,6 +38,8 @@ This admin index is the map of durable admin documentation. Older V1/V2 drafts a
 
 - [RAILWAY_ADMIN_LAUNCH_CHECKLIST.md](./RAILWAY_ADMIN_LAUNCH_CHECKLIST.md)
   Railway deployment and environment setup checklist.
+- [BUG_FIXES.md](./BUG_FIXES.md)
+  Short production bug-fix and recovery notes, including Railway 502 recovery.
 
 ## Current Workflow Layer
 
