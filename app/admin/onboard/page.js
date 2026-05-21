@@ -4,6 +4,8 @@ import { getStudentDetails, getWaitingStudents } from '@/lib/admin/mms';
 import { getOnboardingDuplicateState } from '@/lib/admin/onboarding';
 import { getTutorsForInstrument } from '@/lib/admin/tutors';
 
+const VALID_LESSON_LENGTHS = new Set(['30', '45', '60']);
+
 function formatDate(dateString) {
   if (!dateString) return '—';
   return new Date(dateString).toLocaleDateString('en-GB', {
@@ -13,16 +15,42 @@ function formatDate(dateString) {
   });
 }
 
+function normaliseQueryValue(value) {
+  return Array.isArray(value) ? value[0] || '' : value || '';
+}
+
+function getRequestedTutor(tutorOptions = [], { teacherId = '', tutorName = '' } = {}) {
+  const normalisedName = tutorName.trim().toLowerCase();
+  return tutorOptions.find((tutor) => (
+    teacherId && tutor.teacherId === teacherId
+  )) || tutorOptions.find((tutor) => (
+    normalisedName && tutor.fullName.trim().toLowerCase() === normalisedName
+  )) || null;
+}
+
+function getInitialLessonLength(value) {
+  const lessonLength = `${value || ''}`;
+  return VALID_LESSON_LENGTHS.has(lessonLength) ? lessonLength : '30';
+}
+
 export default async function AdminOnboardPage({ searchParams }) {
   const resolvedSearchParams = await searchParams;
-  const mmsId = resolvedSearchParams?.mmsId || '';
+  const mmsId = normaliseQueryValue(resolvedSearchParams?.mmsId);
+  const requestedLessonDate = normaliseQueryValue(resolvedSearchParams?.lessonDate);
+  const requestedLessonTime = normaliseQueryValue(resolvedSearchParams?.lessonTime);
+  const requestedLessonLength = normaliseQueryValue(resolvedSearchParams?.lessonLength);
+  const requestedTeacherId = normaliseQueryValue(resolvedSearchParams?.teacherId);
+  const requestedTutorName = normaliseQueryValue(resolvedSearchParams?.tutorName);
   const waitingStudents = await getWaitingStudents();
   const selectedStudent = waitingStudents.find((student) => student.mmsId === mmsId) || null;
   const details = mmsId ? await getStudentDetails(mmsId) : null;
   const parsed = details?.parsed || {};
   const instrument = normaliseInstrument(parsed.instrument || '');
   const tutorOptions = getTutorsForInstrument(instrument.toLowerCase());
-  const initialTutor = tutorOptions[0] || null;
+  const initialTutor = getRequestedTutor(tutorOptions, {
+    teacherId: requestedTeacherId,
+    tutorName: requestedTutorName,
+  }) || tutorOptions[0] || null;
   const duplicateState = mmsId && initialTutor
     ? await getOnboardingDuplicateState({
         mmsId,
@@ -43,14 +71,14 @@ export default async function AdminOnboardPage({ searchParams }) {
         isAdult: Number(parsed.age || 0) >= 19,
         age: parsed.age || '',
         instrument,
-        lessonLength: '30',
+        lessonLength: getInitialLessonLength(requestedLessonLength),
         lessonType: 'individual',
         secondStudentMmsId: '',
         lessonDay: '',
-        lessonTime: '',
-        lessonDate: '',
+        lessonTime: requestedLessonTime,
+        lessonDate: requestedLessonDate,
         isRecurring: true,
-        tutorShortName: tutorOptions[0]?.shortName || '',
+        tutorShortName: initialTutor?.shortName || '',
         thetaUsername: `${(details.firstName || '').toLowerCase()}${(details.lastName || '').toLowerCase()}fc`.replace(/[^a-z0-9]/g, ''),
         soundsliceUrl: '',
         soundsliceCode: '',

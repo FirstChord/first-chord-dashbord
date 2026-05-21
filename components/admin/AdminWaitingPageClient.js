@@ -85,6 +85,18 @@ function mergeRefreshedStudents(currentStudents, refreshedStudents) {
   });
 }
 
+function buildOnboardSlotHref(student, tutor, slot) {
+  const params = new URLSearchParams({ mmsId: student.mmsId });
+
+  if (slot.nextDate) params.set('lessonDate', slot.nextDate);
+  if (slot.startTime) params.set('lessonTime', slot.startTime);
+  if (slot.durationMinutes) params.set('lessonLength', slot.durationMinutes);
+  if (tutor.teacherId) params.set('teacherId', tutor.teacherId);
+  if (tutor.teacherName) params.set('tutorName', tutor.teacherName);
+
+  return `/admin/onboard?${params.toString()}`;
+}
+
 export default function AdminWaitingPageClient({ initialStudents, initialCapacityContext = null }) {
   const [students, setStudents] = useState(initialStudents);
   const [actionState, setActionState] = useState({ pendingId: '', error: '' });
@@ -402,9 +414,17 @@ export default function AdminWaitingPageClient({ initialStudents, initialCapacit
                                   <span className="text-xs text-slate-500"> ({formatMatchedInstruments(tutor.matchedInstruments)})</span>
                                 ) : null}
                               </p>
-                              <p className="text-xs text-slate-600">
-                                {tutor.slots.map((slot) => `${slot.startTime} (${slot.durationMinutes} mins)`).join(', ')}
-                              </p>
+                              <div className="mt-1 flex flex-wrap gap-1.5">
+                                {tutor.slots.map((slot) => (
+                                  <Link
+                                    key={`${slot.startTime}-${slot.durationMinutes}-${slot.nextDate || 'no-date'}`}
+                                    href={buildOnboardSlotHref(student, tutor, slot)}
+                                    className="inline-flex rounded-md border border-sky-200 bg-sky-50 px-2 py-1 text-xs font-medium text-sky-900 transition hover:border-sky-300 hover:bg-sky-100"
+                                  >
+                                    {slot.startTime} ({slot.durationMinutes} mins)
+                                  </Link>
+                                ))}
+                              </div>
                             </div>
                           ))}
                         </div>

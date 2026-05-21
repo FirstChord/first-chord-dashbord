@@ -30,6 +30,7 @@ test('normaliseFreeCalendarSlot extracts tutor, time, and duration', () => {
   assert.equal(slot.eventId, 'evt_1');
   assert.equal(slot.teacherName, 'Scott Brice');
   assert.equal(slot.teacherId, 'tch_1');
+  assert.equal(slot.date, '2026-05-18');
   assert.equal(slot.durationMinutes, '45');
   assert.equal(slot.eventCategory, 'Free');
   assert.equal(slot.studentCount, 0);
@@ -66,6 +67,32 @@ test('buildFreeSlotSummary counts usual weekly slots by tutor', () => {
     { teacherName: 'Chloe Mak', weeklySlotCount: 1 },
   ]);
   assert.equal(summary.weeklySlots.find((slot) => slot.teacherName === 'Scott Brice' && slot.startTime === '16:00').occurrenceCount, 2);
+});
+
+test('buildFreeSlotSummary keeps the nearest concrete occurrence for weekly slots', () => {
+  const summary = buildFreeSlotSummary([
+    normaliseFreeCalendarSlot({
+      ID: 'evt_later',
+      StartDate: '2026-05-25T16:00:00',
+      Duration: 30,
+      TeacherID: 'tch_1',
+      Teacher: { DisplayName: 'Scott Brice' },
+      EventCategory: { Name: 'Free' },
+    }),
+    normaliseFreeCalendarSlot({
+      ID: 'evt_earlier',
+      StartDate: '2026-05-18T16:00:00',
+      Duration: 30,
+      TeacherID: 'tch_1',
+      Teacher: { DisplayName: 'Scott Brice' },
+      EventCategory: { Name: 'Free' },
+    }),
+  ]);
+
+  assert.equal(summary.weeklySlots.length, 1);
+  assert.equal(summary.weeklySlots[0].occurrenceCount, 2);
+  assert.equal(summary.weeklySlots[0].nextDate, '2026-05-18');
+  assert.equal(summary.weeklySlots[0].nextStartAt, '2026-05-18T16:00:00');
 });
 
 test('buildScheduleCacheSummary highlights stale, missing, and shared slots', () => {
@@ -163,8 +190,20 @@ test('buildWaitingCapacityMatches suggests only instrument-compatible free slots
           teacherName: 'Chloe Mak',
           matchedInstruments: ['piano'],
           slots: [
-            { startTime: '17:00', durationMinutes: '30', occurrenceCount: 1 },
-            { startTime: '17:30', durationMinutes: '30', occurrenceCount: 1 },
+            {
+              startTime: '17:00',
+              durationMinutes: '30',
+              nextDate: '2026-05-19',
+              nextStartAt: '2026-05-19T17:00:00',
+              occurrenceCount: 1,
+            },
+            {
+              startTime: '17:30',
+              durationMinutes: '30',
+              nextDate: '2026-05-19',
+              nextStartAt: '2026-05-19T17:30:00',
+              occurrenceCount: 1,
+            },
           ],
         },
       ],

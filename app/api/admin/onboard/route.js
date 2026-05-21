@@ -62,6 +62,13 @@ function firstNameOnly(value, fallback = '') {
   return trimmed.split(/\s+/)[0] || fallback;
 }
 
+function firstNameList(values = []) {
+  const names = values.map((value) => firstNameOnly(value, value)).filter(Boolean);
+  if (names.length <= 1) return names[0] || '';
+  if (names.length === 2) return `${names[0]} and ${names[1]}`;
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
+
 function buildWelcomeMessage(data) {
   const paymentLink = process.env.STRIPE_PAYMENT_LINK || process.env.PAYMENT_LINK || '[ADD PAYMENT LINK]';
   const groupPaymentLink = process.env.GROUP_LESSON_PAYMENT_LINK || 'https://buy.stripe.com/14AdRab7C1b28N79ZM5J60D';
@@ -71,7 +78,9 @@ function buildWelcomeMessage(data) {
     : firstNameOnly(data.parentName, data.parentName);
   const tutorFirstName = firstNameOnly(data.tutorFullName, data.tutorFullName);
   const resolvedPaymentLink = data.lessonType === 'sibling_group' ? groupPaymentLink : paymentLink;
-  const learnerLabel = data.lessonType === 'sibling_group' ? data.studentNamesLabel : data.studentName;
+  const learnerLabel = data.lessonType === 'sibling_group'
+    ? data.studentFirstNamesLabel
+    : firstNameOnly(data.studentName, data.studentName);
 
   if (data.isAdult) {
     return `Hey ${recipientFirstName}, we've got you down for ${data.lessonTime} on ${data.lessonDay} ${data.lessonDate} with ${tutorFirstName}. ✨🎶
@@ -114,7 +123,8 @@ ${handbookUrl}`;
 
 function buildSoundsliceFollowup({ soundsliceCode, studentName, tutorFullName }) {
   const tutorFirstName = firstNameOnly(tutorFullName, tutorFullName);
-  return `Oo one last important thing to do. If you could head to soundslice.com and make a free account, then head to soundslice.com/coursecode and pop in this code *${soundsliceCode}* that will make a folder that ${studentName} can access and ${tutorFirstName} can put in all the songs they are learning 💥`;
+  const learnerLabel = firstNameList(studentName.split(' and '));
+  return `Oo one last important thing to do. If you could head to soundslice.com and make a free account, then head to soundslice.com/coursecode and pop in this code *${soundsliceCode}* that will make a folder that ${learnerLabel} can access and ${tutorFirstName} can put in all the songs they are learning 💥`;
 }
 
 function generateBillingGroupId(mmsIds = []) {
@@ -229,6 +239,7 @@ export async function POST(request) {
   const billingGroupId = secondStudentRequired ? generateBillingGroupId(studentIds) : '';
   const secondStudentName = secondStudentDetails?.fullName || '';
   const studentNamesLabel = secondStudentRequired && secondStudentName ? `${studentName} and ${secondStudentName}` : studentName;
+  const studentFirstNamesLabel = firstNameList([studentName, secondStudentRequired ? secondStudentName : '']);
   const duplicateState = await getOnboardingDuplicateState({
     mmsId: payload.mmsId,
     tutorFullName: tutor.fullName,
@@ -478,6 +489,7 @@ export async function POST(request) {
         welcomeMessage: buildWelcomeMessage({
           studentName,
           studentNamesLabel,
+          studentFirstNamesLabel,
           parentName,
           lessonTime: lessonTimeLabel,
           lessonDay,
@@ -491,7 +503,7 @@ export async function POST(request) {
         }),
         soundsliceFollowup: buildSoundsliceFollowup({
           soundsliceCode: payload.soundsliceCode || '',
-          studentName: studentNamesLabel,
+          studentName: studentFirstNamesLabel,
           tutorFullName: tutor.fullName,
         }),
       },
