@@ -491,7 +491,18 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
             <ReadOnlyField label="Latest pause start" value={student.pauseSummary.latestPause?.startDate} />
             <ReadOnlyField label="Latest pause end" value={student.pauseSummary.latestPause?.endDate} />
             <ReadOnlyField label="Latest recorded Stripe pause status" value={student.pauseSummary.latestPause?.stripeStatus} />
+            <ReadOnlyField label="Pause match confidence" value={student.pauseSummary.matchConfidence || '—'} />
           </div>
+          {student.pauseSummary.matchEvidence ? (
+            <p className={`mt-3 rounded-lg border px-3 py-2 text-sm ${
+              student.pauseSummary.matchConfidence === 'low'
+                ? 'border-amber-200 bg-amber-50 text-amber-900'
+                : 'border-slate-200 bg-white text-slate-700'
+            }`}
+            >
+              {student.pauseSummary.matchEvidence}
+            </p>
+          ) : null}
           <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
             <p className="text-xs uppercase tracking-wide text-slate-500">Pause workflow</p>
             <p className="mt-2 text-sm text-slate-800">{pauseWorkflow.statusLine}</p>
@@ -526,11 +537,11 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
             <div className="mt-4 flex flex-wrap gap-3">
               <button
                 type="button"
-                onClick={() => handleQuickPaymentExpectation('stripe_paused_expected', 'Set Stripe paused expected')}
+                onClick={() => handleQuickPaymentExpectation('stripe_paused_expected', 'Confirm pause and set paused expected')}
                 disabled={isPending}
                 className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Set Stripe paused expected
+                Confirm pause and set paused expected
               </button>
               <button
                 type="button"

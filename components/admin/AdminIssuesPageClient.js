@@ -88,7 +88,7 @@ function shouldRefreshStripeFirst(issue) {
 
 function getPrimaryPaymentQuickAction(issue, actions = []) {
   if (issue.type === 'PAUSE EXPECTATION MISMATCH') {
-    return actions.find((action) => action.label === 'Set Stripe paused expected') || null;
+    return actions.find((action) => action.label === 'Confirm pause and set paused expected') || null;
   }
 
   if (issue.type === 'PAUSE EXPECTATION STALE') {
@@ -233,8 +233,8 @@ function getPaymentActionPath(issue) {
 
   if (issue.type === 'PAUSE EXPECTATION MISMATCH') {
     return [
-      'Confirm Pause History really means the student is paused now.',
-      'If the pause is correct, set payment expectation to Stripe paused expected.',
+      'Confirm Pause History really means this student is paused now.',
+      'If the pause is correct, set payment expectation to Stripe paused expected. Stripe scans verify live billing; they do not update this expectation field automatically.',
       'Refresh Stripe if you need to confirm billing has stopped before resolving.',
     ];
   }
@@ -657,7 +657,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
 
     if (issue.type === 'PAUSE EXPECTATION MISMATCH') {
       return [
-        { label: 'Set Stripe paused expected', payload: { paymentExpectation: 'stripe_paused_expected' } },
+        { label: 'Confirm pause and set paused expected', payload: { paymentExpectation: 'stripe_paused_expected' } },
         { label: 'Set Stripe active expected', payload: { paymentExpectation: 'stripe_active_expected' } },
       ];
     }
@@ -896,7 +896,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
             { value: 'ACTIVE_WITHOUT_SUBSCRIPTION', label: 'Active without subscription' },
             { value: 'SUBSCRIPTION_CANCELLED_UNEXPECTEDLY', label: 'Subscription cancelled unexpectedly' },
             { value: 'SUBSCRIPTION_STATE_MISMATCH', label: 'Subscription state mismatch' },
-            { value: 'PAUSE EXPECTATION MISMATCH', label: 'Pause expectation mismatch' },
+            { value: 'PAUSE EXPECTATION MISMATCH', label: 'Pause record alignment' },
             { value: 'PAUSE EXPECTATION STALE', label: 'Pause expectation stale' },
             { value: 'INACTIVE_STILL_BILLING', label: 'Inactive still billing' },
             { value: 'PAYMENT_FAILED', label: 'Payment failed' },
@@ -1191,6 +1191,9 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                         <p className="text-xs uppercase tracking-wide text-violet-800">Pause loop</p>
                         <p className="mt-2 text-sm font-medium text-violet-950">{pauseWorkflow.state}</p>
                         <p className="mt-2 text-sm text-violet-950">{pauseWorkflow.nextAction}</p>
+                        {issue.pauseSummary?.matchEvidence ? (
+                          <p className="mt-2 text-xs text-violet-900">Evidence: {issue.pauseSummary.matchEvidence}</p>
+                        ) : null}
                         <p className="mt-2 text-xs text-violet-900">Closes when: {pauseWorkflow.closureCondition}</p>
                       </div>
                     ) : null}
@@ -1266,6 +1269,9 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                             <p>Stripe customer: {issue.stripeCustomerId || '—'}</p>
                             <p>Stripe subscription: {issue.stripeSubscriptionId || '—'}</p>
                             <p>Currently paused: {issue.pauseSummary?.hasPauseHistory ? (issue.pauseSummary.currentlyPaused ? 'Yes' : 'No') : 'No pause history'}</p>
+                            {issue.pauseSummary?.matchConfidence ? (
+                              <p>Pause match: {issue.pauseSummary.matchConfidence} confidence</p>
+                            ) : null}
                             {issue.paymentValueContext?.baselineWeeklyLabel || issue.paymentValueContext?.baselineMonthlyLabel ? (
                               <p>
                                 Baseline value: {[issue.paymentValueContext.baselineWeeklyLabel ? `${issue.paymentValueContext.baselineWeeklyLabel}/week` : '', issue.paymentValueContext.baselineMonthlyLabel ? `${issue.paymentValueContext.baselineMonthlyLabel}/month` : ''].filter(Boolean).join(' · ')}

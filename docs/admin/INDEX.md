@@ -8,6 +8,8 @@ This admin index is the map of durable admin documentation. Older V1/V2 drafts a
 
 ## Start Here
 
+- [NEW_AGENT_START_HERE.md](./NEW_AGENT_START_HERE.md)
+  Practical handoff note for a new Codex/AI agent: paths, commands, current direction, source-of-truth rules, and documentation update rules.
 - [CURRENT_STATUS.md](./CURRENT_STATUS.md)
   Current admin direction, recent work, and next recommended slices.
 - [V3_LOOP_ARCHITECTURE.md](./V3_LOOP_ARCHITECTURE.md)

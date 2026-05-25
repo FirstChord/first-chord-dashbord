@@ -13,9 +13,10 @@ test('buildPauseWorkflowSummary flags a missing paused expectation for an active
   });
 
   assert.equal(summary.needsPausedExpectation, true);
-  assert.equal(summary.state, 'Record mismatch');
+  assert.equal(summary.state, 'Pause record alignment needed');
   assert.equal(summary.recordAligned, false);
   assert.match(summary.statusLine, /currently paused/i);
+  assert.match(summary.nextAction, /payment expectation still needs confirming/i);
   assert.match(summary.closureCondition, /payment expectation says Stripe paused expected/i);
 });
 

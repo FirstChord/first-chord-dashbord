@@ -24,6 +24,7 @@ test('buildPauseSummary finds a current pause by subscription id', () => {
   const summary = buildPauseSummary({
     studentEmail: 'parent@example.com',
     stripeSubscriptionId: 'sub_123',
+    studentName: 'Owen Example',
     currentDate: '2026-05-05',
     pauseRows: [
       {
@@ -39,14 +40,18 @@ test('buildPauseSummary finds a current pause by subscription id', () => {
   assert.equal(summary.currentlyPaused, true);
   assert.equal(summary.upcomingPause, false);
   assert.equal(summary.latestPause.subscriptionId, 'sub_123');
+  assert.equal(summary.matchConfidence, 'high');
+  assert.equal(summary.matchedBy, 'subscription_id');
 });
 
-test('buildPauseSummary falls back to email matching and expired pauses are not current', () => {
+test('buildPauseSummary falls back to email and student name matching', () => {
   const summary = buildPauseSummary({
     studentEmail: 'parent@example.com',
+    studentName: 'Owen Example',
     stripeSubscriptionId: '',
     pauseRows: [
       {
+        studentName: 'Owen Example',
         email: 'parent@example.com',
         startDate: '2025-01-01',
         endDate: '2025-01-10',
@@ -58,6 +63,31 @@ test('buildPauseSummary falls back to email matching and expired pauses are not 
   assert.equal(summary.hasPauseHistory, true);
   assert.equal(summary.currentlyPaused, false);
   assert.equal(summary.upcomingPause, false);
+  assert.equal(summary.matchConfidence, 'medium');
+  assert.equal(summary.matchedBy, 'email_and_student_name');
+});
+
+test('buildPauseSummary labels email-only matches as low confidence', () => {
+  const summary = buildPauseSummary({
+    studentEmail: 'family@example.com',
+    studentName: 'Sibling One',
+    stripeSubscriptionId: '',
+    pauseRows: [
+      {
+        studentName: 'Sibling Two',
+        email: 'family@example.com',
+        startDate: '2026-05-01',
+        endDate: '2026-05-10',
+        stripeStatus: 'paused',
+      },
+    ],
+    currentDate: '2026-05-05',
+  });
+
+  assert.equal(summary.hasPauseHistory, true);
+  assert.equal(summary.currentlyPaused, true);
+  assert.equal(summary.matchConfidence, 'low');
+  assert.equal(summary.matchedBy, 'email_only');
 });
 
 test('buildPauseSummary treats future pause windows as upcoming, not current', () => {
