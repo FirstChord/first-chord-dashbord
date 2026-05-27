@@ -18,11 +18,14 @@ import { markWaitingWorkflowStudentsOnboarded } from '@/lib/admin/waiting-workfl
 
 function formatLessonDateForMessage(value) {
   const parsed = new Date(`${value}T12:00:00`);
-  return parsed.toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
+  const weekday = parsed.toLocaleDateString('en-GB', { weekday: 'long' });
+  const month = parsed.toLocaleDateString('en-GB', { month: 'long' });
+  const day = parsed.getDate();
+  const suffix = day % 100 >= 11 && day % 100 <= 13
+    ? 'th'
+    : { 1: 'st', 2: 'nd', 3: 'rd' }[day % 10] || 'th';
+
+  return `${weekday} ${day}${suffix} of ${month}`;
 }
 
 function formatLessonTimeForMessage(value) {
@@ -42,11 +45,14 @@ function formatLessonTimeForMessage(value) {
     throw new Error('Lesson time is invalid');
   }
 
-  return parsed.toLocaleTimeString('en-GB', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
+  const hour = parsed.getHours();
+  const minute = parsed.getMinutes();
+  const suffix = hour >= 12 ? 'pm' : 'am';
+  const displayHour = hour % 12 || 12;
+
+  return minute === 0
+    ? `${displayHour}${suffix}`
+    : `${displayHour}:${String(minute).padStart(2, '0')}${suffix}`;
 }
 
 function deriveWeekday(value) {
@@ -97,9 +103,9 @@ Feel free to pop down any questions you have and one of us will be sure to get b
 
 Cheers! 😃
 
-${resolvedPaymentLink}
+Payment Link 🔗: ${resolvedPaymentLink}
 
-${handbookUrl}`;
+School Handbook 📖: ${handbookUrl}`;
   }
 
   return `Hey ${recipientFirstName}, we've got ${learnerLabel} down for ${data.lessonTime} on ${data.lessonDay} ${data.lessonDate} with ${tutorFirstName}. ✨🎶
@@ -116,9 +122,9 @@ Feel free to pop down any questions you have and one of us will be sure to get b
 
 Cheers! 😃
 
-${resolvedPaymentLink}
+Payment Link 🔗: ${resolvedPaymentLink}
 
-${handbookUrl}`;
+School Handbook 📖: ${handbookUrl}`;
 }
 
 function buildSoundsliceFollowup({ soundsliceCode, studentName, tutorFullName }) {

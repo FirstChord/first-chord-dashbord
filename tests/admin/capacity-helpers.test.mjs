@@ -211,6 +211,57 @@ test('buildWaitingCapacityMatches suggests only instrument-compatible free slots
   ]);
 });
 
+test('buildWaitingCapacityMatches includes Fennella for singing free slots', () => {
+  const [fennellaSlot] = [
+    normaliseFreeCalendarSlot({
+      ID: 'evt_fennella_singing',
+      StartDate: '2026-05-18T16:30:00',
+      Duration: 30,
+      TeacherID: 'tch_C2bJ9',
+      Teacher: { DisplayName: 'Fennella McCallum' },
+      EventCategory: { Name: 'Free' },
+    }),
+  ];
+
+  const [student] = buildWaitingCapacityMatches({
+    waitingStudents: [{ mmsId: 'sdt_voice', instruments: ['Singing'] }],
+    freeSlots: [fennellaSlot],
+    tutors: [
+      { fullName: 'Fennella McCallum', teacherId: 'tch_C2bJ9', instruments: ['singing', 'piano'] },
+    ],
+  });
+
+  assert.equal(student.capacityMatchStatus, 'matched');
+  assert.equal(student.capacityMatches.length, 1);
+  assert.equal(student.capacityMatches[0].teacherName, 'Fennella McCallum');
+  assert.deepEqual(student.capacityMatches[0].matchedInstruments, ['singing']);
+});
+
+test('buildWaitingCapacityMatches can match tutor short names when MMS teacher id is missing', () => {
+  const [fennellaSlot] = [
+    normaliseFreeCalendarSlot({
+      ID: 'evt_fennella_short_name',
+      StartDate: '2026-05-18T16:30:00',
+      Duration: 30,
+      Teacher: { DisplayName: 'Fennella' },
+      EventCategory: { Name: 'Free' },
+    }),
+  ];
+
+  const [student] = buildWaitingCapacityMatches({
+    waitingStudents: [{ mmsId: 'sdt_voice', instruments: ['Singing'] }],
+    freeSlots: [fennellaSlot],
+    tutors: [
+      { shortName: 'Fennella', fullName: 'Fennella McCallum', teacherId: 'tch_C2bJ9', instruments: ['singing', 'piano'] },
+    ],
+  });
+
+  assert.equal(student.capacityMatchStatus, 'matched');
+  assert.equal(student.capacityMatches.length, 1);
+  assert.equal(student.capacityMatches[0].teacherName, 'Fennella');
+  assert.deepEqual(student.capacityMatches[0].matchedInstruments, ['singing']);
+});
+
 test('buildWaitingCapacityMatches refuses to guess when instrument is unknown', () => {
   const [student] = buildWaitingCapacityMatches({
     waitingStudents: [{ mmsId: 'sdt_1', instruments: [] }],
