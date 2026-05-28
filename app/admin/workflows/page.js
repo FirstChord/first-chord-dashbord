@@ -25,6 +25,12 @@ const workflowSections = [
     description: 'Seasonal admin checklist for school breaks, pauses, and related communication.',
     status: 'Recurring',
   },
+  {
+    href: '/admin/workflows/parent-understanding',
+    title: 'Parent Understanding',
+    description: 'Call workflow for checking parent understanding, recording feedback, and closing follow-up loops.',
+    status: 'Campaign',
+  },
 ];
 
 function WorkflowCard({ section }) {
