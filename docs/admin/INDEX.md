@@ -76,6 +76,15 @@ This admin index is the map of durable admin documentation. Older V1/V2 drafts a
   - policy reminders
   - copy-ready messages
   - persistent action checklists
+- `/admin/workflows/parent-understanding` is a parent check-in campaign workflow for Fenella.
+- `Parent_Understanding_State` in Google Sheets stores one workflow-state row per student/parent record.
+- Parent understanding is intentionally manual and approval-first:
+  - it can copy WhatsApp follow-up templates
+  - it can record understanding gaps, risk signals, next actions, summaries, and follow-up state
+  - it does not auto-send WhatsApp messages
+  - it does not edit MMS contact details
+  - it does not automatically notify tutors
+- Consequential parent-understanding saves append to `Event_Log` when a record is completed, marked needs-follow-up, or escalated.
 
 ## Suggested Handoff Order
 

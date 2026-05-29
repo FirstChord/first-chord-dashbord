@@ -2,6 +2,53 @@
 
 This file tracks the admin dashboard build so work can be handed between agents cleanly.
 
+## 2026-05-29 — Parent Understanding Workflow
+
+### Scope
+- Add a first testable workflow page for Fenella to call parents, check understanding of key school systems, capture feedback, and leave a clear follow-up state.
+- Keep the workflow manual and approval-first. This is not WhatsApp automation, a CRM replacement, or a tutor-notification system.
+
+### What changed
+- Added `/admin/workflows/parent-understanding`.
+- Added a Workflows hub card for Parent Understanding.
+- Added `POST /api/admin/parent-understanding`.
+- Added `Parent_Understanding_State` as a managed Google Sheets tab.
+- Added parent-understanding helpers for:
+  - workflow/loop status normalisation
+  - four-area understanding score
+  - practical risk signal derivation
+  - deterministic summary generation
+- Added focused helper tests in `tests/admin/parent-understanding-helpers.test.mjs`.
+- The page shows:
+  - student/parent/tutor/schedule/instrument/lifecycle context
+  - call status and loop status
+  - understanding checks for cancellations/holidays, dashboard/Soundslice, practice notes, and showcases
+  - WhatsApp group understanding and community-group status
+  - parent feedback and tutor/action relevance
+  - next-action guidance
+  - copyable WhatsApp templates
+  - editable summary and save action
+
+### Operational notes
+- `Parent_Understanding_State` is dashboard workflow state, one row per student.
+- Student/contact truth still comes from existing Sheets/MMS/registry data.
+- Practice notes are assumed to go to the parent email in MMS.
+- Contact-detail problems should be flagged for Fenella/admin follow-up; this workflow does not edit MMS yet.
+- WhatsApp templates are copied for human sending. No WhatsApp API send is wired.
+- Wider community-group absence is treated as follow-up unless intentionally declined or not relevant.
+- Consequential saves append to `Event_Log` when the workflow status is `completed`, `needs_follow_up`, or `escalate_to_admin`.
+
+### Manual checks before handoff to Fenella
+- Open `/admin/workflows/parent-understanding`.
+- Test one clean/completed parent record.
+- Test one practice-notes-not-received record and confirm the next action points to MMS parent email follow-up.
+- Test one not-in-community-group record and confirm the community invite/template are useful.
+- Reload the page and confirm saved state returns from `Parent_Understanding_State`.
+
+### Validation
+- `npm run test:admin` passes
+- `npm run build` passes
+
 ## 2026-05-18 — Manual Waiting Free-Slot Refresh
 
 ### Scope

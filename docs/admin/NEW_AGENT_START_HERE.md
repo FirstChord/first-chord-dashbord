@@ -1,6 +1,6 @@
 # New Agent Start Here — Admin Dashboard
 
-Last updated: 2026-05-22
+Last updated: 2026-05-29
 
 This is the practical handoff note for a new Codex/AI agent working on the First Chord admin dashboard.
 
@@ -38,6 +38,7 @@ Recent V4 layers include:
 - MMS Free-slot capacity context
 - clickable waiting-list capacity slots into onboarding
 - first-name learner labels in onboarding message copy
+- parent understanding workflow at `/admin/workflows/parent-understanding`
 
 ## Read These First
 
@@ -60,6 +61,22 @@ Recent V4 layers include:
 - `Event_Log` = action history
 - `Pause History` = pause event/history source
 - `Schedule_Context` = cached selected MMS schedule facts
+- `Parent_Understanding_State` = parent check-in campaign workflow state
+
+## Latest Important Commit
+
+- `120fdb6 Add parent understanding workflow`
+
+This added the first testable parent check-in workflow:
+
+- route: `/admin/workflows/parent-understanding`
+- API: `POST /api/admin/parent-understanding`
+- client: `components/admin/AdminParentUnderstandingPageClient.js`
+- helpers: `lib/admin/parent-understanding.js` and `lib/admin/parent-understanding-helpers.mjs`
+- tests: `tests/admin/parent-understanding-helpers.test.mjs`
+- managed Sheets tab: `Parent_Understanding_State`
+
+The workflow is intentionally approval/manual-first. It copies WhatsApp follow-up text but does not auto-send messages, edit MMS contact details, notify tutors, or create issues.
 
 Do not create a second source of truth unless the user explicitly agrees.
 
@@ -95,4 +112,3 @@ Use Obsidian for higher-level operating memory:
 - `08 Operations/Glossary.md` for shared terms
 
 Do not update docs for tiny styling-only changes unless they affect a documented workflow or decision.
-

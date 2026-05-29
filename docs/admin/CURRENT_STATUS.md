@@ -1,6 +1,6 @@
 # Admin Current Status
 
-Last updated: 2026-05-16
+Last updated: 2026-05-29
 
 This is the tracked current-status entrypoint for agents working from the `music-school-dashboard` repository.
 
@@ -42,6 +42,13 @@ The active surface is the private admin dashboard under `/admin`.
 - V4.1 scalable navigation model: top nav is now Overview, Issues, Workflows, and Planning, with student lookup as a header utility
 - waiting cards now show MMS sign-up context, parsed note facts, parent/contact phone when available, and the full MMS note behind a detail toggle
 - `/admin/waiting` has a manual `Refresh free slots` button to force-refresh MMS `Free` calendar slots without polling on every page load
+- `/admin/workflows/parent-understanding` is a first testable parent check-in workflow for Fenella:
+  - search/select existing students
+  - see parent contact, tutor, schedule, instrument, lifecycle, and dashboard URL context
+  - record call status, understanding checks, feedback, WhatsApp/community-group context, risk signals, next actions, and a summary
+  - copy parent-facing WhatsApp templates
+  - save one row per student to `Parent_Understanding_State`
+  - append `Event_Log` entries when records are completed, need follow-up, or are escalated
 
 ## Current Slice
 
@@ -58,6 +65,18 @@ The active V4 slice is context layering, not new automation.
 - `/admin/waiting` now parses instruments from the MMS sign-up note and shows possible free slots only when the tutor teaches the parsed instrument. These are hints only; they do not reserve slots, assign tutors, send messages, or start onboarding.
 - `/admin/waiting` is the placement/contact decision surface: it shows parent contact details, MMS note context, and possible capacity matches before handing off to `/admin/onboard` for execution.
 - The waiting free-slot refresh is explicit and admin-triggered. It bypasses the short server cache for MMS `Free` slots, then recalculates waiting-list capacity hints in place.
+- `/admin/workflows/parent-understanding` is a campaign workflow, not a CRM and not message automation. It should stay manual/approval-first until the communication draft layer is intentionally designed.
+- Parent understanding records are workflow state:
+  - Sheets tab: `Parent_Understanding_State`
+  - state owner: dashboard
+  - student/contact truth: existing Sheets/MMS/registry data
+  - message sending: human copy/send only
+  - contact-detail fixes: flag and note for Fenella/admin follow-up; do not edit MMS from this workflow yet
+- The current parent check-in policy assumptions are:
+  - practice notes are sent to the parent email in MMS
+  - all active students should generally have a small tutor/parent/Finn/Tom WhatsApp group except Adult Ukulele Orchestra-style exceptions
+  - not being in the wider First Chord community group should remain a follow-up unless intentionally declined/not relevant
+  - cancellation/holiday recap should use the school handbook plus the short plain-English policy summary in the template
 - Admin navigation is intentionally action-led:
   - `Overview` = today's operating summary
   - `Issues` = detected problems and issue-loop actions
@@ -108,6 +127,12 @@ npm run build
    - Add draft and approval records before any WhatsApp Cloud API integration.
    - Do not auto-send.
 
+9. **Parent understanding hardening**
+   - Manually test 2-3 real students before handing to Fenella.
+   - Confirm the labels match how Fenella naturally asks the questions.
+   - Keep improving next-action wording before adding more fields.
+   - Do not auto-update MMS contact details from this page; keep this as flag/note only for now.
+
 ## Do Not Do Next
 
 - Do not add heavy assignment/owner systems yet.
@@ -125,6 +150,7 @@ npm run build
 - MMS calendar category `Free` = current real free-slot truth
 - Stripe = payment-provider truth
 - `Schedule_Context` = dashboard cache of selected MMS lesson context
+- `Parent_Understanding_State` = dashboard workflow state for parent check-in campaign records
 - `Pause History` = intentional pause-window truth
 - generated FC tabs and generated dashboard config files = derived outputs
 
