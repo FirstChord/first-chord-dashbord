@@ -57,6 +57,16 @@ test('deriveParentUnderstandingRiskSignals flags practical follow-up gaps', () =
   assert(signals.includes('Tutor-related feedback needs admin review'));
 });
 
+test('deriveParentUnderstandingRiskSignals treats not often practice as engagement follow-up', () => {
+  const signals = deriveParentUnderstandingRiskSignals({
+    feedback: {
+      practiceAtHome: 'not_often',
+    },
+  });
+
+  assert(signals.includes('Practice engagement needs review'));
+});
+
 test('buildParentUnderstandingSummary includes score, student, and follow-up signals', () => {
   const summary = buildParentUnderstandingSummary(
     {

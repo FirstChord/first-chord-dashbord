@@ -120,8 +120,59 @@ function getRecordScore(record) {
   return calculateUnderstandingScore({ ...record.state.details, adminFollowUpNote: record.state.details.adminFollowUpNote });
 }
 
+function hasSavedWorkflowState(record) {
+  return Boolean(record?.state?.updatedAt || record?.state?.recordId);
+}
+
+function hasUnderstandingAssessment(record) {
+  const understanding = record?.state?.details?.understanding || {};
+  return Object.values(understanding).some((area) => `${area?.understands || ''}`.trim());
+}
+
+function hasWorkflowActivity(record) {
+  const details = record?.state?.details || {};
+  const feedback = details.feedback || {};
+  const communication = details.communication || {};
+  const hasFeedback = Object.values(feedback).some((value) => {
+    const text = Array.isArray(value) ? value.join(' ') : `${value || ''}`;
+    return text.trim() && text !== 'unknown' && text !== 'none';
+  });
+  const hasCommunication = Object.values(communication).some((value) => {
+    const text = `${value || ''}`.trim();
+    return text && text !== 'unknown';
+  });
+
+  return Boolean(
+    hasSavedWorkflowState(record)
+    || record?.state?.workflowStatus !== 'not_started'
+    || hasUnderstandingAssessment(record)
+    || hasFeedback
+    || hasCommunication
+    || `${details.adminFollowUpNote || ''}`.trim(),
+  );
+}
+
 function getRecordRiskSignals(record) {
+  if (!hasWorkflowActivity(record)) {
+    return [];
+  }
   return deriveParentUnderstandingRiskSignals({ ...record.state.details, adminFollowUpNote: record.state.details.adminFollowUpNote });
+}
+
+function matchesQueueSearch(record, query) {
+  const trimmedQuery = query.trim().toLowerCase();
+  if (!trimmedQuery) {
+    return true;
+  }
+
+  const searchableText = [
+    record.student.studentName,
+    record.student.parentName,
+    record.student.tutor,
+    record.student.mmsId,
+  ].join(' ').toLowerCase();
+
+  return searchableText.includes(trimmedQuery);
 }
 
 function buildTemplates(record) {
@@ -135,7 +186,7 @@ function buildTemplates(record) {
     practiceNotes: `Hi ${parent}, just confirming that practice notes are sent via email after each lesson. If you're not seeing them, please check spam or let us know and we'll resend them.\n\nWe also recommend bookmarking ${student}'s dashboard so you can quickly access practice notes and song material from anywhere: ${dashboardUrl}`,
     showcases: `Hi ${parent}, just to recap, we run two free Student Showcases each year. All students are welcome to perform in a supportive environment. Dates are announced via newsletter and the WhatsApp community.\n\nDo let us know if you're not in the First Chord community group.`,
     whatsappGroups: `Hi ${parent}, just to recap how we usually communicate: the small WhatsApp group with the tutor, parents, Finn and Tom is for most lesson/admin messages, and the main First Chord community group is for bigger school-wide announcements. We’ll keep important information in the relevant group so it’s easy to find.\n\nFirst Chord Community Group: ${WHATSAPP_COMMUNITY_INVITE_URL}`,
-    noAnswer: `Hi ${parent}, it's Fenella from First Chord. I was just trying to catch you for a quick check-in about ${student}'s lessons and to make sure you have all the useful lesson information. Let me know if there's a better time to call, or feel free to reply here.`,
+    noAnswer: `Hi ${parent}, it's Fenella from First Chord. I was just trying to catch you for a quick check-in about ${student}'s lessons and to make sure you have all the useful lesson information. Let me know if there's a better time to call.`,
   };
 }
 
@@ -178,6 +229,7 @@ function deriveNextActions(record) {
 function QueueItem({ record, selected, onSelect }) {
   const score = getRecordScore(record);
   const signals = getRecordRiskSignals(record);
+  const hasActivity = hasWorkflowActivity(record);
 
   return (
     <button
@@ -192,7 +244,9 @@ function QueueItem({ record, selected, onSelect }) {
           <p className="truncate text-sm font-semibold text-slate-900">{record.student.studentName}</p>
           <p className="mt-1 truncate text-xs text-slate-500">{record.student.parentName || 'Parent not recorded'}</p>
         </div>
-        <span className="shrink-0 rounded-full bg-white px-2 py-1 text-xs text-slate-600 shadow-sm">{score.total}/8</span>
+        <span className="shrink-0 rounded-full bg-white px-2 py-1 text-xs text-slate-600 shadow-sm">
+          {hasActivity ? `${score.total}/8` : 'Not assessed'}
+        </span>
       </div>
       <div className="mt-3 flex flex-wrap gap-2 text-xs">
         <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-600">
@@ -283,21 +337,18 @@ export default function AdminParentUnderstandingPageClient({ initialWorkflow }) 
   const templates = selectedRecord ? buildTemplates(selectedRecord) : {};
 
   const filteredRecords = useMemo(() => records.filter((record) => {
-    const searchText = [
-      record.student.studentName,
-      record.student.parentName,
-      record.student.tutor,
-      record.student.instrument,
-    ].join(' ').toLowerCase();
-    if (query.trim() && !searchText.includes(query.trim().toLowerCase())) {
+    if (!matchesQueueSearch(record, query)) {
       return false;
     }
 
     const recordScore = getRecordScore(record);
     const signals = getRecordRiskSignals(record);
+    const hasActivity = hasWorkflowActivity(record);
     if (filter === 'all') return true;
-    if (filter === 'risk') return signals.length > 0;
-    if (filter === 'low_score') return recordScore.total <= 4;
+    if (filter === 'risk') return hasActivity && signals.length > 0;
+    if (filter === 'low_score') return hasUnderstandingAssessment(record) && recordScore.total <= 4;
+    if (filter === 'not_started') return record.state.workflowStatus === 'not_started' && !hasActivity;
+    if (!hasActivity) return false;
     return record.state.workflowStatus === filter;
   }), [records, filter, query]);
 
@@ -496,7 +547,7 @@ export default function AdminParentUnderstandingPageClient({ initialWorkflow }) 
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search student, parent, tutor"
+              placeholder="Search student, parent, tutor, MMS ID"
               className="min-w-0 flex-1 bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
             />
           </div>
@@ -516,15 +567,24 @@ export default function AdminParentUnderstandingPageClient({ initialWorkflow }) 
               </button>
             ))}
           </div>
+          <p className="mt-3 text-xs text-slate-500">
+            Showing {filteredRecords.length} of {records.length}
+          </p>
           <div className="mt-4 max-h-[680px] space-y-3 overflow-auto pr-1">
-            {filteredRecords.map((record) => (
-              <QueueItem
-                key={record.student.mmsId}
-                record={record}
-                selected={record.student.mmsId === selectedRecord.student.mmsId}
-                onSelect={() => setSelectedMmsId(record.student.mmsId)}
-              />
-            ))}
+            {filteredRecords.length ? (
+              filteredRecords.map((record) => (
+                <QueueItem
+                  key={record.student.mmsId}
+                  record={record}
+                  selected={record.student.mmsId === selectedRecord.student.mmsId}
+                  onSelect={() => setSelectedMmsId(record.student.mmsId)}
+                />
+              ))
+            ) : (
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                No matching parent records.
+              </div>
+            )}
           </div>
         </aside>
 
@@ -649,9 +709,9 @@ export default function AdminParentUnderstandingPageClient({ initialWorkflow }) 
                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
                   >
                     <option value="unknown">Unknown</option>
-                    <option value="yes">Yes</option>
+                    <option value="regularly">Regularly</option>
                     <option value="sometimes">Sometimes</option>
-                    <option value="no">No</option>
+                    <option value="not_often">Not often</option>
                   </select>
                 </div>
                 <div className="space-y-2">
