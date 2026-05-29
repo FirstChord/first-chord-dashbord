@@ -66,6 +66,7 @@ const FILTERS = [
 ];
 
 const WHATSAPP_COMMUNITY_INVITE_URL = 'https://chat.whatsapp.com/KKetDYyqDDGFBF1sTSWOG3?mode=gi_t';
+const GOOGLE_REVIEW_URL = 'https://www.google.com/search?hl=en-GB&gl=uk&q=First+Chord+Music+School,+33+Otago+St,+Glasgow+G12+8JJ&ludocid=12199449542125224380&lsig=AB86z5W4tXrtGxxEIxNKZMDj34tG#lrd=0x48884565152a53d5:0xa94d26b91dad01bc,3';
 
 const CANCELLATION_POLICY_RECAP = 'If you cannot attend in person, you can have a Zoom lesson at the normal time or your tutor can send a 5-10 minute practice video with notes. Same-day cancellations/no-shows are not eligible for a practice video. If you need to cancel a lesson, please give one week of notice so the lesson is not charged. Extended breaks can be paused for up to 3 weeks; weeks 4 and 5 are charged as normal, and 6+ weeks usually means discussing stepping back temporarily. Summer holidays are handled separately.';
 
@@ -187,6 +188,7 @@ function buildTemplates(record) {
     showcases: `Hi ${parent}, just to recap, we run two free Student Showcases each year. All students are welcome to perform in a supportive environment. Dates are announced via newsletter and the WhatsApp community.\n\nDo let us know if you're not in the First Chord community group.`,
     whatsappGroups: `Hi ${parent}, just to recap how we usually communicate: the small WhatsApp group with the tutor, parents, Finn and Tom is for most lesson/admin messages, and the main First Chord community group is for bigger school-wide announcements. We’ll keep important information in the relevant group so it’s easy to find.\n\nFirst Chord Community Group: ${WHATSAPP_COMMUNITY_INVITE_URL}`,
     noAnswer: `Hi ${parent}, it's Fenella from First Chord. I was just trying to catch you for a quick check-in about ${student}'s lessons and to make sure you have all the useful lesson information. Let me know if there's a better time to call.`,
+    reviewRequest: `Hi ${parent}, thanks again for taking the time to chat today. It was really helpful to check in about ${student}'s lessons.\n\nIf you have a minute, we'd really appreciate a quick Google review. You can click here: ${GOOGLE_REVIEW_URL}`,
   };
 }
 
@@ -847,6 +849,7 @@ export default function AdminParentUnderstandingPageClient({ initialWorkflow }) 
           </section>
 
           <section className="space-y-2">
+            <TemplateButton label="Thanks + review request" body={templates.reviewRequest} onCopy={copyTemplate} copied={copiedTemplate} />
             <TemplateButton label="No answer follow-up" body={templates.noAnswer} onCopy={copyTemplate} copied={copiedTemplate} />
             {selectedRecord.state.details.communication.whatsappUnderstanding !== 'yes' ? (
               <TemplateButton label="WhatsApp groups recap" body={templates.whatsappGroups} onCopy={copyTemplate} copied={copiedTemplate} />
