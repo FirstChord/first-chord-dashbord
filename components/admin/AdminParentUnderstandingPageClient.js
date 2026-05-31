@@ -2,12 +2,11 @@
 
 import Link from 'next/link';
 import { Check, Copy, Loader2, Search } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   buildParentUnderstandingSummary,
   calculateUnderstandingScore,
   deriveParentUnderstandingRiskSignals,
-  PARENT_UNDERSTANDING_LOOP_STATUS_OPTIONS,
   PARENT_UNDERSTANDING_STATUS_OPTIONS,
 } from '@/lib/admin/parent-understanding-helpers.mjs';
 
@@ -58,7 +57,6 @@ const FILTERS = [
   { value: 'all', label: 'All' },
   { value: 'not_started', label: 'Not Started' },
   { value: 'in_progress', label: 'In Progress' },
-  { value: 'no_answer', label: 'No Answer' },
   { value: 'needs_follow_up', label: 'Needs Follow-Up' },
   { value: 'completed', label: 'Completed' },
   { value: 'risk', label: 'Has Risk Signals' },
@@ -80,6 +78,34 @@ function firstName(name = '') {
 
 function labelFor(options, value) {
   return options.find((option) => option.value === value)?.label || value || 'Not set';
+}
+
+function statusAfterEdit(status = '') {
+  if (['completed', 'needs_follow_up', 'escalate_to_admin'].includes(status)) {
+    return status;
+  }
+  return 'in_progress';
+}
+
+function buildStatusPatch(nextStatus = 'in_progress') {
+  if (nextStatus === 'completed') {
+    return {
+      workflowStatus: 'completed',
+      loopStatus: 'closed',
+    };
+  }
+
+  if (nextStatus === 'needs_follow_up') {
+    return {
+      workflowStatus: 'needs_follow_up',
+      loopStatus: 'open_admin_follow_up_needed',
+    };
+  }
+
+  return {
+    workflowStatus: 'in_progress',
+    loopStatus: 'partially_closed',
+  };
 }
 
 function buildEmptyDetails(details = {}) {
@@ -228,7 +254,7 @@ function deriveNextActions(record) {
   return nextActions;
 }
 
-function QueueItem({ record, selected, onSelect }) {
+function QueueItem({ record, selected, unsaved, onSelect }) {
   const score = getRecordScore(record);
   const signals = getRecordRiskSignals(record);
   const hasActivity = hasWorkflowActivity(record);
@@ -254,6 +280,9 @@ function QueueItem({ record, selected, onSelect }) {
         <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-600">
           {labelFor(PARENT_UNDERSTANDING_STATUS_OPTIONS, record.state.workflowStatus)}
         </span>
+        {unsaved ? (
+          <span className="rounded-full bg-amber-100 px-2 py-1 font-medium text-amber-900">Unsaved</span>
+        ) : null}
         {signals.length ? (
           <span className="rounded-full bg-amber-50 px-2 py-1 text-amber-800">{signals.length} signal{signals.length === 1 ? '' : 's'}</span>
         ) : null}
@@ -330,9 +359,11 @@ export default function AdminParentUnderstandingPageClient({ initialWorkflow }) 
   const [filter, setFilter] = useState('all');
   const [query, setQuery] = useState('');
   const [saveState, setSaveState] = useState({ pending: false, error: '', savedAt: '' });
+  const [unsavedMmsIds, setUnsavedMmsIds] = useState(() => new Set());
   const [copiedTemplate, setCopiedTemplate] = useState('');
 
   const selectedRecord = records.find((record) => record.student.mmsId === selectedMmsId) || records[0] || null;
+  const hasUnsavedSelected = selectedRecord ? unsavedMmsIds.has(selectedRecord.student.mmsId) : false;
   const score = selectedRecord ? getRecordScore(selectedRecord) : calculateUnderstandingScore({});
   const riskSignals = selectedRecord ? getRecordRiskSignals(selectedRecord) : [];
   const nextActions = selectedRecord ? deriveNextActions(selectedRecord) : [];
@@ -357,6 +388,52 @@ export default function AdminParentUnderstandingPageClient({ initialWorkflow }) 
   const completedCount = records.filter((record) => record.state.workflowStatus === 'completed').length;
   const followUpCount = records.filter((record) => ['needs_follow_up', 'escalate_to_admin'].includes(record.state.workflowStatus)).length;
 
+  useEffect(() => {
+    setSaveState({ pending: false, error: '', savedAt: '' });
+  }, [selectedMmsId]);
+
+  useEffect(() => {
+    function handleBeforeUnload(event) {
+      if (!unsavedMmsIds.size) {
+        return;
+      }
+      event.preventDefault();
+      event.returnValue = '';
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [unsavedMmsIds]);
+
+  function confirmDiscardUnsaved() {
+    if (!hasUnsavedSelected) {
+      return true;
+    }
+    return window.confirm('This parent record has unsaved changes. Leave without saving?');
+  }
+
+  function selectRecord(nextMmsId) {
+    if (nextMmsId === selectedRecord?.student?.mmsId) {
+      return;
+    }
+    if (!confirmDiscardUnsaved()) {
+      return;
+    }
+    setSelectedMmsId(nextMmsId);
+  }
+
+  function markSelectedDirty() {
+    if (!selectedRecord?.student?.mmsId) {
+      return;
+    }
+    setUnsavedMmsIds((current) => {
+      const next = new Set(current);
+      next.add(selectedRecord.student.mmsId);
+      return next;
+    });
+    setSaveState({ pending: false, error: '', savedAt: '' });
+  }
+
   function updateSelected(updater) {
     setRecords((current) => current.map((record) => {
       if (record.student.mmsId !== selectedRecord.student.mmsId) {
@@ -367,20 +444,24 @@ export default function AdminParentUnderstandingPageClient({ initialWorkflow }) 
   }
 
   function updateState(patch) {
+    markSelectedDirty();
     updateSelected((record) => ({
       ...record,
       state: {
         ...record.state,
+        workflowStatus: patch.workflowStatus || statusAfterEdit(record.state.workflowStatus),
         ...patch,
       },
     }));
   }
 
   function updateDetails(patch) {
+    markSelectedDirty();
     updateSelected((record) => ({
       ...record,
       state: {
         ...record.state,
+        workflowStatus: statusAfterEdit(record.state.workflowStatus),
         details: {
           ...record.state.details,
           ...patch,
@@ -455,25 +536,33 @@ export default function AdminParentUnderstandingPageClient({ initialWorkflow }) 
     });
   }
 
-  async function saveRecord() {
+  async function saveRecord(nextStatus = 'in_progress') {
+    const statusPatch = buildStatusPatch(nextStatus);
+    const recordToSave = {
+      ...selectedRecord,
+      state: {
+        ...selectedRecord.state,
+        ...statusPatch,
+      },
+    };
     setSaveState({ pending: true, error: '', savedAt: '' });
-    const nextScore = getRecordScore(selectedRecord);
-    const nextSignals = getRecordRiskSignals(selectedRecord);
+    const nextScore = getRecordScore(recordToSave);
+    const nextSignals = getRecordRiskSignals(recordToSave);
 
     try {
       const response = await fetch('/api/admin/parent-understanding', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          studentMmsId: selectedRecord.student.mmsId,
-          studentName: selectedRecord.student.studentName,
-          parentName: selectedRecord.student.parentName,
-          workflowStatus: selectedRecord.state.workflowStatus,
-          loopStatus: selectedRecord.state.loopStatus,
-          callAttemptCount: selectedRecord.state.callAttemptCount,
-          lastContactedAt: selectedRecord.state.lastContactedAt,
-          details: selectedRecord.state.details,
-          summary: selectedRecord.state.summary,
+          studentMmsId: recordToSave.student.mmsId,
+          studentName: recordToSave.student.studentName,
+          parentName: recordToSave.student.parentName,
+          workflowStatus: recordToSave.state.workflowStatus,
+          loopStatus: recordToSave.state.loopStatus,
+          callAttemptCount: recordToSave.state.callAttemptCount,
+          lastContactedAt: recordToSave.state.lastContactedAt,
+          details: recordToSave.state.details,
+          summary: recordToSave.state.summary,
         }),
       });
       const payload = await response.json();
@@ -494,6 +583,11 @@ export default function AdminParentUnderstandingPageClient({ initialWorkflow }) 
           riskSignals: nextSignals,
         },
       }));
+      setUnsavedMmsIds((current) => {
+        const next = new Set(current);
+        next.delete(selectedRecord.student.mmsId);
+        return next;
+      });
       setSaveState({ pending: false, error: '', savedAt: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) });
     } catch (error) {
       setSaveState({ pending: false, error: error.message || 'Save failed', savedAt: '' });
@@ -533,7 +627,7 @@ export default function AdminParentUnderstandingPageClient({ initialWorkflow }) 
         <div className={cardClasses()}>
           <p className="text-sm text-slate-500">Needs follow-up</p>
           <p className="mt-3 text-2xl font-semibold text-slate-900">{followUpCount}</p>
-          <p className="mt-2 text-sm text-slate-600">Saved records marked for follow-up or escalation.</p>
+          <p className="mt-2 text-sm text-slate-600">Saved records marked for follow-up.</p>
         </div>
         <div className={cardClasses()}>
           <p className="text-sm text-slate-500">Selected score</p>
@@ -579,7 +673,8 @@ export default function AdminParentUnderstandingPageClient({ initialWorkflow }) 
                   key={record.student.mmsId}
                   record={record}
                   selected={record.student.mmsId === selectedRecord.student.mmsId}
-                  onSelect={() => setSelectedMmsId(record.student.mmsId)}
+                  unsaved={unsavedMmsIds.has(record.student.mmsId)}
+                  onSelect={() => selectRecord(record.student.mmsId)}
                 />
               ))
             ) : (
@@ -591,6 +686,33 @@ export default function AdminParentUnderstandingPageClient({ initialWorkflow }) 
         </aside>
 
         <main className="space-y-5">
+          {hasUnsavedSelected || saveState.error || saveState.savedAt ? (
+            <section
+              className={`rounded-2xl border p-4 shadow-sm ${
+                saveState.error
+                  ? 'border-red-200 bg-red-50 text-red-900'
+                  : hasUnsavedSelected
+                    ? 'border-amber-200 bg-amber-50 text-amber-950'
+                    : 'border-emerald-200 bg-emerald-50 text-emerald-900'
+              }`}
+            >
+              <p className="text-sm font-semibold">
+                {saveState.error
+                  ? 'Save failed'
+                  : hasUnsavedSelected
+                    ? 'Unsaved changes'
+                    : `Saved at ${saveState.savedAt}`}
+              </p>
+              <p className="mt-1 text-sm">
+                {saveState.error
+                  ? saveState.error
+                  : hasUnsavedSelected
+                    ? 'Click Save progress, Mark done, or Needs follow-up before moving to another parent. Unsaved edits only live on this screen.'
+                    : 'This parent workflow record has been written to the Parent_Understanding_State sheet.'}
+              </p>
+            </section>
+          ) : null}
+
           <section className={cardClasses()}>
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
@@ -599,6 +721,11 @@ export default function AdminParentUnderstandingPageClient({ initialWorkflow }) 
               </div>
               <Link
                 href={`/admin/students/${selectedRecord.student.mmsId}`}
+                onClick={(event) => {
+                  if (!confirmDiscardUnsaved()) {
+                    event.preventDefault();
+                  }
+                }}
                 className="rounded-full border border-blue-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-blue-50"
               >
                 Open student record
@@ -623,31 +750,16 @@ export default function AdminParentUnderstandingPageClient({ initialWorkflow }) 
 
           <section className={cardClasses()}>
             <h3 className="text-lg font-semibold text-slate-900">Call Status</h3>
+            <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Current state</p>
+              <p className="mt-2 text-sm font-semibold text-slate-900">
+                {hasUnsavedSelected ? 'Unsaved changes - save progress, mark done, or flag follow-up' : labelFor(PARENT_UNDERSTANDING_STATUS_OPTIONS, selectedRecord.state.workflowStatus)}
+              </p>
+              <p className="mt-1 text-sm text-slate-600">
+                Starting or editing a record automatically makes it in progress. Use the save buttons at the bottom to close the loop.
+              </p>
+            </div>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <FieldLabel>Workflow status</FieldLabel>
-                <select
-                  value={selectedRecord.state.workflowStatus}
-                  onChange={(event) => updateState({ workflowStatus: event.target.value })}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
-                >
-                  {PARENT_UNDERSTANDING_STATUS_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <FieldLabel>Loop status</FieldLabel>
-                <select
-                  value={selectedRecord.state.loopStatus}
-                  onChange={(event) => updateState({ loopStatus: event.target.value })}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
-                >
-                  {PARENT_UNDERSTANDING_LOOP_STATUS_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
-                  ))}
-                </select>
-              </div>
               <div className="space-y-2">
                 <FieldLabel>Attempt count</FieldLabel>
                 <input
@@ -829,12 +941,33 @@ export default function AdminParentUnderstandingPageClient({ initialWorkflow }) 
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <button
                 type="button"
-                onClick={saveRecord}
+                onClick={() => saveRecord('in_progress')}
                 disabled={saveState.pending}
-                className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-5 py-2 text-sm font-semibold text-emerald-900 shadow-sm transition hover:bg-emerald-100 disabled:cursor-wait disabled:opacity-70"
+                className={`inline-flex items-center gap-2 rounded-full border px-5 py-2 text-sm font-semibold shadow-sm transition disabled:cursor-wait disabled:opacity-70 ${
+                  hasUnsavedSelected
+                    ? 'border-amber-300 bg-amber-100 text-amber-950 hover:bg-amber-200'
+                    : 'border-emerald-200 bg-emerald-50 text-emerald-900 hover:bg-emerald-100'
+                }`}
               >
                 {saveState.pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                Save record
+                Save progress
+              </button>
+              <button
+                type="button"
+                onClick={() => saveRecord('completed')}
+                disabled={saveState.pending}
+                className="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-100 px-5 py-2 text-sm font-semibold text-emerald-950 shadow-sm transition hover:bg-emerald-200 disabled:cursor-wait disabled:opacity-70"
+              >
+                <Check className="h-4 w-4" />
+                Mark done
+              </button>
+              <button
+                type="button"
+                onClick={() => saveRecord('needs_follow_up')}
+                disabled={saveState.pending}
+                className="inline-flex items-center gap-2 rounded-full border border-amber-300 bg-amber-100 px-5 py-2 text-sm font-semibold text-amber-950 shadow-sm transition hover:bg-amber-200 disabled:cursor-wait disabled:opacity-70"
+              >
+                Needs follow-up
               </button>
               {saveState.savedAt ? <span className="text-sm text-emerald-700">Saved at {saveState.savedAt}</span> : null}
               {saveState.error ? <span className="text-sm text-red-700">{saveState.error}</span> : null}
