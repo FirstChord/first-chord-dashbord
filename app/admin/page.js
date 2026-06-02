@@ -4,6 +4,7 @@ import { getReviewFlagsRows } from '@/lib/admin/sheets';
 import { getAdminHealthSummary } from '@/lib/admin/health';
 import { formatDateTime } from '@/lib/admin/health-helpers.mjs';
 import { buildPaymentOperationsSummary } from '@/lib/admin/payment-summary.mjs';
+import { getTutorAbsenceOverviewSummary } from '@/lib/admin/tutor-absence';
 
 const OVERVIEW_TEST_STUDENT_NAMES = new Set([
   'test studenty',
@@ -46,8 +47,9 @@ function healthPriority(health) {
   return 'healthy';
 }
 
-function buildPrioritySentence({ openIssues, linkingGaps, unknownPaymentMode, systemHealth }) {
+function buildPrioritySentence({ openIssues, tutorAbsences, linkingGaps, unknownPaymentMode, systemHealth }) {
   const priorities = [];
+  if (tutorAbsences > 0) priorities.push('tutor absences');
   if (linkingGaps > 0) priorities.push('payment/linking gaps');
   if (openIssues > 0) priorities.push('open flags');
   if (unknownPaymentMode > 0) priorities.push('unknown payment modes');
@@ -88,17 +90,26 @@ function SectionHeader({ title, copy = '' }) {
 }
 
 export default async function AdminHomePage() {
-  const [students, flags, health] = await Promise.all([getAdminStudents(), getReviewFlagsRows(), getAdminHealthSummary()]);
+  const [students, flags, health, tutorAbsenceSummary] = await Promise.all([
+    getAdminStudents(),
+    getReviewFlagsRows(),
+    getAdminHealthSummary(),
+    getTutorAbsenceOverviewSummary(),
+  ]);
   const operationalStudents = students.filter((student) => !isOverviewTestStudent(student));
   const paymentSummary = buildPaymentOperationsSummary(operationalStudents);
   const lifecycleCounts = buildLifecycleCounts(operationalStudents);
   const systemHealth = healthPriority(health);
   const prioritySentence = buildPrioritySentence({
     openIssues: flags.length,
+    tutorAbsences: tutorAbsenceSummary.openAbsences,
     linkingGaps: paymentSummary.stripeLinkingGaps,
     unknownPaymentMode: paymentSummary.unknownPaymentMode,
     systemHealth,
   });
+  const tutorAbsenceHref = tutorAbsenceSummary.firstOpenAbsence
+    ? `/admin/workflows/tutor-absence?tutor=${encodeURIComponent(tutorAbsenceSummary.firstOpenAbsence.tutorShortName)}&date=${encodeURIComponent(tutorAbsenceSummary.firstOpenAbsence.absenceDate)}`
+    : '/admin/workflows/tutor-absence';
 
   const stats = [
     { label: 'Students in Sheets', value: operationalStudents.length, href: '/admin/students' },
@@ -160,8 +171,9 @@ export default async function AdminHomePage() {
 
       <section className="space-y-4">
         <SectionHeader title="Today's attention" copy={prioritySentence} />
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
           <StatCard label="Open issues" value={flags.length} href="/admin/flags" tone="border-red-100 bg-red-50/70" helper="Review queue" />
+          <StatCard label="Tutor absences" value={tutorAbsenceSummary.openAbsences} href={tutorAbsenceHref} tone="border-orange-100 bg-orange-50/70" helper={`${tutorAbsenceSummary.unresolvedMessages} parent messages left`} />
           <StatCard label="Payment/linking gaps" value={paymentSummary.stripeLinkingGaps} href="/admin/flags" tone="border-amber-100 bg-amber-50/70" helper="Outside setup pending" />
           <StatCard label="Payment setup pending" value={paymentSummary.setupPending} href="/admin/students" tone="border-blue-100 bg-blue-50/70" helper="Billing expectation" />
           <StatCard label="Unknown payment mode" value={paymentSummary.unknownPaymentMode} href="/admin/students" tone="border-slate-200 bg-slate-50/80" helper="Needs classification" />

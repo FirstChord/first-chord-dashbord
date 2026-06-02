@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildPauseSummary, normalisePauseHistoryRow } from '../../lib/admin/pause-helpers.mjs';
+import { buildPauseSummary, derivePauseCoverageContext, normalisePauseHistoryRow } from '../../lib/admin/pause-helpers.mjs';
 
 test('normalisePauseHistoryRow handles Pause History field variations', () => {
   const row = normalisePauseHistoryRow({
@@ -109,4 +109,81 @@ test('buildPauseSummary treats future pause windows as upcoming, not current', (
   assert.equal(summary.currentlyPaused, false);
   assert.equal(summary.upcomingPause, true);
   assert.equal(summary.latestPause.startDate, '2026-05-28');
+});
+
+test('derivePauseCoverageContext maps pause windows onto the usual lesson slot', () => {
+  const coverage = derivePauseCoverageContext({
+    currentDate: '2026-07-07',
+    pauseSummary: {
+      hasPauseHistory: true,
+      currentlyPaused: true,
+      latestPause: {
+        startDate: '2026-07-01',
+        endDate: '2026-07-21',
+      },
+    },
+    scheduleContext: {
+      status: 'found',
+      confidence: 'high',
+      usualWeekday: 'Tuesday',
+      usualTime: '18:00',
+    },
+  });
+
+  assert.equal(coverage.status, 'covers_future_or_current_lesson');
+  assert.equal(coverage.confidence, 'high');
+  assert.equal(coverage.coveredLessonCount, 3);
+  assert.deepEqual(
+    coverage.coveredLessonDates.map((lesson) => lesson.date),
+    ['2026-07-07', '2026-07-14', '2026-07-21'],
+  );
+  assert.match(coverage.summary, /3 usual lessons/i);
+});
+
+test('derivePauseCoverageContext recommends returning active once covered lessons have passed', () => {
+  const coverage = derivePauseCoverageContext({
+    currentDate: '2026-07-22',
+    pauseSummary: {
+      hasPauseHistory: true,
+      currentlyPaused: false,
+      latestPause: {
+        startDate: '2026-07-01',
+        endDate: '2026-07-21',
+      },
+    },
+    scheduleContext: {
+      status: 'found',
+      confidence: 'high',
+      usualWeekday: 'Tuesday',
+      usualTime: '18:00',
+    },
+  });
+
+  assert.equal(coverage.status, 'covered_lessons_passed');
+  assert.equal(coverage.remainingCoveredLessonCount, 0);
+  assert.match(coverage.recommendation, /return to Stripe active expected/i);
+});
+
+test('derivePauseCoverageContext flags pause windows that miss the usual lesson day', () => {
+  const coverage = derivePauseCoverageContext({
+    currentDate: '2026-07-03',
+    pauseSummary: {
+      hasPauseHistory: true,
+      currentlyPaused: true,
+      latestPause: {
+        startDate: '2026-07-01',
+        endDate: '2026-07-03',
+      },
+    },
+    scheduleContext: {
+      status: 'found',
+      confidence: 'high',
+      usualWeekday: 'Tuesday',
+      usualTime: '18:00',
+    },
+  });
+
+  assert.equal(coverage.status, 'no_usual_lesson_covered');
+  assert.equal(coverage.coveredLessonCount, 0);
+  assert.match(coverage.recommendation, /Review manually/i);
 });

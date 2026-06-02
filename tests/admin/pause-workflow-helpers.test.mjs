@@ -16,7 +16,7 @@ test('buildPauseWorkflowSummary flags a missing paused expectation for an active
   assert.equal(summary.state, 'Pause record alignment needed');
   assert.equal(summary.recordAligned, false);
   assert.match(summary.statusLine, /currently paused/i);
-  assert.match(summary.nextAction, /payment expectation still needs confirming/i);
+  assert.match(summary.nextAction, /set payment expectation to Stripe paused expected/i);
   assert.match(summary.closureCondition, /payment expectation says Stripe paused expected/i);
 });
 
@@ -66,6 +66,26 @@ test('buildPauseWorkflowSummary names records-aligned state before live Stripe i
   assert.equal(summary.liveStripeChecked, false);
   assert.equal(summary.state, 'Records aligned');
   assert.match(summary.nextAction, /Refresh live Stripe/i);
+});
+
+test('buildPauseWorkflowSummary includes pause coverage before asking for Stripe confirmation', () => {
+  const summary = buildPauseWorkflowSummary({
+    pauseSummary: {
+      hasPauseHistory: true,
+      currentlyPaused: true,
+    },
+    paymentExpectation: 'stripe_paused_expected',
+    pauseCoverageContext: {
+      status: 'covers_future_or_current_lesson',
+      summary: 'This pause window appears to cover 1 usual lesson: Mon 8 Jun, 18:00.',
+      recommendation: 'Keep payment expectation aligned with the active pause until the covered lesson has passed.',
+    },
+  });
+
+  assert.equal(summary.recordAligned, true);
+  assert.equal(summary.coverageStatus, 'covers_future_or_current_lesson');
+  assert.match(summary.nextAction, /single-student Stripe check/i);
+  assert.match(summary.statusLine, /agree that this student should currently be paused/i);
 });
 
 test('buildPauseWorkflowSummary closes the loop when records and live Stripe agree', () => {

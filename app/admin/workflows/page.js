@@ -31,6 +31,12 @@ const workflowSections = [
     description: 'Call workflow for checking parent understanding, recording feedback, and closing follow-up loops.',
     status: 'Campaign',
   },
+  {
+    href: '/admin/workflows/tutor-absence',
+    title: 'Tutor Absence',
+    description: 'Handle a tutor being off: find affected lessons, choose cancel or cover, and track parent messages.',
+    status: 'Action flow',
+  },
 ];
 
 function WorkflowCard({ section }) {

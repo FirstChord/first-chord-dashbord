@@ -110,9 +110,11 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
     scheduleContext: student.scheduleContext || null,
   });
   const [paymentValueContext, setPaymentValueContext] = useState(student.paymentValueContext || null);
+  const [pauseCoverageContext, setPauseCoverageContext] = useState(student.pauseCoverageContext || null);
   const [isPending, startTransition] = useTransition();
   const pauseWorkflow = buildPauseWorkflowSummary({
     pauseSummary: student.pauseSummary,
+    pauseCoverageContext,
     paymentExpectation: form.paymentExpectation,
     stripeSnapshot: stripeState.snapshot,
   });
@@ -229,6 +231,7 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
         scheduleContext: data.scheduleContext || null,
       });
       setPaymentValueContext(data.paymentValueContext || null);
+      setPauseCoverageContext(data.pauseCoverageContext || null);
     } catch (error) {
       setScheduleState((current) => ({
         ...current,
@@ -485,7 +488,7 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
       {student.pauseSummary?.hasPauseHistory ? (
         <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
           <h3 className="text-sm font-semibold text-slate-900">Pause state</h3>
-          <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <ReadOnlyField label="Currently paused" value={student.pauseSummary.currentlyPaused ? 'Yes' : 'No'} />
             <ReadOnlyField label="Upcoming pause" value={student.pauseSummary.upcomingPause ? 'Yes' : 'No'} />
             <ReadOnlyField label="Latest pause start" value={student.pauseSummary.latestPause?.startDate} />
@@ -493,6 +496,18 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
             <ReadOnlyField label="Latest recorded Stripe pause status" value={student.pauseSummary.latestPause?.stripeStatus} />
             <ReadOnlyField label="Pause match confidence" value={student.pauseSummary.matchConfidence || '—'} />
           </div>
+          {pauseCoverageContext?.summary ? (
+            <div className={`mt-3 rounded-lg border px-3 py-2 text-sm ${
+              pauseCoverageContext.status === 'no_usual_lesson_covered' || pauseCoverageContext.status === 'schedule_missing'
+                ? 'border-amber-200 bg-amber-50 text-amber-900'
+                : 'border-blue-200 bg-blue-50 text-blue-950'
+            }`}
+            >
+              <p className="font-medium">Likely lesson coverage</p>
+              <p className="mt-1">{pauseCoverageContext.summary}</p>
+              <p className="mt-1">{pauseCoverageContext.recommendation}</p>
+            </div>
+          ) : null}
           {student.pauseSummary.matchEvidence ? (
             <p className={`mt-3 rounded-lg border px-3 py-2 text-sm ${
               student.pauseSummary.matchConfidence === 'low'

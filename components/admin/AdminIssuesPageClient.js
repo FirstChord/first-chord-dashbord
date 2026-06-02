@@ -99,6 +99,10 @@ function getPrimaryPaymentQuickAction(issue, actions = []) {
 }
 
 function getIssueKeyFact(issue) {
+  if (issue.pauseCoverageContext?.summary && isPauseIssue(issue)) {
+    return issue.pauseCoverageContext.summary;
+  }
+
   if (issue.pauseSummary?.latestPause) {
     return `Pause window: ${issue.pauseSummary.latestPause.startDate || '—'} to ${issue.pauseSummary.latestPause.endDate || '—'}`;
   }
@@ -964,6 +968,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                 const pauseWorkflow = isPauseIssue(issue)
                   ? buildPauseWorkflowSummary({
                     pauseSummary: issue.pauseSummary,
+                    pauseCoverageContext: issue.pauseCoverageContext,
                     paymentExpectation: issue.paymentExpectation || '',
                     stripeSnapshot: liveStripeState?.snapshot || null,
                   })
@@ -1194,6 +1199,9 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                         {issue.pauseSummary?.matchEvidence ? (
                           <p className="mt-2 text-xs text-violet-900">Evidence: {issue.pauseSummary.matchEvidence}</p>
                         ) : null}
+                        {issue.pauseCoverageContext?.summary ? (
+                          <p className="mt-2 text-xs text-violet-900">Coverage: {issue.pauseCoverageContext.summary}</p>
+                        ) : null}
                         <p className="mt-2 text-xs text-violet-900">Closes when: {pauseWorkflow.closureCondition}</p>
                       </div>
                     ) : null}
@@ -1281,6 +1289,9 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                               <p>
                                 Latest pause window: {issue.pauseSummary.latestPause.startDate || '—'} to {issue.pauseSummary.latestPause.endDate || '—'}
                               </p>
+                            ) : null}
+                            {issue.pauseCoverageContext?.summary ? (
+                              <p>Likely coverage: {issue.pauseCoverageContext.summary}</p>
                             ) : null}
                           </div>
                         </div>
