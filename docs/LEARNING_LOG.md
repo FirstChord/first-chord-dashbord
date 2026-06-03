@@ -19,6 +19,26 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-03 — Planning Inbox V1
+
+**Feature/change:** Added a lightweight `/admin/planning` inbox for ideas, initiatives, and actions. Planning items now have owner, area, status, optional links, outcome, next action, and append-only progress notes. The page derives momentum labels such as `Moving`, `Stalled`, and `No next action`.
+
+**Why it exists:** Some improvement work lasts weeks or months, so a simple `Active` status can hide real progress. Planning V1 is designed to capture thoughts quickly, then show whether chosen initiatives are moving, waiting, stalled, or missing a next action.
+
+**Source-of-truth impact:** `Planning_Items` is dashboard-owned planning/workflow state. `Planning_Progress_Log` is dashboard-owned append-only progress history. Neither tab is external truth, and this does not affect Issues, Students, MMS, Stripe, or parent-facing actions.
+
+**Files/functions involved:**
+
+- `app/admin/planning/page.js`
+- `app/api/admin/planning/route.js`
+- `components/admin/AdminPlanningPageClient.js`
+- `lib/admin/planning.js`
+- `lib/admin/planning-helpers.mjs`
+- `getPlanningItemRows()`, `upsertPlanningItemRow()`, `getPlanningProgressLogRows()`, and `appendPlanningProgressLogRow()` in `lib/admin/sheets.js`
+- `tests/admin/planning-helpers.test.mjs`
+
+**What to watch out for:** Keep this as lightweight planning, not project management. Avoid due dates, notifications, automation, or AI classification until the capture/review habit proves useful. Initiatives should always have a current next action if they are active.
+
 ### 2026-06-03 — Payment Setup Pending As Work Queue
 
 **Feature/change:** Moved ordinary `setup_pending` students out of `/admin/flags` issue generation and into the `/admin/students?paymentExpectation=setup_pending` work queue. Blank Stripe-managed rows with no Stripe customer/subscription IDs now derive as `setup_pending`. Added a narrower `SETUP PENDING STRIPE LINKED` issue for students still marked setup pending even though both Stripe linkage IDs are recorded.
