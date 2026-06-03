@@ -14,6 +14,7 @@ test('classifyIssue maps current review flag types into actionable admin metadat
   assert.deepEqual(classifyIssue('SHEETS ONLY').systemsAffected, ['Sheets']);
   assert.deepEqual(classifyIssue('REGISTRY ONLY').systemsAffected, ['Registry']);
   assert.deepEqual(classifyIssue('PAYMENT SETUP PENDING').severity, 'Warning');
+  assert.deepEqual(classifyIssue('SETUP PENDING STRIPE LINKED').summary, 'Stripe linkage exists but payment expectation is still setup pending');
   assert.deepEqual(classifyIssue('STRIPE SUBSCRIPTION MISSING').systemsAffected, ['Sheets', 'Stripe']);
   assert.deepEqual(classifyIssue('PAYMENT_FAILED').severity, 'Needs action');
   assert.deepEqual(classifyIssue('SUBSCRIPTION_STATE_MISMATCH').systemsAffected, ['Sheets', 'Stripe']);
@@ -140,4 +141,26 @@ test('buildPaymentIssueRecord creates a Stripe issue with current payment linkag
   assert.deepEqual(issue.lifecycleWarnings, ['Stripe linkage is incomplete for an active-expected student.']);
   assert.equal(issue.paymentValueContext.baselineWeeklyLabel, '£25');
   assert.equal(issue.adminStudentPath, '/admin/students/sdt_test');
+});
+
+test('buildPaymentIssueRecord describes stale setup state when Stripe linkage exists', () => {
+  const issue = buildPaymentIssueRecord({
+    type: 'SETUP PENDING STRIPE LINKED',
+    student: {
+      mmsId: 'sdt_setup',
+      fullName: 'Charlie Example',
+      tutor: 'Tom Walters',
+      registryTutor: 'Tom',
+      paymentMode: 'stripe',
+      paymentExpectation: 'setup_pending',
+      stripeCustomerId: 'cus_123',
+      stripeSubscriptionId: 'sub_123',
+      registryEntry: { mmsId: 'sdt_setup' },
+    },
+  });
+
+  assert.equal(issue.type, 'SETUP PENDING STRIPE LINKED');
+  assert.equal(issue.source, 'payment_static');
+  assert.equal(issue.summary, 'Stripe linkage exists but payment expectation is still setup pending');
+  assert.match(issue.paymentReason, /both Stripe customer and subscription IDs/);
 });

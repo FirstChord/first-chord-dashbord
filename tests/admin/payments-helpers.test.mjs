@@ -49,3 +49,24 @@ test('derivePaymentExpectation falls back from payment mode conservatively', () 
   assert.equal(derivePaymentExpectation({ explicitExpectation: '', paymentMode: 'unknown' }), 'setup_pending');
   assert.equal(derivePaymentExpectation({ explicitExpectation: '', paymentMode: 'manual' }), '');
 });
+
+test('derivePaymentExpectation treats blank Stripe linkage as setup pending when linkage context is available', () => {
+  assert.equal(
+    derivePaymentExpectation({
+      explicitExpectation: '',
+      paymentMode: 'stripe',
+      stripeCustomerId: '',
+      stripeSubscriptionId: '',
+    }),
+    'setup_pending',
+  );
+  assert.equal(
+    derivePaymentExpectation({
+      explicitExpectation: '',
+      paymentMode: 'stripe',
+      stripeCustomerId: 'cus_123',
+      stripeSubscriptionId: '',
+    }),
+    'stripe_active_expected',
+  );
+});

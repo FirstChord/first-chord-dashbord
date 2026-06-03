@@ -72,6 +72,8 @@ Recommended values:
 
 This should be used alongside `payment_mode`, not instead of it.
 
+If `payment_mode` resolves to `stripe`, `payment_expectation` is blank, and both Stripe linkage IDs are blank, the dashboard should treat the student as `setup_pending`. If one or both Stripe IDs are present, the student should still be treated as active-expected unless an explicit expectation says otherwise, so incomplete or stale linkage remains visible.
+
 ---
 
 ## Expected Payment States
@@ -79,7 +81,7 @@ This should be used alongside `payment_mode`, not instead of it.
 | Expected state | When to use it | Stripe should look like | Flag? | Notes |
 |---|---|---|---|---|
 | `manual_payment` | Cash or bank transfer exceptions | Ignore Stripe state | No | Katrina Caldwell, Kenny, Hayleigh, Hudson, Anji Godard |
-| `setup_pending` | New student not fully set up yet | Customer/subscription may be missing | Yes | Keep visible until setup is completed |
+| `setup_pending` | New student not fully set up yet | Customer/subscription may be missing | No by itself | Keep visible in the payment setup queue until setup is completed |
 | `stripe_active_expected` | Normal active paying student | Active subscription, not intentionally paused | Yes if broken | Main default state |
 | `stripe_paused_expected` | Payment intentionally paused | Subscription paused or equivalent expected state | Yes only if mismatch | Should suppress failure alarms |
 | `inactive_or_stopped` | Left, stopped, or no longer operational | Stripe may be canceled or absent | Usually no | Only flag if obviously contradictory |
@@ -110,16 +112,19 @@ Recommended snapshot fields:
 | Expected state | Stripe condition | Issue | Severity |
 |---|---|---|---|
 | `manual_payment` | Any | None | — |
-| `setup_pending` | Missing customer/subscription or expectation still pending | `PAYMENT SETUP PENDING` | Warning |
+| `setup_pending` | Missing customer/subscription or expectation still pending | None | — |
+| `setup_pending` | Both customer and subscription IDs are recorded | `SETUP PENDING STRIPE LINKED` | Warning |
 | `stripe_active_expected` | No customer and no subscription | `STRIPE_SETUP_INCOMPLETE` | Warning |
 | `stripe_active_expected` | Customer missing | `STRIPE_CUSTOMER_MISSING` | Warning |
 | `stripe_active_expected` | Subscription missing | `STRIPE_SUBSCRIPTION_MISSING` | Warning |
 | `stripe_active_expected` | Subscription canceled | `SUBSCRIPTION_CANCELLED_UNEXPECTEDLY` | Needs action |
 | `stripe_active_expected` | Recent payment failed | `PAYMENT_FAILED` | Needs action |
+| `stripe_active_expected` | Latest invoice void with remaining balance and subscription past_due/unpaid | `PAYMENT_FAILED` | Needs action |
 | `stripe_active_expected` | Subscription paused | `SUBSCRIPTION_STATE_MISMATCH` | Warning |
 | `stripe_paused_expected` | Subscription paused correctly | None | — |
 | `stripe_paused_expected` | Subscription active instead of paused | `SUBSCRIPTION_STATE_MISMATCH` | Warning |
-| `stripe_paused_expected` | Payment failed while paused | Usually none | — |
+| `stripe_paused_expected` | Normal paused invoice voiding while subscription otherwise healthy | None | — |
+| `stripe_paused_expected` | Latest invoice void with remaining balance and subscription past_due/unpaid | `PAYMENT_FAILED` | Needs action |
 | `inactive_or_stopped` | Missing/canceled subscription | None | — |
 | `inactive_or_stopped` | Active subscription still billing | `ACTIVE_WITH_SUBSCRIPTION` | Warning |
 

@@ -43,6 +43,7 @@ function freshnessClasses(status) {
 function isPaymentIssue(issue) {
   return [
     'PAYMENT SETUP PENDING',
+    'SETUP PENDING STRIPE LINKED',
     'STRIPE SETUP INCOMPLETE',
     'STRIPE CUSTOMER MISSING',
     'STRIPE SUBSCRIPTION MISSING',
@@ -143,6 +144,10 @@ function getPaymentActionHint(issue) {
     return 'Usually not a broken billing case yet. Finish setup or deliberately move the student into a different payment mode/expectation.';
   }
 
+  if (issue.type === 'SETUP PENDING STRIPE LINKED') {
+    return 'This is probably stale setup state rather than missing Stripe setup. Confirm the student should be live, then mark Stripe active expected.';
+  }
+
   if (['STRIPE SETUP INCOMPLETE', 'STRIPE CUSTOMER MISSING', 'STRIPE SUBSCRIPTION MISSING'].includes(issue.type)) {
     return 'Usually a linkage/setup problem rather than a live billing failure. Check whether setup is still pending before treating it as broken Stripe.';
   }
@@ -208,6 +213,14 @@ function getPaymentActionPath(issue) {
       'Confirm this is genuinely still in setup rather than a broken active billing case.',
       'If setup is complete, move the expectation to Stripe active expected.',
       'If this student will not use Stripe, mark them as a manual payer instead.',
+    ];
+  }
+
+  if (issue.type === 'SETUP PENDING STRIPE LINKED') {
+    return [
+      'Confirm the recorded Stripe customer and subscription belong to this student.',
+      'If they should now be live, move the expectation to Stripe active expected.',
+      'If they are not actually live, choose the correct expectation rather than leaving setup pending by habit.',
     ];
   }
 
@@ -633,11 +646,11 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
   }
 
   function getPaymentQuickActions(issue) {
-    if (issue.paymentMode !== 'stripe' && issue.type !== 'PAYMENT SETUP PENDING') {
+    if (issue.paymentMode !== 'stripe' && !['PAYMENT SETUP PENDING', 'SETUP PENDING STRIPE LINKED'].includes(issue.type)) {
       return [];
     }
 
-    if (issue.type === 'PAYMENT SETUP PENDING') {
+    if (['PAYMENT SETUP PENDING', 'SETUP PENDING STRIPE LINKED'].includes(issue.type)) {
       return [
         { label: 'Set Stripe active expected', payload: { paymentMode: 'stripe', paymentExpectation: 'stripe_active_expected' } },
         { label: 'Mark manual payer', payload: { paymentMode: 'manual', paymentExpectation: '' } },
@@ -894,6 +907,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
             { value: 'SHEETS ONLY', label: 'Sheets only' },
             { value: 'REGISTRY ONLY', label: 'Registry only' },
             { value: 'PAYMENT SETUP PENDING', label: 'Payment setup pending' },
+            { value: 'SETUP PENDING STRIPE LINKED', label: 'Setup pending but linked' },
             { value: 'STRIPE SETUP INCOMPLETE', label: 'Stripe setup incomplete' },
             { value: 'STRIPE CUSTOMER MISSING', label: 'Stripe customer missing' },
             { value: 'STRIPE SUBSCRIPTION MISSING', label: 'Stripe subscription missing' },

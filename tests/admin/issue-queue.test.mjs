@@ -113,6 +113,95 @@ test('mergeIssuesWithQueueState flips missing managed issues to source_present f
   assert.equal(result.queueUpserts[0].sourcePresent, 'false');
 });
 
+test('mergeIssuesWithQueueState reopens resolved issues that are still currently detected', () => {
+  const now = '2026-06-03T19:20:00.000Z';
+  const currentIssues = [prepareIssue({
+    source: 'stripe_live',
+    type: 'PAYMENT_FAILED',
+    mmsId: 'sdt_BDHJJF',
+    contextKey: 'sub_123',
+    studentName: 'Claire Example',
+    severity: 'Needs action',
+    systemsAffected: ['Stripe'],
+    summary: 'Payment failed',
+    detail: 'latest_invoice_status=void',
+    recommendedAction: 'Review payment failure',
+  })];
+  const queueRows = [{
+    issueId: 'stripe_live:PAYMENT_FAILED:sdt_BDHJJF:sub_123',
+    source: 'stripe_live',
+    issueType: 'PAYMENT_FAILED',
+    mmsId: 'sdt_BDHJJF',
+    contextKey: 'sub_123',
+    studentName: 'Claire Example',
+    severity: 'Needs action',
+    status: 'resolved',
+    owner: '',
+    createdAt: '2026-06-03T19:02:00.000Z',
+    updatedAt: '2026-06-03T19:07:00.000Z',
+    resolvedAt: '2026-06-03T19:07:00.000Z',
+    ignoredAt: '',
+    acknowledgedAt: '',
+    lastSeenAt: '2026-06-03T19:02:00.000Z',
+    sourcePresent: 'TRUE',
+    summary: 'Payment failed',
+    detail: 'latest_invoice_status=void',
+    recommendedAction: 'Review payment failure',
+    systemsAffected: 'Stripe',
+    resolutionNote: 'System-cleared issue bulk resolved from dashboard.',
+  }];
+
+  const result = mergeIssuesWithQueueState({
+    currentIssues,
+    queueRows,
+    now,
+    managedSources: ['stripe_live'],
+  });
+
+  assert.equal(result.mergedCurrentIssues[0].status, 'open');
+  assert.equal(result.mergedCurrentIssues[0].reappeared, true);
+  assert.equal(result.queueUpserts[0].status, 'open');
+  assert.equal(result.queueUpserts[0].resolvedAt, '');
+  assert.equal(result.queueUpserts[0].sourcePresent, 'true');
+  assert.equal(result.eventRows[0].eventType, 'issue_reopened');
+});
+
+test('mergeIssuesWithQueueState treats uppercase TRUE as source-present when marking missing issues cleared', () => {
+  const now = '2026-06-03T19:20:00.000Z';
+  const queueRows = [{
+    issueId: 'stripe_live:PAYMENT_FAILED:sdt_BDHJJF:sub_123',
+    source: 'stripe_live',
+    issueType: 'PAYMENT_FAILED',
+    mmsId: 'sdt_BDHJJF',
+    contextKey: 'sub_123',
+    studentName: 'Claire Example',
+    severity: 'Needs action',
+    status: 'open',
+    owner: '',
+    createdAt: '2026-06-03T19:02:00.000Z',
+    updatedAt: '2026-06-03T19:07:00.000Z',
+    resolvedAt: '',
+    ignoredAt: '',
+    acknowledgedAt: '',
+    lastSeenAt: '2026-06-03T19:02:00.000Z',
+    sourcePresent: 'TRUE',
+    summary: 'Payment failed',
+    detail: 'latest_invoice_status=void',
+    recommendedAction: 'Review payment failure',
+    systemsAffected: 'Stripe',
+    resolutionNote: '',
+  }];
+
+  const result = mergeIssuesWithQueueState({
+    currentIssues: [],
+    queueRows,
+    now,
+    managedSources: ['stripe_live'],
+  });
+
+  assert.equal(result.queueUpserts[0].sourcePresent, 'false');
+});
+
 test('buildIssueStateChange logs previous and next state while keeping issue metadata', () => {
   const { nextRow, eventRow } = buildIssueStateChange({
     issueRow: {

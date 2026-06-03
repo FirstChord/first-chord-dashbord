@@ -45,6 +45,26 @@ test('deriveStripeInvoiceSummary marks payment problems from invoice or payment 
   assert.equal(invoice.latestPaymentIntentStatus, 'requires_payment_method');
 });
 
+test('deriveStripeInvoiceSummary marks void invoices with a remaining balance for review', () => {
+  const invoice = deriveStripeInvoiceSummary({
+    id: 'in_void',
+    status: 'void',
+    paid: false,
+    amount_due: 2500,
+    amount_remaining: 2500,
+    billing_reason: 'subscription_cycle',
+    status_transitions: {
+      voided_at: 1780444877,
+    },
+  });
+
+  assert.equal(invoice.hasPaymentProblem, true);
+  assert.equal(invoice.latestInvoiceStatus, 'void');
+  assert.equal(invoice.latestInvoiceAmountRemaining, 2500);
+  assert.equal(invoice.latestInvoiceBillingReason, 'subscription_cycle');
+  assert.equal(invoice.latestInvoiceVoidWithBalance, true);
+});
+
 test('buildStripeSnapshot derives actively billing only for non-paused billable statuses', () => {
   const activeSnapshot = buildStripeSnapshot({
     customer: { id: 'cus_123' },
@@ -103,4 +123,44 @@ test('buildLiveStripeIssues flags active students with payment failures and miss
   });
 
   assert.deepEqual(issues, ['ACTIVE_WITHOUT_SUBSCRIPTION', 'PAYMENT_FAILED']);
+});
+
+test('buildLiveStripeIssues flags paused-expected void invoices when the subscription is past due', () => {
+  const issues = buildLiveStripeIssues({
+    student: {
+      paymentMode: 'stripe',
+      paymentExpectation: 'stripe_paused_expected',
+    },
+    snapshot: {
+      subscriptionFound: true,
+      subscriptionStatus: 'past_due',
+      pauseState: 'paused',
+      activelyBilling: false,
+      hasPaymentProblem: true,
+      latestInvoiceStatus: 'void',
+      latestInvoiceVoidWithBalance: true,
+    },
+  });
+
+  assert.deepEqual(issues, ['PAYMENT_FAILED']);
+});
+
+test('buildLiveStripeIssues does not flag paused-expected void invoices when the subscription is otherwise healthy', () => {
+  const issues = buildLiveStripeIssues({
+    student: {
+      paymentMode: 'stripe',
+      paymentExpectation: 'stripe_paused_expected',
+    },
+    snapshot: {
+      subscriptionFound: true,
+      subscriptionStatus: 'active',
+      pauseState: 'paused',
+      activelyBilling: false,
+      hasPaymentProblem: true,
+      latestInvoiceStatus: 'void',
+      latestInvoiceVoidWithBalance: true,
+    },
+  });
+
+  assert.deepEqual(issues, []);
 });
