@@ -170,6 +170,19 @@ function buildSearchText(item) {
   ].join(' ').toLowerCase();
 }
 
+function workflowHref(workflowId = '') {
+  const key = `${workflowId || ''}`.trim().toLowerCase();
+  const routes = {
+    'tutor-absence': '/admin/workflows/tutor-absence',
+    'parent-understanding': '/admin/workflows/parent-understanding',
+    waiting: '/admin/waiting',
+    onboarding: '/admin/onboard',
+    showcase: '/admin/showcase',
+    holidays: '/admin/holidays',
+  };
+  return routes[key] || '';
+}
+
 function ItemForm({
   form,
   onChange,
@@ -289,6 +302,7 @@ function PlanningCard({ item, onStatus, onEdit, onProgress, pendingId }) {
     item.linkedStudentId ? `Student: ${item.linkedStudentId}` : '',
     item.linkedTutorId ? `Tutor: ${item.linkedTutorId}` : '',
   ].filter(Boolean);
+  const linkedWorkflowHref = workflowHref(item.linkedWorkflowId);
 
   return (
     <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_22px_rgba(15,23,42,0.04)]">
@@ -347,6 +361,15 @@ function PlanningCard({ item, onStatus, onEdit, onProgress, pendingId }) {
           ))}
         </div>
       )}
+
+      {linkedWorkflowHref ? (
+        <Link
+          href={linkedWorkflowHref}
+          className="mt-3 inline-flex rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-white"
+        >
+          Open linked workflow
+        </Link>
+      ) : null}
 
       {item.latestProgress && (
         <div className="mt-4 border-l-2 border-slate-200 pl-3 text-sm text-slate-600">
@@ -553,10 +576,11 @@ export default function AdminPlanningPageClient({ initialPlanning }) {
         </p>
       </section>
 
-      <section className="grid gap-3 md:grid-cols-4">
+      <section className="grid gap-3 md:grid-cols-5">
         {[
+          ['Open planning', summary.open || 0],
+          ['Active', summary.active || 0],
           ['Inbox', summary.inbox || 0],
-          ['Initiatives', summary.initiatives || 0],
           ['No next action', summary.noNextAction || 0],
           ['Stalled', summary.stalled || 0],
         ].map(([label, value]) => (
@@ -683,6 +707,18 @@ export default function AdminPlanningPageClient({ initialPlanning }) {
                 Free slots, tutor availability, waiting-list placement hints, and schedule-cache health.
               </p>
             </Link>
+            <div className="mt-3 rounded-2xl border border-orange-100 bg-orange-50/70 p-4">
+              <p className="text-sm font-semibold text-slate-900">Tutor absence</p>
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                Start the cancel-or-cover workflow for a tutor being off.
+              </p>
+              <Link
+                href="/admin/workflows/tutor-absence"
+                className="mt-3 inline-flex rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-700"
+              >
+                Open workflow
+              </Link>
+            </div>
             <Link
               href="/admin/workflows"
               className="mt-3 block rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-blue-200 hover:bg-white"

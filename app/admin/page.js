@@ -5,6 +5,7 @@ import { getAdminHealthSummary } from '@/lib/admin/health';
 import { formatDateTime } from '@/lib/admin/health-helpers.mjs';
 import { buildPaymentOperationsSummary } from '@/lib/admin/payment-summary.mjs';
 import { getTutorAbsenceOverviewSummary } from '@/lib/admin/tutor-absence';
+import { getPlanningDashboard } from '@/lib/admin/planning';
 
 const OVERVIEW_TEST_STUDENT_NAMES = new Set([
   'test studenty',
@@ -47,10 +48,18 @@ function healthPriority(health) {
   return 'healthy';
 }
 
-function buildPrioritySentence({ openIssues, tutorAbsences, linkingGaps, unknownPaymentMode, systemHealth }) {
+function buildPrioritySentence({
+  openIssues,
+  tutorAbsences,
+  linkingGaps,
+  unknownPaymentMode,
+  planningNeedsAttention,
+  systemHealth,
+}) {
   const priorities = [];
   if (tutorAbsences > 0) priorities.push('tutor absences');
   if (linkingGaps > 0) priorities.push('payment/linking gaps');
+  if (planningNeedsAttention > 0) priorities.push('planning items needing next action');
   if (openIssues > 0) priorities.push('open flags');
   if (unknownPaymentMode > 0) priorities.push('unknown payment modes');
   if (systemHealth !== 'healthy') priorities.push('system health');
@@ -159,18 +168,20 @@ function SectionHeader({ title, copy = '' }) {
 }
 
 export default async function AdminHomePage() {
-  const [students, flags, health, tutorAbsenceSummary, parentUnderstandingRows] = await Promise.all([
+  const [students, flags, health, tutorAbsenceSummary, parentUnderstandingRows, planningDashboard] = await Promise.all([
     getAdminStudents(),
     getReviewFlagsRows(),
     getAdminHealthSummary(),
     getTutorAbsenceOverviewSummary(),
     getParentUnderstandingStateRows(),
+    getPlanningDashboard(),
   ]);
   const operationalStudents = students.filter((student) => !isOverviewTestStudent(student));
   const paymentSummary = buildPaymentOperationsSummary(operationalStudents);
   const lifecycleCounts = buildLifecycleCounts(operationalStudents);
   const waitingSummary = buildWaitingOverview(operationalStudents);
   const parentUnderstandingSummary = buildParentUnderstandingOverview(parentUnderstandingRows);
+  const planningSummary = planningDashboard.summary || {};
   const systemHealth = healthPriority(health);
   const trustItems = buildTrustItems(health, systemHealth);
   const prioritySentence = buildPrioritySentence({
@@ -178,6 +189,7 @@ export default async function AdminHomePage() {
     tutorAbsences: tutorAbsenceSummary.openAbsences,
     linkingGaps: paymentSummary.stripeLinkingGaps,
     unknownPaymentMode: paymentSummary.unknownPaymentMode,
+    planningNeedsAttention: planningSummary.needsAttention || 0,
     systemHealth,
   });
   const tutorAbsenceHref = tutorAbsenceSummary.firstOpenAbsence
@@ -211,6 +223,13 @@ export default async function AdminHomePage() {
       href: '/admin/workflows/parent-understanding',
       helper: 'Communication loops still open',
       tone: 'border-blue-100 bg-blue-50/70',
+    } : null,
+    (planningSummary.needsAttention || 0) > 0 ? {
+      label: 'Planning needs action',
+      value: planningSummary.needsAttention,
+      href: '/admin/planning',
+      helper: `${planningSummary.noNextAction || 0} no next action · ${planningSummary.stalled || 0} stalled`,
+      tone: 'border-purple-100 bg-purple-50/70',
     } : null,
     waitingSummary.onboardingReady > 0 ? {
       label: 'Ready to onboard',
@@ -263,6 +282,13 @@ export default async function AdminHomePage() {
       href: tutorAbsenceHref,
       helper: `${tutorAbsenceSummary.unresolvedMessages} messages left`,
       tone: 'border-orange-100 bg-orange-50/70',
+    } : null,
+    (planningSummary.open || 0) > 0 && !attentionLabels.has('Planning needs action') ? {
+      label: 'Planning inbox',
+      value: planningSummary.open,
+      href: '/admin/planning',
+      helper: `${planningSummary.inbox || 0} inbox · ${planningSummary.active || 0} active`,
+      tone: 'border-purple-100 bg-purple-50/70',
     } : null,
   ].filter(Boolean);
 

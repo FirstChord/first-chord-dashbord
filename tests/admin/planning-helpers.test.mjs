@@ -99,7 +99,10 @@ test('attaches progress rows and builds summary counts', () => {
   assert.equal(items[0].momentum, 'moving');
   assert.equal(items[1].momentum, 'inbox');
   assert.equal(summary.total, 2);
+  assert.equal(summary.open, 2);
   assert.equal(summary.inbox, 1);
   assert.equal(summary.initiatives, 1);
+  assert.equal(summary.activeInitiatives, 1);
   assert.equal(summary.moving, 1);
+  assert.equal(summary.needsAttention, 0);
 });
