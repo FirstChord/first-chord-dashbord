@@ -64,13 +64,17 @@ test('buildTutorAbsenceMessage creates cancellation and cover parent copy', () =
     absenceDate: '2026-06-04',
     decision: 'cancel_day',
   }), /won’t be going ahead/);
-  assert.match(buildTutorAbsenceMessage({
+  const coverMessage = buildTutorAbsenceMessage({
     lesson,
     tutorName: 'Dean Louden',
     absenceDate: '2026-06-04',
     decision: 'cover',
     coverTutorName: 'Tom Walters',
-  }), /Tom Walters to cover/);
+  });
+  assert.match(coverMessage, /covered by Tom/);
+  assert.match(coverMessage, /Tom is up to speed/);
+  assert.doesNotMatch(coverMessage, /Tom Walters/);
+  assert.doesNotMatch(coverMessage, /16:30/);
 });
 
 test('summariseTutorAbsenceState counts parent messages left', () => {
