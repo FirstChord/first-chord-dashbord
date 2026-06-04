@@ -1,6 +1,6 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
-import { buildIssueStateChange } from '@/lib/admin/issue-queue';
+import { buildIssueStateChange, isSourcePresent } from '@/lib/admin/issue-queue';
 import { appendEventLogRows, getIssueQueueRows, upsertIssueQueueRows } from '@/lib/admin/sheets';
 
 export async function POST(request) {
@@ -33,7 +33,7 @@ export async function POST(request) {
       if (
         !issueRow ||
         !['open', 'acknowledged'].includes(issueRow.status) ||
-        issueRow.sourcePresent === 'true'
+        isSourcePresent(issueRow.sourcePresent)
       ) {
         continue;
       }

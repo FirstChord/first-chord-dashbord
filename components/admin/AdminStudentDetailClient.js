@@ -76,6 +76,10 @@ function lifecycleClasses(status) {
   return 'border-amber-200 bg-amber-50 text-amber-800';
 }
 
+function paymentExpectationLabel(value = '') {
+  return PAYMENT_EXPECTATION_OPTIONS.find((option) => option.value === value)?.label || value || 'Not set';
+}
+
 export default function AdminStudentDetailClient({ student, tutorOptions }) {
   const [form, setForm] = useState({
     firstName: student.firstName || '',
@@ -111,6 +115,11 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
   });
   const [paymentValueContext, setPaymentValueContext] = useState(student.paymentValueContext || null);
   const [pauseCoverageContext, setPauseCoverageContext] = useState(student.pauseCoverageContext || null);
+  const [exitState, setExitState] = useState({
+    registryPresent: Boolean(student.registry),
+    mmsInactive: false,
+    sheetArchived: false,
+  });
   const [isPending, startTransition] = useTransition();
   const pauseWorkflow = buildPauseWorkflowSummary({
     pauseSummary: student.pauseSummary,
@@ -118,6 +127,15 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
     paymentExpectation: form.paymentExpectation,
     stripeSnapshot: stripeState.snapshot,
   });
+  const hasStripeLinkage = Boolean(student.stripeCustomerId || student.stripeSubscriptionId);
+  const archiveAlreadyMarked = form.paymentExpectation === 'inactive_or_stopped';
+  const archiveScheduleLabel = scheduleState.scheduleContext
+    ? [
+      scheduleState.scheduleContext.usualWeekday,
+      scheduleState.scheduleContext.usualTime,
+      scheduleState.scheduleContext.teacherName ? `with ${scheduleState.scheduleContext.teacherName}` : '',
+    ].filter(Boolean).join(' ')
+    : 'No cached schedule context';
 
   function updateField(key, value) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -295,6 +313,143 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
     });
   }
 
+  function runExitAction({
+    action,
+    actionLabel,
+    promptText,
+    confirmText,
+    onSuccess,
+  }) {
+    const note = window.prompt(
+      promptText,
+      '',
+    );
+
+    if (note === null) {
+      return;
+    }
+
+    const trimmedNote = note.trim();
+    if (!trimmedNote) {
+      setServerState({ error: 'A short note is required for student exit actions.', success: '' });
+      return;
+    }
+
+    const confirmed = window.confirm(confirmText);
+
+    if (!confirmed) {
+      return;
+    }
+
+    setServerState({ error: '', success: '' });
+
+    startTransition(async () => {
+      const response = await fetch(`/api/admin/students/${student.mmsId}/archive`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action,
+          note: trimmedNote,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setServerState({ error: data.error || `${actionLabel} failed`, success: '' });
+        return;
+      }
+
+      onSuccess?.(data);
+    });
+  }
+
+  function handleArchiveStudent() {
+    runExitAction({
+      action: 'mark_inactive_expectation',
+      actionLabel: 'Mark inactive / stopped',
+      promptText: `Why are you marking ${student.fullName || student.mmsId} inactive/stopped? This note is saved to the archive audit log.`,
+      confirmText: archiveAlreadyMarked
+        ? 'This will log an archive note only. Continue?'
+        : 'This will set payment expectation to inactive/stopped and log the reason. Continue?',
+      onSuccess: (data) => {
+        setForm((current) => ({
+          ...current,
+          paymentExpectation: data.student.paymentExpectation || '',
+        }));
+        setServerState({
+          error: '',
+          success: data.audit?.paymentExpectationChanged
+            ? 'Student marked inactive/stopped and archive note logged.'
+            : 'Archive note logged. Payment expectation was already inactive/stopped.',
+        });
+      },
+    });
+  }
+
+  function handleDeleteRegistryEntry() {
+    runExitAction({
+      action: 'delete_registry_entry',
+      actionLabel: 'Delete registry entry',
+      promptText: `Why are you deleting registry access for ${student.fullName || student.mmsId}?`,
+      confirmText: 'This removes the portal/dashboard registry entry. It does not remove the Students sheet row or change MMS. Continue?',
+      onSuccess: (data) => {
+        setExitState((current) => ({
+          ...current,
+          registryPresent: Boolean(data.student?.registry),
+        }));
+        setServerState({
+          error: '',
+          success: data.audit?.registryDeleted
+            ? 'Registry entry deleted and logged.'
+            : 'No registry entry was present.',
+        });
+      },
+    });
+  }
+
+  function handleMarkMmsInactive() {
+    runExitAction({
+      action: 'mark_mms_inactive',
+      actionLabel: 'Mark inactive in MMS',
+      promptText: `Why are you marking ${student.fullName || student.mmsId} inactive in MMS?`,
+      confirmText: 'This updates the student status in MMS to Inactive. Continue?',
+      onSuccess: (data) => {
+        setExitState((current) => ({
+          ...current,
+          mmsInactive: true,
+        }));
+        setServerState({
+          error: '',
+          success: data.audit?.alreadyInactive
+            ? 'MMS was already inactive. Confirmation logged.'
+            : 'MMS student marked inactive and logged.',
+        });
+      },
+    });
+  }
+
+  function handleArchiveSheetRow() {
+    runExitAction({
+      action: 'archive_students_sheet_row',
+      actionLabel: 'Archive Students sheet row',
+      promptText: `Why are you removing ${student.fullName || student.mmsId} from the active Students sheet?`,
+      confirmText: 'Final step: this copies the row to Students_Archive, then removes it from the active Students sheet. The student detail page will no longer load after refresh. Continue?',
+      onSuccess: () => {
+        setExitState((current) => ({
+          ...current,
+          sheetArchived: true,
+        }));
+        setServerState({
+          error: '',
+          success: 'Students sheet row archived and removed. This page will no longer load after refresh.',
+        });
+      },
+    });
+  }
+
   return (
     <div className="space-y-8">
       <section>
@@ -303,6 +458,17 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
           Editable student detail. Sheets-lane fields and registry-lane fields are saved separately behind one form.
         </p>
       </section>
+
+      {serverState.success || serverState.error ? (
+        <section className={`rounded-2xl border p-4 text-sm ${
+          serverState.error
+            ? 'border-red-200 bg-red-50 text-red-800'
+            : 'border-emerald-200 bg-emerald-50 text-emerald-800'
+        }`}
+        >
+          {serverState.error || serverState.success}
+        </section>
+      ) : null}
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -359,6 +525,83 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
           </ul>
         </section>
       ) : null}
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900">Student exit / archive</h3>
+            <p className="mt-1 text-sm text-slate-600">
+              Work through this when a student has left. Each step is explicit, logged, and can be done separately.
+            </p>
+          </div>
+        </div>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <ReadOnlyField label="Current expectation" value={paymentExpectationLabel(form.paymentExpectation)} />
+          <ReadOnlyField label="Registry entry" value={exitState.registryPresent ? 'Present' : 'Missing'} />
+          <ReadOnlyField label="Stripe linkage" value={hasStripeLinkage ? 'IDs present' : 'No Stripe IDs'} />
+          <ReadOnlyField label="Usual lesson" value={archiveScheduleLabel} />
+        </div>
+        <div className="mt-4 grid gap-3 lg:grid-cols-4">
+          <div className={`rounded-xl border p-4 ${archiveAlreadyMarked ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-slate-50'}`}>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Step 1</p>
+            <p className="mt-2 text-sm font-medium text-slate-900">Mark inactive/stopped</p>
+            <p className="mt-1 text-xs text-slate-600">Updates the Students sheet payment expectation.</p>
+            <button
+              type="button"
+              onClick={handleArchiveStudent}
+              disabled={isPending || exitState.sheetArchived}
+              className="mt-3 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isPending ? 'Saving…' : archiveAlreadyMarked ? 'Log note' : 'Mark inactive'}
+            </button>
+          </div>
+          <div className={`rounded-xl border p-4 ${!exitState.registryPresent ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-slate-50'}`}>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Step 2</p>
+            <p className="mt-2 text-sm font-medium text-slate-900">Remove registry access</p>
+            <p className="mt-1 text-xs text-slate-600">Deletes the portal/dashboard registry entry.</p>
+            <button
+              type="button"
+              onClick={handleDeleteRegistryEntry}
+              disabled={isPending || !archiveAlreadyMarked || !exitState.registryPresent || exitState.sheetArchived}
+              className="mt-3 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isPending ? 'Saving…' : exitState.registryPresent ? 'Delete registry' : 'Done'}
+            </button>
+          </div>
+          <div className={`rounded-xl border p-4 ${exitState.mmsInactive ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-slate-50'}`}>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Step 3</p>
+            <p className="mt-2 text-sm font-medium text-slate-900">Mark inactive in MMS</p>
+            <p className="mt-1 text-xs text-slate-600">Updates MMS student status to Inactive.</p>
+            <button
+              type="button"
+              onClick={handleMarkMmsInactive}
+              disabled={isPending || !archiveAlreadyMarked || exitState.mmsInactive || exitState.sheetArchived}
+              className="mt-3 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isPending ? 'Saving…' : exitState.mmsInactive ? 'Done' : 'Mark MMS inactive'}
+            </button>
+          </div>
+          <div className={`rounded-xl border p-4 ${exitState.sheetArchived ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-slate-50'}`}>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Step 4</p>
+            <p className="mt-2 text-sm font-medium text-slate-900">Archive active row</p>
+            <p className="mt-1 text-xs text-slate-600">Copies to Students_Archive, then removes from Students.</p>
+            <button
+              type="button"
+              onClick={handleArchiveSheetRow}
+              disabled={isPending || !archiveAlreadyMarked || exitState.sheetArchived}
+              className="mt-3 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isPending ? 'Saving…' : exitState.sheetArchived ? 'Archived' : 'Archive row'}
+            </button>
+          </div>
+        </div>
+        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+          <p className="font-medium">Stripe is still separate.</p>
+          <p className="mt-1">
+            This workflow does not cancel Stripe. If Stripe is still billing after the student is inactive/stopped, the payment checks should flag it as inactive still billing.
+          </p>
+        </div>
+      </section>
 
       {(student.tutor || student.registryTutor) ? (
         <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5">

@@ -261,3 +261,37 @@ test('buildDisplayIssues includes persisted queue rows that are no longer curren
   assert.equal(issues[0].sourcePresent, false);
   assert.equal(issues[0].sheetTutor, 'Fennella McCallum');
 });
+
+test('buildDisplayIssues treats uppercase TRUE as source-present for persisted rows', () => {
+  const issues = buildDisplayIssues({
+    currentIssues: [],
+    queueRows: [{
+      issueId: 'review_flags:TUTOR_CONFLICT:sdt_123:registry_vs_sheets',
+      source: 'review_flags',
+      issueType: 'TUTOR CONFLICT',
+      mmsId: 'sdt_123',
+      contextKey: 'registry_vs_sheets',
+      studentName: 'Owen Example',
+      severity: 'Needs action',
+      status: 'open',
+      owner: '',
+      createdAt: '2026-05-01T10:00:00.000Z',
+      updatedAt: '2026-05-02T10:00:00.000Z',
+      resolvedAt: '',
+      ignoredAt: '',
+      acknowledgedAt: '',
+      lastSeenAt: '2026-05-01T10:00:00.000Z',
+      sourcePresent: 'TRUE',
+      summary: 'Tutor mismatch',
+      detail: 'Current detail',
+      recommendedAction: 'Fix it',
+      systemsAffected: 'Sheets, Registry',
+      resolutionNote: '',
+    }],
+    sheetByMmsId: new Map(),
+    registryByMmsId: new Map(),
+  });
+
+  assert.equal(issues[0].sourcePresent, true);
+  assert.equal(issues[0].active, true);
+});

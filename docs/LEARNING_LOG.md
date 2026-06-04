@@ -19,6 +19,26 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-04 — Student Exit Archive V1
+
+**Feature/change:** Added a student-detail exit/archive workflow that can mark `payment_expectation` as `inactive_or_stopped`, delete the portal registry entry, mark the student inactive in MMS, and archive/remove the active `Students` sheet row after copying it to `Students_Archive`. Each step writes an explicit audit row to `Event_Log`.
+
+**Why it exists:** Deleting someone from the Students sheet is too blunt to treat as an automatic instruction to delete registry access or change MMS. The safer loop is a deliberate dashboard path: confirm the student has left, then close each operational lane with a note and audit trail.
+
+**Source-of-truth impact:** The `Students` sheet remains the source of truth for active dashboard student rows until the final archive step. `Students_Archive` stores removed rows for history. Registry and MMS are changed only by explicit per-system buttons. Stripe is not changed by this workflow; live payment checks should still catch inactive students who are billing.
+
+**Files/functions involved:**
+
+- `components/admin/AdminStudentDetailClient.js`
+- `app/api/admin/students/[mmsId]/archive/route.js`
+- `lib/admin/student-archive-helpers.mjs`
+- `markStudentInactive()` in `lib/admin/mms.js`
+- `archiveAndDeleteStudentSheetRow()` in `lib/admin/sheets.js`
+- `buildStudentArchiveEvent()`
+- `tests/admin/student-archive-helpers.test.mjs`
+
+**What to watch out for:** This does not cancel Stripe. The final `Students` row archive makes the student detail page stop loading after refresh, so it should be the last step. MMS status writes rely on the same PUT pattern as onboarding activation; if MMS rejects a status change, keep the student in the workflow and resolve manually.
+
 ### 2026-06-03 — Planning Inbox V1
 
 **Feature/change:** Added a lightweight `/admin/planning` inbox for ideas, initiatives, and actions. Planning items now have owner, area, status, optional links, outcome, next action, and append-only progress notes. The page derives momentum labels such as `Moving`, `Stalled`, and `No next action`.

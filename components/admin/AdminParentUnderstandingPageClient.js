@@ -47,9 +47,9 @@ const UNDERSTANDING_AREAS = [
 
 const UNDERSTANDING_OPTIONS = [
   { value: '', label: 'Not checked' },
-  { value: 'yes', label: 'Yes' },
-  { value: 'partial', label: 'Partial' },
-  { value: 'no', label: 'No' },
+  { value: 'yes', label: 'Clear' },
+  { value: 'partial', label: 'Some clarification' },
+  { value: 'no', label: 'Not clear' },
   { value: 'unsure', label: 'Unsure' },
 ];
 
