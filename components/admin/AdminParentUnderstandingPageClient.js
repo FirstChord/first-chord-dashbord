@@ -156,6 +156,11 @@ function hasUnderstandingAssessment(record) {
   return Object.values(understanding).some((area) => `${area?.understands || ''}`.trim());
 }
 
+function hasCompleteUnderstandingAssessment(record) {
+  const understanding = record?.state?.details?.understanding || {};
+  return UNDERSTANDING_AREAS.every((area) => `${understanding[area.key]?.understands || ''}`.trim());
+}
+
 function hasWorkflowActivity(record) {
   const details = record?.state?.details || {};
   const feedback = details.feedback || {};
@@ -180,10 +185,27 @@ function hasWorkflowActivity(record) {
 }
 
 function getRecordRiskSignals(record) {
+  if (!hasUnderstandingAssessment(record)) {
+    return hasWorkflowActivity(record) ? ['Understanding checklist not assessed'] : [];
+  }
   if (!hasWorkflowActivity(record)) {
     return [];
   }
   return deriveParentUnderstandingRiskSignals({ ...record.state.details, adminFollowUpNote: record.state.details.adminFollowUpNote });
+}
+
+function effectiveWorkflowStatus(record) {
+  if (record?.state?.workflowStatus === 'completed' && !hasCompleteUnderstandingAssessment(record)) {
+    return 'needs_follow_up';
+  }
+  return record?.state?.workflowStatus || 'not_started';
+}
+
+function workflowStatusLabel(record) {
+  if (record?.state?.workflowStatus === 'completed' && !hasCompleteUnderstandingAssessment(record)) {
+    return 'Checklist missing';
+  }
+  return labelFor(PARENT_UNDERSTANDING_STATUS_OPTIONS, record?.state?.workflowStatus);
 }
 
 function matchesQueueSearch(record, query) {
@@ -258,6 +280,7 @@ function QueueItem({ record, selected, unsaved, onSelect }) {
   const score = getRecordScore(record);
   const signals = getRecordRiskSignals(record);
   const hasActivity = hasWorkflowActivity(record);
+  const hasAssessment = hasUnderstandingAssessment(record);
 
   return (
     <button
@@ -273,12 +296,12 @@ function QueueItem({ record, selected, unsaved, onSelect }) {
           <p className="mt-1 truncate text-xs text-slate-500">{record.student.parentName || 'Parent not recorded'}</p>
         </div>
         <span className="shrink-0 rounded-full bg-white px-2 py-1 text-xs text-slate-600 shadow-sm">
-          {hasActivity ? `${score.total}/8` : 'Not assessed'}
+          {hasActivity && hasAssessment ? `${score.total}/8` : 'Not assessed'}
         </span>
       </div>
       <div className="mt-3 flex flex-wrap gap-2 text-xs">
         <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-600">
-          {labelFor(PARENT_UNDERSTANDING_STATUS_OPTIONS, record.state.workflowStatus)}
+          {workflowStatusLabel(record)}
         </span>
         {unsaved ? (
           <span className="rounded-full bg-amber-100 px-2 py-1 font-medium text-amber-900">Unsaved</span>
@@ -365,6 +388,8 @@ export default function AdminParentUnderstandingPageClient({ initialWorkflow }) 
   const selectedRecord = records.find((record) => record.student.mmsId === selectedMmsId) || records[0] || null;
   const hasUnsavedSelected = selectedRecord ? unsavedMmsIds.has(selectedRecord.student.mmsId) : false;
   const score = selectedRecord ? getRecordScore(selectedRecord) : calculateUnderstandingScore({});
+  const selectedHasAssessment = selectedRecord ? hasUnderstandingAssessment(selectedRecord) : false;
+  const selectedHasCompleteAssessment = selectedRecord ? hasCompleteUnderstandingAssessment(selectedRecord) : false;
   const riskSignals = selectedRecord ? getRecordRiskSignals(selectedRecord) : [];
   const nextActions = selectedRecord ? deriveNextActions(selectedRecord) : [];
   const templates = selectedRecord ? buildTemplates(selectedRecord) : {};
@@ -380,13 +405,14 @@ export default function AdminParentUnderstandingPageClient({ initialWorkflow }) 
     if (filter === 'all') return true;
     if (filter === 'risk') return hasActivity && signals.length > 0;
     if (filter === 'low_score') return hasUnderstandingAssessment(record) && recordScore.total <= 4;
-    if (filter === 'not_started') return record.state.workflowStatus === 'not_started' && !hasActivity;
+    const status = effectiveWorkflowStatus(record);
+    if (filter === 'not_started') return status === 'not_started' && !hasActivity;
     if (!hasActivity) return false;
-    return record.state.workflowStatus === filter;
+    return status === filter;
   }), [records, filter, query]);
 
-  const completedCount = records.filter((record) => record.state.workflowStatus === 'completed').length;
-  const followUpCount = records.filter((record) => ['needs_follow_up', 'escalate_to_admin'].includes(record.state.workflowStatus)).length;
+  const completedCount = records.filter((record) => effectiveWorkflowStatus(record) === 'completed').length;
+  const followUpCount = records.filter((record) => ['needs_follow_up', 'escalate_to_admin'].includes(effectiveWorkflowStatus(record))).length;
 
   useEffect(() => {
     setSaveState({ pending: false, error: '', savedAt: '' });
@@ -537,6 +563,15 @@ export default function AdminParentUnderstandingPageClient({ initialWorkflow }) 
   }
 
   async function saveRecord(nextStatus = 'in_progress') {
+    if (nextStatus === 'completed' && !hasCompleteUnderstandingAssessment(selectedRecord)) {
+      setSaveState({
+        pending: false,
+        error: 'Complete all four understanding checks before marking this call done.',
+        savedAt: '',
+      });
+      return;
+    }
+
     const statusPatch = buildStatusPatch(nextStatus);
     const recordToSave = {
       ...selectedRecord,
@@ -631,8 +666,12 @@ export default function AdminParentUnderstandingPageClient({ initialWorkflow }) 
         </div>
         <div className={cardClasses()}>
           <p className="text-sm text-slate-500">Selected score</p>
-          <p className="mt-3 text-2xl font-semibold text-slate-900">{score.total} / {score.max}</p>
-          <p className="mt-2 text-sm text-slate-600">{score.labelText}</p>
+          <p className="mt-3 text-2xl font-semibold text-slate-900">
+            {selectedHasAssessment ? `${score.total} / ${score.max}` : 'Not assessed'}
+          </p>
+          <p className="mt-2 text-sm text-slate-600">
+            {selectedHasAssessment ? score.labelText : 'Use the four understanding dropdowns before marking the call done.'}
+          </p>
         </div>
       </section>
 
@@ -753,7 +792,7 @@ export default function AdminParentUnderstandingPageClient({ initialWorkflow }) 
             <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Current state</p>
               <p className="mt-2 text-sm font-semibold text-slate-900">
-                {hasUnsavedSelected ? 'Unsaved changes - save progress, mark done, or flag follow-up' : labelFor(PARENT_UNDERSTANDING_STATUS_OPTIONS, selectedRecord.state.workflowStatus)}
+                {hasUnsavedSelected ? 'Unsaved changes - save progress, mark done, or flag follow-up' : workflowStatusLabel(selectedRecord)}
               </p>
               <p className="mt-1 text-sm text-slate-600">
                 Starting or editing a record automatically makes it in progress. Use the save buttons at the bottom to close the loop.
@@ -955,8 +994,9 @@ export default function AdminParentUnderstandingPageClient({ initialWorkflow }) 
               <button
                 type="button"
                 onClick={() => saveRecord('completed')}
-                disabled={saveState.pending}
+                disabled={saveState.pending || !selectedHasCompleteAssessment}
                 className="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-100 px-5 py-2 text-sm font-semibold text-emerald-950 shadow-sm transition hover:bg-emerald-200 disabled:cursor-wait disabled:opacity-70"
+                title={selectedHasCompleteAssessment ? '' : 'Complete the four understanding checks before marking done.'}
               >
                 <Check className="h-4 w-4" />
                 Mark done
@@ -972,6 +1012,11 @@ export default function AdminParentUnderstandingPageClient({ initialWorkflow }) 
               {saveState.savedAt ? <span className="text-sm text-emerald-700">Saved at {saveState.savedAt}</span> : null}
               {saveState.error ? <span className="text-sm text-red-700">{saveState.error}</span> : null}
             </div>
+            {!selectedHasCompleteAssessment ? (
+              <p className="mt-3 text-sm text-amber-800">
+                Complete all four understanding checks before marking this call done. Use Save progress or Needs follow-up if the call is only partly assessed.
+              </p>
+            ) : null}
           </section>
         </main>
 
