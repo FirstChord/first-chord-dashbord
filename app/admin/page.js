@@ -53,13 +53,15 @@ function buildPrioritySentence({
   tutorAbsences,
   linkingGaps,
   unknownPaymentMode,
+  planningDueNow,
   planningNeedsAttention,
   systemHealth,
 }) {
   const priorities = [];
   if (tutorAbsences > 0) priorities.push('tutor absences');
+  if (planningDueNow > 0) priorities.push("today's planning tasks");
   if (linkingGaps > 0) priorities.push('payment/linking gaps');
-  if (planningNeedsAttention > 0) priorities.push('planning items needing next action');
+  if (planningNeedsAttention > 0 && planningDueNow === 0) priorities.push('planning items needing next action');
   if (openIssues > 0) priorities.push('open flags');
   if (unknownPaymentMode > 0) priorities.push('unknown payment modes');
   if (systemHealth !== 'healthy') priorities.push('system health');
@@ -182,6 +184,7 @@ export default async function AdminHomePage() {
   const waitingSummary = buildWaitingOverview(operationalStudents);
   const parentUnderstandingSummary = buildParentUnderstandingOverview(parentUnderstandingRows);
   const planningSummary = planningDashboard.summary || {};
+  const planningDueNow = planningSummary.dueNow || 0;
   const systemHealth = healthPriority(health);
   const trustItems = buildTrustItems(health, systemHealth);
   const prioritySentence = buildPrioritySentence({
@@ -189,6 +192,7 @@ export default async function AdminHomePage() {
     tutorAbsences: tutorAbsenceSummary.openAbsences,
     linkingGaps: paymentSummary.stripeLinkingGaps,
     unknownPaymentMode: paymentSummary.unknownPaymentMode,
+    planningDueNow,
     planningNeedsAttention: planningSummary.needsAttention || 0,
     systemHealth,
   });
@@ -210,6 +214,15 @@ export default async function AdminHomePage() {
       helper: `${tutorAbsenceSummary.unresolvedMessages} parent messages left`,
       tone: 'border-orange-100 bg-orange-50/70',
     } : null,
+    planningDueNow > 0 ? {
+      label: "Today's planning",
+      value: planningDueNow,
+      href: '/admin/planning',
+      helper: planningSummary.overdue > 0
+        ? `${planningSummary.overdue} overdue · ${planningSummary.dueToday || 0} due today`
+        : `${planningSummary.dueToday || 0} due today`,
+      tone: 'border-violet-100 bg-violet-50/70',
+    } : null,
     paymentSummary.stripeLinkingGaps > 0 ? {
       label: 'Payment/linking gaps',
       value: paymentSummary.stripeLinkingGaps,
@@ -224,7 +237,7 @@ export default async function AdminHomePage() {
       helper: 'Communication loops still open',
       tone: 'border-blue-100 bg-blue-50/70',
     } : null,
-    (planningSummary.needsAttention || 0) > 0 ? {
+    (planningSummary.needsAttention || 0) > 0 && planningDueNow === 0 ? {
       label: 'Planning needs action',
       value: planningSummary.needsAttention,
       href: '/admin/planning',
