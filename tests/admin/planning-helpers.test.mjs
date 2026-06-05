@@ -4,6 +4,7 @@ import {
   attachPlanningProgress,
   buildPlanningSummary,
   derivePlanningMomentum,
+  inferPlanningTargetDateFromText,
   normalisePlanningArea,
   normalisePlanningItemType,
   normalisePlanningOwner,
@@ -21,6 +22,17 @@ test('normalises planning defaults conservatively', () => {
   assert.equal(normalisePlanningArea('random'), 'other');
   assert.equal(normalisePlanningOwner('Tom'), 'Tom');
   assert.equal(normalisePlanningOwner('Fenella'), 'Unassigned');
+});
+
+test('infers target dates from operational capture notes', () => {
+  assert.equal(
+    inferPlanningTargetDateFromText('Pause Coban for Friday', new Date('2026-06-05T10:00:00.000Z')),
+    '2026-06-11',
+  );
+  assert.equal(
+    inferPlanningTargetDateFromText('Set up Anna McPhail Stripe 12th June', new Date('2026-06-05T10:00:00.000Z')),
+    '2026-06-12',
+  );
 });
 
 test('marks active initiatives with no next action clearly', () => {

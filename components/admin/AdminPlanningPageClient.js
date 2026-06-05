@@ -1,13 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { Check, Loader2, Pencil, Plus, Search } from 'lucide-react';
+import { Check, Loader2, Pencil, Plus, Search, SlidersHorizontal } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import {
   PLANNING_AREAS,
   PLANNING_ITEM_TYPES,
   PLANNING_OWNERS,
   PLANNING_STATUSES,
+  inferPlanningTargetDateFromText,
   labelPlanningArea,
   labelPlanningMomentum,
   labelPlanningStatus,
@@ -30,6 +31,7 @@ const MOMENTUM_FILTERS = [
   { value: 'initiative', label: 'Initiatives' },
   { value: 'idea', label: 'Ideas' },
   { value: 'action', label: 'Actions' },
+  { value: 'done', label: 'Done' },
 ];
 
 const EMPTY_FORM = {
@@ -45,7 +47,16 @@ const EMPTY_FORM = {
   parentPlanningId: '',
   outcome: '',
   nextAction: '',
+  targetDate: '',
   progressNote: '',
+};
+
+const QUICK_CAPTURE_DEFAULTS = {
+  owner: 'Unassigned',
+  area: 'other',
+  itemType: 'action',
+  status: 'inbox',
+  linkedWorkflowId: '',
 };
 
 function cardClasses(extra = '') {
@@ -74,6 +85,82 @@ function shortPreview(value = '', max = 150) {
     return text;
   }
   return `${text.slice(0, max - 1)}...`;
+}
+
+function formatTargetDate(value = '') {
+  if (!value) return '';
+  const parsed = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString('en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  });
+}
+
+function firstLine(value = '') {
+  return `${value || ''}`
+    .split(/\n/)
+    .map((line) => line.trim())
+    .find(Boolean) || '';
+}
+
+function truncateTitle(value = '', max = 90) {
+  const text = firstLine(value).replace(/^[-•⁠\s]+/u, '').trim();
+  if (text.length <= max) return text;
+  return `${text.slice(0, max - 1)}...`;
+}
+
+function inferQuickCapture(raw = '') {
+  const text = `${raw || ''}`.toLowerCase();
+  const defaults = { ...QUICK_CAPTURE_DEFAULTS };
+
+  if (/\b(pause|holiday|away|off|cancel lesson|no lesson)\b/u.test(text)) {
+    defaults.area = 'admin';
+    defaults.itemType = 'action';
+  }
+  if (/\b(tutor|cover|covering|teacher)\b/u.test(text) && /\b(away|off|cover)\b/u.test(text)) {
+    defaults.area = 'tutor';
+    defaults.linkedWorkflowId = 'tutor-absence';
+  }
+  if (/\b(onboard|new student|starting|sign.?up)\b/u.test(text)) {
+    defaults.area = 'admin';
+    defaults.linkedWorkflowId = 'onboarding';
+  }
+  if (/\b(stripe|payment|billing|refund|charge|subscription|vat|payroll)\b/u.test(text)) {
+    defaults.area = 'finance';
+  }
+  if (/\b(show|showcase|poster|venue|perform)\b/u.test(text)) {
+    defaults.area = 'showcase';
+    defaults.linkedWorkflowId = 'showcase';
+  }
+  if (/\b(dashboard|tool|website|mms|soundslice|link|bug)\b/u.test(text)) {
+    defaults.area = 'tech';
+  }
+  if (/\b(maybe|idea|revisit|could|should|future|plan)\b/u.test(text)) {
+    defaults.itemType = 'idea';
+  }
+
+  return defaults;
+}
+
+function buildQuickCaptureItem(rawNote = '', overrides = {}) {
+  const inferred = inferQuickCapture(rawNote);
+  const item = {
+    ...EMPTY_FORM,
+    ...inferred,
+    ...overrides,
+    title: truncateTitle(rawNote),
+    notes: rawNote.trim(),
+    targetDate: overrides.targetDate || inferPlanningTargetDateFromText(rawNote),
+    progressNote: 'Captured from quick brain capture.',
+  };
+
+  if (item.itemType === 'action') {
+    item.nextAction = item.nextAction || item.title;
+  }
+
+  return item;
 }
 
 function momentumClasses(momentum = '') {
@@ -138,6 +225,20 @@ function TextField({ label, value, onChange, placeholder = '' }) {
   );
 }
 
+function DateField({ label, value, onChange }) {
+  return (
+    <label className="block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+      {label}
+      <input
+        type="date"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium normal-case tracking-normal text-slate-800"
+      />
+    </label>
+  );
+}
+
 function TextAreaField({ label, value, onChange, placeholder = '', rows = 3 }) {
   return (
     <label className="block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -166,6 +267,7 @@ function buildSearchText(item) {
     item.linkedTutorId,
     item.outcome,
     item.nextAction,
+    item.targetDate,
     item.latestProgress?.progressNote,
   ].join(' ').toLowerCase();
 }
@@ -273,6 +375,11 @@ function ItemForm({
         onChange={(value) => setValue('nextAction', value)}
         placeholder="The next concrete step"
       />
+      <DateField
+        label="Do by"
+        value={form.targetDate}
+        onChange={(value) => setValue('targetDate', value)}
+      />
       <TextAreaField
         label={compact ? 'Initial note' : 'Progress note'}
         value={form.progressNote}
@@ -288,6 +395,109 @@ function ItemForm({
       >
         {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
         {submitLabel}
+      </button>
+    </form>
+  );
+}
+
+function QuickBrainCapture({
+  rawNote,
+  setRawNote,
+  options,
+  setOptions,
+  expanded,
+  setExpanded,
+  onSubmit,
+  pending = false,
+}) {
+  const inferred = inferQuickCapture(rawNote);
+  const inferredTargetDate = inferPlanningTargetDateFromText(rawNote);
+  const effectiveOptions = {
+    ...inferred,
+    targetDate: inferredTargetDate,
+    ...options,
+  };
+
+  function setOption(key, value) {
+    setOptions((current) => ({ ...current, [key]: value }));
+  }
+
+  return (
+    <form onSubmit={onSubmit} className="space-y-4">
+      <label className="block">
+        <span className="sr-only">Brain capture note</span>
+        <textarea
+          value={rawNote}
+          onChange={(event) => setRawNote(event.target.value)}
+          rows={5}
+          autoFocus
+          placeholder="Pause Coban for 7 Feb&#10;Elena away next Friday - arrange cover&#10;Idea: meet students video"
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base font-medium leading-7 text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+        />
+      </label>
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
+          <span className="rounded-full bg-slate-100 px-2.5 py-1">{labelPlanningType(effectiveOptions.itemType)}</span>
+          <span className="rounded-full bg-slate-100 px-2.5 py-1">{labelPlanningArea(effectiveOptions.area)}</span>
+          {effectiveOptions.linkedWorkflowId ? (
+            <span className="rounded-full bg-blue-50 px-2.5 py-1 text-blue-800">{effectiveOptions.linkedWorkflowId}</span>
+          ) : null}
+          {effectiveOptions.targetDate ? (
+            <span className="rounded-full bg-amber-50 px-2.5 py-1 text-amber-800">Do by {formatTargetDate(effectiveOptions.targetDate)}</span>
+          ) : null}
+        </div>
+        <button
+          type="button"
+          onClick={() => setExpanded(!expanded)}
+          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+        >
+          <SlidersHorizontal className="h-3.5 w-3.5" />
+          {expanded ? 'Hide structure' : 'Add structure'}
+        </button>
+      </div>
+
+      {expanded ? (
+        <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-5">
+          <SelectField
+            label="Type"
+            value={effectiveOptions.itemType}
+            onChange={(value) => setOption('itemType', value)}
+            options={PLANNING_ITEM_TYPES.map((value) => ({ value, label: labelPlanningType(value) }))}
+          />
+          <SelectField
+            label="Owner"
+            value={effectiveOptions.owner}
+            onChange={(value) => setOption('owner', value)}
+            options={PLANNING_OWNERS}
+          />
+          <SelectField
+            label="Area"
+            value={effectiveOptions.area}
+            onChange={(value) => setOption('area', value)}
+            options={PLANNING_AREAS.map((value) => ({ value, label: labelPlanningArea(value) }))}
+          />
+          <DateField
+            label="Do by"
+            value={effectiveOptions.targetDate}
+            onChange={(value) => setOption('targetDate', value)}
+          />
+          <SelectField
+            label="Status"
+            value={effectiveOptions.status}
+            onChange={(value) => setOption('status', value)}
+            options={PLANNING_STATUSES.map((value) => ({ value, label: labelPlanningStatus(value) }))}
+          />
+        </div>
+      ) : null}
+
+      <button
+        type="submit"
+        disabled={pending || !rawNote.trim()}
+        className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-base font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+      >
+        {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+        Capture
       </button>
     </form>
   );
@@ -349,6 +559,13 @@ function PlanningCard({ item, onStatus, onEdit, onProgress, pendingId }) {
           {item.nextAction}
         </div>
       )}
+
+      {item.targetDate ? (
+        <div className="mt-3 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+          <span className="font-semibold">Do by: </span>
+          {formatTargetDate(item.targetDate)}
+        </div>
+      ) : null}
 
       {item.notes && <p className="mt-3 text-sm leading-6 text-slate-600">{shortPreview(item.notes)}</p>}
 
@@ -428,29 +645,38 @@ function PlanningCard({ item, onStatus, onEdit, onProgress, pendingId }) {
 
 export default function AdminPlanningPageClient({ initialPlanning }) {
   const [planning, setPlanning] = useState(initialPlanning || { items: [], summary: {} });
-  const [captureForm, setCaptureForm] = useState(EMPTY_FORM);
+  const [quickNote, setQuickNote] = useState('');
+  const [quickOptions, setQuickOptions] = useState({});
+  const [quickExpanded, setQuickExpanded] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [editForm, setEditForm] = useState(EMPTY_FORM);
   const [saveState, setSaveState] = useState({ pending: false, error: '', savedAt: '' });
   const [pendingId, setPendingId] = useState('');
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
+  const [showDone, setShowDone] = useState(false);
 
   const filteredItems = useMemo(() => {
     const search = query.trim().toLowerCase();
     return (planning.items || []).filter((item) => {
+      if (!showDone && filter !== 'done' && item.status === 'done') {
+        return false;
+      }
       if (search && !buildSearchText(item).includes(search)) {
         return false;
       }
       if (filter === 'all') {
         return true;
       }
+      if (filter === 'done') {
+        return item.status === 'done';
+      }
       if (['idea', 'initiative', 'action'].includes(filter)) {
         return item.itemType === filter;
       }
       return item.momentum === filter;
     });
-  }, [planning.items, query, filter]);
+  }, [planning.items, query, filter, showDone]);
 
   async function postPlanning(payload, targetId = '') {
     setSaveState({ pending: true, error: '', savedAt: '' });
@@ -478,13 +704,23 @@ export default function AdminPlanningPageClient({ initialPlanning }) {
 
   async function handleCapture(event) {
     event.preventDefault();
+    const rawNote = quickNote.trim();
+    if (!rawNote) {
+      setSaveState({ pending: false, error: 'Write a note before capturing.', savedAt: '' });
+      return;
+    }
+
+    const item = buildQuickCaptureItem(rawNote, quickOptions);
+
     try {
       await postPlanning({
         mode: 'save',
-        item: captureForm,
-        progressNote: captureForm.progressNote,
+        item,
+        progressNote: item.progressNote,
       });
-      setCaptureForm(EMPTY_FORM);
+      setQuickNote('');
+      setQuickOptions({});
+      setQuickExpanded(false);
     } catch (error) {
       setSaveState({ pending: false, error: error.message, savedAt: '' });
       setPendingId('');
@@ -507,6 +743,7 @@ export default function AdminPlanningPageClient({ initialPlanning }) {
       parentPlanningId: item.parentPlanningId,
       outcome: item.outcome,
       nextAction: item.nextAction,
+      targetDate: item.targetDate,
     });
   }
 
@@ -594,8 +831,11 @@ export default function AdminPlanningPageClient({ initialPlanning }) {
       <section className={cardClasses()}>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h3 className="text-lg font-semibold text-slate-900">Quick capture</h3>
-            <p className="mt-1 text-sm text-slate-600">Write the thought first. Organise it only as much as needed.</p>
+            <h3 className="text-lg font-semibold text-slate-900">Brain capture</h3>
+            <p className="mt-1 text-sm text-slate-600">One box for the stuff that would usually disappear in WhatsApp.</p>
+            <p className="mt-2 text-xs leading-5 text-slate-500">
+              Add dates when you can. Pauses, cancellations, and tutor absences should usually be done before the lesson day. Review rhythm: Monday, Thursday, Friday.
+            </p>
           </div>
           {saveState.savedAt && (
             <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
@@ -607,13 +847,15 @@ export default function AdminPlanningPageClient({ initialPlanning }) {
           <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{saveState.error}</p>
         )}
         <div className="mt-5">
-          <ItemForm
-            form={captureForm}
-            onChange={setCaptureForm}
+          <QuickBrainCapture
+            rawNote={quickNote}
+            setRawNote={setQuickNote}
+            options={quickOptions}
+            setOptions={setQuickOptions}
+            expanded={quickExpanded}
+            setExpanded={setQuickExpanded}
             onSubmit={handleCapture}
-            submitLabel="Save to inbox"
             pending={saveState.pending && !pendingId}
-            compact
           />
         </div>
       </section>
@@ -626,6 +868,17 @@ export default function AdminPlanningPageClient({ initialPlanning }) {
               <p className="mt-1 text-sm text-slate-600">Grouped by current state, with initiatives and next actions kept visible.</p>
             </div>
             <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setShowDone((current) => !current)}
+                className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${
+                  showDone
+                    ? 'border-emerald-700 bg-emerald-700 text-white'
+                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                {showDone ? 'Showing done' : 'Hide done'}
+              </button>
               {MOMENTUM_FILTERS.map((option) => (
                 <button
                   key={option.value}
