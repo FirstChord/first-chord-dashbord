@@ -28,11 +28,26 @@ test('normalises planning defaults conservatively', () => {
 test('infers target dates from operational capture notes', () => {
   assert.equal(
     inferPlanningTargetDateFromText('Pause Coban for Friday', new Date('2026-06-05T10:00:00.000Z')),
-    '2026-06-11',
+    '2026-06-08',
   );
   assert.equal(
     inferPlanningTargetDateFromText('Set up Anna McPhail Stripe 12th June', new Date('2026-06-05T10:00:00.000Z')),
     '2026-06-12',
+  );
+});
+
+test('puts pause reminders on meeting days two to five days before the pause', () => {
+  assert.equal(
+    inferPlanningTargetDateFromText('Pause Eddie for Saturday 13th June', new Date('2026-06-05T10:00:00.000Z')),
+    '2026-06-11',
+  );
+  assert.equal(
+    inferPlanningTargetDateFromText('Pause Lyra March 12th', new Date('2026-02-05T10:00:00.000Z')),
+    '2026-03-09',
+  );
+  assert.equal(
+    inferPlanningTargetDateFromText('Pause Coban for Tuesday 9th June', new Date('2026-06-05T10:00:00.000Z')),
+    '2026-06-05',
   );
 });
 

@@ -59,6 +59,8 @@ const QUICK_CAPTURE_DEFAULTS = {
   linkedWorkflowId: '',
 };
 
+const PAUSE_PAYMENT_CONFIRMATION_NOTE = 'Payment pause confirmation message sent.';
+
 function cardClasses(extra = '') {
   return `rounded-[1.2rem] border border-blue-100 bg-white/90 p-5 shadow-[0_12px_36px_rgba(15,23,42,0.06)] ${extra}`;
 }
@@ -285,6 +287,20 @@ function workflowHref(workflowId = '') {
   return routes[key] || '';
 }
 
+function isPausePlanningItem(item = {}) {
+  return /\bpaus(?:e|ed|ing)\b/iu.test([
+    item.title,
+    item.notes,
+    item.nextAction,
+  ].join(' '));
+}
+
+function hasPausePaymentConfirmation(item = {}) {
+  return (item.progress || []).some((entry) => (
+    `${entry.progressNote || ''}`.toLowerCase().includes(PAUSE_PAYMENT_CONFIRMATION_NOTE.toLowerCase())
+  ));
+}
+
 function ItemForm({
   form,
   onChange,
@@ -507,6 +523,8 @@ function PlanningCard({ item, onStatus, onEdit, onProgress, pendingId }) {
   const [progressNote, setProgressNote] = useState('');
   const [nextAction, setNextAction] = useState(item.nextAction || '');
   const isPending = pendingId === item.planningId;
+  const isPauseReminder = isPausePlanningItem(item);
+  const pausePaymentConfirmed = hasPausePaymentConfirmation(item);
   const linkFacts = [
     item.linkedWorkflowId ? `Workflow: ${item.linkedWorkflowId}` : '',
     item.linkedStudentId ? `Student: ${item.linkedStudentId}` : '',
@@ -601,7 +619,7 @@ function PlanningCard({ item, onStatus, onEdit, onProgress, pendingId }) {
           <button
             key={status}
             type="button"
-            disabled={isPending || item.status === status}
+            disabled={isPending || item.status === status || (status === 'done' && isPauseReminder && !pausePaymentConfirmed)}
             onClick={() => onStatus(item, status)}
             className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
@@ -609,6 +627,35 @@ function PlanningCard({ item, onStatus, onEdit, onProgress, pendingId }) {
           </button>
         ))}
       </div>
+
+      {isPauseReminder ? (
+        <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2">
+          <label className="flex items-start gap-2 text-sm font-medium text-amber-950">
+            <input
+              type="checkbox"
+              checked={pausePaymentConfirmed}
+              disabled={isPending || pausePaymentConfirmed}
+              onChange={(event) => {
+                if (event.target.checked) {
+                  onProgress(item, {
+                    progressNote: PAUSE_PAYMENT_CONFIRMATION_NOTE,
+                    nextAction,
+                  });
+                }
+              }}
+              className="mt-1 h-4 w-4 rounded border-amber-300 text-slate-900"
+            />
+            <span>
+              Payment pause confirmation message sent
+              {!pausePaymentConfirmed ? (
+                <span className="block text-xs font-normal text-amber-800">
+                  Tick this before marking a pause reminder done.
+                </span>
+              ) : null}
+            </span>
+          </label>
+        </div>
+      ) : null}
 
       <form
         className="mt-4 grid gap-2 md:grid-cols-[1fr_1fr_auto]"
