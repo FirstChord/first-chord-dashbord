@@ -25,6 +25,7 @@ const STATUS_GROUPS = [
 
 const MOMENTUM_FILTERS = [
   { value: 'all', label: 'All' },
+  { value: 'due_now', label: 'Due Now' },
   { value: 'no_next_action', label: 'No Next Action' },
   { value: 'stalled', label: 'Stalled' },
   { value: 'moving', label: 'Moving' },
@@ -98,6 +99,17 @@ function formatTargetDate(value = '') {
     day: 'numeric',
     month: 'short',
   });
+}
+
+function formatDateInput(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function isDueNowPlanningItem(item = {}, now = new Date()) {
+  const targetDate = `${item.targetDate || ''}`.trim();
+  return !['done', 'parked'].includes(item.status)
+    && /^\d{4}-\d{2}-\d{2}$/.test(targetDate)
+    && targetDate <= formatDateInput(now);
 }
 
 function firstLine(value = '') {
@@ -690,7 +702,7 @@ function PlanningCard({ item, onStatus, onEdit, onProgress, pendingId }) {
   );
 }
 
-export default function AdminPlanningPageClient({ initialPlanning }) {
+export default function AdminPlanningPageClient({ initialPlanning, initialFilter = 'all' }) {
   const [planning, setPlanning] = useState(initialPlanning || { items: [], summary: {} });
   const [quickNote, setQuickNote] = useState('');
   const [quickOptions, setQuickOptions] = useState({});
@@ -700,7 +712,7 @@ export default function AdminPlanningPageClient({ initialPlanning }) {
   const [saveState, setSaveState] = useState({ pending: false, error: '', savedAt: '' });
   const [pendingId, setPendingId] = useState('');
   const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState(initialFilter);
   const [showDone, setShowDone] = useState(false);
 
   const filteredItems = useMemo(() => {
@@ -711,6 +723,9 @@ export default function AdminPlanningPageClient({ initialPlanning }) {
       }
       if (search && !buildSearchText(item).includes(search)) {
         return false;
+      }
+      if (filter === 'due_now') {
+        return isDueNowPlanningItem(item);
       }
       if (filter === 'all') {
         return true;

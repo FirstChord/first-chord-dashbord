@@ -217,7 +217,7 @@ export default async function AdminHomePage() {
     planningDueNow > 0 ? {
       label: "Today's planning",
       value: planningDueNow,
-      href: '/admin/planning',
+      href: '/admin/planning?filter=due_now',
       helper: planningSummary.overdue > 0
         ? `${planningSummary.overdue} overdue · ${planningSummary.dueToday || 0} due today`
         : `${planningSummary.dueToday || 0} due today`,
