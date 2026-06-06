@@ -30,6 +30,34 @@ function Select({ label, value, onChange, options }) {
   );
 }
 
+const ISSUE_TYPE_OPTIONS = [
+  { value: 'all', label: 'All types' },
+  { value: 'TUTOR CONFLICT', label: 'Tutor conflict' },
+  { value: 'SHEETS ONLY', label: 'Sheets only' },
+  { value: 'REGISTRY ONLY', label: 'Registry only' },
+  { value: 'PAYMENT SETUP PENDING', label: 'Payment setup pending' },
+  { value: 'SETUP PENDING STRIPE LINKED', label: 'Setup pending but linked' },
+  { value: 'STRIPE SETUP INCOMPLETE', label: 'Stripe setup incomplete' },
+  { value: 'STRIPE CUSTOMER MISSING', label: 'Stripe customer missing' },
+  { value: 'STRIPE SUBSCRIPTION MISSING', label: 'Stripe subscription missing' },
+  { value: 'ACTIVE_WITHOUT_SUBSCRIPTION', label: 'Active without subscription' },
+  { value: 'SUBSCRIPTION_CANCELLED_UNEXPECTEDLY', label: 'Subscription cancelled unexpectedly' },
+  { value: 'SUBSCRIPTION_STATE_MISMATCH', label: 'Subscription state mismatch' },
+  { value: 'PAUSE EXPECTATION MISMATCH', label: 'Pause record alignment' },
+  { value: 'PAUSE EXPECTATION STALE', label: 'Pause expectation stale' },
+  { value: 'INACTIVE_STILL_BILLING', label: 'Inactive still billing' },
+  { value: 'PAYMENT_FAILED', label: 'Payment failed' },
+];
+
+const ISSUE_VIEW_OPTIONS = [
+  { value: 'all', label: 'All active', hint: 'Everything in the current queue.' },
+  { value: 'payment_risk', label: 'Payment risk', hint: 'Failed payments and live Stripe/billing mismatches.' },
+  { value: 'pause', label: 'Pause checks', hint: 'Pause History, Stripe state, and expectation alignment.' },
+  { value: 'setup', label: 'Setup/linking', hint: 'Students not fully connected to Stripe yet.' },
+  { value: 'records', label: 'Registry & Sheets', hint: 'Record mismatches between systems.' },
+  { value: 'cleared', label: 'Ready to clear', hint: 'No longer detected by the latest source check.' },
+];
+
 function freshnessClasses(status) {
   if (status === 'Fresh') return 'border-emerald-200 bg-emerald-50 text-emerald-800';
   if (status === 'Aging') return 'border-amber-200 bg-amber-50 text-amber-800';
@@ -38,6 +66,24 @@ function freshnessClasses(status) {
   if (status === 'Manual') return 'border-blue-200 bg-blue-50 text-blue-800';
   if (status === 'Cleared') return 'border-slate-200 bg-slate-100 text-slate-700';
   return 'border-slate-200 bg-slate-50 text-slate-700';
+}
+
+function isSetupIssue(issue) {
+  return [
+    'PAYMENT SETUP PENDING',
+    'SETUP PENDING STRIPE LINKED',
+    'STRIPE SETUP INCOMPLETE',
+    'STRIPE CUSTOMER MISSING',
+    'STRIPE SUBSCRIPTION MISSING',
+  ].includes(issue.type);
+}
+
+function isRecordIssue(issue) {
+  return [
+    'TUTOR CONFLICT',
+    'SHEETS ONLY',
+    'REGISTRY ONLY',
+  ].includes(issue.type);
 }
 
 function isPaymentIssue(issue) {
@@ -55,6 +101,25 @@ function isPaymentIssue(issue) {
     'PAUSE EXPECTATION MISMATCH',
     'PAUSE EXPECTATION STALE',
   ].includes(issue.type);
+}
+
+function issueMatchesView(issue, view) {
+  if (view === 'payment_risk') {
+    return needsLiveStripeReview(issue);
+  }
+  if (view === 'pause') {
+    return isPauseIssue(issue);
+  }
+  if (view === 'setup') {
+    return isSetupIssue(issue);
+  }
+  if (view === 'records') {
+    return isRecordIssue(issue);
+  }
+  if (view === 'cleared') {
+    return ['open', 'acknowledged'].includes(issue.status) && !issue.sourcePresent;
+  }
+  return true;
 }
 
 function needsLiveStripeReview(issue) {
@@ -315,6 +380,7 @@ function summariseStripeSnapshot(snapshot, issues = []) {
 
 export default function AdminIssuesPageClient({ issues, freshness }) {
   const [issueList, setIssueList] = useState(issues);
+  const [viewFilter, setViewFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [severityFilter, setSeverityFilter] = useState('all');
   const [systemFilter, setSystemFilter] = useState('all');
@@ -338,6 +404,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
   const filteredIssues = useMemo(
     () =>
       issueList.filter((issue) => {
+        if (!issueMatchesView(issue, viewFilter)) return false;
         if (typeFilter !== 'all' && issue.type !== typeFilter) return false;
         if (severityFilter !== 'all' && issue.severity !== severityFilter) return false;
         if (systemFilter !== 'all' && !issue.systemsAffected.includes(systemFilter)) return false;
@@ -345,7 +412,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
         if (statusFilter !== 'all' && statusFilter !== 'active' && issue.status !== statusFilter) return false;
         return true;
       }),
-    [issueList, severityFilter, statusFilter, systemFilter, typeFilter],
+    [issueList, severityFilter, statusFilter, systemFilter, typeFilter, viewFilter],
   );
   const visibleSystemClearedIssues = filteredIssues.filter(
     (issue) => ['open', 'acknowledged'].includes(issue.status) && !issue.sourcePresent,
@@ -896,66 +963,84 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
         </section>
       ) : null}
 
-      <section className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:grid-cols-4">
-        <Select
-          label="Issue type"
-          value={typeFilter}
-          onChange={(event) => setTypeFilter(event.target.value)}
-          options={[
-            { value: 'all', label: 'All types' },
-            { value: 'TUTOR CONFLICT', label: 'Tutor conflict' },
-            { value: 'SHEETS ONLY', label: 'Sheets only' },
-            { value: 'REGISTRY ONLY', label: 'Registry only' },
-            { value: 'PAYMENT SETUP PENDING', label: 'Payment setup pending' },
-            { value: 'SETUP PENDING STRIPE LINKED', label: 'Setup pending but linked' },
-            { value: 'STRIPE SETUP INCOMPLETE', label: 'Stripe setup incomplete' },
-            { value: 'STRIPE CUSTOMER MISSING', label: 'Stripe customer missing' },
-            { value: 'STRIPE SUBSCRIPTION MISSING', label: 'Stripe subscription missing' },
-            { value: 'ACTIVE_WITHOUT_SUBSCRIPTION', label: 'Active without subscription' },
-            { value: 'SUBSCRIPTION_CANCELLED_UNEXPECTEDLY', label: 'Subscription cancelled unexpectedly' },
-            { value: 'SUBSCRIPTION_STATE_MISMATCH', label: 'Subscription state mismatch' },
-            { value: 'PAUSE EXPECTATION MISMATCH', label: 'Pause record alignment' },
-            { value: 'PAUSE EXPECTATION STALE', label: 'Pause expectation stale' },
-            { value: 'INACTIVE_STILL_BILLING', label: 'Inactive still billing' },
-            { value: 'PAYMENT_FAILED', label: 'Payment failed' },
-          ]}
-        />
-        <Select
-          label="Severity"
-          value={severityFilter}
-          onChange={(event) => setSeverityFilter(event.target.value)}
-          options={[
-            { value: 'all', label: 'All severities' },
-            { value: 'Needs action', label: 'Needs action' },
-            { value: 'Warning', label: 'Warning' },
-            { value: 'Info', label: 'Info' },
-          ]}
-        />
-        <Select
-          label="System"
-          value={systemFilter}
-          onChange={(event) => setSystemFilter(event.target.value)}
-          options={[
-            { value: 'all', label: 'All systems' },
-            { value: 'Sheets', label: 'Sheets' },
-            { value: 'Registry', label: 'Registry' },
-            { value: 'Stripe', label: 'Stripe' },
-            { value: 'Pause', label: 'Pause' },
-          ]}
-        />
-        <Select
-          label="Queue status"
-          value={statusFilter}
-          onChange={(event) => setStatusFilter(event.target.value)}
-          options={[
-            { value: 'active', label: 'Open + acknowledged' },
-            { value: 'all', label: 'All statuses' },
-            { value: 'open', label: 'Open' },
-            { value: 'acknowledged', label: 'Acknowledged' },
-            { value: 'ignored', label: 'Ignored' },
-            { value: 'resolved', label: 'Resolved' },
-          ]}
-        />
+      <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-900">Start here</h3>
+          <p className="mt-1 text-sm text-slate-600">
+            Use a simple work view first. Exact issue types are still available under advanced filters.
+          </p>
+        </div>
+        <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+          {ISSUE_VIEW_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => {
+                setViewFilter(option.value);
+                setTypeFilter('all');
+              }}
+              className={`rounded-2xl border p-4 text-left transition ${
+                viewFilter === option.value
+                  ? 'border-blue-300 bg-blue-50 text-slate-950 shadow-[0_12px_30px_rgba(15,23,42,0.08)]'
+                  : 'border-slate-200 bg-slate-50 text-slate-800 hover:border-blue-200 hover:bg-white'
+              }`}
+            >
+              <span className="block text-sm font-semibold">{option.label}</span>
+              <span className={`mt-1 block text-xs leading-5 ${viewFilter === option.value ? 'text-slate-700' : 'text-slate-500'}`}>
+                {option.hint}
+              </span>
+            </button>
+          ))}
+        </div>
+        <details className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+          <summary className="cursor-pointer text-sm font-semibold text-slate-800">
+            Advanced filters
+          </summary>
+          <div className="mt-4 grid gap-4 md:grid-cols-4">
+            <Select
+              label="Exact issue type"
+              value={typeFilter}
+              onChange={(event) => setTypeFilter(event.target.value)}
+              options={ISSUE_TYPE_OPTIONS}
+            />
+            <Select
+              label="Severity"
+              value={severityFilter}
+              onChange={(event) => setSeverityFilter(event.target.value)}
+              options={[
+                { value: 'all', label: 'All severities' },
+                { value: 'Needs action', label: 'Needs action' },
+                { value: 'Warning', label: 'Warning' },
+                { value: 'Info', label: 'Info' },
+              ]}
+            />
+            <Select
+              label="System"
+              value={systemFilter}
+              onChange={(event) => setSystemFilter(event.target.value)}
+              options={[
+                { value: 'all', label: 'All systems' },
+                { value: 'Sheets', label: 'Sheets' },
+                { value: 'Registry', label: 'Registry' },
+                { value: 'Stripe', label: 'Stripe' },
+                { value: 'Pause', label: 'Pause' },
+              ]}
+            />
+            <Select
+              label="Queue status"
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+              options={[
+                { value: 'active', label: 'Open + acknowledged' },
+                { value: 'all', label: 'All statuses' },
+                { value: 'open', label: 'Open' },
+                { value: 'acknowledged', label: 'Acknowledged' },
+                { value: 'ignored', label: 'Ignored' },
+                { value: 'resolved', label: 'Resolved' },
+              ]}
+            />
+          </div>
+        </details>
       </section>
 
       <section className="space-y-4">
