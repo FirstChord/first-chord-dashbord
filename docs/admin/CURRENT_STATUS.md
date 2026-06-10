@@ -1,6 +1,6 @@
 # Admin Current Status
 
-Last updated: 2026-05-29
+Last updated: 2026-06-10
 
 This is the tracked current-status entrypoint for agents working from the `music-school-dashboard` repository.
 
@@ -49,10 +49,17 @@ The active surface is the private admin dashboard under `/admin`.
   - copy parent-facing WhatsApp templates
   - save one row per student to `Parent_Understanding_State`
   - append `Event_Log` entries when records are completed, need follow-up, or are escalated
+- `/admin/planning` now has a lightweight Brain/planning inbox with:
+  - quick capture for ideas/actions/initiatives
+  - owner, status, area, next action, due/review date, and progress history
+  - meeting-friendly filters such as Due Now, Unassigned, Waiting, Linked, and No Next Action
+  - student search/linking so planning items can attach to a real student record
+  - linked planning items shown on student detail pages
+  - explicit pause-planning action to set a linked student to `stripe_paused_expected` after the parent/payment confirmation checkbox is ticked
 
 ## Current Slice
 
-The active V4 slice is context layering, not new automation.
+The active V4 slice is context + ownership layering, not broad automation.
 
 - `deriveStudentLifecycleStatus()` is read-only context. It does not change issue generation, onboarding, Stripe actions, or stored state.
 - `Schedule_Context` is a cached Sheets tab populated from MMS calendar events. It is refreshed manually per student or by the bulk schedule refresh route, not on every page load.
@@ -83,6 +90,16 @@ The active V4 slice is context layering, not new automation.
   - `Workflows` = waiting list, onboarding, showcase, holidays, and future task/communication flows
   - `Planning` = capacity, schedule health, seasonal planning, and future finance/capacity layers
 - Student records remain important context, but they are accessed through header search, issue links, workflow links, or `/admin/students`; they are not a primary top-nav mode.
+- Planning state is dashboard-owned work state, not external truth:
+  - Sheets tabs: `Planning_Items` and `Planning_Progress_Log`
+  - linked student IDs point at existing `Students` rows
+  - progress notes are append-only planning memory
+  - student-linked pause planning can update `payment_expectation` only through an explicit human click
+  - marking a planning task `Done` does not itself change payment state
+- Pause planning guardrail:
+  - pause reminders should be linked to a student before billing actions
+  - `Payment pause confirmation message sent` must be logged before `Set Stripe paused expected`
+  - the payment expectation update goes through the existing student PATCH route and logs to `Event_Log`
 
 Before deployment, verify with:
 
@@ -133,6 +150,11 @@ npm run build
    - Keep improving next-action wording before adding more fields.
    - Do not auto-update MMS contact details from this page; keep this as flag/note only for now.
 
+10. **Planning link refinement**
+   - Improve student matching only if real captures show ambiguity.
+   - Consider linking planning items to issue IDs after the student-link loop is calm.
+   - Keep ownership simple: Finn, Tom, or Unassigned unless a real delegation need appears.
+
 ## Do Not Do Next
 
 - Do not add heavy assignment/owner systems yet.
@@ -151,6 +173,8 @@ npm run build
 - Stripe = payment-provider truth
 - `Schedule_Context` = dashboard cache of selected MMS lesson context
 - `Parent_Understanding_State` = dashboard workflow state for parent check-in campaign records
+- `Planning_Items` = dashboard-owned human planning/task/initiative state
+- `Planning_Progress_Log` = append-only progress history for planning items
 - `Pause History` = intentional pause-window truth
 - generated FC tabs and generated dashboard config files = derived outputs
 

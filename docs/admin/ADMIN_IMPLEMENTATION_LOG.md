@@ -2,6 +2,37 @@
 
 This file tracks the admin dashboard build so work can be handed between agents cleanly.
 
+## 2026-06-10 — Student-Linked Planning + Pause Action
+
+### Scope
+- Make the lightweight Planning/Brain inbox more useful in Finn/Tom meetings without turning it into full project management.
+- Connect planning items to student context and add one explicit pause-related billing action.
+
+### What changed
+- `/admin/planning` now receives compact student options from `getAdminStudents()`.
+- Brain capture can infer a likely student from note text and shows a student chip.
+- Capture/edit forms include a student search selector for `linkedStudentId`.
+- Planning cards show linked student names and link to student detail pages.
+- Student detail pages show open linked planning items.
+- Planning review gained meeting-friendly filters:
+  - Due Now
+  - Unassigned
+  - Waiting
+  - Linked
+  - No Next Action
+- Linked pause planning cards can show `Set Stripe paused expected` after `Payment pause confirmation message sent` is logged.
+- The payment expectation update uses the existing student PATCH route and `admin_pause_workflow_action` audit context.
+
+### Operational notes
+- `Planning_Items` and `Planning_Progress_Log` are dashboard-owned planning state.
+- Linked student IDs point back to `Students` rows; Sheets remains student truth.
+- Marking a planning item `Done` does not change payment expectation.
+- Parent/payment-affecting changes remain explicit, button-driven, and logged.
+- Keep ownership light for now: Finn, Tom, or Unassigned unless the real delegation model becomes clearer.
+
+### Validation
+- `npm run build` passes
+
 ## 2026-05-29 — Parent Understanding Workflow
 
 ### Scope

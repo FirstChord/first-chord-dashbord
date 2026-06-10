@@ -19,6 +19,26 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-10 — Student-Linked Planning With Explicit Billing Actions
+
+**Feature/change:** Planning items can now link to students through search/inference, show linked student names on planning cards, appear on student detail pages, and offer an explicit `Set Stripe paused expected` action for linked pause reminders after the confirmation-message checkbox is logged.
+
+**Why it exists:** Loose Brain notes such as “pause Eddie next week” are only useful if they connect to the right student context. Student linking turns human-captured planning into retrievable operational work while keeping payment-affecting actions approval-first.
+
+**Source-of-truth impact:** `Planning_Items` and `Planning_Progress_Log` remain dashboard-owned workflow/planning state. The `Students` sheet remains the source of truth for `payment_expectation`. The pause planning action writes `payment_expectation` through the existing student update route and logs the consequential action to `Event_Log`.
+
+**Files/functions involved:**
+
+- `app/admin/planning/page.js`
+- `app/admin/students/[mmsId]/page.js`
+- `components/admin/AdminPlanningPageClient.js`
+- `components/admin/AdminStudentDetailClient.js`
+- `POST /api/admin/planning`
+- `PATCH /api/admin/students/[mmsId]`
+- `getAdminStudents()`
+
+**What to watch out for:** Student name inference is a convenience, not authority; admins should confirm the linked student when names are ambiguous. Marking a planning item `Done` must not mutate payment state. Keep future ownership fields light until there is a real delegation model beyond Finn/Tom/Fenella.
+
 ### 2026-06-04 — Student Exit Archive V1
 
 **Feature/change:** Added a student-detail exit/archive workflow that can mark `payment_expectation` as `inactive_or_stopped`, delete the portal registry entry, mark the student inactive in MMS, and archive/remove the active `Students` sheet row after copying it to `Students_Archive`. Each step writes an explicit audit row to `Event_Log`.

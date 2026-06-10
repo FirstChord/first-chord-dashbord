@@ -1,6 +1,6 @@
 # New Agent Start Here — Admin Dashboard
 
-Last updated: 2026-05-29
+Last updated: 2026-06-10
 
 This is the practical handoff note for a new Codex/AI agent working on the First Chord admin dashboard.
 
@@ -39,6 +39,9 @@ Recent V4 layers include:
 - clickable waiting-list capacity slots into onboarding
 - first-name learner labels in onboarding message copy
 - parent understanding workflow at `/admin/workflows/parent-understanding`
+- lightweight Planning/Brain inbox at `/admin/planning`
+- student-linked planning items visible from student detail pages
+- pause planning cards with an explicit audited `Set Stripe paused expected` action
 
 ## Read These First
 
@@ -62,12 +65,12 @@ Recent V4 layers include:
 - `Pause History` = pause event/history source
 - `Schedule_Context` = cached selected MMS schedule facts
 - `Parent_Understanding_State` = parent check-in campaign workflow state
+- `Planning_Items` = human-captured planning/task/initiative state
+- `Planning_Progress_Log` = append-only planning progress history
 
-## Latest Important Commit
+## Recent Important Work
 
-- `120fdb6 Add parent understanding workflow`
-
-This added the first testable parent check-in workflow:
+Parent Understanding added the first testable parent check-in workflow:
 
 - route: `/admin/workflows/parent-understanding`
 - API: `POST /api/admin/parent-understanding`
@@ -78,6 +81,18 @@ This added the first testable parent check-in workflow:
 
 The workflow is intentionally approval/manual-first. It copies WhatsApp follow-up text but does not auto-send messages, edit MMS contact details, notify tutors, or create issues.
 
+Planning now captures human Brain-style work without becoming full project management:
+
+- route: `/admin/planning`
+- API: `POST /api/admin/planning`
+- client: `components/admin/AdminPlanningPageClient.js`
+- helpers: `lib/admin/planning.js` and `lib/admin/planning-helpers.mjs`
+- managed Sheets tabs: `Planning_Items`, `Planning_Progress_Log`
+- meeting filters: Due Now, Unassigned, Waiting, Linked, No Next Action
+- student linking: Planning receives compact student options from `getAdminStudents()`
+- student detail: open linked planning items appear on `/admin/students/[mmsId]`
+- pause guardrail: linked pause planning items can set `payment_expectation` to `stripe_paused_expected`, but only via explicit button after the confirmation checkbox is logged
+
 Do not create a second source of truth unless the user explicitly agrees.
 
 ## What To Avoid Rushing
@@ -86,6 +101,7 @@ Do not create a second source of truth unless the user explicitly agrees.
 - WhatsApp auto-send
 - AI/agent actions that affect parent messaging or payments without approval
 - Heavy generic workflow engine
+- Heavy ownership/project-management layers
 - Finance/accounting dashboard beyond lightweight operational value context
 - Rewriting V3 loop architecture
 
