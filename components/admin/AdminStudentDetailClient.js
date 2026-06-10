@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { buildPauseWorkflowSummary } from '@/lib/admin/pause-workflow-helpers.mjs';
 
@@ -68,6 +69,17 @@ function formatDateTime(value) {
   });
 }
 
+function formatTargetDate(value = '') {
+  if (!value) return 'No date';
+  const parsed = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString('en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  });
+}
+
 function lifecycleClasses(status) {
   if (status === 'active') return 'border-emerald-200 bg-emerald-50 text-emerald-800';
   if (status === 'paused') return 'border-violet-200 bg-violet-50 text-violet-800';
@@ -80,7 +92,7 @@ function paymentExpectationLabel(value = '') {
   return PAYMENT_EXPECTATION_OPTIONS.find((option) => option.value === value)?.label || value || 'Not set';
 }
 
-export default function AdminStudentDetailClient({ student, tutorOptions }) {
+export default function AdminStudentDetailClient({ student, tutorOptions, linkedPlanningItems = [] }) {
   const [form, setForm] = useState({
     firstName: student.firstName || '',
     lastName: student.lastName || '',
@@ -523,6 +535,46 @@ export default function AdminStudentDetailClient({ student, tutorOptions }) {
               </li>
             ))}
           </ul>
+        </section>
+      ) : null}
+
+      {linkedPlanningItems.length ? (
+        <section className="rounded-2xl border border-blue-100 bg-blue-50/60 p-5">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-900">Open planning</h3>
+              <p className="mt-1 text-sm text-slate-600">Planning items currently linked to this student.</p>
+            </div>
+            <Link
+              href="/admin/planning?filter=linked"
+              className="rounded-lg border border-blue-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-blue-50"
+            >
+              Open planning
+            </Link>
+          </div>
+          <div className="mt-4 space-y-3">
+            {linkedPlanningItems.map((item) => (
+              <div key={item.planningId} className="rounded-xl border border-blue-100 bg-white p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">{item.title}</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {item.owner || 'Unassigned'} · {item.statusLabel || item.status} · {item.momentumLabel || 'Planning'}
+                    </p>
+                  </div>
+                  <span className="rounded-full border border-amber-100 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-900">
+                    {formatTargetDate(item.targetDate)}
+                  </span>
+                </div>
+                {item.nextAction ? (
+                  <p className="mt-2 text-sm text-slate-700">
+                    <span className="font-medium">Next action: </span>
+                    {item.nextAction}
+                  </p>
+                ) : null}
+              </div>
+            ))}
+          </div>
         </section>
       ) : null}
 

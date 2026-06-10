@@ -26,7 +26,10 @@ const STATUS_GROUPS = [
 const MOMENTUM_FILTERS = [
   { value: 'all', label: 'All' },
   { value: 'due_now', label: 'Due Now' },
+  { value: 'unassigned', label: 'Unassigned' },
   { value: 'no_next_action', label: 'No Next Action' },
+  { value: 'waiting_status', label: 'Waiting' },
+  { value: 'linked', label: 'Linked' },
   { value: 'stalled', label: 'Stalled' },
   { value: 'moving', label: 'Moving' },
   { value: 'initiative', label: 'Initiatives' },
@@ -61,6 +64,7 @@ const QUICK_CAPTURE_DEFAULTS = {
 };
 
 const PAUSE_PAYMENT_CONFIRMATION_NOTE = 'Payment pause confirmation message sent.';
+const PAUSE_EXPECTATION_SET_NOTE = 'Set Stripe paused expected from linked pause planning item.';
 
 function cardClasses(extra = '') {
   return `rounded-[1.2rem] border border-blue-100 bg-white/90 p-5 shadow-[0_12px_36px_rgba(15,23,42,0.06)] ${extra}`;
@@ -105,11 +109,91 @@ function formatDateInput(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
+function normaliseSearchText(value = '') {
+  return `${value || ''}`.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
 function isDueNowPlanningItem(item = {}, now = new Date()) {
   const targetDate = `${item.targetDate || ''}`.trim();
   return !['done', 'parked'].includes(item.status)
     && /^\d{4}-\d{2}-\d{2}$/.test(targetDate)
     && targetDate <= formatDateInput(now);
+}
+
+function isOpenPlanningItem(item = {}) {
+  return !['done', 'parked'].includes(item.status);
+}
+
+function hasPlanningLink(item = {}) {
+  return Boolean(
+    `${item.linkedWorkflowId || ''}`.trim()
+    || `${item.linkedStudentId || ''}`.trim()
+    || `${item.linkedTutorId || ''}`.trim()
+    || `${item.parentPlanningId || ''}`.trim(),
+  );
+}
+
+function studentLabel(student = {}) {
+  return [
+    student.fullName || student.mmsId,
+    student.tutor ? `Tutor: ${student.tutor}` : '',
+    student.instrument || '',
+  ].filter(Boolean).join(' · ');
+}
+
+function findStudentById(studentOptions = [], mmsId = '') {
+  return studentOptions.find((student) => student.mmsId === mmsId) || null;
+}
+
+function findStudentSuggestions(studentOptions = [], query = '', limit = 6) {
+  const search = normaliseSearchText(query);
+  if (!search) {
+    return [];
+  }
+  const terms = search.split(/\s+/).filter(Boolean);
+
+  return studentOptions
+    .map((student) => {
+      const haystack = normaliseSearchText([
+        student.fullName,
+        student.mmsId,
+        student.tutor,
+        student.instrument,
+      ].filter(Boolean).join(' '));
+      const score = terms.reduce((sum, term) => (
+        haystack.includes(term) ? sum + (haystack.startsWith(term) ? 2 : 1) : sum
+      ), 0);
+      return { student, score };
+    })
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => b.score - a.score || a.student.fullName.localeCompare(b.student.fullName))
+    .slice(0, limit)
+    .map((entry) => entry.student);
+}
+
+function inferStudentFromText(studentOptions = [], rawText = '') {
+  const text = normaliseSearchText(rawText);
+  if (!text) {
+    return null;
+  }
+
+  const exactMatches = studentOptions
+    .map((student) => {
+      const name = normaliseSearchText(student.fullName);
+      if (!name || !text.includes(name)) {
+        return null;
+      }
+      return { student, score: name.length };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.score - a.score);
+
+  if (exactMatches.length) {
+    return exactMatches[0].student;
+  }
+
+  const suggestions = findStudentSuggestions(studentOptions, rawText, 2);
+  return suggestions.length === 1 ? suggestions[0] : null;
 }
 
 function firstLine(value = '') {
@@ -158,14 +242,17 @@ function inferQuickCapture(raw = '') {
   return defaults;
 }
 
-function buildQuickCaptureItem(rawNote = '', overrides = {}) {
+function buildQuickCaptureItem(rawNote = '', overrides = {}, studentOptions = []) {
   const inferred = inferQuickCapture(rawNote);
+  const hasStudentOverride = Object.prototype.hasOwnProperty.call(overrides, 'linkedStudentId');
+  const inferredStudent = hasStudentOverride ? null : inferStudentFromText(studentOptions, rawNote);
   const item = {
     ...EMPTY_FORM,
     ...inferred,
     ...overrides,
     title: truncateTitle(rawNote),
     notes: rawNote.trim(),
+    linkedStudentId: hasStudentOverride ? overrides.linkedStudentId : inferredStudent?.mmsId || '',
     targetDate: overrides.targetDate || inferPlanningTargetDateFromText(rawNote),
     progressNote: 'Captured from quick brain capture.',
   };
@@ -253,6 +340,59 @@ function DateField({ label, value, onChange }) {
   );
 }
 
+function StudentSearchField({ label = 'Linked Student', value, onChange, studentOptions = [] }) {
+  const selectedStudent = findStudentById(studentOptions, value);
+  const [query, setQuery] = useState('');
+  const suggestions = findStudentSuggestions(studentOptions, query);
+
+  return (
+    <div className="block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+      {label}
+      {selectedStudent ? (
+        <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 normal-case tracking-normal">
+          <span className="text-sm font-medium text-slate-900">{studentLabel(selectedStudent)}</span>
+          <button
+            type="button"
+            onClick={() => {
+              onChange('');
+              setQuery('');
+            }}
+            className="rounded-lg border border-blue-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700"
+          >
+            Clear
+          </button>
+        </div>
+      ) : (
+        <>
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Type a student name"
+            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium normal-case tracking-normal text-slate-800 placeholder:text-slate-400"
+          />
+          {suggestions.length ? (
+            <div className="mt-2 space-y-1 rounded-xl border border-slate-200 bg-white p-2 normal-case tracking-normal">
+              {suggestions.map((student) => (
+                <button
+                  key={student.mmsId}
+                  type="button"
+                  onClick={() => {
+                    onChange(student.mmsId);
+                    setQuery('');
+                  }}
+                  className="block w-full rounded-lg px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-50"
+                >
+                  {studentLabel(student)}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </>
+      )}
+    </div>
+  );
+}
+
 function TextAreaField({ label, value, onChange, placeholder = '', rows = 3 }) {
   return (
     <label className="block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -299,6 +439,22 @@ function workflowHref(workflowId = '') {
   return routes[key] || '';
 }
 
+function studentHref(studentId = '') {
+  const key = `${studentId || ''}`.trim();
+  return key ? `/admin/students/${encodeURIComponent(key)}` : '';
+}
+
+function LinkPill({ label, href = '' }) {
+  const classes = 'rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-blue-50 hover:text-slate-900';
+  return href ? (
+    <Link href={href} className={classes}>
+      {label}
+    </Link>
+  ) : (
+    <span className={classes}>{label}</span>
+  );
+}
+
 function isPausePlanningItem(item = {}) {
   return /\bpaus(?:e|ed|ing)\b/iu.test([
     item.title,
@@ -316,6 +472,7 @@ function hasPausePaymentConfirmation(item = {}) {
 function ItemForm({
   form,
   onChange,
+  studentOptions = [],
   onSubmit,
   submitLabel = 'Save',
   pending = false,
@@ -374,11 +531,10 @@ function ItemForm({
               onChange={(value) => setValue('linkedWorkflowId', value)}
               placeholder="parent-understanding"
             />
-            <TextField
-              label="Linked Student"
+            <StudentSearchField
               value={form.linkedStudentId}
               onChange={(value) => setValue('linkedStudentId', value)}
-              placeholder="sdt_..."
+              studentOptions={studentOptions}
             />
             <TextField
               label="Linked Tutor"
@@ -433,6 +589,7 @@ function QuickBrainCapture({
   setRawNote,
   options,
   setOptions,
+  studentOptions = [],
   expanded,
   setExpanded,
   onSubmit,
@@ -440,9 +597,12 @@ function QuickBrainCapture({
 }) {
   const inferred = inferQuickCapture(rawNote);
   const inferredTargetDate = inferPlanningTargetDateFromText(rawNote);
+  const hasStudentOverride = Object.prototype.hasOwnProperty.call(options, 'linkedStudentId');
+  const inferredStudent = hasStudentOverride ? null : inferStudentFromText(studentOptions, rawNote);
   const effectiveOptions = {
     ...inferred,
     targetDate: inferredTargetDate,
+    linkedStudentId: hasStudentOverride ? options.linkedStudentId : inferredStudent?.mmsId || '',
     ...options,
   };
 
@@ -473,6 +633,11 @@ function QuickBrainCapture({
           ) : null}
           {effectiveOptions.targetDate ? (
             <span className="rounded-full bg-amber-50 px-2.5 py-1 text-amber-800">Do by {formatTargetDate(effectiveOptions.targetDate)}</span>
+          ) : null}
+          {effectiveOptions.linkedStudentId ? (
+            <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-800">
+              Student: {findStudentById(studentOptions, effectiveOptions.linkedStudentId)?.fullName || effectiveOptions.linkedStudentId}
+            </span>
           ) : null}
         </div>
         <button
@@ -516,6 +681,13 @@ function QuickBrainCapture({
             onChange={(value) => setOption('status', value)}
             options={PLANNING_STATUSES.map((value) => ({ value, label: labelPlanningStatus(value) }))}
           />
+          <div className="md:col-span-5">
+            <StudentSearchField
+              value={effectiveOptions.linkedStudentId}
+              onChange={(value) => setOption('linkedStudentId', value)}
+              studentOptions={studentOptions}
+            />
+          </div>
         </div>
       ) : null}
 
@@ -531,18 +703,24 @@ function QuickBrainCapture({
   );
 }
 
-function PlanningCard({ item, onStatus, onEdit, onProgress, pendingId }) {
+function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides = {}, onStatus, onEdit, onProgress, onSetPauseExpected, pendingId }) {
   const [progressNote, setProgressNote] = useState('');
   const [nextAction, setNextAction] = useState(item.nextAction || '');
   const isPending = pendingId === item.planningId;
   const isPauseReminder = isPausePlanningItem(item);
   const pausePaymentConfirmed = hasPausePaymentConfirmation(item);
-  const linkFacts = [
-    item.linkedWorkflowId ? `Workflow: ${item.linkedWorkflowId}` : '',
-    item.linkedStudentId ? `Student: ${item.linkedStudentId}` : '',
-    item.linkedTutorId ? `Tutor: ${item.linkedTutorId}` : '',
-  ].filter(Boolean);
   const linkedWorkflowHref = workflowHref(item.linkedWorkflowId);
+  const linkedStudent = findStudentById(studentOptions, item.linkedStudentId);
+  const linkedStudentPaymentExpectation = paymentExpectationOverrides[item.linkedStudentId] || linkedStudent?.paymentExpectation || '';
+  const pauseExpectationAlreadySet = linkedStudentPaymentExpectation === 'stripe_paused_expected';
+  const linkFacts = [
+    item.linkedWorkflowId ? { label: `Workflow: ${item.linkedWorkflowId}`, href: linkedWorkflowHref } : null,
+    item.linkedStudentId ? {
+      label: `Student: ${findStudentById(studentOptions, item.linkedStudentId)?.fullName || item.linkedStudentId}`,
+      href: studentHref(item.linkedStudentId),
+    } : null,
+    item.linkedTutorId ? { label: `Tutor: ${item.linkedTutorId}`, href: '' } : null,
+  ].filter(Boolean);
 
   return (
     <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_22px_rgba(15,23,42,0.04)]">
@@ -602,9 +780,7 @@ function PlanningCard({ item, onStatus, onEdit, onProgress, pendingId }) {
       {linkFacts.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-2">
           {linkFacts.map((fact) => (
-            <span key={fact} className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
-              {fact}
-            </span>
+            <LinkPill key={fact.label} label={fact.label} href={fact.href} />
           ))}
         </div>
       )}
@@ -666,6 +842,27 @@ function PlanningCard({ item, onStatus, onEdit, onProgress, pendingId }) {
               ) : null}
             </span>
           </label>
+          {item.linkedStudentId ? (
+            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-amber-100 pt-3">
+              <button
+                type="button"
+                disabled={isPending || !pausePaymentConfirmed || pauseExpectationAlreadySet}
+                onClick={() => onSetPauseExpected(item)}
+                className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs font-semibold text-amber-950 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {pauseExpectationAlreadySet ? 'Paused expected set' : 'Set Stripe paused expected'}
+              </button>
+              <span className="text-xs text-amber-800">
+                {pausePaymentConfirmed
+                  ? 'Updates the linked student payment expectation and logs the action.'
+                  : 'Tick the confirmation message first.'}
+              </span>
+            </div>
+          ) : (
+            <p className="mt-3 border-t border-amber-100 pt-3 text-xs text-amber-800">
+              Link a student before changing payment expectation from Planning.
+            </p>
+          )}
         </div>
       ) : null}
 
@@ -702,7 +899,7 @@ function PlanningCard({ item, onStatus, onEdit, onProgress, pendingId }) {
   );
 }
 
-export default function AdminPlanningPageClient({ initialPlanning, initialFilter = 'all' }) {
+export default function AdminPlanningPageClient({ initialPlanning, initialFilter = 'all', studentOptions = [] }) {
   const [planning, setPlanning] = useState(initialPlanning || { items: [], summary: {} });
   const [quickNote, setQuickNote] = useState('');
   const [quickOptions, setQuickOptions] = useState({});
@@ -711,6 +908,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
   const [editForm, setEditForm] = useState(EMPTY_FORM);
   const [saveState, setSaveState] = useState({ pending: false, error: '', savedAt: '' });
   const [pendingId, setPendingId] = useState('');
+  const [paymentExpectationOverrides, setPaymentExpectationOverrides] = useState({});
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState(initialFilter);
   const [showDone, setShowDone] = useState(false);
@@ -726,6 +924,15 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
       }
       if (filter === 'due_now') {
         return isDueNowPlanningItem(item);
+      }
+      if (filter === 'unassigned') {
+        return isOpenPlanningItem(item) && item.owner === 'Unassigned';
+      }
+      if (filter === 'waiting_status') {
+        return isOpenPlanningItem(item) && item.status === 'waiting';
+      }
+      if (filter === 'linked') {
+        return isOpenPlanningItem(item) && hasPlanningLink(item);
       }
       if (filter === 'all') {
         return true;
@@ -772,7 +979,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
       return;
     }
 
-    const item = buildQuickCaptureItem(rawNote, quickOptions);
+    const item = buildQuickCaptureItem(rawNote, quickOptions, studentOptions);
 
     try {
       await postPlanning({
@@ -858,6 +1065,50 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
     }
   }
 
+  async function handleSetPauseExpected(item) {
+    if (!item.linkedStudentId) {
+      setSaveState({ pending: false, error: 'Link a student before setting pause expectation.', savedAt: '' });
+      return;
+    }
+
+    try {
+      setSaveState({ pending: true, error: '', savedAt: '' });
+      setPendingId(item.planningId);
+      const response = await fetch(`/api/admin/students/${encodeURIComponent(item.linkedStudentId)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paymentExpectation: 'stripe_paused_expected',
+          auditContext: {
+            source: 'admin_pause_workflow_action',
+            actionLabel: 'Set Stripe paused expected from Planning',
+            note: `Linked planning item: ${item.title}`,
+          },
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Pause expectation update failed');
+      }
+
+      await postPlanning({
+        mode: 'progress',
+        planningId: item.planningId,
+        progressNote: PAUSE_EXPECTATION_SET_NOTE,
+        progressType: 'action_completed',
+        nextAction: item.nextAction,
+      }, item.planningId);
+      setPaymentExpectationOverrides((current) => ({
+        ...current,
+        [item.linkedStudentId]: 'stripe_paused_expected',
+      }));
+    } catch (error) {
+      setSaveState({ pending: false, error: error.message || 'Pause expectation update failed', savedAt: '' });
+      setPendingId('');
+    }
+  }
+
   const summary = planning.summary || {};
 
   return (
@@ -914,6 +1165,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
             setRawNote={setQuickNote}
             options={quickOptions}
             setOptions={setQuickOptions}
+            studentOptions={studentOptions}
             expanded={quickExpanded}
             setExpanded={setQuickExpanded}
             onSubmit={handleCapture}
@@ -991,9 +1243,12 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
                       <PlanningCard
                         key={item.planningId}
                         item={item}
+                        studentOptions={studentOptions}
+                        paymentExpectationOverrides={paymentExpectationOverrides}
                         onStatus={handleStatus}
                         onEdit={startEdit}
                         onProgress={handleProgress}
+                        onSetPauseExpected={handleSetPauseExpected}
                         pendingId={pendingId}
                       />
                     ))}
@@ -1067,6 +1322,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
                 <ItemForm
                   form={editForm}
                   onChange={setEditForm}
+                  studentOptions={studentOptions}
                   onSubmit={handleEdit}
                   submitLabel="Save changes"
                   pending={pendingId === editingItem.planningId}
