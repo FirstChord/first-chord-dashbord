@@ -12,14 +12,22 @@ This admin index is the map of durable admin documentation. Older V1/V2 drafts a
   Practical handoff note for a new Codex/AI agent: paths, commands, current direction, source-of-truth rules, and documentation update rules.
 - [CURRENT_STATUS.md](./CURRENT_STATUS.md)
   Current admin direction, recent work, and next recommended slices.
+- [DOCUMENTATION_MAP.md](./DOCUMENTATION_MAP.md)
+  Canonical documentation entry points, repo-vs-Obsidian split, and historical-doc rules.
 - [V3_LOOP_ARCHITECTURE.md](./V3_LOOP_ARCHITECTURE.md)
   Current V3 loop pattern for issues, payments, pauses, waiting list, recurring workflows, and audit logging.
+- [STATE_TABS_SCHEMA.md](./STATE_TABS_SCHEMA.md)
+  Dashboard-owned Sheets state tabs, keys, write patterns, concurrency notes, and limits.
+- [HYGIENE_AND_SECRETS.md](./HYGIENE_AND_SECRETS.md)
+  Trust-floor notes for the home-directory git repo, Theta credentials, test students, and secret handling.
 - [OPERATING_DASHBOARD_BUILD_BLUEPRINT.md](./OPERATING_DASHBOARD_BUILD_BLUEPRINT.md)
   Reusable playbook for building a similar internal operating dashboard, including loop design, state/audit patterns, navigation, caching, and automation guardrails.
 - [ADMIN_BRIEF.md](./ADMIN_BRIEF.md)
   Historical V1 brief with current-state addenda. Useful for background, but not the current planning authority.
 - [ADMIN_IMPLEMENTATION_LOG.md](./ADMIN_IMPLEMENTATION_LOG.md)
   Chronological record of what has actually been built.
+- [AUDIT_2026-06-10.md](./AUDIT_2026-06-10.md)
+  Independent audit: strengths, risks, documentation gaps, agent readiness, productisation assessment, and recommended next slices. Critique input, not active direction.
 - [V2_SPEC_DRAFT.md](./V2_SPEC_DRAFT.md)
   Historical V2 plan and sequencing.
 - [V3_ARCHITECTURE.md](./V3_ARCHITECTURE.md)
@@ -90,10 +98,12 @@ This admin index is the map of durable admin documentation. Older V1/V2 drafts a
 
 1. Read [CURRENT_STATUS.md](./CURRENT_STATUS.md)
 2. Read [V3_LOOP_ARCHITECTURE.md](./V3_LOOP_ARCHITECTURE.md)
-3. Skim [ADMIN_IMPLEMENTATION_LOG.md](./ADMIN_IMPLEMENTATION_LOG.md)
-4. Check [OWNERSHIP_MATRIX.md](./OWNERSHIP_MATRIX.md)
-5. Read [SCHOOL_POLICY.md](./SCHOOL_POLICY.md)
-6. Review [PAYMENTS_RULES.md](./PAYMENTS_RULES.md) if working on Stripe or pauses
-7. Read [V3_ARCHITECTURE.md](./V3_ARCHITECTURE.md) for broader system direction
-8. Use [ADMIN_BRIEF.md](./ADMIN_BRIEF.md) and [V2_SPEC_DRAFT.md](./V2_SPEC_DRAFT.md) only as historical background
-9. Read [BRAIN_CAPABILITY_ROADMAP.md](./BRAIN_CAPABILITY_ROADMAP.md) only for longer-term assistant design
+3. Read [STATE_TABS_SCHEMA.md](./STATE_TABS_SCHEMA.md)
+4. Read [HYGIENE_AND_SECRETS.md](./HYGIENE_AND_SECRETS.md)
+5. Skim [ADMIN_IMPLEMENTATION_LOG.md](./ADMIN_IMPLEMENTATION_LOG.md)
+6. Check [OWNERSHIP_MATRIX.md](./OWNERSHIP_MATRIX.md)
+7. Read [SCHOOL_POLICY.md](./SCHOOL_POLICY.md)
+8. Review [PAYMENTS_RULES.md](./PAYMENTS_RULES.md) if working on Stripe or pauses
+9. Read [V3_ARCHITECTURE.md](./V3_ARCHITECTURE.md) for broader system direction
+10. Use [ADMIN_BRIEF.md](./ADMIN_BRIEF.md) and [V2_SPEC_DRAFT.md](./V2_SPEC_DRAFT.md) only as historical background
+11. Read [BRAIN_CAPABILITY_ROADMAP.md](./BRAIN_CAPABILITY_ROADMAP.md) only for longer-term assistant design

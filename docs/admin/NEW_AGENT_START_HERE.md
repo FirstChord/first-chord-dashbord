@@ -48,11 +48,14 @@ Recent V4 layers include:
 1. `docs/admin/CURRENT_STATUS.md`
 2. `docs/admin/V3_LOOP_ARCHITECTURE.md`
 3. `docs/admin/OWNERSHIP_MATRIX.md`
-4. `docs/admin/SCHOOL_POLICY.md`
-5. `docs/admin/PAYMENTS_RULES.md` if touching Stripe, pauses, or payment expectations
-6. `docs/admin/BUG_FIXES.md` if debugging Railway, MMS calendar times, or recent production issues
-7. Obsidian: `08 Operations/Current System Map.md`
-8. Obsidian: `08 Operations/Active Roadmap.md`
+4. `docs/admin/STATE_TABS_SCHEMA.md`
+5. `docs/admin/HYGIENE_AND_SECRETS.md`
+6. `docs/admin/DOCUMENTATION_MAP.md`
+7. `docs/admin/SCHOOL_POLICY.md`
+8. `docs/admin/PAYMENTS_RULES.md` if touching Stripe, pauses, or payment expectations
+9. `docs/admin/BUG_FIXES.md` if debugging Railway, MMS calendar times, or recent production issues
+10. Obsidian: `08 Operations/Current System Map.md`
+11. Obsidian: `08 Operations/Active Roadmap.md`
 
 ## Source-of-Truth Rules
 
@@ -128,3 +131,12 @@ Use Obsidian for higher-level operating memory:
 - `08 Operations/Glossary.md` for shared terms
 
 Do not update docs for tiny styling-only changes unless they affect a documented workflow or decision.
+
+Before editing docs, check `docs/admin/DOCUMENTATION_MAP.md`. It defines which repo docs are current authority and which older docs are historical background.
+
+## Hygiene Guardrails
+
+- Do not run commits from `/Users/finnlemarinel`; use the dashboard repo path above.
+- Do not alter the home-directory git remote without explicit user confirmation.
+- Do not remove tracked Theta credential files until the student portal has a replacement credential-loading path.
+- Do not delete test/demo students from live data without explicit user confirmation.

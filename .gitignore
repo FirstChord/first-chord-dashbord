@@ -44,3 +44,6 @@ next-env.d.ts
 
 # config backups (local only)
 /backups/
+
+# local-only generated/student credential overrides
+/lib/config/theta-credentials.local.js

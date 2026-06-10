@@ -56,6 +56,11 @@ The active surface is the private admin dashboard under `/admin`.
   - student search/linking so planning items can attach to a real student record
   - linked planning items shown on student detail pages
   - explicit pause-planning action to set a linked student to `stripe_paused_expected` after the parent/payment confirmation checkbox is ticked
+- State/documentation hygiene pass:
+  - `lib/admin/sheets.js` has a shared `upsertManagedSheetRow()` helper for one-row dashboard state upserts
+  - `docs/admin/STATE_TABS_SCHEMA.md` documents dashboard-owned Sheets tabs, keys, write patterns, and concurrency limits
+  - `docs/admin/HYGIENE_AND_SECRETS.md` documents the home-directory git risk, Theta credential migration concern, and test-student cleanup path
+  - `docs/admin/DOCUMENTATION_MAP.md` defines canonical repo docs versus higher-level Obsidian notes
 
 ## Current Slice
 
@@ -96,6 +101,7 @@ The active V4 slice is context + ownership layering, not broad automation.
   - progress notes are append-only planning memory
   - student-linked pause planning can update `payment_expectation` only through an explicit human click
   - marking a planning task `Done` does not itself change payment state
+- Dashboard-owned state tabs and write patterns are now documented in `docs/admin/STATE_TABS_SCHEMA.md`. Treat that as the schema map before adding another Sheets tab.
 - Pause planning guardrail:
   - pause reminders should be linked to a student before billing actions
   - `Payment pause confirmation message sent` must be logged before `Set Stripe paused expected`
