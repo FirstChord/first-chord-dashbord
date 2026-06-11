@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Check, Copy, Loader2, Search } from 'lucide-react';
+import { Check, Copy, Loader2, Search, Trash2 } from 'lucide-react';
 import { buildTutorAbsenceMessage, formatTutorAbsenceDate, summariseTutorAbsenceState } from '@/lib/admin/tutor-absence-helpers.mjs';
 
 function cardClasses(extra = '') {
@@ -44,6 +44,7 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
   const [note, setNote] = useState(workflow.state.note || '');
   const [saveState, setSaveState] = useState({ pending: false, error: '', savedAt: '' });
   const [copiedId, setCopiedId] = useState('');
+  const hasSavedAbsence = Boolean(workflow.state.createdAt || workflow.state.updatedAt || workflow.state.resolvedAt);
 
   const selectedCoverTutor = workflow.coverOptions.find((tutor) => tutor.shortName === coverTutorShortName) || null;
   const summary = useMemo(() => summariseTutorAbsenceState({
@@ -117,6 +118,28 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
       setSaveState({ pending: false, error: '', savedAt: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) });
     } catch (error) {
       setSaveState({ pending: false, error: error.message || 'Save failed', savedAt: '' });
+    }
+  }
+
+  async function deleteAbsence() {
+    const confirmed = window.confirm('Delete this logged tutor absence date? Use this when the tutor is no longer off and the date should disappear from the workflow.');
+    if (!confirmed) return;
+
+    setSaveState({ pending: true, error: '', savedAt: '' });
+    try {
+      const response = await fetch('/api/admin/tutor-absence', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ absenceId: workflow.absenceId }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        setSaveState({ pending: false, error: payload.error || 'Delete failed', savedAt: '' });
+        return;
+      }
+      window.location.href = '/admin/workflows/tutor-absence';
+    } catch (error) {
+      setSaveState({ pending: false, error: error.message || 'Delete failed', savedAt: '' });
     }
   }
 
@@ -326,6 +349,17 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
               <Check className="h-4 w-4" />
               Resolve absence
             </button>
+            {hasSavedAbsence ? (
+              <button
+                type="button"
+                onClick={deleteAbsence}
+                disabled={saveState.pending}
+                className="inline-flex items-center gap-2 rounded-full border border-red-200 bg-white px-5 py-2 text-sm font-semibold text-red-800 hover:bg-red-50 disabled:cursor-wait disabled:opacity-70"
+              >
+                {saveState.pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                Delete logged date
+              </button>
+            ) : null}
             {saveState.savedAt ? <span className="text-sm text-emerald-700">Saved at {saveState.savedAt}</span> : null}
             {saveState.error ? <span className="text-sm text-red-700">{saveState.error}</span> : null}
           </div>

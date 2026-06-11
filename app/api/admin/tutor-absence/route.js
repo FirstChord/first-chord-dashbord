@@ -1,6 +1,6 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
-import { saveTutorAbsenceWorkflow } from '@/lib/admin/tutor-absence';
+import { deleteTutorAbsenceWorkflow, saveTutorAbsenceWorkflow } from '@/lib/admin/tutor-absence';
 
 export async function POST(request) {
   const session = await getServerSession(authOptions);
@@ -35,5 +35,27 @@ export async function POST(request) {
     return Response.json({ success: true, state });
   } catch (error) {
     return Response.json({ error: error.message || 'Tutor absence save failed' }, { status: 500 });
+  }
+}
+
+export async function DELETE(request) {
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user?.isAdmin) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const body = await request.json();
+  const absenceId = `${body?.absenceId || ''}`.trim();
+
+  if (!absenceId) {
+    return Response.json({ error: 'absenceId is required' }, { status: 400 });
+  }
+
+  try {
+    const result = await deleteTutorAbsenceWorkflow(absenceId);
+    return Response.json({ success: true, ...result });
+  } catch (error) {
+    return Response.json({ error: error.message || 'Tutor absence delete failed' }, { status: 500 });
   }
 }
