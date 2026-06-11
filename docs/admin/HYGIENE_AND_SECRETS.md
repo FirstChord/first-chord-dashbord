@@ -1,6 +1,6 @@
 # Hygiene And Secrets
 
-Last updated: 2026-06-10
+Last updated: 2026-06-11
 
 This note tracks trust-floor issues that affect deployment safety, future public writing, and new-agent continuity.
 
@@ -22,36 +22,52 @@ Do not alter the home-directory git repo without explicit confirmation.
 
 ## Theta Credentials
 
-`lib/config/theta-credentials.js` is generated and currently tracked. It maps MMS IDs to Theta usernames, and the student portal treats username and password as the same value.
+`lib/config/theta-credentials.js` is generated and no longer tracked. It maps MMS IDs to Theta usernames, and the student portal treats username and password as the same value.
 
 Risk level: not banking-level, but still student login credentials in git. This also blocks clean future case-study/productisation work.
 
-Current non-destructive action:
+Current state:
 
-- `.gitignore` now reserves `lib/config/theta-credentials.local.js` for a future untracked/local credential artifact.
+- `npm run generate-configs` writes `lib/config/theta-credentials.js` locally.
+- `predev`, `prebuild`, and `prevalidate` regenerate config from `lib/config/students-registry.js`.
+- `lib/config/theta-credentials.js` and `lib/config/theta-credentials.local.js` are ignored.
+- Git history still contains the old generated file; history was not rewritten.
 
-Recommended migration before removing tracked credentials:
+Remaining decision:
 
-1. update config generation to write public portal config separately from private Theta credentials
-2. load Theta credentials from an untracked file or environment-backed source on the server
-3. confirm the student portal still works locally and on Railway
-4. rotate Theta credentials if the risk model requires it
-5. remove `lib/config/theta-credentials.js` from git tracking with a deliberate commit
+- Decide whether Theta credential rotation or a student portal password-policy change is needed because old values remain in git history.
 
-Do not simply delete the tracked file without replacing the import path; the generated portal helpers currently import it synchronously.
+Do not manually edit `lib/config/theta-credentials.js`; regenerate it from the registry.
+
+## MMS API Token Exposure
+
+`lib/mms-client.js` previously contained a hardcoded MMS bearer token/API-key JWT. That token is more sensitive than the Theta username file because it can grant API access to the MMS account.
+
+Current state:
+
+- the hardcoded token has been removed from code
+- MMS code now reads from `MMS_BEARER_TOKEN` / legacy `MMS_DEFAULT_TOKEN`
+- the old token remains in git history
+
+Pre-push/deploy blocker:
+
+1. Rotate the exposed MMS API key/token in MMS.
+2. Add the rotated value to Railway as `MMS_BEARER_TOKEN`.
+3. Update local `.env.local` with the same current value.
+4. After deploy, smoke-check `/admin/waiting`, `/admin/capacity`, schedule refresh, onboarding MMS actions, and one student portal page.
 
 ## Test Students
 
-The overview currently excludes known test students by name so operational counts are not inflated. This protects the overview, but it is fragile because the exclusion is not a universal source-of-truth flag.
+Operational surfaces now use an explicit test-student flag instead of name-based exclusions.
 
-Current recommendation:
+Current state:
 
-- do not delete production sheet rows automatically
-- replace name-based exclusions with an explicit test/demo flag in the operational source of truth
-- make all relevant surfaces use that flag consistently
-- then remove hardcoded overview-only filtering
+- supported flags include `is_test_student` on the `Students` sheet and `isTestStudent` in the registry
+- `Test Studenty` is flagged in both the registry and the `Students` sheet
+- `Finn Le Marinel` is flagged in the `Students` sheet
+- overview, students list, issues, capacity cache health, planning student options, parent understanding, tutor absence, and the admin students API use the shared helper
 
-Until that migration exists, removing the overview filter may make headline counts less trustworthy.
+Do not delete external test rows automatically. Keep them explicitly flagged unless Finn decides to remove them from MMS/Sheets.
 
 ## Secret Handling Rules
 

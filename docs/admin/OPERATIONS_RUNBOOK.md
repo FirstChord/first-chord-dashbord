@@ -8,6 +8,7 @@ This runbook covers operational recovery for the First Chord dashboard. It is in
 
 - Do not edit generated files by hand. Edit source files such as `lib/config/students-registry.js`, then run `npm run generate-configs`.
 - Do not commit backups, `.env` files, local token files, or generated secret artifacts.
+- Do not deploy the MMS-token migration unless Railway has `MMS_BEARER_TOKEN` set. Prefer rotating the MMS API key first, then updating both Railway and local `.env.local`.
 - Before any deploy, run:
 
 ```bash
@@ -46,7 +47,7 @@ These names come from real code reads of `process.env` and local token paths.
 | `SHEETS_REFRESH_TOKEN` | Google Sheets OAuth | Sheets reads/writes fail once token is invalid | Generate a new OAuth refresh token with Sheets scope, then update Railway. FINN TO FILL IN exact refresh procedure. |
 | `SHEETS_CLIENT_ID` | Google Sheets OAuth | Sheets reads/writes fail | Update from Google Cloud OAuth credentials. |
 | `SHEETS_CLIENT_SECRET` | Google Sheets OAuth | Sheets reads/writes fail | Update from Google Cloud OAuth credentials. |
-| `MMS_BEARER_TOKEN` | Admin MMS integration | Waiting list, schedule refresh, capacity, onboarding MMS actions, tutor absence lesson discovery fail | Refresh from MMS/session source and update Railway/local `.env.local`. FINN TO FILL IN exact token source. |
+| `MMS_BEARER_TOKEN` | Admin MMS integration | Waiting list, schedule refresh, capacity, onboarding MMS actions, tutor absence lesson discovery, and some portal/MMS routes fail | CRITICAL: this used to be hardcoded in `lib/mms-client.js` and is now removed from code. Rotate the MMS API key, then update Railway and local `.env.local` before pushing/deploying the migration. FINN TO FILL IN exact token source. |
 | `MMS_BASE_URL` | Admin MMS integration | MMS calls hit wrong host if changed | Usually `https://api.mymusicstaff.com/v1`. |
 | `MMS_DEFAULT_BILLING_RATE` | MMS onboarding billing profile default | New MMS billing profile may use wrong fallback rate | Keep aligned with current lesson pricing policy. |
 | `MMS_BILLING_EVENT_CATEGORY_ID` | MMS onboarding billing profile | Billing profile creation may use wrong/default category | Confirm from MMS billing event category. FINN TO FILL IN source. |
@@ -75,7 +76,7 @@ These names come from real code reads of `process.env` and local token paths.
 
 - `lib/config/theta-credentials.js` used to be tracked. It is now generated locally/build-time and ignored.
 - Git history still contains old Theta credential material. We have not rewritten history. Credential rotation or portal-password policy changes are Finn's decision.
-- Some MMS helper files used to contain hardcoded bearer-token material. They now require `MMS_BEARER_TOKEN`.
+- `lib/mms-client.js` used to contain a hardcoded MMS bearer token/API-key JWT. This is more sensitive than the Theta username file because it can grant MMS API access. The code now requires `MMS_BEARER_TOKEN`, but the old token remains in git history. Rotate the MMS API key as the highest-priority post-migration hygiene action.
 
 ## If MMS API Is Failing
 
@@ -96,7 +97,7 @@ npm run build
 
 Recovery:
 
-1. Confirm `MMS_BEARER_TOKEN` is present in Railway env for production or `.env.local` locally.
+1. Confirm `MMS_BEARER_TOKEN` is present in Railway env for production or `.env.local` locally. After the secret migration commit, Railway must have this variable before deploy.
 2. If local only is failing, restart the dev server after editing `.env.local`.
 3. If production is failing, update Railway env and redeploy/restart the service.
 4. If token is expired, refresh it from MMS/session source. FINN TO FILL IN exact source.
@@ -201,6 +202,13 @@ https://<railway-domain>/api/auth/callback/google
 
 ## Deploy Process
 
+Pre-push blocker for the secret migration:
+
+- Rotate the MMS API key/token that used to be hardcoded in `lib/mms-client.js`.
+- Add the rotated value to Railway as `MMS_BEARER_TOKEN`.
+- Update local `.env.local` with the same current value.
+- Smoke-check MMS-backed pages immediately after deploy: `/admin/waiting`, `/admin/capacity`, and one student portal page.
+
 1. Confirm repo:
 
 ```bash
@@ -278,6 +286,7 @@ The backup script and first verified backup are part of the operational hygiene 
 
 ## Known Gaps Finn Should Fill
 
+- Rotate the exposed MMS API key/token that used to be hardcoded in git history.
 - Exact source/steps for refreshing MMS bearer tokens.
 - Exact Google Cloud project and OAuth refresh-token generation steps.
 - Current owner and expiry/rotation policy for `GITHUB_TOKEN`.
