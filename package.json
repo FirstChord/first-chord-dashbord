@@ -6,13 +6,16 @@
     "node": ">=20.0.0"
   },
   "scripts": {
+    "predev": "node scripts/generate-configs.js --no-backup",
     "dev": "next dev --turbopack",
+    "prebuild": "node scripts/generate-configs.js --no-backup",
     "build": "next build",
     "start": "next start",
     "test:admin": "node --test tests/admin/*.test.mjs tests/admin/**/*.test.mjs",
     "sync-admin-tutors": "node scripts/sync-admin-tutors.js",
     "lint": "next lint",
     "analyze": "ANALYZE=true npm run build",
+    "prevalidate": "node scripts/generate-configs.js --no-backup",
     "validate": "node scripts/validate-students.js",
     "generate-configs": "node scripts/generate-configs.js"
   },

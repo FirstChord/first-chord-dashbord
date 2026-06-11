@@ -44,7 +44,7 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add lib/student-url-mappings.js lib/student-helpers.js lib/soundslice-mappings.js lib/config/theta-credentials.js lib/config/instruments.js
+          git add lib/student-url-mappings.js lib/student-helpers.js lib/soundslice-mappings.js lib/config/instruments.js
           git commit -m "chore: regenerate dashboard config files"
           git pull --rebase origin main
           git push

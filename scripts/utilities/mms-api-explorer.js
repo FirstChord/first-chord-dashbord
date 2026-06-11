@@ -9,8 +9,13 @@
  */
 
 const MMS_BASE_URL = 'https://api.mymusicstaff.com/v1';
-const MMS_TOKEN = 'eyJhbGciOiJodHRwOi8vd3d3LnczLm9yZy8yMDAxLzA0L3htbGRzaWctbW9yZSNobWFjLXNoYTI1NiIsInR5cCI6IkpXVCJ9.eyJJbXBlcnNvbmF0aW5nIjpmYWxzZSwiUHJvZmlsZU1vZGUiOiJBcGlLZXkiLCJTY2hvb2xJRCI6InNjaF9GeDVKUSIsIk5hbWUiOiJGaXJzdCBDaG9yZCBEYXNoYm9hcmQiLCJBdXRoVG9rZW4iOiJha193WUpmLldKTnNhclY4NjVUOGQ5Z1dVVGNUS1VDU1h1SzY5MGJZZVB2VkE0RURMQWM9IiwiaWF0IjoxNzU1MTU0NjM1fQ.jE6sNUVTtzRoT6LVSyf_4bVt3eCFSSFq93GvA0gkxZI';
+const MMS_TOKEN = process.env.MMS_BEARER_TOKEN;
 const SCHOOL_ID = 'sch_Fx5JQ';
+
+if (!MMS_TOKEN) {
+  console.error('MMS_BEARER_TOKEN is required to run this script.');
+  process.exit(1);
+}
 
 // Test endpoints to explore
 const ENDPOINTS_TO_TEST = [

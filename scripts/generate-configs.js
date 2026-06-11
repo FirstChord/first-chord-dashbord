@@ -18,6 +18,8 @@ const path = require('path');
 
 console.log('🔨 Generating config files from student registry...\n');
 
+const shouldBackup = !process.argv.includes('--no-backup');
+
 /**
  * Load the student registry
  */
@@ -522,8 +524,11 @@ function main() {
       });
     console.log('');
 
-    // Backup existing files
-    backupFiles();
+    if (shouldBackup) {
+      backupFiles();
+    } else {
+      console.log('📦 Skipping backup for generated config files (--no-backup)\n');
+    }
 
     console.log('🔨 Generating config files...');
 
