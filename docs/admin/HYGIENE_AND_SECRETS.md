@@ -51,9 +51,9 @@ Current state:
 
 Pre-push/deploy blocker:
 
-1. Rotate the exposed MMS API key/token in MMS.
-2. Add the rotated value to Railway as `MMS_BEARER_TOKEN`.
-3. Update local `.env.local` with the same current value.
+1. Add `MMS_BEARER_TOKEN` to Railway before pushing. This may be the existing token if Finn has deliberately deferred rotation.
+2. Confirm local `.env.local` also has `MMS_BEARER_TOKEN`.
+3. Strongly recommended when operationally safe: rotate the exposed MMS API key/token in MMS, then update Railway/local env.
 4. After deploy, smoke-check `/admin/waiting`, `/admin/capacity`, schedule refresh, onboarding MMS actions, and one student portal page.
 
 ## Test Students
