@@ -2,6 +2,23 @@ import { ExternalLink, Music, Gamepad2, FileText, Copy, ExternalLink as LinkIcon
 import { generateSmartUrls } from '@/lib/config';
 import { useState } from 'react';
 
+function buildPracticeChatUrl(student) {
+  const params = new URLSearchParams();
+  const dashboardBaseUrl = typeof window !== 'undefined'
+    ? window.location.origin
+    : 'https://efficient-sparkle-production.up.railway.app';
+  const practiceChatBaseUrl = typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname)
+    ? 'http://localhost:8000'
+    : 'https://practice-chat-pwa.web.app';
+
+  if (student?.mms_id) params.set('studentId', student.mms_id);
+  if (student?.name) params.set('studentName', student.name);
+  if (student?.current_tutor) params.set('tutor', student.current_tutor);
+  params.set('dashboardBaseUrl', dashboardBaseUrl);
+
+  return `${practiceChatBaseUrl}/?${params.toString()}`;
+}
+
 export default function QuickLinks({ student }) {
   const [showCredentials, setShowCredentials] = useState(false);
   const [currentCredentials, setCurrentCredentials] = useState(null);
@@ -35,7 +52,7 @@ export default function QuickLinks({ student }) {
     {
       name: "Practice Chat!",
       icon: <FileText className="w-5 h-5" />,
-      url: "https://practice-chat-pwa.web.app/",
+      url: buildPracticeChatUrl(student),
       instruction: "For taking homework notes",
       requiresAuth: false,
       color: "bg-orange-500"

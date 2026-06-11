@@ -22,6 +22,7 @@ External systems own external truth. The dashboard stores workflow state, action
 | `Tutor_Absence_State` | Tutor absence workflow decisions/messages | `absence_id` | keyed upsert | `upsertTutorAbsenceStateRow` | Absence workflows should end in cover or cancellation decision plus parent-message tracking. |
 | `Planning_Items` | Brain/planning capture for ideas, actions, and initiatives | `planning_id` | keyed upsert | `upsertPlanningItemRow` | Human-created work, not system-detected issues. Can link to students/tutors/workflows. |
 | `Planning_Progress_Log` | Append-only progress history for planning items | `progress_id` | append-only | `appendPlanningProgressLogRow` | Momentum log. Do not overwrite history. |
+| `Practice_Notes_Log` | Append-only snapshots of notes generated in Practice Chat before the tutor completes attendance in MMS | `note_id` | append-only with duplicate guard | `appendPracticeNoteLogRow`, `POST /api/practice-notes` | Dashboard-owned snapshot/memory only. MMS remains the source for attendance, parent email send, and canonical lesson notes. Repeated posts with the same `note_id` are skipped. |
 | `Students_Archive` | Archive copy before dashboard-driven student removal from `Students` | inherited student row plus archive metadata | append-only | `archiveAndDeleteStudentSheetRow` | Safety record for destructive student removal. |
 
 ## Setup And Backup Checks
@@ -64,6 +65,7 @@ Watch for:
 - stale browser tabs overwriting a newer state row
 - wide bulk syncs taking longer than expected
 - state rows drifting from external truth when MMS/Stripe/registry changes outside the dashboard
+- append-only logs containing student/parent data that must stay out of git and public storage
 
 If those become real operational problems, the next hardening step is per-row revision metadata or moving high-write workflow state to a small database. Do not introduce that until Sheets becomes a measured bottleneck.
 
@@ -71,6 +73,7 @@ If those become real operational problems, the next hardening step is per-row re
 
 - live Stripe truth
 - live MMS schedule truth
+- MMS attendance/completion truth
 - canonical student contact truth
 - registry/portal config truth
 - AI decisions as authoritative state

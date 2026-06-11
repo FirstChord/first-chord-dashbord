@@ -70,6 +70,7 @@ Recent V4 layers include:
 - `Parent_Understanding_State` = parent check-in campaign workflow state
 - `Planning_Items` = human-captured planning/task/initiative state
 - `Planning_Progress_Log` = append-only planning progress history
+- `Practice_Notes_Log` = append-only dashboard snapshot of Practice Chat notes before MMS handoff
 
 ## Recent Important Work
 
@@ -95,6 +96,14 @@ Planning now captures human Brain-style work without becoming full project manag
 - student linking: Planning receives compact student options from `getAdminStudents()`
 - student detail: open linked planning items appear on `/admin/students/[mmsId]`
 - pause guardrail: linked pause planning items can set `payment_expectation` to `stripe_paused_expected`, but only via explicit button after the confirmation checkbox is logged
+
+Practice Chat now has a V1.5 dashboard snapshot handoff:
+
+- Practice Chat route params from dashboard quick links: `studentId`, `studentName`, `tutor`, `dashboardBaseUrl`
+- API: `POST /api/practice-notes`
+- helper: `lib/admin/practice-notes-helpers.mjs`
+- managed Sheets tab: `Practice_Notes_Log`
+- source-of-truth boundary: this records what the tutor generated before clicking through to MMS; MMS remains the truth for attendance, parent email checkbox, and final lesson-note completion
 
 Do not create a second source of truth unless the user explicitly agrees.
 

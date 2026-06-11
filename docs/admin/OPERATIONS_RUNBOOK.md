@@ -308,6 +308,8 @@ backups/sheets/2026-06-11T12-46-00Z/
 
 That run backed up all 12 tabs with zero failed or skipped tabs and set the next planning reminder for `2026-06-25`.
 
+New dashboard-owned state tabs should be added to `scripts/backup-sheets-tabs.mjs`. `Practice_Notes_Log` is included because it stores student-linked note snapshots from Practice Chat.
+
 Retention policy for now:
 
 - Keep local dated backups in `backups/sheets/`.

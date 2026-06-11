@@ -61,6 +61,10 @@ The active surface is the private admin dashboard under `/admin`.
   - `docs/admin/STATE_TABS_SCHEMA.md` documents dashboard-owned Sheets tabs, keys, write patterns, and concurrency limits
   - `docs/admin/HYGIENE_AND_SECRETS.md` documents the home-directory git risk, Theta credential migration concern, and test-student cleanup path
   - `docs/admin/DOCUMENTATION_MAP.md` defines canonical repo docs versus higher-level Obsidian notes
+- Practice Chat V1.5 note ownership:
+  - dashboard student quick links pass student/tutor context into Practice Chat
+  - clicking `Take Attendance` in Practice Chat appends a best-effort snapshot to `Practice_Notes_Log`
+  - tutors still complete attendance and parent email manually in MMS
 
 ## Current Slice
 
@@ -106,6 +110,10 @@ The active V4 slice is context + ownership layering, not broad automation.
   - pause reminders should be linked to a student before billing actions
   - `Payment pause confirmation message sent` must be logged before `Set Stripe paused expected`
   - the payment expectation update goes through the existing student PATCH route and logs to `Event_Log`
+- Practice Chat snapshots are context/workflow memory only:
+  - `Practice_Notes_Log` stores generated notes, student/tutor context, and whether the MMS handoff button was opened
+  - failed snapshot saves must not block the tutor from opening MMS
+  - MMS remains the source of truth for attendance, parent email sending, and canonical lesson-note records
 
 Before deployment, verify with:
 

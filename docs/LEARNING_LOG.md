@@ -19,6 +19,25 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-11 — Practice Chat Note Snapshots
+
+**Feature/change:** Practice Chat now receives student/tutor context from dashboard quick links and appends a best-effort note snapshot to `Practice_Notes_Log` when the tutor clicks through to take attendance in MMS.
+
+**Why it exists:** Tutors were already creating useful lesson-note data, but First Chord had to pull that context back from MMS later. This adds dashboard-owned visibility without changing the tutor’s core habit: copy notes, open MMS, mark attendance, and send the parent email manually.
+
+**Source-of-truth impact:** `Practice_Notes_Log` is an append-only dashboard snapshot. MMS remains the source of truth for attendance, the parent email checkbox, and canonical lesson-note completion. The snapshot should not be treated as proof that the lesson was marked present or emailed.
+
+**Files/functions involved:**
+
+- `POST /api/practice-notes`
+- `lib/admin/practice-notes-helpers.mjs`
+- `appendPracticeNoteLogRow()` in `lib/admin/sheets.js`
+- `components/navigation/QuickLinks.js`
+- Practice Chat `public/src/practice-note-sync.js`
+- Practice Chat `public/src/app.js`
+
+**What to watch out for:** The API is intentionally best-effort and CORS-limited for V1.5, not the final authenticated tutor workflow. If the save fails, tutors still reach MMS. Add the tab to backups whenever state tabs change, and do not use this log as a replacement for MMS attendance. Keep the `note_id` duplicate guard in place so retries/double-clicks do not create repeated rows.
+
 ### 2026-06-10 — Student-Linked Planning With Explicit Billing Actions
 
 **Feature/change:** Planning items can now link to students through search/inference, show linked student names on planning cards, appear on student detail pages, and offer an explicit `Set Stripe paused expected` action for linked pause reminders after the confirmation-message checkbox is logged.

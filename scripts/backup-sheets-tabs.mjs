@@ -21,6 +21,7 @@ const BACKUP_TABS = [
   'Tutor_Absence_State',
   'Planning_Items',
   'Planning_Progress_Log',
+  'Practice_Notes_Log',
   'Students_Archive',
 ];
 const OPTIONAL_MISSING_TABS = new Set(['Students_Archive']);
