@@ -251,6 +251,14 @@ Manual weekly backup command:
 npm run backup:sheets
 ```
 
+First verified run:
+
+```text
+backups/sheets/2026-06-11T07-04-09Z/
+```
+
+That run backed up all existing dashboard-owned state tabs plus `Students`. `Students_Archive` was recorded as skipped because that tab has not been created by the archive workflow yet.
+
 Retention policy for now:
 
 - Keep local dated backups in `backups/sheets/`.
