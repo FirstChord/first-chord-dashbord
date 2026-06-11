@@ -114,6 +114,11 @@ The active V4 slice is context + ownership layering, not broad automation.
   - `Practice_Notes_Log` stores generated notes, student/tutor context, and whether the MMS handoff button was opened
   - failed snapshot saves must not block the tutor from opening MMS
   - MMS remains the source of truth for attendance, parent email sending, and canonical lesson-note records
+- Practice Chat Level 2 is in test-only exploration:
+  - route: `POST /api/practice-notes/mms-test`
+  - hardcoded allowed student: Test Studenty / `sdt_fBg9JN`
+  - dry-run previews the MMS attendance target, preserved price, and email recipients
+  - execute mode requires `confirmTestStudent: true` and should not be generalised until tested safely
 
 Before deployment, verify with:
 

@@ -38,6 +38,8 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 **What to watch out for:** The API is intentionally best-effort and CORS-limited for V1.5, not the final authenticated tutor workflow. If the save fails, tutors still reach MMS. Add the tab to backups whenever state tabs change, and do not use this log as a replacement for MMS attendance. Keep the `note_id` duplicate guard in place so retries/double-clicks do not create repeated rows.
 
+**Level 2 test path:** `POST /api/practice-notes/mms-test` explores direct MMS attendance/note/email writes, but is deliberately hardcoded to Test Studenty (`sdt_fBg9JN`). It preserves MMS price context from the attendance record and uses `Family.Parents[].ID` for `emailnotes`. Do not wire this to normal students until the test path is proven.
+
 ### 2026-06-10 — Student-Linked Planning With Explicit Billing Actions
 
 **Feature/change:** Planning items can now link to students through search/inference, show linked student names on planning cards, appear on student detail pages, and offer an explicit `Set Stripe paused expected` action for linked pause reminders after the confirmation-message checkbox is logged.

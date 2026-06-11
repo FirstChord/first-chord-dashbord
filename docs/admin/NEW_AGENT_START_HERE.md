@@ -105,6 +105,14 @@ Practice Chat now has a V1.5 dashboard snapshot handoff:
 - managed Sheets tab: `Practice_Notes_Log`
 - source-of-truth boundary: this records what the tutor generated before clicking through to MMS; MMS remains the truth for attendance, parent email checkbox, and final lesson-note completion
 
+There is also a narrow Level 2 MMS-write test route:
+
+- route: `POST /api/practice-notes/mms-test`
+- allowed MMS student: `sdt_fBg9JN` / Test Studenty only
+- dry-run mode previews attendance target and recipients
+- execute mode writes attendance/notes and calls MMS `emailnotes`, but only when `confirmTestStudent: true`
+- do not generalise this until Test Studenty and at least one safe real-student workflow have been verified
+
 Do not create a second source of truth unless the user explicitly agrees.
 
 ## What To Avoid Rushing
