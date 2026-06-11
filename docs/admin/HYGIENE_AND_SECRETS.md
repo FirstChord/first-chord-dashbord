@@ -75,3 +75,27 @@ Do not delete external test rows automatically. Keep them explicitly flagged unl
 - Google OAuth/token files in the home directory are not repo artifacts.
 - Never paste live tokens, Stripe secrets, OAuth refresh tokens, or private sheet IDs into docs.
 - For docs and handovers, describe the variable name and owner, not the value.
+
+## Local Sheets Backups
+
+Operational Sheets backups now run through:
+
+```bash
+npm run backup:sheets
+```
+
+The backup writes ignored local CSV/JSON files under `backups/sheets/` and updates a dated Planning reminder for the next backup 14 days later.
+
+The local macOS schedule is installed with:
+
+```bash
+npm run install:backup-schedule
+```
+
+It creates:
+
+```text
+~/Library/LaunchAgents/com.firstchord.sheets-backup.plist
+```
+
+This keeps backup data local/private while still surfacing the next backup through the dashboard's Planning layer.

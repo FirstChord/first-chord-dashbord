@@ -259,6 +259,39 @@ Manual weekly backup command:
 npm run backup:sheets
 ```
 
+Before first use or after adding a new dashboard-owned state tab, verify/create managed tabs:
+
+```bash
+npm run ensure:state-tabs
+```
+
+Local fortnightly schedule:
+
+```bash
+npm run install:backup-schedule
+```
+
+This installs a macOS LaunchAgent:
+
+```text
+~/Library/LaunchAgents/com.firstchord.sheets-backup.plist
+```
+
+It runs `npm run backup:sheets` every 14 days from the dashboard repo. Logs are written to:
+
+```text
+backups/sheets/launchd.out.log
+backups/sheets/launchd.err.log
+```
+
+The backup script also updates the existing Planning layer with a recurring action:
+
+```text
+Run operational Sheets backup
+```
+
+After each successful backup, its target date is moved 14 days forward. If a backup is missed, it appears through the existing dated planning/overview flow as due or overdue.
+
 First verified run:
 
 ```text
@@ -267,10 +300,18 @@ backups/sheets/2026-06-11T07-04-09Z/
 
 That run backed up all existing dashboard-owned state tabs plus `Students`. `Students_Archive` was recorded as skipped because that tab has not been created by the archive workflow yet.
 
+Follow-up verified run after creating `Students_Archive`:
+
+```text
+backups/sheets/2026-06-11T12-46-00Z/
+```
+
+That run backed up all 12 tabs with zero failed or skipped tabs and set the next planning reminder for `2026-06-25`.
+
 Retention policy for now:
 
 - Keep local dated backups in `backups/sheets/`.
-- Review/prune manually after 8 weekly backups.
+- Review/prune manually after 8 backups.
 - Do not upload to public storage.
 - FINN TO FILL IN whether a private Google Drive backup folder should become the long-term destination.
 

@@ -1,6 +1,6 @@
 # State Tabs Schema
 
-Last updated: 2026-06-10
+Last updated: 2026-06-11
 
 This note documents the dashboard-owned Google Sheets tabs that store workflow state, cache snapshots, or audit history. It is intentionally about dashboard state, not the main `Students` operational sheet.
 
@@ -23,6 +23,22 @@ External systems own external truth. The dashboard stores workflow state, action
 | `Planning_Items` | Brain/planning capture for ideas, actions, and initiatives | `planning_id` | keyed upsert | `upsertPlanningItemRow` | Human-created work, not system-detected issues. Can link to students/tutors/workflows. |
 | `Planning_Progress_Log` | Append-only progress history for planning items | `progress_id` | append-only | `appendPlanningProgressLogRow` | Momentum log. Do not overwrite history. |
 | `Students_Archive` | Archive copy before dashboard-driven student removal from `Students` | inherited student row plus archive metadata | append-only | `archiveAndDeleteStudentSheetRow` | Safety record for destructive student removal. |
+
+## Setup And Backup Checks
+
+Run this to create/verify dashboard-owned state tabs and required headers:
+
+```bash
+npm run ensure:state-tabs
+```
+
+Run this to back up `Students` plus dashboard-owned state tabs to ignored local CSV/JSON files:
+
+```bash
+npm run backup:sheets
+```
+
+`npm run backup:sheets` also updates the Planning item `planning_operational_sheets_backup` so the next fortnightly backup appears in the existing dated planning/overview flow.
 
 ## Shared Upsert Helper
 

@@ -1,6 +1,9 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { appendPlanningProgressLogRow, getPlanningItemRows, upsertPlanningItemRow } from '../lib/admin/sheets.js';
+import { buildBackupPlanningItem, buildBackupProgressNote, BACKUP_PLANNING_ID } from '../lib/admin/backup-helpers.mjs';
+import { loadLocalEnv } from './script-env.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,39 +24,6 @@ const BACKUP_TABS = [
   'Students_Archive',
 ];
 const OPTIONAL_MISSING_TABS = new Set(['Students_Archive']);
-
-async function loadEnvFile(filePath) {
-  let raw = '';
-  try {
-    raw = await readFile(filePath, 'utf8');
-  } catch {
-    return;
-  }
-
-  for (const line of raw.split(/\r?\n/u)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#') || !trimmed.includes('=')) {
-      continue;
-    }
-
-    const separatorIndex = trimmed.indexOf('=');
-    const key = trimmed.slice(0, separatorIndex).trim();
-    let value = trimmed.slice(separatorIndex + 1).trim();
-
-    if (!key || process.env[key] != null) {
-      continue;
-    }
-
-    if (
-      (value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))
-    ) {
-      value = value.slice(1, -1);
-    }
-
-    process.env[key] = value;
-  }
-}
 
 function timestampForFolder(date = new Date()) {
   return date.toISOString().replace(/\.\d{3}Z$/u, 'Z').replace(/[:]/g, '-');
@@ -126,8 +96,7 @@ async function backupTab({ tabName, outputDir, getSheetValues }) {
 }
 
 async function main() {
-  await loadEnvFile(path.join(repoRoot, '.env.local'));
-  await loadEnvFile(path.join(repoRoot, '.env'));
+  await loadLocalEnv(repoRoot);
 
   if (!process.env.GOOGLE_SPREADSHEET_ID) {
     throw new Error('GOOGLE_SPREADSHEET_ID is required to back up Sheets tabs.');
@@ -182,6 +151,23 @@ async function main() {
     return;
   }
 
+  const existingPlanningRows = await getPlanningItemRows();
+  const existingBackupReminder = existingPlanningRows.find((row) => row.planningId === BACKUP_PLANNING_ID) || {};
+  const planningItem = buildBackupPlanningItem({
+    completedAt: new Date(manifest.completedAt),
+    existingItem: existingBackupReminder,
+  });
+
+  await upsertPlanningItemRow(planningItem);
+  await appendPlanningProgressLogRow({
+    progressId: `planning_progress_backup_${timestamp.replace(/[^A-Za-z0-9]/g, '_')}`,
+    planningId: planningItem.planningId,
+    progressNote: buildBackupProgressNote(manifest),
+    progressType: 'action_completed',
+    createdAt: manifest.completedAt,
+    createdBy: 'local_backup_script',
+  });
+  console.log(`Next backup reminder set for ${planningItem.targetDate}`);
   console.log(`Backup complete: ${outputDir}`);
 }
 

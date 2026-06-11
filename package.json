@@ -14,6 +14,8 @@
     "test:admin": "node --test tests/admin/*.test.mjs tests/admin/**/*.test.mjs",
     "sync-admin-tutors": "node scripts/sync-admin-tutors.js",
     "backup:sheets": "node scripts/backup-sheets-tabs.mjs",
+    "ensure:state-tabs": "node scripts/ensure-state-tabs.mjs",
+    "install:backup-schedule": "node scripts/install-sheets-backup-launch-agent.mjs",
     "lint": "next lint",
     "analyze": "ANALYZE=true npm run build",
     "prevalidate": "node scripts/generate-configs.js --no-backup",
