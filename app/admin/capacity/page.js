@@ -1,6 +1,7 @@
 import { getMmsFreeCalendarSlotContext } from '@/lib/admin/mms';
 import { getScheduleContextRows } from '@/lib/admin/sheets';
 import { buildFreeSlotSummary, buildScheduleCacheSummary } from '@/lib/admin/capacity-helpers.mjs';
+import { getOperationalAdminStudents } from '@/lib/admin/students';
 
 function formatDateTime(value) {
   if (!value) return '—';
@@ -24,15 +25,18 @@ function statCard(label, value, detail = '') {
 }
 
 export default async function AdminCapacityPage() {
-  const [scheduleRows, freeSlotResult] = await Promise.all([
+  const [scheduleRows, operationalStudents, freeSlotResult] = await Promise.all([
     getScheduleContextRows(),
+    getOperationalAdminStudents(),
     getMmsFreeCalendarSlotContext({ lookaheadDays: 30 }).then(
       (context) => ({ ...context, error: '' }),
       (error) => ({ slots: [], error: error.message || 'Could not load MMS free slots' }),
     ),
   ]);
 
-  const scheduleSummary = buildScheduleCacheSummary(scheduleRows);
+  const operationalStudentIds = new Set(operationalStudents.map((student) => student.mmsId).filter(Boolean));
+  const operationalScheduleRows = scheduleRows.filter((row) => !row.mmsId || operationalStudentIds.has(row.mmsId));
+  const scheduleSummary = buildScheduleCacheSummary(operationalScheduleRows);
   const freeSlots = freeSlotResult.slots;
   const freeSlotSummary = buildFreeSlotSummary(freeSlots);
   const upcomingSlots = freeSlots.slice(0, 40);

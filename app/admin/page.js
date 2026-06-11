@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { getAdminStudents } from '@/lib/admin/students';
+import { getOperationalAdminStudents } from '@/lib/admin/students';
 import { getParentUnderstandingStateRows, getReviewFlagsRows } from '@/lib/admin/sheets';
 import { getAdminHealthSummary } from '@/lib/admin/health';
 import { formatDateTime } from '@/lib/admin/health-helpers.mjs';
@@ -7,24 +7,11 @@ import { buildPaymentOperationsSummary } from '@/lib/admin/payment-summary.mjs';
 import { getTutorAbsenceOverviewSummary } from '@/lib/admin/tutor-absence';
 import { getPlanningDashboard } from '@/lib/admin/planning';
 
-const OVERVIEW_TEST_STUDENT_NAMES = new Set([
-  'test studenty',
-  'finn le marinel',
-]);
-
 function statusClasses(status) {
   if (status === 'Healthy' || status === 'Fresh') return 'border-emerald-200 bg-emerald-50 text-emerald-800';
   if (status === 'Running' || status === 'Aging') return 'border-amber-200 bg-amber-50 text-amber-800';
   if (status === 'Failing' || status === 'Stale') return 'border-red-200 bg-red-50 text-red-800';
   return 'border-slate-200 bg-slate-50 text-slate-700';
-}
-
-function normaliseName(value = '') {
-  return `${value}`.trim().replace(/\s+/g, ' ').toLowerCase();
-}
-
-function isOverviewTestStudent(student = {}) {
-  return OVERVIEW_TEST_STUDENT_NAMES.has(normaliseName(student.fullName));
 }
 
 function buildLifecycleCounts(students = []) {
@@ -171,17 +158,16 @@ function SectionHeader({ title, copy = '' }) {
 
 export default async function AdminHomePage() {
   const [students, flags, health, tutorAbsenceSummary, parentUnderstandingRows, planningDashboard] = await Promise.all([
-    getAdminStudents(),
+    getOperationalAdminStudents(),
     getReviewFlagsRows(),
     getAdminHealthSummary(),
     getTutorAbsenceOverviewSummary(),
     getParentUnderstandingStateRows(),
     getPlanningDashboard(),
   ]);
-  const operationalStudents = students.filter((student) => !isOverviewTestStudent(student));
-  const paymentSummary = buildPaymentOperationsSummary(operationalStudents);
-  const lifecycleCounts = buildLifecycleCounts(operationalStudents);
-  const waitingSummary = buildWaitingOverview(operationalStudents);
+  const paymentSummary = buildPaymentOperationsSummary(students);
+  const lifecycleCounts = buildLifecycleCounts(students);
+  const waitingSummary = buildWaitingOverview(students);
   const parentUnderstandingSummary = buildParentUnderstandingOverview(parentUnderstandingRows);
   const planningSummary = planningDashboard.summary || {};
   const planningDueNow = planningSummary.dueNow || 0;
@@ -384,7 +370,7 @@ export default async function AdminHomePage() {
         <div className="rounded-2xl border border-blue-100 bg-white/90 p-5 shadow-[0_12px_36px_rgba(15,23,42,0.05)]">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <h4 className="text-sm font-semibold text-slate-900">Lifecycle snapshot</h4>
-            <p className="text-xs text-slate-500">{operationalStudents.length} operational students. Derived state, separate from payment expectation.</p>
+            <p className="text-xs text-slate-500">{students.length} operational students. Derived state, separate from payment expectation.</p>
           </div>
           <div className="mt-3 grid gap-3 sm:grid-cols-3 xl:grid-cols-6">
             {[

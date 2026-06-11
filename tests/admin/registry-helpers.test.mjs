@@ -11,6 +11,7 @@ export const studentsRegistry = {
     lastName: 'Studenty',
     friendlyUrl: 'test-s',
     tutor: 'Arion',
+    isTestStudent: 'true',
   }, // Test Studenty
 };
 `;
@@ -23,6 +24,7 @@ export const studentsRegistry = {
       lastName: 'Studenty',
       friendlyUrl: 'test-s',
       tutor: 'Arion',
+      isTestStudent: 'true',
     },
   ]);
 });
@@ -43,4 +45,3 @@ test('updateEntryBlock only updates targeted quoted keys', () => {
   assert.match(updated, /soundsliceUrl:\s*'https:\/\/www\.soundslice\.com\/courses\/456\/\\'weird'/);
   assert.match(updated, /firstName:\s*'Test'/);
 });
-

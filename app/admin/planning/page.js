@@ -1,6 +1,6 @@
 import AdminPlanningPageClient from '@/components/admin/AdminPlanningPageClient';
 import { getPlanningDashboard } from '@/lib/admin/planning';
-import { getAdminStudents } from '@/lib/admin/students';
+import { getOperationalAdminStudents } from '@/lib/admin/students';
 
 const ALLOWED_INITIAL_FILTERS = new Set([
   'due_now',
@@ -14,7 +14,7 @@ export default async function AdminPlanningPage({ searchParams }) {
   const resolvedSearchParams = await searchParams;
   const [planning, students] = await Promise.all([
     getPlanningDashboard(),
-    getAdminStudents(),
+    getOperationalAdminStudents(),
   ]);
   const requestedFilter = `${resolvedSearchParams?.filter || ''}`.trim();
   const initialFilter = ALLOWED_INITIAL_FILTERS.has(requestedFilter) ? requestedFilter : 'all';

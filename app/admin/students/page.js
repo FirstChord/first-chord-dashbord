@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { getAdminStudents } from '@/lib/admin/students';
+import { getOperationalAdminStudents } from '@/lib/admin/students';
 
 function normaliseSearch(value = '') {
   return value.toString().trim().toLowerCase();
@@ -64,7 +64,7 @@ function StripeLinkageSummary({ student }) {
 }
 
 export default async function AdminStudentsPage({ searchParams }) {
-  const students = await getAdminStudents();
+  const students = await getOperationalAdminStudents();
   const resolvedSearchParams = await searchParams;
   const rawQuery = getSearchQuery(resolvedSearchParams);
   const paymentExpectationFilter = getPaymentExpectationFilter(resolvedSearchParams);
