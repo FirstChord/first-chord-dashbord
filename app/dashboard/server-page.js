@@ -1,8 +1,9 @@
 import Dashboard from '@/components/layout/Dashboard';
+import { getMmsBearerToken } from '@/lib/mms-token';
 
 async function getInitialData() {
   try {
-    const mmsToken = process.env.MMS_DEFAULT_TOKEN;
+    const mmsToken = getMmsBearerToken();
     
     if (!mmsToken) {
       return {

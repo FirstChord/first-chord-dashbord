@@ -1,11 +1,13 @@
 // app/api/mms/[...path]/route.js
 import { cookies } from 'next/headers'
+import { getMmsBearerToken } from '@/lib/mms-token'
 
 const MMS_BASE_URL = process.env.MMS_API_URL || 'https://api.mymusicstaff.com'
 
 export async function GET(request, { params }) {
-  const token = cookies().get('mms-token')
-  const defaultToken = process.env.MMS_DEFAULT_TOKEN
+  const cookieStore = await cookies()
+  const token = cookieStore.get('mms-token')
+  const defaultToken = getMmsBearerToken()
   
   // Use stored token or fall back to default token
   const authToken = token?.value || defaultToken
@@ -34,8 +36,9 @@ export async function GET(request, { params }) {
 }
 
 export async function POST(request, { params }) {
-  const token = cookies().get('mms-token')
-  const defaultToken = process.env.MMS_DEFAULT_TOKEN
+  const cookieStore = await cookies()
+  const token = cookieStore.get('mms-token')
+  const defaultToken = getMmsBearerToken()
   
   // Use stored token or fall back to default token
   const authToken = token?.value || defaultToken

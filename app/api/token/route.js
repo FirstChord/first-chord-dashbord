@@ -1,5 +1,6 @@
 // app/api/auth/mms/route.js
 import { cookies } from 'next/headers'
+import { getMmsBearerToken } from '@/lib/mms-token'
 
 // Store MMS token in httpOnly cookie
 export async function POST(request) {
@@ -29,7 +30,7 @@ export async function POST(request) {
 export async function GET() {
   const cookieStore = await cookies()
   const token = cookieStore.get('mms-token')
-  const defaultToken = process.env.MMS_DEFAULT_TOKEN
+  const defaultToken = getMmsBearerToken()
   
   // Check if we have either a stored token or default token
   if (!token && !defaultToken) {
