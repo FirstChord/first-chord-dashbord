@@ -1,6 +1,6 @@
 # Admin Current Status
 
-Last updated: 2026-06-12
+Last updated: 2026-06-13
 
 This is the tracked current-status entrypoint for agents working from the `music-school-dashboard` repository.
 
@@ -17,6 +17,8 @@ V3 established the dashboard's loop-closing pattern:
 5. log consequential actions
 
 V4 is now adding lightweight context layers on top of those loops. The goal is to make each student, issue, payment, and workflow easier to understand and delegate without adding a large state machine or new database.
+
+A guiding workflow principle is now explicit: reduce admin cognitive load. Workflows should turn recurring memory-heavy admin into clear context, safe next actions, and logged outcomes.
 
 The active surface is the private admin dashboard under `/admin`.
 
@@ -55,7 +57,7 @@ The active surface is the private admin dashboard under `/admin`.
   - meeting-friendly filters such as Due Now, Unassigned, Waiting, Linked, and No Next Action
   - student search/linking so planning items can attach to a real student record
   - linked planning items shown on student detail pages
-  - explicit pause-planning action to set a linked student to `stripe_paused_expected` after the parent/payment confirmation checkbox is ticked
+  - streamlined pause-planning completion path: open the prefilled payment-pause PWA, copy the dashboard-generated parent confirmation message, confirm the pause tool/message checks, then mark the pause completed
 - State/documentation hygiene pass:
   - `lib/admin/sheets.js` has a shared `upsertManagedSheetRow()` helper for one-row dashboard state upserts
   - `docs/admin/STATE_TABS_SCHEMA.md` documents dashboard-owned Sheets tabs, keys, write patterns, and concurrency limits
@@ -109,13 +111,14 @@ The active V4 slice is context + ownership layering, not broad automation.
   - Sheets tabs: `Planning_Items` and `Planning_Progress_Log`
   - linked student IDs point at existing `Students` rows
   - progress notes are append-only planning memory
-  - student-linked pause planning can update `payment_expectation` only through an explicit human click
-  - marking a planning task `Done` does not itself change payment state
+  - student-linked pause planning can update `payment_expectation` only through an explicit human completion action
+  - generic `Done` does not itself change payment state; `Mark pause completed` is the guarded pause-specific action that logs confirmation, aligns `payment_expectation`, and closes the task
 - Dashboard-owned state tabs and write patterns are now documented in `docs/admin/STATE_TABS_SCHEMA.md`. Treat that as the schema map before adding another Sheets tab.
 - Pause planning guardrail:
   - pause reminders should be linked to a student before billing actions
-  - `Payment pause confirmation message sent` must be logged before `Set Stripe paused expected`
-  - the payment expectation update goes through the existing student PATCH route and logs to `Event_Log`
+  - the admin must confirm the payment pause tool was run and the parent confirmation was sent/copied
+  - the dashboard-generated parent message reduces copy/paste and wording load but does not send WhatsApp
+  - `Mark pause completed` logs the confirmation, sets `stripe_paused_expected` through the existing student PATCH route if needed, appends to `Event_Log`, and marks the planning task done
 - Practice Chat note ownership is becoming a bridge between admin and learning:
   - `Practice_Notes_Log` stores generated notes and student/tutor context
   - in the legacy handoff flow, failed snapshot saves must not block the tutor from opening MMS

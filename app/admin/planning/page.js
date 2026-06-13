@@ -2,7 +2,7 @@ import AdminPlanningPageClient from '@/components/admin/AdminPlanningPageClient'
 import { getPlanningDashboard } from '@/lib/admin/planning';
 import { getScheduleContextRows } from '@/lib/admin/sheets';
 import { enrichScheduleContextsWithSharedSlots } from '@/lib/admin/schedule-context-helpers.mjs';
-import { getOperationalAdminStudents } from '@/lib/admin/students';
+import { getAdminStudents } from '@/lib/admin/students';
 
 const ALLOWED_INITIAL_FILTERS = new Set([
   'due_now',
@@ -16,7 +16,7 @@ export default async function AdminPlanningPage({ searchParams }) {
   const resolvedSearchParams = await searchParams;
   const [planning, students, scheduleRows] = await Promise.all([
     getPlanningDashboard(),
-    getOperationalAdminStudents(),
+    getAdminStudents(),
     getScheduleContextRows(),
   ]);
   const scheduleByMmsId = enrichScheduleContextsWithSharedSlots(scheduleRows);
@@ -27,6 +27,11 @@ export default async function AdminPlanningPage({ searchParams }) {
     fullName: student.fullName,
     tutor: student.tutor,
     instrument: student.instrument,
+    email: student.email,
+    parentFirstName: student.parentFirstName,
+    parentLastName: student.parentLastName,
+    stripeCustomerId: student.stripeCustomerId,
+    stripeSubscriptionId: student.stripeSubscriptionId,
     paymentExpectation: student.paymentExpectation,
     scheduleContext: scheduleByMmsId.get(student.mmsId) || null,
   }));

@@ -19,6 +19,26 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-13 — Guarded Pause Planning Completion
+
+**Feature/change:** Pause planning cards now provide a single guarded completion path: open the prefilled Payment Pause PWA, copy a dashboard-generated parent confirmation message, confirm the pause tool was run and the message was sent/copied, then click `Mark pause completed`.
+
+**Why it exists:** The previous path was safe but cognitively heavy: open the PWA, copy/send the message, return to Planning, log confirmation, set the payment expectation, and then close the task. The new path keeps the same human approval boundary while reducing remembered steps and making "done" mean a complete pause loop.
+
+**Source-of-truth impact:** `Planning_Items` and `Planning_Progress_Log` remain dashboard-owned workflow state. The `Students` sheet remains the source of truth for `payment_expectation`. The payment expectation update still goes through the student PATCH route and writes the consequential action to `Event_Log`. The dashboard still does not run Stripe pause actions directly from Planning.
+
+**Files/functions involved:**
+
+- `components/admin/AdminPlanningPageClient.js`
+- `buildPaymentPausePrefillUrl()`
+- `buildPauseConfirmationMessage()`
+- `handlePauseCompleted()`
+- `PATCH /api/admin/students/[mmsId]`
+- `POST /api/admin/planning`
+- `docs/admin/WORKFLOW_DESIGN_PRINCIPLES.md`
+
+**What to watch out for:** The completion button assumes the admin really ran the Payment Pause PWA. It aligns dashboard expectation after human confirmation; it is not proof from Stripe. Keep this explicit until the pause tool exposes a verified callback or shared state. Do not generalise this into automatic Stripe mutation from Planning.
+
 ### 2026-06-13 — Canonical Practice Chat Admin API
 
 **Feature/change:** Practice Chat quick links now use the canonical admin/API Railway app for production writebacks: `https://first-chord-dashbord-production.up.railway.app`. Local links still use the local dashboard origin.

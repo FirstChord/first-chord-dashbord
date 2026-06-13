@@ -1,6 +1,6 @@
 # New Agent Start Here — Admin Dashboard
 
-Last updated: 2026-06-10
+Last updated: 2026-06-13
 
 This is the practical handoff note for a new Codex/AI agent working on the First Chord admin dashboard.
 
@@ -41,7 +41,7 @@ Recent V4 layers include:
 - parent understanding workflow at `/admin/workflows/parent-understanding`
 - lightweight Planning/Brain inbox at `/admin/planning`
 - student-linked planning items visible from student detail pages
-- pause planning cards with an explicit audited `Set Stripe paused expected` action
+- pause planning cards with a guarded `Mark pause completed` path that logs confirmation, aligns `payment_expectation`, and closes the planning task
 
 ## Read These First
 
@@ -49,13 +49,14 @@ Recent V4 layers include:
 2. `docs/admin/V3_LOOP_ARCHITECTURE.md`
 3. `docs/admin/OWNERSHIP_MATRIX.md`
 4. `docs/admin/STATE_TABS_SCHEMA.md`
-5. `docs/admin/HYGIENE_AND_SECRETS.md`
-6. `docs/admin/DOCUMENTATION_MAP.md`
-7. `docs/admin/SCHOOL_POLICY.md`
-8. `docs/admin/PAYMENTS_RULES.md` if touching Stripe, pauses, or payment expectations
-9. `docs/admin/BUG_FIXES.md` if debugging Railway, MMS calendar times, or recent production issues
-10. Obsidian: `08 Operations/Current System Map.md`
-11. Obsidian: `08 Operations/Active Roadmap.md`
+5. `docs/admin/WORKFLOW_DESIGN_PRINCIPLES.md`
+6. `docs/admin/HYGIENE_AND_SECRETS.md`
+7. `docs/admin/DOCUMENTATION_MAP.md`
+8. `docs/admin/SCHOOL_POLICY.md`
+9. `docs/admin/PAYMENTS_RULES.md` if touching Stripe, pauses, or payment expectations
+10. `docs/admin/BUG_FIXES.md` if debugging Railway, MMS calendar times, or recent production issues
+11. Obsidian: `08 Operations/Current System Map.md`
+12. Obsidian: `08 Operations/Active Roadmap.md`
 
 ## Source-of-Truth Rules
 
@@ -95,7 +96,9 @@ Planning now captures human Brain-style work without becoming full project manag
 - meeting filters: Due Now, Unassigned, Waiting, Linked, No Next Action
 - student linking: Planning receives compact student options from `getAdminStudents()`
 - student detail: open linked planning items appear on `/admin/students/[mmsId]`
-- pause guardrail: linked pause planning items can set `payment_expectation` to `stripe_paused_expected`, but only via explicit button after the confirmation checkbox is logged
+- workflow principle: reduce admin cognitive load by making the next safe action clear, not by adding fields
+- pause guardrail: linked pause planning items can open the prefilled payment-pause PWA, generate/copy the parent confirmation message, then use `Mark pause completed` after confirming the pause tool was run and the message was sent/copied
+- pause completion writes `payment_expectation = stripe_paused_expected` through the existing student PATCH route if needed, logs progress, appends the consequential action to `Event_Log`, and marks the planning task done
 
 Practice Chat now has a dashboard bridge:
 

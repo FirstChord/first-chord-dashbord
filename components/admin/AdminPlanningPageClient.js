@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { Check, Loader2, Pencil, Plus, Search, SlidersHorizontal } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   PLANNING_AREAS,
   PLANNING_ITEM_TYPES,
@@ -65,8 +65,26 @@ const QUICK_CAPTURE_DEFAULTS = {
   linkedWorkflowId: '',
 };
 
+const PAYMENT_PAUSE_PWA_URL = process.env.NEXT_PUBLIC_PAYMENT_PAUSE_PWA_URL || 'https://payment-pause-pwa.web.app/';
 const PAUSE_PAYMENT_CONFIRMATION_NOTE = 'Payment pause confirmation message sent.';
 const PAUSE_EXPECTATION_SET_NOTE = 'Set Stripe paused expected from linked pause planning item.';
+const PAUSE_COMPLETED_NOTE = 'Pause completed from Planning: pause tool run, parent confirmation sent, and payment expectation aligned.';
+
+const SHORT_MONTH_INDEX = {
+  jan: 0,
+  feb: 1,
+  mar: 2,
+  apr: 3,
+  may: 4,
+  jun: 5,
+  jul: 6,
+  aug: 7,
+  sep: 8,
+  sept: 8,
+  oct: 9,
+  nov: 10,
+  dec: 11,
+};
 
 function cardClasses(extra = '') {
   return `rounded-[1.2rem] border border-blue-100 bg-white/90 p-5 shadow-[0_12px_36px_rgba(15,23,42,0.06)] ${extra}`;
@@ -107,8 +125,139 @@ function formatTargetDate(value = '') {
   });
 }
 
+function formatFriendlyPauseDate(value = '') {
+  if (!value) return '';
+  const parsed = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString('en-GB', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+}
+
+function firstName(value = '') {
+  return `${value || ''}`.trim().split(/\s+/u).filter(Boolean)[0] || '';
+}
+
 function formatDateInput(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function addDaysToDateInput(value = '', days = 0) {
+  const match = `${value || ''}`.match(/^(\d{4})-(\d{2})-(\d{2})$/u);
+  if (!match) return value;
+  const parsed = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  parsed.setDate(parsed.getDate() + days);
+  return formatDateInput(parsed);
+}
+
+function parseReadablePlanningDate(value = '') {
+  const match = `${value || ''}`.trim().match(/(?:mon|tue|wed|thu|fri|sat|sun),?\s*(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)\s+(\d{4})/iu);
+  if (!match) return '';
+  const month = SHORT_MONTH_INDEX[match[2].toLowerCase()];
+  if (typeof month !== 'number') return '';
+  const parsed = new Date(Number(match[3]), month, Number(match[1]));
+  return Number.isNaN(parsed.getTime()) ? '' : formatDateInput(parsed);
+}
+
+function matchIsoPlanningDate(text = '', labels = []) {
+  for (const label of labels) {
+    const pattern = new RegExp(`${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*:?\\s*(\\d{4}-\\d{2}-\\d{2})`, 'iu');
+    const match = text.match(pattern);
+    if (match?.[1]) return match[1];
+  }
+  return '';
+}
+
+function extractPauseDatesFromPlanningItem(item = {}) {
+  const text = [item.title, item.notes, item.nextAction].filter(Boolean).join('\n');
+  const startDate = matchIsoPlanningDate(text, [
+    'Lesson date',
+    'First lesson to pause date',
+    'First pause date',
+    'Start date',
+  ]);
+  const endDate = matchIsoPlanningDate(text, [
+    'Returning from date',
+    'Return date',
+    'End date',
+  ]);
+
+  if (startDate) {
+    return {
+      startDate,
+      endDate: endDate || startDate,
+    };
+  }
+
+  const singleMatch = text.match(/\blesson on\s+([A-Z][a-z]{2},?\s+\d{1,2}\s+[A-Z][a-z]{2,4}\s+\d{4})/u)
+    || text.match(/\bLesson to pause:\s*([A-Z][a-z]{2},?\s+\d{1,2}\s+[A-Z][a-z]{2,4}\s+\d{4})/u);
+  if (singleMatch?.[1]) {
+    const parsed = parseReadablePlanningDate(singleMatch[1]);
+    return parsed ? { startDate: parsed, endDate: parsed } : { startDate: '', endDate: '' };
+  }
+
+  const rangeMatch = text.match(/\bfrom\s+([A-Z][a-z]{2},?\s+\d{1,2}\s+[A-Z][a-z]{2,4}\s+\d{4});\s*returning\s+([A-Z][a-z]{2},?\s+\d{1,2}\s+[A-Z][a-z]{2,4}\s+\d{4})/u);
+  if (rangeMatch?.[1] && rangeMatch?.[2]) {
+    return {
+      startDate: parseReadablePlanningDate(rangeMatch[1]),
+      endDate: parseReadablePlanningDate(rangeMatch[2]),
+    };
+  }
+
+  return { startDate: '', endDate: '' };
+}
+
+function buildPaymentPausePrefillUrl({ item = {}, student = null } = {}) {
+  if (!student?.mmsId) return '';
+  const { startDate, endDate } = extractPauseDatesFromPlanningItem(item);
+  if (!startDate || !endDate) return '';
+  const pauseToolEndDate = endDate === startDate ? addDaysToDateInput(endDate, 1) : endDate;
+
+  const parentName = [
+    student.parentFirstName || '',
+    student.parentLastName || '',
+  ].filter(Boolean).join(' ').trim();
+  const url = new URL(PAYMENT_PAUSE_PWA_URL);
+  const params = {
+    source: 'dashboard-planning',
+    planningId: item.planningId || '',
+    studentName: student.fullName || '',
+    email: student.email || '',
+    startDate,
+    endDate: pauseToolEndDate,
+    reason: item.notes?.toLowerCase().includes('teacher') ? 'Teacher Holiday' : 'Student Holiday',
+    mmsId: student.mmsId || '',
+    customerId: student.stripeCustomerId || '',
+    subscriptionId: student.stripeSubscriptionId || '',
+    tutor: student.tutor || '',
+    parentName,
+  };
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (`${value || ''}`.trim()) {
+      url.searchParams.set(key, value);
+    }
+  });
+  return url.toString();
+}
+
+function buildPauseConfirmationMessage({ item = {}, student = null } = {}) {
+  if (!student) return '';
+  const { startDate, endDate } = extractPauseDatesFromPlanningItem(item);
+  if (!startDate || !endDate) return '';
+
+  const parentName = firstName(student.parentFirstName) || firstName(student.parentLastName) || 'there';
+  const studentName = firstName(student.fullName) || student.fullName || 'the lesson';
+  const startLabel = formatFriendlyPauseDate(startDate);
+  const endLabel = formatFriendlyPauseDate(endDate);
+
+  if (startDate === endDate) {
+    return `Hi ${parentName}, just confirming we have paused payment for ${studentName}'s lesson on ${startLabel}. Thanks!`;
+  }
+
+  return `Hi ${parentName}, just confirming we have paused payment for ${studentName} from ${startLabel}. They are expected back from ${endLabel}, so lessons and payment should continue as normal from then. Thanks!`;
 }
 
 function normaliseSearchText(value = '') {
@@ -962,16 +1111,65 @@ function QuickBrainCapture({
   );
 }
 
-function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides = {}, onStatus, onEdit, onProgress, onSetPauseExpected, pendingId }) {
+function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides = {}, onStatus, onEdit, onProgress, onPauseCompleted, onRepairPauseDetails, pendingId }) {
   const [progressNote, setProgressNote] = useState('');
   const [nextAction, setNextAction] = useState(item.nextAction || '');
+  const [pauseToolRan, setPauseToolRan] = useState(false);
+  const [pauseMessageConfirmed, setPauseMessageConfirmed] = useState(false);
+  const [copyState, setCopyState] = useState('');
+  const [scheduleOverrides, setScheduleOverrides] = useState({});
+  const [scheduleRefreshState, setScheduleRefreshState] = useState({ pendingId: '', error: '' });
+  const existingPauseDates = extractPauseDatesFromPlanningItem(item);
+  const [repairOpen, setRepairOpen] = useState(false);
+  const [repairOptions, setRepairOptions] = useState({
+    pauseType: existingPauseDates.startDate && existingPauseDates.endDate && existingPauseDates.startDate !== existingPauseDates.endDate ? 'range' : 'single',
+    linkedStudentId: item.linkedStudentId || '',
+    pauseLessonDate: existingPauseDates.startDate === existingPauseDates.endDate ? existingPauseDates.startDate : '',
+    pauseFirstPauseDate: existingPauseDates.startDate !== existingPauseDates.endDate ? existingPauseDates.startDate : '',
+    pauseReturnDate: existingPauseDates.startDate !== existingPauseDates.endDate ? existingPauseDates.endDate : '',
+    pauseExtraNote: '',
+  });
   const isPending = pendingId === item.planningId;
   const isPauseReminder = isPausePlanningItem(item);
   const pausePaymentConfirmed = hasPausePaymentConfirmation(item);
   const linkedWorkflowHref = workflowHref(item.linkedWorkflowId);
-  const linkedStudent = findStudentById(studentOptions, item.linkedStudentId);
+  const linkedStudentBase = findStudentById(studentOptions, item.linkedStudentId);
+  const linkedStudent = linkedStudentBase ? {
+    ...linkedStudentBase,
+    scheduleContext: scheduleOverrides[item.linkedStudentId] || linkedStudentBase.scheduleContext,
+  } : null;
+  const repairStudentBase = findStudentById(studentOptions, repairOptions.linkedStudentId);
+  const repairStudent = repairStudentBase ? {
+    ...repairStudentBase,
+    scheduleContext: scheduleOverrides[repairOptions.linkedStudentId] || repairStudentBase.scheduleContext,
+  } : null;
+  const repairPauseType = repairOptions.pauseType === 'range' ? 'range' : 'single';
+  const repairDateSuggestions = buildPauseLessonDateSuggestions(repairStudent?.scheduleContext, {
+    count: 6,
+    startDate: repairPauseType === 'range' ? repairOptions.pauseFirstPauseDate || '' : '',
+  });
+  const repairDraft = buildStructuredPausePlanningDraft({
+    studentName: repairStudent?.fullName || '',
+    pauseType: repairPauseType,
+    lessonDate: repairOptions.pauseLessonDate || '',
+    firstPauseDate: repairOptions.pauseFirstPauseDate || '',
+    returnDate: repairOptions.pauseReturnDate || '',
+    extraNote: repairOptions.pauseExtraNote || '',
+  });
   const linkedStudentPaymentExpectation = paymentExpectationOverrides[item.linkedStudentId] || linkedStudent?.paymentExpectation || '';
   const pauseExpectationAlreadySet = linkedStudentPaymentExpectation === 'stripe_paused_expected';
+  const paymentPausePrefillUrl = isPauseReminder
+    ? buildPaymentPausePrefillUrl({ item, student: linkedStudent })
+    : '';
+  const pauseConfirmationMessage = isPauseReminder
+    ? buildPauseConfirmationMessage({ item, student: linkedStudent })
+    : '';
+  const canCompletePause = Boolean(
+    item.linkedStudentId
+    && paymentPausePrefillUrl
+    && (pauseToolRan || pauseExpectationAlreadySet)
+    && (pauseMessageConfirmed || pausePaymentConfirmed)
+  );
   const linkFacts = [
     item.linkedWorkflowId ? { label: `Workflow: ${item.linkedWorkflowId}`, href: linkedWorkflowHref } : null,
     item.linkedStudentId ? {
@@ -980,6 +1178,27 @@ function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides =
     } : null,
     item.linkedTutorId ? { label: `Tutor: ${item.linkedTutorId}`, href: '' } : null,
   ].filter(Boolean);
+
+  async function refreshRepairSchedule() {
+    if (!repairOptions.linkedStudentId) return;
+    setScheduleRefreshState({ pendingId: repairOptions.linkedStudentId, error: '' });
+    try {
+      const response = await fetch(`/api/admin/students/${encodeURIComponent(repairOptions.linkedStudentId)}/schedule`, {
+        method: 'POST',
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Schedule refresh failed');
+      }
+      setScheduleOverrides((current) => ({
+        ...current,
+        [repairOptions.linkedStudentId]: data.scheduleContext,
+      }));
+      setScheduleRefreshState({ pendingId: '', error: '' });
+    } catch (error) {
+      setScheduleRefreshState({ pendingId: '', error: error.message || 'Schedule refresh failed' });
+    }
+  }
 
   return (
     <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_22px_rgba(15,23,42,0.04)]">
@@ -1077,50 +1296,254 @@ function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides =
 
       {isPauseReminder ? (
         <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2">
-          <label className="flex items-start gap-2 text-sm font-medium text-amber-950">
-            <input
-              type="checkbox"
-              checked={pausePaymentConfirmed}
-              disabled={isPending || pausePaymentConfirmed}
-              onChange={(event) => {
-                if (event.target.checked) {
-                  onProgress(item, {
-                    progressNote: PAUSE_PAYMENT_CONFIRMATION_NOTE,
-                    nextAction,
-                  });
-                }
-              }}
-              className="mt-1 h-4 w-4 rounded border-amber-300 text-slate-900"
-            />
-            <span>
-              Payment pause confirmation message sent
-              {!pausePaymentConfirmed ? (
-                <span className="block text-xs font-normal text-amber-800">
-                  Tick this before marking a pause reminder done.
+          {(
+            <div className="space-y-3">
+              <div>
+                <p className="text-sm font-semibold text-amber-950">Complete pause</p>
+                <p className="mt-1 text-xs leading-5 text-amber-800">
+                  Run the pause tool, send the parent confirmation, then mark this completed. The dashboard will align payment expectation and close the planning task.
+                </p>
+              </div>
+              {paymentPausePrefillUrl ? (
+                <a
+                  href={paymentPausePrefillUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex rounded-lg border border-violet-300 bg-white px-3 py-2 text-xs font-semibold text-violet-950 hover:bg-violet-50"
+                >
+                  Open payment pause tool
+                </a>
+              ) : (
+                <span className="rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs font-semibold text-amber-900">
+                  Add structured pause dates to prefill the pause tool
                 </span>
+              )}
+              {!paymentPausePrefillUrl ? (
+                <div className="rounded-lg border border-amber-100 bg-white p-3">
+                  <button
+                    type="button"
+                    onClick={() => setRepairOpen((current) => !current)}
+                    className="rounded-lg border border-violet-200 bg-white px-3 py-1.5 text-xs font-semibold text-violet-800 hover:bg-violet-50"
+                  >
+                    {repairOpen ? 'Hide date repair' : 'Add dates to this plan'}
+                  </button>
+
+                  {repairOpen ? (
+                    <div className="mt-3 space-y-3">
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <SelectField
+                          label="Pause type"
+                          value={repairPauseType}
+                          onChange={(value) => setRepairOptions((current) => ({ ...current, pauseType: value }))}
+                          options={[
+                            { value: 'single', label: 'One lesson' },
+                            { value: 'range', label: 'Away period' },
+                          ]}
+                        />
+                        <StudentSearchField
+                          label="Student"
+                          value={repairOptions.linkedStudentId}
+                          onChange={(value) => setRepairOptions((current) => ({ ...current, linkedStudentId: value }))}
+                          studentOptions={studentOptions}
+                        />
+                      </div>
+
+                      {repairStudent?.scheduleContext?.status === 'found' && repairDateSuggestions.length ? (
+                        <div className="rounded-xl border border-violet-100 bg-violet-50/70 p-3">
+                          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-violet-700">Suggested lesson dates</p>
+                          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                            {repairDateSuggestions.map((suggestion) => (
+                              <div key={suggestion.date} className="rounded-lg border border-violet-100 bg-white p-2">
+                                <p className="text-sm font-semibold text-slate-900">{suggestion.lessonLabel}</p>
+                                {repairPauseType === 'single' ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => setRepairOptions((current) => ({ ...current, pauseLessonDate: suggestion.date }))}
+                                    className="mt-2 rounded-lg border border-violet-200 bg-white px-2.5 py-1 text-xs font-semibold text-violet-800 hover:bg-violet-50"
+                                  >
+                                    Use this lesson
+                                  </button>
+                                ) : (
+                                  <div className="mt-2 flex flex-wrap gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => setRepairOptions((current) => ({ ...current, pauseFirstPauseDate: suggestion.date }))}
+                                      className="rounded-lg border border-violet-200 bg-white px-2.5 py-1 text-xs font-semibold text-violet-800 hover:bg-violet-50"
+                                    >
+                                      First missed
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setRepairOptions((current) => ({ ...current, pauseReturnDate: suggestion.date }))}
+                                      className="rounded-lg border border-emerald-200 bg-white px-2.5 py-1 text-xs font-semibold text-emerald-800 hover:bg-emerald-50"
+                                    >
+                                      Returning
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : repairOptions.linkedStudentId ? (
+                        <div className="rounded-xl border border-amber-100 bg-amber-50 p-3">
+                          <p className="text-sm font-semibold text-amber-950">No cached schedule for this student yet.</p>
+                          <p className="mt-1 text-xs leading-5 text-amber-800">
+                            Refresh from MMS to pull the usual lesson slot into `Schedule_Context`, then the suggested pause dates should appear here.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={refreshRepairSchedule}
+                            disabled={scheduleRefreshState.pendingId === repairOptions.linkedStudentId}
+                            className="mt-3 inline-flex items-center gap-2 rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-950 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {scheduleRefreshState.pendingId === repairOptions.linkedStudentId ? (
+                              <>
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                Refreshing...
+                              </>
+                            ) : 'Refresh schedule from MMS'}
+                          </button>
+                          {scheduleRefreshState.error ? (
+                            <p className="mt-2 text-xs font-semibold text-red-700">{scheduleRefreshState.error}</p>
+                          ) : null}
+                        </div>
+                      ) : null}
+
+                      {repairPauseType === 'single' ? (
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <DateField
+                            label="Lesson to pause"
+                            value={repairOptions.pauseLessonDate || ''}
+                            onChange={(value) => setRepairOptions((current) => ({ ...current, pauseLessonDate: value }))}
+                          />
+                          <TextField
+                            label="Extra note"
+                            value={repairOptions.pauseExtraNote || ''}
+                            onChange={(value) => setRepairOptions((current) => ({ ...current, pauseExtraNote: value }))}
+                            placeholder="Optional reason or context"
+                          />
+                        </div>
+                      ) : (
+                        <div className="grid gap-3 md:grid-cols-3">
+                          <DateField
+                            label="First lesson missed"
+                            value={repairOptions.pauseFirstPauseDate || ''}
+                            onChange={(value) => setRepairOptions((current) => ({ ...current, pauseFirstPauseDate: value }))}
+                          />
+                          <DateField
+                            label="Returning from"
+                            value={repairOptions.pauseReturnDate || ''}
+                            onChange={(value) => setRepairOptions((current) => ({ ...current, pauseReturnDate: value }))}
+                          />
+                          <TextField
+                            label="Extra note"
+                            value={repairOptions.pauseExtraNote || ''}
+                            onChange={(value) => setRepairOptions((current) => ({ ...current, pauseExtraNote: value }))}
+                            placeholder="Summer holiday, illness, etc."
+                          />
+                        </div>
+                      )}
+
+                      <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-sm text-slate-700">
+                        {repairDraft.isComplete ? (
+                          <>
+                            <p className="font-semibold text-slate-900">{repairDraft.title}</p>
+                            <p className="mt-1 whitespace-pre-line">{repairDraft.notes}</p>
+                            {repairDraft.targetDate ? (
+                              <p className="mt-2 text-xs font-semibold text-amber-800">Do by {formatTargetDate(repairDraft.targetDate)}</p>
+                            ) : null}
+                          </>
+                        ) : (
+                          <p>Add {repairDraft.missingFields.join(' and ')} to repair this pause plan.</p>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        disabled={isPending || !repairDraft.isComplete}
+                        onClick={() => onRepairPauseDetails(item, {
+                          draft: repairDraft,
+                          linkedStudentId: repairOptions.linkedStudentId,
+                        })}
+                        className="inline-flex items-center gap-2 rounded-xl bg-violet-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-800 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Save structured dates
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
               ) : null}
-            </span>
-          </label>
-          {item.linkedStudentId ? (
-            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-amber-100 pt-3">
+              {pauseConfirmationMessage ? (
+                <div className="rounded-lg border border-amber-100 bg-white p-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-700">Parent message</p>
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-800">{pauseConfirmationMessage}</p>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(pauseConfirmationMessage);
+                        setCopyState('Copied');
+                      } catch (error) {
+                        setCopyState('Copy failed');
+                      }
+                    }}
+                    className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    Copy message
+                  </button>
+                  {copyState ? <span className="ml-2 text-xs font-semibold text-amber-800">{copyState}</span> : null}
+                </div>
+              ) : null}
+              <div className="space-y-2">
+                <label className="flex items-start gap-2 text-sm font-medium text-amber-950">
+                  <input
+                    type="checkbox"
+                    checked={pauseToolRan || pauseExpectationAlreadySet}
+                    disabled={isPending || pauseExpectationAlreadySet}
+                    onChange={(event) => setPauseToolRan(event.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border-amber-300 text-slate-900"
+                  />
+                  <span>
+                    Payment pause tool has been run
+                    {pauseExpectationAlreadySet ? (
+                      <span className="block text-xs font-normal text-amber-800">Payment expectation is already paused expected.</span>
+                    ) : null}
+                  </span>
+                </label>
+                <label className="flex items-start gap-2 text-sm font-medium text-amber-950">
+                  <input
+                    type="checkbox"
+                    checked={pauseMessageConfirmed || pausePaymentConfirmed}
+                    disabled={isPending || pausePaymentConfirmed}
+                    onChange={(event) => setPauseMessageConfirmed(event.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border-amber-300 text-slate-900"
+                  />
+                  <span>
+                    Parent confirmation message sent
+                    {pausePaymentConfirmed ? (
+                      <span className="block text-xs font-normal text-amber-800">Already logged on this planning item.</span>
+                    ) : null}
+                  </span>
+                </label>
+              </div>
               <button
                 type="button"
-                disabled={isPending || !pausePaymentConfirmed || pauseExpectationAlreadySet}
-                onClick={() => onSetPauseExpected(item)}
-                className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs font-semibold text-amber-950 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={isPending || !canCompletePause}
+                onClick={() => onPauseCompleted(item)}
+                className="inline-flex min-h-10 items-center justify-center rounded-lg bg-amber-950 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-900 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {pauseExpectationAlreadySet ? 'Paused expected set' : 'Set Stripe paused expected'}
+                {isPending ? 'Completing...' : 'Mark pause completed'}
               </button>
-              <span className="text-xs text-amber-800">
-                {pausePaymentConfirmed
-                  ? 'Updates the linked student payment expectation and logs the action.'
-                  : 'Tick the confirmation message first.'}
-              </span>
+              <p className="text-xs leading-5 text-amber-800">
+                This logs the confirmation, sets Stripe paused expected if needed, and marks the task done. It does not run Stripe directly.
+              </p>
+              {!item.linkedStudentId ? (
+                <p className="rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs font-semibold text-amber-900">
+                  Save structured dates with a linked student before completing this pause.
+                </p>
+              ) : null}
             </div>
-          ) : (
-            <p className="mt-3 border-t border-amber-100 pt-3 text-xs text-amber-800">
-              Link a student before changing payment expectation from Planning.
-            </p>
           )}
         </div>
       ) : null}
@@ -1171,6 +1594,13 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState(initialFilter);
   const [showDone, setShowDone] = useState(false);
+  const editPanelRef = useRef(null);
+
+  useEffect(() => {
+    if (editingItem && editPanelRef.current) {
+      editPanelRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [editingItem]);
 
   const filteredItems = useMemo(() => {
     const search = query.trim().toLowerCase();
@@ -1324,46 +1754,99 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
     }
   }
 
-  async function handleSetPauseExpected(item) {
+  async function handleRepairPauseDetails(item, { draft, linkedStudentId }) {
+    if (!draft?.isComplete) {
+      setSaveState({ pending: false, error: 'Add the missing pause date details before saving.', savedAt: '' });
+      return;
+    }
+
+    try {
+      await postPlanning({
+        mode: 'save',
+        planningId: item.planningId,
+        item: {
+          ...item,
+          title: draft.title,
+          notes: draft.notes,
+          itemType: 'action',
+          status: item.status === 'inbox' ? 'active' : item.status,
+          area: 'admin',
+          linkedStudentId: linkedStudentId || item.linkedStudentId,
+          targetDate: draft.targetDate || item.targetDate,
+          nextAction: draft.nextAction,
+        },
+        progressNote: draft.progressNote || 'Added structured pause dates to existing planning item.',
+      }, item.planningId);
+    } catch (error) {
+      setSaveState({ pending: false, error: error.message || 'Pause date repair failed', savedAt: '' });
+      setPendingId('');
+    }
+  }
+
+  async function handlePauseCompleted(item) {
     if (!item.linkedStudentId) {
-      setSaveState({ pending: false, error: 'Link a student before setting pause expectation.', savedAt: '' });
+      setSaveState({ pending: false, error: 'Link a student before completing a pause task.', savedAt: '' });
       return;
     }
 
     try {
       setSaveState({ pending: true, error: '', savedAt: '' });
       setPendingId(item.planningId);
-      const response = await fetch(`/api/admin/students/${encodeURIComponent(item.linkedStudentId)}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          paymentExpectation: 'stripe_paused_expected',
-          auditContext: {
-            source: 'admin_pause_workflow_action',
-            actionLabel: 'Set Stripe paused expected from Planning',
-            note: `Linked planning item: ${item.title}`,
-          },
-        }),
-      });
-      const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Pause expectation update failed');
+      if (!hasPausePaymentConfirmation(item)) {
+        await postPlanning({
+          mode: 'progress',
+          planningId: item.planningId,
+          progressNote: PAUSE_PAYMENT_CONFIRMATION_NOTE,
+          progressType: 'action_completed',
+          nextAction: item.nextAction,
+        }, item.planningId);
+      }
+
+      const linkedStudent = findStudentById(studentOptions, item.linkedStudentId);
+      const currentExpectation = paymentExpectationOverrides[item.linkedStudentId] || linkedStudent?.paymentExpectation || '';
+      if (currentExpectation !== 'stripe_paused_expected') {
+        const response = await fetch(`/api/admin/students/${encodeURIComponent(item.linkedStudentId)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            paymentExpectation: 'stripe_paused_expected',
+            auditContext: {
+              source: 'admin_pause_workflow_action',
+              actionLabel: 'Complete pause from Planning',
+              note: `Linked planning item: ${item.title}`,
+            },
+          }),
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Pause expectation update failed');
+        }
+
+        await postPlanning({
+          mode: 'progress',
+          planningId: item.planningId,
+          progressNote: PAUSE_EXPECTATION_SET_NOTE,
+          progressType: 'action_completed',
+          nextAction: item.nextAction,
+        }, item.planningId);
+        setPaymentExpectationOverrides((current) => ({
+          ...current,
+          [item.linkedStudentId]: 'stripe_paused_expected',
+        }));
       }
 
       await postPlanning({
-        mode: 'progress',
+        mode: 'status',
         planningId: item.planningId,
-        progressNote: PAUSE_EXPECTATION_SET_NOTE,
+        status: 'done',
+        progressNote: PAUSE_COMPLETED_NOTE,
         progressType: 'action_completed',
         nextAction: item.nextAction,
       }, item.planningId);
-      setPaymentExpectationOverrides((current) => ({
-        ...current,
-        [item.linkedStudentId]: 'stripe_paused_expected',
-      }));
     } catch (error) {
-      setSaveState({ pending: false, error: error.message || 'Pause expectation update failed', savedAt: '' });
+      setSaveState({ pending: false, error: error.message || 'Pause completion failed', savedAt: '' });
       setPendingId('');
     }
   }
@@ -1507,7 +1990,8 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
                         onStatus={handleStatus}
                         onEdit={startEdit}
                         onProgress={handleProgress}
-                        onSetPauseExpected={handleSetPauseExpected}
+                        onPauseCompleted={handlePauseCompleted}
+                        onRepairPauseDetails={handleRepairPauseDetails}
                         pendingId={pendingId}
                       />
                     ))}
@@ -1560,7 +2044,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
           </div>
 
           {editingItem && (
-            <div className={cardClasses('sticky top-4')}>
+            <div ref={editPanelRef} className={cardClasses('sticky top-4 ring-2 ring-blue-100')}>
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="text-base font-semibold text-slate-900">Edit item</h3>

@@ -2,6 +2,32 @@
 
 This file tracks the admin dashboard build so work can be handed between agents cleanly.
 
+## 2026-06-13 — Guarded Pause Planning Completion + Workflow Design Principle
+
+### Scope
+- Reduce cognitive load in the pause-planning workflow without letting Planning run Stripe directly.
+- Document shared workflow design principles so new workflows do not become scattered, dense, or memory-heavy.
+
+### What changed
+- Added `docs/admin/WORKFLOW_DESIGN_PRINCIPLES.md`.
+- Made "reduce admin cognitive load" an explicit dashboard workflow principle.
+- Pause planning cards now generate a parent confirmation message from the linked student and structured pause dates.
+- Pause planning cards now use one guarded `Mark pause completed` path after the admin confirms:
+  - the payment pause tool was run
+  - the parent confirmation message was sent/copied
+- The completion path logs confirmation progress, sets `payment_expectation` to `stripe_paused_expected` through the existing student PATCH route if needed, and marks the planning task `done`.
+
+### Operational notes
+- `Planning_Items` and `Planning_Progress_Log` remain dashboard-owned workflow state.
+- `Students` remains the source of truth for `payment_expectation`.
+- The Payment Pause PWA remains the execution surface for the actual pause.
+- Planning does not call Stripe directly.
+- The completion button relies on human confirmation until there is a verified pause-tool callback/shared state.
+
+### Validation
+- `npm run test:admin` passes
+- `npm run build` passes
+
 ## 2026-06-10 — Student-Linked Planning + Pause Action
 
 ### Scope
