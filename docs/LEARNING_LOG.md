@@ -19,6 +19,25 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-13 — Canonical Practice Chat Admin API
+
+**Feature/change:** Practice Chat quick links now use the canonical admin/API Railway app for production writebacks: `https://first-chord-dashbord-production.up.railway.app`. Local links still use the local dashboard origin.
+
+**Why it exists:** The Railway account has multiple dashboard deployments. `efficient-sparkle` serves the public tutor/student dashboard but only has MMS-focused env vars, while `pure-spontaneity` has the full admin/Gmail/Sheets/Stripe env needed for Practice Chat Level 2. Relying on `window.location.origin` meant Practice Chat could post back to the wrong runtime.
+
+**Source-of-truth impact:** No operational truth moved. `Practice_Notes_Log` remains dashboard-owned note/delivery memory; MMS remains attendance backup/source context; Gmail remains First Chord-owned parent delivery for the Level 2 pilot. This change clarifies deployment routing, not data ownership.
+
+**Files/functions involved:**
+
+- `buildPracticeChatUrl()` in `components/navigation/QuickLinks.js`
+- `NEXT_PUBLIC_PRACTICE_CHAT_DASHBOARD_BASE_URL`
+- `PRACTICE_CHAT_API_SECRET`
+- `NEXT_PUBLIC_PRACTICE_CHAT_API_SECRET`
+- `docs/admin/OPERATIONS_RUNBOOK.md`
+- `docs/admin/BUG_FIXES.md`
+
+**What to watch out for:** Do not point Level 2 writebacks at a Railway service unless it has the full admin env and the matching Practice Chat bridge secret. The browser-side secret is a coarse bridge guard, not per-tutor authentication. If the canonical admin domain changes, update `NEXT_PUBLIC_PRACTICE_CHAT_DASHBOARD_BASE_URL` and the runbook.
+
 ### 2026-06-12 — Practice Chat Delivery Idempotency
 
 **Feature/change:** Practice Chat Level 2 delivery now uses a stable `delivery_key` for each student + MMS attendance + note-text hash, and the dashboard upserts the Level 2 delivery row instead of appending repeated delivery attempts.
