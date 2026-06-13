@@ -8,6 +8,8 @@ import {
   PLANNING_ITEM_TYPES,
   PLANNING_OWNERS,
   PLANNING_STATUSES,
+  buildPauseLessonDateSuggestions,
+  buildStructuredPausePlanningDraft,
   inferPlanningTargetDateFromText,
   labelPlanningArea,
   labelPlanningMomentum,
@@ -192,7 +194,32 @@ function inferStudentFromText(studentOptions = [], rawText = '') {
     return exactMatches[0].student;
   }
 
-  const suggestions = findStudentSuggestions(studentOptions, rawText, 2);
+  const studentQuery = text
+    .replace(/\b(please|can|could|you|we|need|to|for|from|until|pause|paused|pausing|lesson|lessons|away|off|holiday|holidays)\b/gu, ' ')
+    .replace(/\s+/gu, ' ')
+    .trim();
+  if (studentQuery) {
+    const queryTerms = studentQuery.split(/\s+/).filter(Boolean);
+    const exactFirstNameMatches = studentOptions.filter((student) => {
+      const firstName = normaliseSearchText(student.fullName).split(/\s+/)[0] || '';
+      return queryTerms.some((term) => firstName === term);
+    });
+    if (exactFirstNameMatches.length === 1) {
+      return exactFirstNameMatches[0];
+    }
+  }
+
+  const suggestions = findStudentSuggestions(studentOptions, studentQuery || rawText, 3);
+  if (suggestions.length > 1 && studentQuery) {
+    const queryTerms = studentQuery.split(/\s+/).filter(Boolean);
+    const firstNameMatches = suggestions.filter((student) => {
+      const firstName = normaliseSearchText(student.fullName).split(/\s+/)[0] || '';
+      return queryTerms.some((term) => firstName === term || firstName.startsWith(term));
+    });
+    if (firstNameMatches.length === 1) {
+      return firstNameMatches[0];
+    }
+  }
   return suggestions.length === 1 ? suggestions[0] : null;
 }
 
@@ -242,19 +269,35 @@ function inferQuickCapture(raw = '') {
   return defaults;
 }
 
+function isPauseCaptureText(raw = '') {
+  return /\bpaus(?:e|ed|ing)\b/iu.test(`${raw || ''}`);
+}
+
 function buildQuickCaptureItem(rawNote = '', overrides = {}, studentOptions = []) {
   const inferred = inferQuickCapture(rawNote);
-  const hasStudentOverride = Object.prototype.hasOwnProperty.call(overrides, 'linkedStudentId');
+  const {
+    structuredCapture,
+    pauseType,
+    pauseLessonDate,
+    pauseFirstPauseDate,
+    pauseReturnDate,
+    pauseExtraNote,
+    showPauseBuilder,
+    hidePauseBuilder,
+    studentSelectionSource,
+    ...safeOverrides
+  } = overrides;
+  const hasStudentOverride = Object.prototype.hasOwnProperty.call(safeOverrides, 'linkedStudentId');
   const inferredStudent = hasStudentOverride ? null : inferStudentFromText(studentOptions, rawNote);
   const item = {
     ...EMPTY_FORM,
     ...inferred,
-    ...overrides,
-    title: truncateTitle(rawNote),
-    notes: rawNote.trim(),
-    linkedStudentId: hasStudentOverride ? overrides.linkedStudentId : inferredStudent?.mmsId || '',
-    targetDate: overrides.targetDate || inferPlanningTargetDateFromText(rawNote),
-    progressNote: 'Captured from quick brain capture.',
+    ...safeOverrides,
+    title: safeOverrides.title || truncateTitle(rawNote),
+    notes: safeOverrides.notes || rawNote.trim(),
+    linkedStudentId: hasStudentOverride ? safeOverrides.linkedStudentId : inferredStudent?.mmsId || '',
+    targetDate: safeOverrides.targetDate || inferPlanningTargetDateFromText(rawNote),
+    progressNote: safeOverrides.progressNote || 'Captured from quick brain capture.',
   };
 
   if (item.itemType === 'action') {
@@ -597,17 +640,63 @@ function QuickBrainCapture({
 }) {
   const inferred = inferQuickCapture(rawNote);
   const inferredTargetDate = inferPlanningTargetDateFromText(rawNote);
-  const hasStudentOverride = Object.prototype.hasOwnProperty.call(options, 'linkedStudentId');
-  const inferredStudent = hasStudentOverride ? null : inferStudentFromText(studentOptions, rawNote);
+  const hasManualStudentOverride = options.studentSelectionSource === 'manual';
+  const inferredStudent = hasManualStudentOverride ? null : inferStudentFromText(studentOptions, rawNote);
   const effectiveOptions = {
     ...inferred,
     targetDate: inferredTargetDate,
-    linkedStudentId: hasStudentOverride ? options.linkedStudentId : inferredStudent?.mmsId || '',
+    linkedStudentId: hasManualStudentOverride ? options.linkedStudentId : inferredStudent?.mmsId || options.linkedStudentId || '',
     ...options,
+    linkedStudentId: hasManualStudentOverride ? options.linkedStudentId : inferredStudent?.mmsId || options.linkedStudentId || '',
   };
+  const pauseBuilderVisible = !effectiveOptions.hidePauseBuilder
+    && (isPauseCaptureText(rawNote) || effectiveOptions.showPauseBuilder);
+  const pauseType = effectiveOptions.pauseType === 'range' ? 'range' : 'single';
+  const pauseStudent = findStudentById(studentOptions, effectiveOptions.linkedStudentId);
+  const pauseDateSuggestions = buildPauseLessonDateSuggestions(pauseStudent?.scheduleContext, {
+    count: 6,
+    startDate: pauseType === 'range' ? effectiveOptions.pauseFirstPauseDate || '' : '',
+  });
+  const pauseDraft = buildStructuredPausePlanningDraft({
+    studentName: pauseStudent?.fullName || '',
+    pauseType,
+    lessonDate: effectiveOptions.pauseLessonDate || '',
+    firstPauseDate: effectiveOptions.pauseFirstPauseDate || '',
+    returnDate: effectiveOptions.pauseReturnDate || '',
+    extraNote: effectiveOptions.pauseExtraNote || '',
+  });
 
   function setOption(key, value) {
     setOptions((current) => ({ ...current, [key]: value }));
+  }
+
+  function setStudentOption(value) {
+    setOptions((current) => ({
+      ...current,
+      linkedStudentId: value,
+      studentSelectionSource: value ? 'manual' : '',
+    }));
+  }
+
+  function applyPauseDraft() {
+    if (!pauseDraft.isComplete) {
+      return;
+    }
+    setRawNote(pauseDraft.title);
+    setOptions((current) => ({
+      ...current,
+      structuredCapture: 'pause',
+      title: pauseDraft.title,
+      notes: pauseDraft.notes,
+      itemType: 'action',
+      status: 'active',
+      area: 'admin',
+      targetDate: pauseDraft.targetDate,
+      nextAction: pauseDraft.nextAction,
+      progressNote: pauseDraft.progressNote,
+      showPauseBuilder: true,
+      hidePauseBuilder: false,
+    }));
   }
 
   return (
@@ -623,6 +712,176 @@ function QuickBrainCapture({
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base font-medium leading-7 text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
         />
       </label>
+
+      {pauseBuilderVisible ? (
+        <div className="rounded-2xl border border-violet-200 bg-violet-50/80 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-700">Structured pause</p>
+              <p className="mt-1 text-sm text-violet-950">
+                Use this when a pause covers one lesson or an away period. For away periods, “returning from” means the first lesson/date they are expected back.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setOption('showPauseBuilder', false);
+                setOption('hidePauseBuilder', true);
+              }}
+              className="rounded-lg border border-violet-200 bg-white px-3 py-1.5 text-xs font-semibold text-violet-800 hover:bg-violet-100"
+            >
+              Hide
+            </button>
+          </div>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <SelectField
+              label="Pause type"
+              value={pauseType}
+              onChange={(value) => setOption('pauseType', value)}
+              options={[
+                { value: 'single', label: 'One lesson' },
+                { value: 'range', label: 'Away period' },
+              ]}
+            />
+            <div>
+              <StudentSearchField
+                label="Student"
+                value={effectiveOptions.linkedStudentId}
+                onChange={setStudentOption}
+                studentOptions={studentOptions}
+              />
+            </div>
+          </div>
+
+          {pauseStudent?.scheduleContext?.status === 'found' ? (
+            <div className="mt-4 rounded-xl border border-violet-100 bg-white p-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-700">
+                Suggested lesson dates
+              </p>
+              <p className="mt-1 text-sm text-slate-700">
+                Usual lesson: {[
+                  pauseStudent.scheduleContext.usualWeekday,
+                  pauseStudent.scheduleContext.usualTime,
+                  pauseStudent.scheduleContext.teacherName ? `with ${pauseStudent.scheduleContext.teacherName}` : '',
+                ].filter(Boolean).join(' ') || 'cached schedule found'}
+              </p>
+              {pauseDateSuggestions.length ? (
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {pauseDateSuggestions.map((suggestion) => (
+                    <div key={suggestion.date} className="rounded-lg border border-slate-100 bg-slate-50 p-2">
+                      <p className="text-sm font-semibold text-slate-900">{suggestion.lessonLabel}</p>
+                      {pauseType === 'single' ? (
+                        <button
+                          type="button"
+                          onClick={() => setOption('pauseLessonDate', suggestion.date)}
+                          className="mt-2 rounded-lg border border-violet-200 bg-white px-2.5 py-1 text-xs font-semibold text-violet-800 hover:bg-violet-50"
+                        >
+                          Use this lesson
+                        </button>
+                      ) : (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setOption('pauseFirstPauseDate', suggestion.date)}
+                            className="rounded-lg border border-violet-200 bg-white px-2.5 py-1 text-xs font-semibold text-violet-800 hover:bg-violet-50"
+                          >
+                            First missed
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setOption('pauseReturnDate', suggestion.date)}
+                            className="rounded-lg border border-emerald-200 bg-white px-2.5 py-1 text-xs font-semibold text-emerald-800 hover:bg-emerald-50"
+                          >
+                            Returning
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-2 text-sm text-slate-600">No upcoming cached lesson dates available.</p>
+              )}
+            </div>
+          ) : effectiveOptions.linkedStudentId ? (
+            <p className="mt-3 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              No cached lesson schedule for this student yet. Use the date fields manually, or refresh schedule context from the student record later.
+            </p>
+          ) : null}
+
+          {pauseType === 'single' ? (
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
+              <DateField
+                label="Lesson to pause"
+                value={effectiveOptions.pauseLessonDate || ''}
+                onChange={(value) => setOption('pauseLessonDate', value)}
+              />
+              <TextField
+                label="Extra note"
+                value={effectiveOptions.pauseExtraNote || ''}
+                onChange={(value) => setOption('pauseExtraNote', value)}
+                placeholder="Optional reason or context"
+              />
+            </div>
+          ) : (
+            <div className="mt-3 grid gap-3 md:grid-cols-3">
+              <DateField
+                label="First lesson to pause"
+                value={effectiveOptions.pauseFirstPauseDate || ''}
+                onChange={(value) => setOption('pauseFirstPauseDate', value)}
+              />
+              <DateField
+                label="Returning from"
+                value={effectiveOptions.pauseReturnDate || ''}
+                onChange={(value) => setOption('pauseReturnDate', value)}
+              />
+              <TextField
+                label="Extra note"
+                value={effectiveOptions.pauseExtraNote || ''}
+                onChange={(value) => setOption('pauseExtraNote', value)}
+                placeholder="Summer holiday, illness, etc."
+              />
+            </div>
+          )}
+
+          <div className="mt-4 rounded-xl border border-violet-100 bg-white p-3 text-sm text-slate-700">
+            {pauseDraft.isComplete ? (
+              <>
+                <p className="font-semibold text-slate-900">{pauseDraft.title}</p>
+                <p className="mt-1 whitespace-pre-line">{pauseDraft.notes}</p>
+                {pauseDraft.targetDate ? (
+                  <p className="mt-2 text-xs font-semibold text-amber-800">Do by {formatTargetDate(pauseDraft.targetDate)}</p>
+                ) : null}
+              </>
+            ) : (
+              <p>
+                Add {pauseDraft.missingFields.join(' and ')} to generate a clear pause task.
+              </p>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={applyPauseDraft}
+            disabled={!pauseDraft.isComplete}
+            className="mt-3 inline-flex items-center gap-2 rounded-xl bg-violet-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-800 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Use these pause details
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => {
+            setOption('showPauseBuilder', true);
+            setOption('hidePauseBuilder', false);
+          }}
+          className="inline-flex items-center gap-2 rounded-xl border border-violet-200 bg-white px-3 py-2 text-xs font-semibold text-violet-800 hover:bg-violet-50"
+        >
+          Structure a pause
+        </button>
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
@@ -684,7 +943,7 @@ function QuickBrainCapture({
           <div className="md:col-span-5">
             <StudentSearchField
               value={effectiveOptions.linkedStudentId}
-              onChange={(value) => setOption('linkedStudentId', value)}
+              onChange={setStudentOption}
               studentOptions={studentOptions}
             />
           </div>

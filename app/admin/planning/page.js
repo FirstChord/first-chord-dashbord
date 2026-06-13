@@ -1,5 +1,7 @@
 import AdminPlanningPageClient from '@/components/admin/AdminPlanningPageClient';
 import { getPlanningDashboard } from '@/lib/admin/planning';
+import { getScheduleContextRows } from '@/lib/admin/sheets';
+import { enrichScheduleContextsWithSharedSlots } from '@/lib/admin/schedule-context-helpers.mjs';
 import { getOperationalAdminStudents } from '@/lib/admin/students';
 
 const ALLOWED_INITIAL_FILTERS = new Set([
@@ -12,10 +14,12 @@ const ALLOWED_INITIAL_FILTERS = new Set([
 
 export default async function AdminPlanningPage({ searchParams }) {
   const resolvedSearchParams = await searchParams;
-  const [planning, students] = await Promise.all([
+  const [planning, students, scheduleRows] = await Promise.all([
     getPlanningDashboard(),
     getOperationalAdminStudents(),
+    getScheduleContextRows(),
   ]);
+  const scheduleByMmsId = enrichScheduleContextsWithSharedSlots(scheduleRows);
   const requestedFilter = `${resolvedSearchParams?.filter || ''}`.trim();
   const initialFilter = ALLOWED_INITIAL_FILTERS.has(requestedFilter) ? requestedFilter : 'all';
   const studentOptions = students.map((student) => ({
@@ -24,6 +28,7 @@ export default async function AdminPlanningPage({ searchParams }) {
     tutor: student.tutor,
     instrument: student.instrument,
     paymentExpectation: student.paymentExpectation,
+    scheduleContext: scheduleByMmsId.get(student.mmsId) || null,
   }));
 
   return <AdminPlanningPageClient initialPlanning={planning} initialFilter={initialFilter} studentOptions={studentOptions} />;

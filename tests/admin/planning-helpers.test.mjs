@@ -2,8 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   attachPlanningProgress,
+  buildPauseLessonDateSuggestions,
   buildPlanningDueSummary,
   buildPlanningSummary,
+  buildStructuredPausePlanningDraft,
   derivePlanningMomentum,
   inferPlanningTargetDateFromText,
   normalisePlanningArea,
@@ -49,6 +51,103 @@ test('puts pause reminders on meeting days two to five days before the pause', (
     inferPlanningTargetDateFromText('Pause Coban for Tuesday 9th June', new Date('2026-06-05T10:00:00.000Z')),
     '2026-06-05',
   );
+});
+
+test('buildStructuredPausePlanningDraft creates an unambiguous single lesson pause action', () => {
+  const draft = buildStructuredPausePlanningDraft({
+    studentName: 'Sam Reid',
+    pauseType: 'single',
+    lessonDate: '2026-06-13',
+    now: NOW,
+  });
+
+  assert.equal(draft.isComplete, true);
+  assert.equal(draft.title, 'Pause Sam Reid lesson on Sat, 13 Jun 2026');
+  assert.equal(draft.targetDate, '2026-06-11');
+  assert.match(draft.notes, /Pause type: single lesson/u);
+  assert.match(draft.nextAction, /Run pause tool for this lesson/u);
+});
+
+test('buildStructuredPausePlanningDraft treats return date as first date back for away periods', () => {
+  const draft = buildStructuredPausePlanningDraft({
+    studentName: 'Léo TERHZAZ',
+    pauseType: 'range',
+    firstPauseDate: '2026-06-25',
+    returnDate: '2026-08-13',
+    extraNote: 'Summer holiday.',
+    now: NOW,
+  });
+
+  assert.equal(draft.isComplete, true);
+  assert.equal(draft.title, 'Pause Léo TERHZAZ from Thu, 25 Jun 2026; returning Thu, 13 Aug 2026');
+  assert.equal(draft.targetDate, '2026-06-22');
+  assert.match(draft.notes, /Returning from: Thu, 13 Aug 2026/u);
+  assert.match(draft.notes, /not the last lesson to pause/u);
+  assert.match(draft.notes, /Summer holiday/u);
+});
+
+test('buildStructuredPausePlanningDraft reports missing range fields', () => {
+  const draft = buildStructuredPausePlanningDraft({
+    pauseType: 'range',
+    firstPauseDate: '2026-06-25',
+  });
+
+  assert.equal(draft.isComplete, false);
+  assert.deepEqual(draft.missingFields, ['returning from date']);
+});
+
+test('buildPauseLessonDateSuggestions repeats cached lesson dates weekly', () => {
+  const suggestions = buildPauseLessonDateSuggestions({
+    status: 'found',
+    nextLessonAt: '2026-06-07T18:30:00',
+    usualTime: '18:30',
+    teacherName: 'Fennella McCallum',
+  }, {
+    now: new Date('2026-06-03T12:00:00.000Z'),
+    count: 3,
+  });
+
+  assert.deepEqual(suggestions.map((entry) => entry.date), [
+    '2026-06-07',
+    '2026-06-14',
+    '2026-06-21',
+  ]);
+  assert.match(suggestions[0].lessonLabel, /18:30 with Fennella McCallum/u);
+});
+
+test('buildPauseLessonDateSuggestions rolls stale cached next lesson forward', () => {
+  const suggestions = buildPauseLessonDateSuggestions({
+    status: 'found',
+    nextLessonAt: '2026-05-18T16:30:00',
+    usualTime: '16:30',
+  }, {
+    now: new Date('2026-06-03T12:00:00.000Z'),
+    count: 2,
+  });
+
+  assert.deepEqual(suggestions.map((entry) => entry.date), [
+    '2026-06-08',
+    '2026-06-15',
+  ]);
+});
+
+test('buildPauseLessonDateSuggestions can pivot from a selected first missed lesson', () => {
+  const suggestions = buildPauseLessonDateSuggestions({
+    status: 'found',
+    nextLessonAt: '2026-06-07T18:30:00',
+    usualTime: '18:30',
+  }, {
+    now: new Date('2026-06-03T12:00:00.000Z'),
+    count: 4,
+    startDate: '2026-06-21',
+  });
+
+  assert.deepEqual(suggestions.map((entry) => entry.date), [
+    '2026-06-21',
+    '2026-06-28',
+    '2026-07-05',
+    '2026-07-12',
+  ]);
 });
 
 test('summarises planning items due today and overdue', () => {
