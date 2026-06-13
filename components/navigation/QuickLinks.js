@@ -2,12 +2,26 @@ import { ExternalLink, Music, Gamepad2, FileText, Copy, ExternalLink as LinkIcon
 import { generateSmartUrls } from '@/lib/config';
 import { useState } from 'react';
 
+const CANONICAL_PRACTICE_CHAT_DASHBOARD_BASE_URL =
+  process.env.NEXT_PUBLIC_PRACTICE_CHAT_DASHBOARD_BASE_URL
+  || 'https://first-chord-dashbord-production.up.railway.app';
+
+function isLocalDashboardHost(hostname = '') {
+  return ['localhost', '127.0.0.1'].includes(hostname);
+}
+
+function getPracticeChatDashboardBaseUrl() {
+  if (typeof window !== 'undefined' && isLocalDashboardHost(window.location.hostname)) {
+    return window.location.origin;
+  }
+
+  return CANONICAL_PRACTICE_CHAT_DASHBOARD_BASE_URL.replace(/\/+$/u, '');
+}
+
 function buildPracticeChatUrl(student) {
   const params = new URLSearchParams();
-  const dashboardBaseUrl = typeof window !== 'undefined'
-    ? window.location.origin
-    : 'https://efficient-sparkle-production.up.railway.app';
-  const practiceChatBaseUrl = typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname)
+  const dashboardBaseUrl = getPracticeChatDashboardBaseUrl();
+  const practiceChatBaseUrl = typeof window !== 'undefined' && isLocalDashboardHost(window.location.hostname)
     ? 'http://localhost:8000'
     : 'https://practice-chat-pwa.web.app';
 

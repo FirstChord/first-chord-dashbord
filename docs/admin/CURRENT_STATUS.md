@@ -63,6 +63,7 @@ The active surface is the private admin dashboard under `/admin`.
   - `docs/admin/DOCUMENTATION_MAP.md` defines canonical repo docs versus higher-level Obsidian notes
 - Practice Chat bridge:
   - dashboard student quick links pass student/tutor context into Practice Chat
+  - production quick links now send Practice Chat writebacks to the canonical admin/API Railway app, `https://first-chord-dashbord-production.up.railway.app`, instead of relying on whichever dashboard domain the tutor opened
   - Practice Chat Level 1 now appends an editable lesson-note snapshot to `Practice_Notes_Log` when the tutor clicks `Copy Notes`, then the tutor continues the manual MMS attendance/email flow
   - `Practice_Notes_Log` now has optional delivery/audit fields for selected MMS attendance, recipient, Gmail message IDs, send status, send timestamp, manual follow-up state, and a stable delivery key
   - student detail pages show a read-only `Recent practice notes` panel with latest note date, tutor, lesson date, send status, recipient, MMS attendance context, and a short preview

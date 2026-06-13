@@ -100,6 +100,7 @@ Planning now captures human Brain-style work without becoming full project manag
 Practice Chat now has a dashboard bridge:
 
 - Practice Chat route params from dashboard quick links: `studentId`, `studentName`, `tutor`, `dashboardBaseUrl`
+- production quick links should use the canonical admin/API Railway app for `dashboardBaseUrl`: `https://first-chord-dashbord-production.up.railway.app`. Do not let Level 2 writes post back to the legacy `efficient-sparkle` runtime unless that service has the full admin/Gmail/Sheets env.
 - API: `POST /api/practice-notes`
 - helper: `lib/admin/practice-notes-helpers.mjs`
 - managed Sheets tab: `Practice_Notes_Log`

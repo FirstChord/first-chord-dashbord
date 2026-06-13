@@ -101,3 +101,27 @@ This was not a dashboard code bug. It looked like a Railway service/domain/deplo
   - Public legacy URL: `efficient-sparkle-production.up.railway.app`
   - Owning service: `efficient-sparkle`
   - Secondary healthy service URL: `first-chord-dashbord-production-d599.up.railway.app`
+
+## Railway project split
+
+**Date:** 13 June 2026
+
+**Finding**
+
+The Railway account currently has three relevant projects:
+
+- `pure-spontaneity`: full admin/API runtime, domain `https://first-chord-dashbord-production.up.railway.app`.
+- `efficient-sparkle`: legacy/public tutor-student dashboard runtime, domains `https://efficient-sparkle-production.up.railway.app` and `https://first-chord-dashbord-production-d599.up.railway.app`.
+- `awake-connection`: Practice Chat speech relay, domain `https://enhanced-music-lesson-notes-production.up.railway.app`.
+
+`efficient-sparkle` serves `/dashboard`, but it does not have the full admin/Gmail/Sheets/Stripe env set. `/admin` on the old public domain can therefore fail with auth configuration errors. Practice Chat Level 2 writebacks should target `pure-spontaneity`, not whichever dashboard domain happened to generate the link.
+
+**Fix**
+
+Practice Chat quick links now use the canonical admin/API app for production writebacks:
+
+```text
+https://first-chord-dashbord-production.up.railway.app
+```
+
+Local links still use the local dashboard origin, so `localhost:3000` plus local Practice Chat remains testable.

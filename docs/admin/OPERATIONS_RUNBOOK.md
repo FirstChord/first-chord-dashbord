@@ -66,6 +66,7 @@ These names come from real code reads of `process.env` and local token paths.
 | `PRACTICE_NOTES_FROM_NAME` | Practice note email sending | Sender display name may default incorrectly | Usually `First Chord Music School`. |
 | `PRACTICE_CHAT_API_SECRET` | Practice Chat API route guard | Practice Chat routes reject requests that send the matching header once configured | Set on the dashboard/Railway side before real tutor rollout. This blocks no-Origin scripts and requires `X-FirstChord-PracticeChat-Secret`. |
 | `NEXT_PUBLIC_PRACTICE_CHAT_API_SECRET` | Practice Chat quick-link handoff | Dashboard quick links will not pass the secret to Practice Chat | Must match `PRACTICE_CHAT_API_SECRET` if the shared-secret guard is enabled. This is a coarse shared secret, not per-tutor authentication. |
+| `NEXT_PUBLIC_PRACTICE_CHAT_DASHBOARD_BASE_URL` | Practice Chat quick-link API target override | Practice Chat links may post back to the wrong Railway domain if the default changes | Optional. Defaults to the canonical admin API app `https://first-chord-dashbord-production.up.railway.app`; set it if the admin Railway domain changes. |
 | `DISABLE_API_CACHE` | API cache emergency bypass | Not required; setting `true` bypasses cache | Use only for debugging stale data. |
 | `DISABLE_MMS_CACHE` | MMS cache emergency bypass | Not required; setting `true` bypasses MMS cache | Use only when debugging stale MMS reads. |
 | `ANALYZE` | Next bundle analysis | No operational impact | Development-only. |
@@ -84,6 +85,18 @@ These names come from real code reads of `process.env` and local token paths.
 - `lib/config/theta-credentials.js` used to be tracked. It is now generated locally/build-time and ignored.
 - Git history still contains old Theta credential material. We have not rewritten history. Credential rotation or portal-password policy changes are Finn's decision.
 - `lib/mms-client.js` used to contain a hardcoded MMS bearer token/API-key JWT. This is more sensitive than the Theta username file because it can grant MMS API access. The code now requires `MMS_BEARER_TOKEN`, but the old token remains in git history. Rotate the MMS API key as the highest-priority post-migration hygiene action when it is operationally safe.
+
+## Railway Project Map
+
+As of 13 June 2026, the Railway account has three relevant projects:
+
+| Project | Service | Domain | Role | Env shape |
+| --- | --- | --- | --- | --- |
+| `pure-spontaneity` | `first-chord-dashbord` | `https://first-chord-dashbord-production.up.railway.app` | Canonical admin/API runtime. Use this for `/admin`, Practice Chat note writes, Gmail sends, Sheets writes, Stripe scans, and internal operating-system work. | Full admin env: Google OAuth, Sheets, Gmail, Stripe, GitHub, MMS, admin auth. |
+| `efficient-sparkle` | `efficient-sparkle` and `first-chord-dashbord` | `https://efficient-sparkle-production.up.railway.app`, `https://first-chord-dashbord-production-d599.up.railway.app` | Legacy/public tutor-student dashboard runtime. `/dashboard` works here. `/admin` is not fully configured on the old public domain. | MMS-focused env only. |
+| `awake-connection` | `enhanced-music-lesson-notes` | `https://enhanced-music-lesson-notes-production.up.railway.app` | Practice Chat speech/Whisper relay. | OpenAI relay env only. |
+
+Do not assume a GitHub deploy to one Railway service means all Railway services have the same environment variables. Practice Chat quick links should use the canonical admin API base URL for writeback, even if the tutor opens the public dashboard from an older domain.
 
 ## If MMS API Is Failing
 
