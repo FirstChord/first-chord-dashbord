@@ -2,12 +2,17 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   attachPlanningProgress,
+  buildSchoolForwardReflections,
+  buildSchoolForwardPlanningItem,
   buildPauseLessonDateSuggestions,
+  calculateFridayReviewDate,
+  calculateNextMeetingDate,
   buildPlanningDueSummary,
   buildPlanningSummary,
   buildStructuredPausePlanningDraft,
   derivePlanningMomentum,
   inferPlanningTargetDateFromText,
+  isMeetingPlanningItem,
   normalisePlanningArea,
   normalisePlanningItemType,
   normalisePlanningOwner,
@@ -25,6 +30,76 @@ test('normalises planning defaults conservatively', () => {
   assert.equal(normalisePlanningArea('random'), 'other');
   assert.equal(normalisePlanningOwner('Tom'), 'Tom');
   assert.equal(normalisePlanningOwner('Fenella'), 'Unassigned');
+});
+
+test('calculates Friday review and next meeting dates', () => {
+  assert.equal(calculateFridayReviewDate(new Date('2026-06-12T10:00:00.000Z')), '2026-06-12');
+  assert.equal(calculateFridayReviewDate(new Date('2026-06-12T10:00:00.000Z'), { skipToday: true }), '2026-06-19');
+  assert.equal(calculateNextMeetingDate(new Date('2026-06-13T10:00:00.000Z')), '2026-06-15');
+});
+
+test('buildSchoolForwardPlanningItem creates a weekly Friday prompt', () => {
+  const item = buildSchoolForwardPlanningItem({
+    now: new Date('2026-06-12T10:00:00.000Z'),
+  });
+
+  assert.equal(item.title, 'Friday: what moved the school forward?');
+  assert.equal(item.status, 'waiting');
+  assert.equal(item.area, 'workflow');
+  assert.equal(item.targetDate, '2026-06-12');
+  assert.match(item.outcome, /improving the school/u);
+});
+
+test('buildSchoolForwardReflections returns dated history from the Friday prompt', () => {
+  const items = [{
+    planningId: 'planning_weekly_school_forward_review',
+    progress: [
+      {
+        progressId: 'old',
+        progressNote: 'Defined the pause planning workflow.',
+        createdAt: '2026-06-05T12:00:00.000Z',
+      },
+      {
+        progressId: 'new',
+        progressNote: 'Piloted Practice Chat with Finn, Tom, and Fennella.',
+        createdAt: '2026-06-12T12:00:00.000Z',
+      },
+      {
+        progressId: 'blank',
+        progressNote: '',
+        createdAt: '2026-06-13T12:00:00.000Z',
+      },
+    ],
+  }];
+
+  const reflections = buildSchoolForwardReflections(items);
+
+  assert.equal(reflections.length, 2);
+  assert.equal(reflections[0].progressId, 'new');
+  assert.equal(reflections[1].progressId, 'old');
+});
+
+test('isMeetingPlanningItem includes decision, due, and school-forward work', () => {
+  const now = new Date('2026-06-13T10:00:00.000Z');
+
+  assert.equal(isMeetingPlanningItem({
+    planningId: 'planning_weekly_school_forward_review',
+    status: 'waiting',
+  }, now), true);
+  assert.equal(isMeetingPlanningItem({
+    status: 'active',
+    targetDate: '2026-06-15',
+  }, now), true);
+  assert.equal(isMeetingPlanningItem({
+    status: 'waiting',
+  }, now), true);
+  assert.equal(isMeetingPlanningItem({
+    status: 'active',
+    owner: 'Finn',
+    targetDate: '2026-06-30',
+    nextAction: 'Review later',
+    updatedAt: '2026-06-13T09:00:00.000Z',
+  }, now), false);
 });
 
 test('infers target dates from operational capture notes', () => {

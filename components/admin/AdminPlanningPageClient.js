@@ -8,9 +8,12 @@ import {
   PLANNING_ITEM_TYPES,
   PLANNING_OWNERS,
   PLANNING_STATUSES,
+  SCHOOL_FORWARD_PLANNING_ID,
+  buildSchoolForwardReflections,
   buildPauseLessonDateSuggestions,
   buildStructuredPausePlanningDraft,
   inferPlanningTargetDateFromText,
+  isMeetingPlanningItem,
   labelPlanningArea,
   labelPlanningMomentum,
   labelPlanningStatus,
@@ -27,6 +30,7 @@ const STATUS_GROUPS = [
 
 const MOMENTUM_FILTERS = [
   { value: 'all', label: 'All' },
+  { value: 'meeting', label: 'Meeting' },
   { value: 'due_now', label: 'Due Now' },
   { value: 'unassigned', label: 'Unassigned' },
   { value: 'no_next_action', label: 'No Next Action' },
@@ -1131,6 +1135,7 @@ function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides =
   });
   const isPending = pendingId === item.planningId;
   const isPauseReminder = isPausePlanningItem(item);
+  const isSchoolForwardReview = item.planningId === SCHOOL_FORWARD_PLANNING_ID;
   const pausePaymentConfirmed = hasPausePaymentConfirmation(item);
   const linkedWorkflowHref = workflowHref(item.linkedWorkflowId);
   const linkedStudentBase = findStudentById(studentOptions, item.linkedStudentId);
@@ -1274,7 +1279,7 @@ function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides =
 
       {item.latestProgress && (
         <div className="mt-4 border-l-2 border-slate-200 pl-3 text-sm text-slate-600">
-          <p className="font-semibold text-slate-800">Latest progress</p>
+          <p className="font-semibold text-slate-800">{isSchoolForwardReview ? 'Latest reflection' : 'Latest progress'}</p>
           <p className="mt-1">{item.latestProgress.progressNote}</p>
           <p className="mt-1 text-xs text-slate-500">{formatDateTime(item.latestProgress.createdAt)}</p>
         </div>
@@ -1549,32 +1554,55 @@ function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides =
       ) : null}
 
       <form
-        className="mt-4 grid gap-2 md:grid-cols-[1fr_1fr_auto]"
+        className={`mt-4 grid gap-2 ${isSchoolForwardReview ? 'md:grid-cols-[1fr_auto]' : 'md:grid-cols-[1fr_1fr_auto]'}`}
         onSubmit={(event) => {
           event.preventDefault();
           onProgress(item, { progressNote, nextAction });
           setProgressNote('');
         }}
       >
-        <input
-          value={progressNote}
-          onChange={(event) => setProgressNote(event.target.value)}
-          placeholder="Add progress note"
-          className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400"
-        />
-        <input
-          value={nextAction}
-          onChange={(event) => setNextAction(event.target.value)}
-          placeholder="Update next action"
-          className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400"
-        />
+        {isSchoolForwardReview ? (
+          <div className="space-y-2">
+            <textarea
+              value={progressNote}
+              onChange={(event) => setProgressNote(event.target.value)}
+              placeholder={`What moved forward:\n-\n\nUseful decisions:\n-\n\nWhat felt stuck:\n-\n\nWhat we learned:\n-\n\nNext improvement to make time for:\n-`}
+              rows={4}
+              className="min-h-28 w-full rounded-xl border border-emerald-200 bg-emerald-50/40 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-500"
+            />
+            <input
+              value={nextAction}
+              onChange={(event) => setNextAction(event.target.value)}
+              placeholder="Next improvement to make time for"
+              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400"
+            />
+            <p className="text-xs leading-5 text-slate-500">
+              Saved as dated progress history for later monthly or quarterly summaries.
+            </p>
+          </div>
+        ) : (
+          <>
+            <input
+              value={progressNote}
+              onChange={(event) => setProgressNote(event.target.value)}
+              placeholder="Add progress note"
+              className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400"
+            />
+            <input
+              value={nextAction}
+              onChange={(event) => setNextAction(event.target.value)}
+              placeholder="Update next action"
+              className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400"
+            />
+          </>
+        )}
         <button
           type="submit"
           disabled={isPending || !progressNote.trim()}
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-          Log
+          {isSchoolForwardReview ? 'Add Friday reflection' : 'Log'}
         </button>
       </form>
     </article>
@@ -1613,6 +1641,9 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
       }
       if (filter === 'due_now') {
         return isDueNowPlanningItem(item);
+      }
+      if (filter === 'meeting') {
+        return isMeetingPlanningItem(item);
       }
       if (filter === 'unassigned') {
         return isOpenPlanningItem(item) && item.owner === 'Unassigned';
@@ -1852,6 +1883,10 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
   }
 
   const summary = planning.summary || {};
+  const schoolForwardReflections = useMemo(
+    () => buildSchoolForwardReflections(planning.items || [], { limit: 6 }),
+    [planning.items],
+  );
 
   return (
     <div className="space-y-8">
@@ -1867,6 +1902,56 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
           Capture ideas quickly, turn chosen work into initiatives, and keep momentum visible through next actions and progress notes.
         </p>
       </section>
+
+      {filter === 'meeting' ? (
+        <section className="rounded-[1.2rem] border border-emerald-100 bg-emerald-50/80 p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Meeting rhythm</p>
+          <div className="mt-3 grid gap-4 md:grid-cols-2">
+            <div>
+              <h3 className="text-base font-semibold text-slate-900">Keep things running</h3>
+              <p className="mt-1 text-sm leading-6 text-slate-700">
+                Clear dated work, pauses, tutor absences, waiting items, and unresolved admin loops quickly.
+              </p>
+            </div>
+            <div>
+              <h3 className="text-base font-semibold text-slate-900">Move the school forward</h3>
+              <p className="mt-1 text-sm leading-6 text-slate-700">
+                Protect time for one useful improvement, decision, or learning from the week, especially on Friday.
+              </p>
+            </div>
+          </div>
+          {schoolForwardReflections.length ? (
+            <div className="mt-5 rounded-2xl border border-emerald-100 bg-white/80 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-base font-semibold text-slate-900">Recent Friday reflections</h3>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                    Dated progress entries from the weekly school-forward prompt. This is the raw material for monthly or quarterly summaries.
+                  </p>
+                </div>
+                <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800">
+                  {schoolForwardReflections.length} recent
+                </span>
+              </div>
+              <div className="mt-3 grid gap-2 md:grid-cols-2">
+                {schoolForwardReflections.map((reflection) => (
+                  <div key={reflection.progressId} className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
+                    <p className="text-xs font-semibold text-slate-500">{formatDateTime(reflection.createdAt)}</p>
+                    <p className="mt-1 text-sm leading-6 text-slate-700">{shortPreview(reflection.progressNote, 180)}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="mt-5 rounded-2xl border border-emerald-100 bg-white/70 p-4">
+              <h3 className="text-base font-semibold text-slate-900">Friday reflections</h3>
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                Add reflections to the Friday prompt and they will appear here as a dated record of what moved forward.
+              </p>
+            </div>
+          )}
+        </section>
+      ) : null}
 
       <section className="grid gap-3 md:grid-cols-5">
         {[

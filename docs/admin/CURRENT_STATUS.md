@@ -55,6 +55,9 @@ The active surface is the private admin dashboard under `/admin`.
   - quick capture for ideas/actions/initiatives
   - owner, status, area, next action, due/review date, and progress history
   - meeting-friendly filters such as Due Now, Unassigned, Waiting, Linked, and No Next Action
+  - a Meeting filter that groups work worth discussing together, beyond only items due today
+  - a recurring Friday prompt: `Friday: what moved the school forward?`
+  - Friday reflections saved as dated `Planning_Progress_Log` entries, with recent reflections shown in the Meeting view for later monthly/quarterly summaries
   - student search/linking so planning items can attach to a real student record
   - linked planning items shown on student detail pages
   - streamlined pause-planning completion path: open the prefilled payment-pause PWA, copy the dashboard-generated parent confirmation message, confirm the pause tool/message checks, then mark the pause completed
@@ -111,6 +114,7 @@ The active V4 slice is context + ownership layering, not broad automation.
   - Sheets tabs: `Planning_Items` and `Planning_Progress_Log`
   - linked student IDs point at existing `Students` rows
   - progress notes are append-only planning memory
+  - the Friday school-forward prompt is a seeded planning item, not a separate workflow engine
   - student-linked pause planning can update `payment_expectation` only through an explicit human completion action
   - generic `Done` does not itself change payment state; `Mark pause completed` is the guarded pause-specific action that logs confirmation, aligns `payment_expectation`, and closes the task
 - Dashboard-owned state tabs and write patterns are now documented in `docs/admin/STATE_TABS_SCHEMA.md`. Treat that as the schema map before adding another Sheets tab.

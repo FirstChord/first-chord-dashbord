@@ -19,6 +19,25 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-13 — Planning Meeting Rhythm
+
+**Feature/change:** Planning now has a `Meeting` filter, a seeded weekly Friday prompt, and a recent-reflections view for `Friday: what moved the school forward?`.
+
+**Why it exists:** Meetings can be consumed by operational busyness. The new rhythm separates "keep things running" from "move the school forward" so routine admin gets cleared quickly and leadership energy is protected for meaningful improvement.
+
+**Source-of-truth impact:** `Planning_Items` remains dashboard-owned planning state. The Friday prompt is a seeded planning item with a stable ID, not a new state tab or workflow engine. Each Friday reflection is a dated `Planning_Progress_Log` entry, which makes future monthly/quarterly summaries possible without adding another store.
+
+**Files/functions involved:**
+
+- `buildSchoolForwardPlanningItem()`
+- `buildSchoolForwardReflections()`
+- `isMeetingPlanningItem()`
+- `getPlanningDashboard()`
+- `components/admin/AdminPlanningPageClient.js`
+- `/admin/planning?filter=meeting`
+
+**What to watch out for:** Keep this as a lightweight rhythm, not project management. If the Meeting view becomes noisy, tighten inclusion rules before adding more fields. The point is to reduce meeting energy cost, not create another review burden.
+
 ### 2026-06-13 — Guarded Pause Planning Completion
 
 **Feature/change:** Pause planning cards now provide a single guarded completion path: open the prefilled Payment Pause PWA, copy a dashboard-generated parent confirmation message, confirm the pause tool was run and the message was sent/copied, then click `Mark pause completed`.

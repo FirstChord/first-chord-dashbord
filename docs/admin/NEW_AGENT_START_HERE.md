@@ -40,6 +40,7 @@ Recent V4 layers include:
 - first-name learner labels in onboarding message copy
 - parent understanding workflow at `/admin/workflows/parent-understanding`
 - lightweight Planning/Brain inbox at `/admin/planning`
+- Planning Meeting view with a seeded Friday reflection prompt; entries append to `Planning_Progress_Log` for future monthly/quarterly summaries
 - student-linked planning items visible from student detail pages
 - pause planning cards with a guarded `Mark pause completed` path that logs confirmation, aligns `payment_expectation`, and closes the planning task
 
@@ -94,6 +95,8 @@ Planning now captures human Brain-style work without becoming full project manag
 - helpers: `lib/admin/planning.js` and `lib/admin/planning-helpers.mjs`
 - managed Sheets tabs: `Planning_Items`, `Planning_Progress_Log`
 - meeting filters: Due Now, Unassigned, Waiting, Linked, No Next Action
+- Meeting filter: a curated planning review surface for clearing admin loops and protecting time for school-improvement work
+- weekly seeded prompt: `Friday: what moved the school forward?`
 - student linking: Planning receives compact student options from `getAdminStudents()`
 - student detail: open linked planning items appear on `/admin/students/[mmsId]`
 - workflow principle: reduce admin cognitive load by making the next safe action clear, not by adding fields

@@ -14,6 +14,8 @@ understand context -> choose a safe action -> complete the loop -> leave an audi
 
 The aim is not to add forms. The aim is to make recurring admin work easier to trust, delegate, and finish.
 
+The broader aim is to reduce the energy cost of keeping the school running, so leadership attention can be spent improving the school.
+
 ## Core Rule
 
 A workflow earns its place when it removes mental juggling.
@@ -66,6 +68,7 @@ Use these questions when designing a workflow:
 - Can one explicit button replace several remembered manual steps?
 - Does the final state clearly say what happened and what is still open?
 - Would Tom or Fenella know what to do without asking Finn?
+- Does this reduce the energy cost of running the school, or create another thing to manage?
 
 Do not make workflows dense just because more data exists. Details can live behind panels, links, or student pages.
 
@@ -158,6 +161,15 @@ State:
 `/admin/planning` captures human-created work: ideas, initiatives, and actions.
 
 Planning is not project management. It exists to stop useful operational thoughts disappearing in WhatsApp, and to make meeting actions visible by owner/date/status.
+
+Planning has a `Meeting` view that separates the meeting rhythm into:
+
+- keep things running
+- move the school forward
+
+It includes due work, waiting items, unassigned items, stalled/no-next-action items, tutor absence work, and the weekly Friday prompt: `Friday: what moved the school forward?`
+
+The Friday prompt is intentionally a reflection record, not just a task. Writing into it appends dated entries to `Planning_Progress_Log`; the Meeting view shows recent reflections so future monthly or quarterly summaries can be built from real operating history.
 
 State:
 
