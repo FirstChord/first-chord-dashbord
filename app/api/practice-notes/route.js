@@ -1,23 +1,6 @@
 import { appendPracticeNoteLogRow } from '@/lib/admin/sheets';
 import { normalisePracticeNotePayload } from '@/lib/admin/practice-notes-helpers.mjs';
-
-const ALLOWED_ORIGINS = new Set([
-  'https://practice-chat-pwa.web.app',
-  'http://localhost:8000',
-  'http://127.0.0.1:8000',
-  'http://localhost:3000',
-  'http://127.0.0.1:3000',
-]);
-
-function corsHeaders(origin = '') {
-  const allowedOrigin = ALLOWED_ORIGINS.has(origin) ? origin : 'https://practice-chat-pwa.web.app';
-  return {
-    'Access-Control-Allow-Origin': allowedOrigin,
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    Vary: 'Origin',
-  };
-}
+import { authenticatePracticeChatRequest, corsHeaders } from '@/lib/admin/practice-chat-auth.mjs';
 
 export async function OPTIONS(request) {
   return new Response(null, {
@@ -29,9 +12,10 @@ export async function OPTIONS(request) {
 export async function POST(request) {
   const origin = request.headers.get('origin') || '';
   const headers = corsHeaders(origin);
+  const auth = authenticatePracticeChatRequest(request);
 
-  if (origin && !ALLOWED_ORIGINS.has(origin)) {
-    return Response.json({ error: 'Origin not allowed' }, { status: 403, headers });
+  if (!auth.ok) {
+    return Response.json({ error: auth.error }, { status: auth.status, headers });
   }
 
   try {

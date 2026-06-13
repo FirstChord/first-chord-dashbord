@@ -1,6 +1,6 @@
 # Admin Current Status
 
-Last updated: 2026-06-10
+Last updated: 2026-06-12
 
 This is the tracked current-status entrypoint for agents working from the `music-school-dashboard` repository.
 
@@ -61,10 +61,15 @@ The active surface is the private admin dashboard under `/admin`.
   - `docs/admin/STATE_TABS_SCHEMA.md` documents dashboard-owned Sheets tabs, keys, write patterns, and concurrency limits
   - `docs/admin/HYGIENE_AND_SECRETS.md` documents the home-directory git risk, Theta credential migration concern, and test-student cleanup path
   - `docs/admin/DOCUMENTATION_MAP.md` defines canonical repo docs versus higher-level Obsidian notes
-- Practice Chat V1.5 note ownership:
+- Practice Chat bridge:
   - dashboard student quick links pass student/tutor context into Practice Chat
-  - clicking `Take Attendance` in Practice Chat appends a best-effort snapshot to `Practice_Notes_Log`
-  - tutors still complete attendance and parent email manually in MMS
+  - Practice Chat Level 1 now appends an editable lesson-note snapshot to `Practice_Notes_Log` when the tutor clicks `Copy Notes`, then the tutor continues the manual MMS attendance/email flow
+  - `Practice_Notes_Log` now has optional delivery/audit fields for selected MMS attendance, recipient, Gmail message IDs, send status, send timestamp, manual follow-up state, and a stable delivery key
+  - student detail pages show a read-only `Recent practice notes` panel with latest note date, tutor, lesson date, send status, recipient, MMS attendance context, and a short preview
+  - the narrow Level 2 test path can preview a target MMS attendance record, show why that lesson was selected, write the note, mark attendance `Present`, and send the note through First Chord Gmail
+  - the Level 2 pilot path is idempotency-aware: a duplicate request for the same student, MMS attendance, and note text returns the existing delivery instead of sending another parent email; if MMS was saved but Gmail failed, retry only attempts the email step
+  - Practice Chat API routes now reject no-Origin requests unless a valid shared secret header is supplied; wider rollout should set matching `PRACTICE_CHAT_API_SECRET` and `NEXT_PUBLIC_PRACTICE_CHAT_API_SECRET`
+  - Level 2 is currently limited to dashboard-verified students whose tutor is Finn, Tom, or Fennella; other tutors remain on the Level 1/current copy-to-MMS workflow
 
 ## Current Slice
 
@@ -89,7 +94,7 @@ The active V4 slice is context + ownership layering, not broad automation.
   - message sending: human copy/send only
   - contact-detail fixes: flag and note for Fenella/admin follow-up; do not edit MMS from this workflow yet
 - The current parent check-in policy assumptions are:
-  - practice notes are sent to the parent email in MMS
+  - practice notes historically went to the parent email in MMS; the Practice Chat Level 2 pilot is testing First Chord-owned Gmail delivery instead
   - all active students should generally have a small tutor/parent/Finn/Tom WhatsApp group except Adult Ukulele Orchestra-style exceptions
   - not being in the wider First Chord community group should remain a follow-up unless intentionally declined/not relevant
   - cancellation/holiday recap should use the school handbook plus the short plain-English policy summary in the template
@@ -110,15 +115,26 @@ The active V4 slice is context + ownership layering, not broad automation.
   - pause reminders should be linked to a student before billing actions
   - `Payment pause confirmation message sent` must be logged before `Set Stripe paused expected`
   - the payment expectation update goes through the existing student PATCH route and logs to `Event_Log`
-- Practice Chat snapshots are context/workflow memory only:
-  - `Practice_Notes_Log` stores generated notes, student/tutor context, and whether the MMS handoff button was opened
-  - failed snapshot saves must not block the tutor from opening MMS
-  - MMS remains the source of truth for attendance, parent email sending, and canonical lesson-note records
-- Practice Chat Level 2 is in test-only exploration:
+- Practice Chat note ownership is becoming a bridge between admin and learning:
+  - `Practice_Notes_Log` stores generated notes and student/tutor context
+  - in the legacy handoff flow, failed snapshot saves must not block the tutor from opening MMS
+  - in the Level 2 test flow, MMS remains the backup/canonical attendance and lesson-note store, while Gmail is being tested as the First Chord-owned parent delivery channel
+  - the current `Practice_Notes_Log` schema stores final send/audit fields when the Level 2 route has them, but older rows may only contain a snapshot
+  - do not treat old rows as proof of delivery unless `email_send_status`, `mms_attendance_saved`, and recipient fields are present
+  - Level 2 delivery records use `delivery_key = student + MMS attendance + note hash` so duplicate clicks/retries do not send the same parent email twice
+- Practice Chat Level 2 is in controlled pilot:
   - route: `POST /api/practice-notes/mms-test`
-  - hardcoded allowed student: Test Studenty / `sdt_fBg9JN`
-  - dry-run previews the MMS attendance target, preserved price, and email recipients
-  - execute mode requires `confirmTestStudent: true` and should not be generalised until tested safely
+  - allowed students: dashboard-verified students for Finn, Tom, or Fennella, plus Test Studenty for local testing
+  - dry-run previews the MMS attendance target, candidate lesson list, selected-date reason, preserved price, and email recipients
+  - execute mode requires `confirmLevel2Pilot: true` and should not be broadened to all tutors until the pilot has been reviewed
+  - local testing confirms the server token can save notes and mark attendance in MMS
+  - MMS `emailnotes` can fail with `Principal must be a teacher to email lesson notes`
+  - test execution now sends the parent note via the First Chord Gmail account instead of MMS `emailnotes`, using `GMAIL_*` send-only OAuth env vars
+  - duplicate execution returns the existing sent delivery when `gmail_message_id`/`email_send_status` says the note was already sent
+  - partial retry skips the MMS write when the existing delivery record says `mms_attendance_saved = TRUE` and only retries Gmail
+  - lesson selection must stay explicit/visible before real tutor rollout
+  - final tutor rollout still needs a real-student pilot, broader auth, and a retry design that does not duplicate MMS writes or parent emails
+  - transactional lesson-note email is now documented as the narrow automated-email exception; payment, pause, onboarding, WhatsApp, and marketing messages remain approval-first
 
 Before deployment, verify with:
 

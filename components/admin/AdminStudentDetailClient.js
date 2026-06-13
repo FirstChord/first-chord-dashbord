@@ -92,7 +92,32 @@ function paymentExpectationLabel(value = '') {
   return PAYMENT_EXPECTATION_OPTIONS.find((option) => option.value === value)?.label || value || 'Not set';
 }
 
-export default function AdminStudentDetailClient({ student, tutorOptions, linkedPlanningItems = [] }) {
+function noteStatusLabel(note = {}) {
+  if (note.emailSendStatus === 'sent') return 'Sent';
+  if (note.emailSendStatus === 'failed') return 'Email follow-up needed';
+  if (note.mmsAttendanceSaved) return 'Saved to MMS';
+  return 'Draft/snapshot';
+}
+
+function noteStatusClasses(note = {}) {
+  if (note.emailSendStatus === 'sent') return 'border-emerald-200 bg-emerald-50 text-emerald-800';
+  if (note.emailSendStatus === 'failed' || note.manualFollowUpNeeded) return 'border-amber-200 bg-amber-50 text-amber-900';
+  if (note.mmsAttendanceSaved) return 'border-blue-200 bg-blue-50 text-blue-800';
+  return 'border-slate-200 bg-slate-50 text-slate-700';
+}
+
+function notePreview(note = {}) {
+  const text = note.practiceGoals || note.rawNoteText || note.whatWeDid || '';
+  if (!text) return 'No note preview stored.';
+  return text.length > 220 ? `${text.slice(0, 220)}...` : text;
+}
+
+export default function AdminStudentDetailClient({
+  student,
+  tutorOptions,
+  linkedPlanningItems = [],
+  recentPracticeNotes = [],
+}) {
   const [form, setForm] = useState({
     firstName: student.firstName || '',
     lastName: student.lastName || '',
@@ -577,6 +602,63 @@ export default function AdminStudentDetailClient({ student, tutorOptions, linked
           </div>
         </section>
       ) : null}
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900">Recent practice notes</h3>
+            <p className="mt-1 text-sm text-slate-600">
+              Read-only learning memory from Practice Chat. This is context for handover and review, not AI analysis.
+            </p>
+          </div>
+          {recentPracticeNotes.length ? (
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
+              {recentPracticeNotes.length} recent
+            </span>
+          ) : null}
+        </div>
+        {recentPracticeNotes.length ? (
+          <div className="mt-4 space-y-3">
+            {recentPracticeNotes.map((note) => (
+              <article key={note.noteId || `${note.lessonDate}-${note.createdAt}`} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">
+                      {formatDateTime(note.emailSentAt || note.createdAt || note.lessonDate)}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {note.tutorName || 'Tutor unknown'} · Lesson {formatDateTime(note.lessonDate)}
+                    </p>
+                  </div>
+                  <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${noteStatusClasses(note)}`}>
+                    {noteStatusLabel(note)}
+                  </span>
+                </div>
+                <p className="mt-3 text-sm text-slate-700 whitespace-pre-line">{notePreview(note)}</p>
+                <div className="mt-3 grid gap-2 text-xs text-slate-500 md:grid-cols-2">
+                  <p>
+                    <span className="font-medium text-slate-600">Recipient: </span>
+                    {note.recipientName || '—'}{note.recipientEmail ? ` · ${note.recipientEmail}` : ''}
+                  </p>
+                  <p>
+                    <span className="font-medium text-slate-600">MMS attendance: </span>
+                    {note.mmsAttendanceId || '—'}{note.targetSelectionLabel ? ` · ${note.targetSelectionLabel}` : ''}
+                  </p>
+                </div>
+                {note.emailError ? (
+                  <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
+                    Email issue: {note.emailError}
+                  </p>
+                ) : null}
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+            No Practice Chat notes have been logged for this student yet.
+          </p>
+        )}
+      </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">

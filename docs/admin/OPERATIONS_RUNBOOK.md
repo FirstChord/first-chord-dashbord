@@ -59,6 +59,13 @@ These names come from real code reads of `process.env` and local token paths.
 | `STRIPE_PAYMENT_LINK` or `PAYMENT_LINK` | Onboarding message templates | Payment link copy falls back to placeholder | Set to current one-to-one payment link. |
 | `GROUP_LESSON_PAYMENT_LINK` | Group onboarding copy | Group payment link may be wrong or use fallback | Set to current group lesson payment link. |
 | `HANDBOOK_URL` | Onboarding and parent messaging copy | Handbook link may be wrong or use default | Usually `https://firstchord.co.uk/handbook`. |
+| `GMAIL_CLIENT_ID` | Practice note email sending | Practice Chat Level 2 falls back to `GOOGLE_CLIENT_ID`; if neither is present, email sending fails | Optional when the Gmail refresh token was generated with the existing dashboard Google OAuth client. |
+| `GMAIL_CLIENT_SECRET` | Practice note email sending | Practice Chat Level 2 falls back to `GOOGLE_CLIENT_SECRET`; if neither is present, email sending fails | Optional when the Gmail refresh token was generated with the existing dashboard Google OAuth client. |
+| `GMAIL_REFRESH_TOKEN` | Practice note email sending | Practice Chat Level 2 cannot send First Chord parent emails once missing/revoked | Generate as `musiclessons@firstchord.co.uk` with `https://www.googleapis.com/auth/gmail.send`; do not reuse Sheets token. |
+| `PRACTICE_NOTES_FROM_EMAIL` | Practice note email sending | Sender may default incorrectly | Usually `musiclessons@firstchord.co.uk`. |
+| `PRACTICE_NOTES_FROM_NAME` | Practice note email sending | Sender display name may default incorrectly | Usually `First Chord Music School`. |
+| `PRACTICE_CHAT_API_SECRET` | Practice Chat API route guard | Practice Chat routes reject requests that send the matching header once configured | Set on the dashboard/Railway side before real tutor rollout. This blocks no-Origin scripts and requires `X-FirstChord-PracticeChat-Secret`. |
+| `NEXT_PUBLIC_PRACTICE_CHAT_API_SECRET` | Practice Chat quick-link handoff | Dashboard quick links will not pass the secret to Practice Chat | Must match `PRACTICE_CHAT_API_SECRET` if the shared-secret guard is enabled. This is a coarse shared secret, not per-tutor authentication. |
 | `DISABLE_API_CACHE` | API cache emergency bypass | Not required; setting `true` bypasses cache | Use only for debugging stale data. |
 | `DISABLE_MMS_CACHE` | MMS cache emergency bypass | Not required; setting `true` bypasses MMS cache | Use only when debugging stale MMS reads. |
 | `ANALYZE` | Next bundle analysis | No operational impact | Development-only. |

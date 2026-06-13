@@ -13,8 +13,12 @@ function buildPracticeChatUrl(student) {
 
   if (student?.mms_id) params.set('studentId', student.mms_id);
   if (student?.name) params.set('studentName', student.name);
-  if (student?.current_tutor) params.set('tutor', student.current_tutor);
+  const tutorName = student?.current_tutor || student?.currentTutor || student?.tutor || student?.Tutor || '';
+  if (tutorName) params.set('tutor', tutorName);
   params.set('dashboardBaseUrl', dashboardBaseUrl);
+  if (process.env.NEXT_PUBLIC_PRACTICE_CHAT_API_SECRET) {
+    params.set('practiceChatSecret', process.env.NEXT_PUBLIC_PRACTICE_CHAT_API_SECRET);
+  }
 
   return `${practiceChatBaseUrl}/?${params.toString()}`;
 }

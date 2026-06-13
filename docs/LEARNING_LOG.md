@@ -19,9 +19,28 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-12 — Practice Chat Delivery Idempotency
+
+**Feature/change:** Practice Chat Level 2 delivery now uses a stable `delivery_key` for each student + MMS attendance + note-text hash, and the dashboard upserts the Level 2 delivery row instead of appending repeated delivery attempts.
+
+**Why it exists:** The finish-lesson-admin button writes across MMS, Gmail, and Sheets. Without idempotency, a retry or double-click could send duplicate parent emails. The highest-risk duplicate is parent delivery, so sent Gmail message IDs now act as the stop sign for retries.
+
+**Source-of-truth impact:** `Practice_Notes_Log` remains dashboard-owned learning/delivery memory. MMS remains the canonical attendance/lesson-note backup. Gmail is the First Chord-owned parent delivery channel for the Test Studenty pilot. The new delivery row is workflow state used to decide whether a retry should do nothing, retry Gmail only, or run the full test flow.
+
+**Files/functions involved:**
+
+- `POST /api/practice-notes/mms-test`
+- `buildPracticeNoteDeliveryKey()`
+- `findPracticeNoteDeliveryRecord()`
+- `isPracticeNoteDeliveryEmailSent()`
+- `upsertPracticeNoteLogRow()`
+- Practice Chat `renderMmsAlreadyCompleted()` / `renderMmsInProgress()`
+
+**What to watch out for:** This guards normal retries and duplicate clicks, but Level 2 is still only a Finn/Tom/Fennella pilot. Wider tutor rollout still needs a proper tutor access model, non-pilot rollout controls, and a decision on how long to treat stale `in_progress` rows as retryable.
+
 ### 2026-06-11 — Practice Chat Note Snapshots
 
-**Feature/change:** Practice Chat now receives student/tutor context from dashboard quick links and appends a best-effort note snapshot to `Practice_Notes_Log` when the tutor clicks through to take attendance in MMS.
+**Feature/change:** Practice Chat now receives student/tutor context from dashboard quick links and appends a best-effort note snapshot to `Practice_Notes_Log` when the tutor copies notes in the Level 1 flow.
 
 **Why it exists:** Tutors were already creating useful lesson-note data, but First Chord had to pull that context back from MMS later. This adds dashboard-owned visibility without changing the tutor’s core habit: copy notes, open MMS, mark attendance, and send the parent email manually.
 
@@ -38,7 +57,9 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 **What to watch out for:** The API is intentionally best-effort and CORS-limited for V1.5, not the final authenticated tutor workflow. If the save fails, tutors still reach MMS. Add the tab to backups whenever state tabs change, and do not use this log as a replacement for MMS attendance. Keep the `note_id` duplicate guard in place so retries/double-clicks do not create repeated rows.
 
-**Level 2 test path:** `POST /api/practice-notes/mms-test` explores direct MMS attendance/note/email writes, but is deliberately hardcoded to Test Studenty (`sdt_fBg9JN`). It preserves MMS price context from the attendance record and uses `Family.Parents[].ID` for `emailnotes`. Do not wire this to normal students until the test path is proven.
+**Level 2 pilot path:** `POST /api/practice-notes/mms-test` explores direct MMS attendance/note/email writes. It is currently limited to dashboard-verified students for Finn, Tom, and Fennella, plus Test Studenty (`sdt_fBg9JN`) for local testing. It preserves MMS price context from the attendance record and uses `Family.Parents[].ID` for recipient discovery. Dry-runs now expose the candidate attendance records and the route can target an explicit `targetAttendanceId`. Local testing proves the dashboard can save the snapshot, write the note, and mark attendance in MMS. MMS `emailnotes` can fail with `Principal must be a teacher to email lesson notes`, so the current pilot path sends parent delivery through First Chord Gmail using send-only `gmail.send` OAuth instead.
+
+**Strategic lesson:** This is no longer only a note-sending tool. It is the first bridge from lesson reflection into dashboard-owned learning memory. The log now has optional audit fields for selected attendance ID, recipient, Gmail message/thread ID, sent timestamp, partial failure, and manual follow-up state. Older rows remain snapshot-only, and real tutor rollout still needs retry/idempotency design so a failed second step cannot duplicate MMS writes or parent emails.
 
 ### 2026-06-10 — Student-Linked Planning With Explicit Billing Actions
 

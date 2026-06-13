@@ -221,6 +221,19 @@ This applies especially to:
 - pause/resume messages
 - other sensitive operational communication
 
+### Transactional lesson-note email exception
+
+Practice Chat lesson-note delivery is the narrow permitted automated email category once the tutor has reviewed the note and clicked the final send/save button.
+
+This is allowed because it is the digital equivalent of the tutor sending the practice note after a completed lesson. It should remain:
+
+- tutor-approved before sending
+- editable before sending
+- logged with recipient, send status, and lesson context
+- limited to lesson/practice notes only
+
+This exception must not be treated as permission for automated payment, pause, onboarding, WhatsApp, or marketing messages. Those remain approval-first.
+
 ### Future WhatsApp integration
 
 Messaging policy should be expanded once WhatsApp is connected.

@@ -2,13 +2,15 @@ import { notFound } from 'next/navigation';
 import { getAdminStudentByMmsId } from '@/lib/admin/students';
 import { getAllTutorOptions } from '@/lib/admin/tutors';
 import { getPlanningDashboard } from '@/lib/admin/planning';
+import { getPracticeNoteLogRows } from '@/lib/admin/sheets';
 import AdminStudentDetailClient from '@/components/admin/AdminStudentDetailClient';
 
 export default async function AdminStudentDetailPage({ params }) {
   const resolvedParams = await params;
-  const [student, planning] = await Promise.all([
+  const [student, planning, recentPracticeNotes] = await Promise.all([
     getAdminStudentByMmsId(resolvedParams.mmsId),
     getPlanningDashboard(),
+    getPracticeNoteLogRows(resolvedParams.mmsId),
   ]);
   const tutorOptions = getAllTutorOptions();
 
@@ -31,5 +33,12 @@ export default async function AdminStudentDetailPage({ params }) {
       momentumLabel: item.momentumLabel,
     }));
 
-  return <AdminStudentDetailClient student={student} tutorOptions={tutorOptions} linkedPlanningItems={linkedPlanningItems} />;
+  return (
+    <AdminStudentDetailClient
+      student={student}
+      tutorOptions={tutorOptions}
+      linkedPlanningItems={linkedPlanningItems}
+      recentPracticeNotes={recentPracticeNotes.slice(0, 5)}
+    />
+  );
 }

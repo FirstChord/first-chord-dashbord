@@ -5,7 +5,11 @@ import {
   buildPracticeNoteAttendancePayload,
   buildPracticeNoteEmailPayload,
   buildPracticeNoteEmailRecipients,
+  describePracticeNoteAttendanceSelection,
   formatPracticeNoteHtml,
+  isPracticeNotesLevel2PilotStudent,
+  isPracticeNotesLevel2PilotTutor,
+  listPracticeNoteAttendanceCandidates,
   selectPracticeNoteAttendanceTarget,
 } from '../../lib/admin/practice-notes-mms-helpers.mjs';
 
@@ -29,6 +33,79 @@ test('selectPracticeNoteAttendanceTarget prefers latest unrecorded attendance be
 
   assert.equal(target.attendanceId, 'atn_unrecorded');
   assert.equal(target.eventId, 'evt_unrecorded');
+});
+
+test('listPracticeNoteAttendanceCandidates removes future lessons beyond the safety window', () => {
+  const candidates = listPracticeNoteAttendanceCandidates([
+    {
+      ID: 'atn_tomorrow',
+      EventID: 'evt_tomorrow',
+      StudentID: 'sdt_test',
+      AttendanceStatus: 'Unrecorded',
+      EventStartDate: '2026-06-12T09:00:00',
+    },
+    {
+      ID: 'atn_far_future',
+      EventID: 'evt_far_future',
+      StudentID: 'sdt_test',
+      AttendanceStatus: 'Unrecorded',
+      EventStartDate: '2026-06-20T09:00:00',
+    },
+  ], new Date('2026-06-11T12:00:00Z'));
+
+  assert.deepEqual(candidates.map((candidate) => candidate.attendanceId), ['atn_tomorrow']);
+});
+
+test('selectPracticeNoteAttendanceTarget can target an explicit attendance ID', () => {
+  const target = selectPracticeNoteAttendanceTarget([
+    {
+      ID: 'atn_latest',
+      EventID: 'evt_latest',
+      StudentID: 'sdt_test',
+      AttendanceStatus: 'Unrecorded',
+      EventStartDate: '2026-06-10T13:30:00',
+    },
+    {
+      ID: 'atn_requested',
+      EventID: 'evt_requested',
+      StudentID: 'sdt_test',
+      AttendanceStatus: 'Unrecorded',
+      EventStartDate: '2026-06-03T13:30:00',
+    },
+  ], new Date('2026-06-11T12:00:00Z'), { targetAttendanceId: 'atn_requested' });
+
+  assert.equal(target.attendanceId, 'atn_requested');
+  assert.equal(target.eventId, 'evt_requested');
+});
+
+test('describePracticeNoteAttendanceSelection explains the selected lesson reason', () => {
+  const candidates = [
+    {
+      attendanceId: 'atn_unrecorded',
+      attendanceStatus: 'Unrecorded',
+    },
+    {
+      attendanceId: 'atn_present',
+      attendanceStatus: 'Present',
+    },
+  ];
+
+  assert.deepEqual(describePracticeNoteAttendanceSelection({
+    target: candidates[0],
+    candidates,
+  }), {
+    reason: 'latest_unrecorded',
+    label: 'Selected because it is the latest unrecorded lesson found for this student.',
+  });
+
+  assert.deepEqual(describePracticeNoteAttendanceSelection({
+    target: candidates[1],
+    candidates,
+    targetAttendanceId: 'atn_present',
+  }), {
+    reason: 'explicit_selection',
+    label: 'You selected this lesson from the date list.',
+  });
 });
 
 test('buildPracticeNoteEmailRecipients uses active email-capable MMS parent profiles', () => {
@@ -93,4 +170,15 @@ test('buildPracticeNoteEmailPayload serialises recipient IDs for MMS emailnotes'
   ]), {
     RecipientProfileIDs: ['prt_one', 'prt_two'],
   });
+});
+
+test('Practice Chat Level 2 pilot gate allows only pilot tutors or Test Studenty', () => {
+  assert.equal(isPracticeNotesLevel2PilotTutor('Finn Le Marinel'), true);
+  assert.equal(isPracticeNotesLevel2PilotTutor('Tom'), true);
+  assert.equal(isPracticeNotesLevel2PilotTutor('Fennella McCallum'), true);
+  assert.equal(isPracticeNotesLevel2PilotTutor('Dean'), false);
+
+  assert.equal(isPracticeNotesLevel2PilotStudent({ mmsId: 'sdt_real', tutor: 'Finn' }), true);
+  assert.equal(isPracticeNotesLevel2PilotStudent({ mmsId: 'sdt_real', registryTutor: 'Dean' }), false);
+  assert.equal(isPracticeNotesLevel2PilotStudent({ mmsId: 'sdt_fBg9JN', registryTutor: 'Dean' }), true);
 });

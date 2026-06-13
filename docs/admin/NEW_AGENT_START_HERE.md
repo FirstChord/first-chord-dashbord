@@ -97,21 +97,26 @@ Planning now captures human Brain-style work without becoming full project manag
 - student detail: open linked planning items appear on `/admin/students/[mmsId]`
 - pause guardrail: linked pause planning items can set `payment_expectation` to `stripe_paused_expected`, but only via explicit button after the confirmation checkbox is logged
 
-Practice Chat now has a V1.5 dashboard snapshot handoff:
+Practice Chat now has a dashboard bridge:
 
 - Practice Chat route params from dashboard quick links: `studentId`, `studentName`, `tutor`, `dashboardBaseUrl`
 - API: `POST /api/practice-notes`
 - helper: `lib/admin/practice-notes-helpers.mjs`
 - managed Sheets tab: `Practice_Notes_Log`
-- source-of-truth boundary: this records what the tutor generated before clicking through to MMS; MMS remains the truth for attendance, parent email checkbox, and final lesson-note completion
+- source-of-truth boundary: this records generated note content and student/tutor context. New Level 2 rows also carry delivery/audit fields when available. Older rows may only be snapshots, so check `email_send_status`, `mms_attendance_saved`, and recipient fields before treating a note as delivered.
+- Level 2 delivery rows use `delivery_key = student + MMS attendance + note hash` and are upserted. If a matching row already has `email_send_status = sent` or a `gmail_message_id`, retries must not send another parent email. If MMS was saved but Gmail failed, retry only the Gmail step.
+- student detail reads recent rows through `getPracticeNoteLogRows()` and shows a read-only `Recent practice notes` panel.
 
 There is also a narrow Level 2 MMS-write test route:
 
 - route: `POST /api/practice-notes/mms-test`
-- allowed MMS student: `sdt_fBg9JN` / Test Studenty only
-- dry-run mode previews attendance target and recipients
-- execute mode writes attendance/notes and calls MMS `emailnotes`, but only when `confirmTestStudent: true`
-- do not generalise this until Test Studenty and at least one safe real-student workflow have been verified
+- allowed MMS students: dashboard-verified students whose tutor is Finn, Tom, or Fennella, plus Test Studenty for local testing
+- dry-run mode previews attendance target, candidate attendance records, selected-date reason, preserved price, and recipients
+- execute mode writes attendance/notes to MMS, sends a First Chord Gmail message, and appends/upserts the enriched note/audit row, but only when `confirmLevel2Pilot: true`
+- execute mode is idempotency-aware; do not remove that guard before real tutor rollout
+- local testing proves note write + attendance save; MMS `emailnotes` may fail unless MMS sees the principal as a teacher, so the current test path uses `GMAIL_*` send-only OAuth env vars instead
+- API route guard: no-Origin requests are rejected unless a valid `X-FirstChord-PracticeChat-Secret` header is supplied. For rollout, set matching `PRACTICE_CHAT_API_SECRET` and `NEXT_PUBLIC_PRACTICE_CHAT_API_SECRET`; this is a coarse bridge secret, not per-tutor auth.
+- do not generalise this until lesson targeting is visible/explicit, Gmail delivery has been tested, retry/idempotency is designed, and at least one safe real-student workflow has been verified
 
 Do not create a second source of truth unless the user explicitly agrees.
 
