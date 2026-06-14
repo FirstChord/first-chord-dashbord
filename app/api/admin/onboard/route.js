@@ -487,6 +487,25 @@ export async function POST(request) {
         title: checkin.title,
         targetDate: checkin.targetDate,
       };
+
+      await appendEventLogRows([
+        {
+          eventId: crypto.randomUUID(),
+          occurredAt: new Date().toISOString(),
+          actorEmail: session.user.email || '',
+          entityType: 'planning',
+          entityId: checkin.planningId,
+          eventType: 'first_lesson_checkin_created',
+          mmsId: payload.mmsId,
+          studentName,
+          issueId: '',
+          payloadJson: JSON.stringify({
+            planning_id: checkin.planningId,
+            target_date: checkin.targetDate,
+            owner: 'Unassigned',
+          }),
+        },
+      ]);
     } catch (error) {
       firstLessonCheckinWarning = error.message || 'First-lesson check-in task creation failed';
     }
