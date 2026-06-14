@@ -2,9 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   attachPlanningProgress,
+  buildFirstLessonCheckinPlanningItem,
   buildSchoolForwardReflections,
   buildSchoolForwardPlanningItem,
   buildPauseLessonDateSuggestions,
+  calculateFirstLessonCheckinDate,
   calculateFridayReviewDate,
   calculateNextMeetingDate,
   buildPlanningDueSummary,
@@ -36,6 +38,46 @@ test('calculates Friday review and next meeting dates', () => {
   assert.equal(calculateFridayReviewDate(new Date('2026-06-12T10:00:00.000Z')), '2026-06-12');
   assert.equal(calculateFridayReviewDate(new Date('2026-06-12T10:00:00.000Z'), { skipToday: true }), '2026-06-19');
   assert.equal(calculateNextMeetingDate(new Date('2026-06-13T10:00:00.000Z')), '2026-06-15');
+});
+
+test('first-lesson check-in lands on the first Mon/Wed/Fri after the lesson', () => {
+  // 2026-06-15 is a Monday; the surrounding days are known from the meeting-date test above.
+  assert.equal(calculateFirstLessonCheckinDate('2026-06-15'), '2026-06-17'); // Mon -> Wed
+  assert.equal(calculateFirstLessonCheckinDate('2026-06-16'), '2026-06-17'); // Tue -> Wed
+  assert.equal(calculateFirstLessonCheckinDate('2026-06-17'), '2026-06-19'); // Wed -> Fri
+  assert.equal(calculateFirstLessonCheckinDate('2026-06-19'), '2026-06-22'); // Fri -> next Mon
+  assert.equal(calculateFirstLessonCheckinDate('2026-06-13'), '2026-06-15'); // Sat -> Mon
+  assert.equal(calculateFirstLessonCheckinDate('2026-06-14'), '2026-06-15'); // Sun -> Mon
+});
+
+test('first-lesson check-in always falls within the week after the lesson on a check-in day', () => {
+  const checkinWeekdays = new Set([1, 3, 5]); // Mon, Wed, Fri
+  for (let dayOffset = 0; dayOffset < 14; dayOffset += 1) {
+    const lesson = new Date(2026, 5, 1 + dayOffset); // local dates across two weeks
+    const lessonInput = `${lesson.getFullYear()}-${String(lesson.getMonth() + 1).padStart(2, '0')}-${String(lesson.getDate()).padStart(2, '0')}`;
+    const checkin = new Date(`${calculateFirstLessonCheckinDate(lessonInput)}T12:00:00`);
+    const diffDays = Math.round((checkin - new Date(`${lessonInput}T12:00:00`)) / 86400000);
+    assert.ok(diffDays >= 1 && diffDays <= 6, `check-in ${diffDays} days after lesson ${lessonInput}`);
+    assert.ok(checkinWeekdays.has(checkin.getDay()), `check-in for ${lessonInput} not on a check-in day`);
+  }
+});
+
+test('buildFirstLessonCheckinPlanningItem is Unassigned, parent-area, and student-linked', () => {
+  const item = buildFirstLessonCheckinPlanningItem({
+    mmsId: 'sdt_abc123',
+    studentName: 'Ada Lovelace',
+    tutorName: 'Finn',
+    lessonDate: '2026-06-15',
+    lessonTime: '16:30',
+  });
+  assert.equal(item.owner, 'Unassigned');
+  assert.equal(item.area, 'parent');
+  assert.equal(item.status, 'active');
+  assert.equal(item.itemType, 'action');
+  assert.equal(item.linkedStudentId, 'sdt_abc123');
+  assert.equal(item.targetDate, '2026-06-17');
+  assert.match(item.title, /Ada Lovelace/);
+  assert.match(item.nextAction, /Finn & Tom/);
 });
 
 test('buildSchoolForwardPlanningItem creates a weekly Friday prompt', () => {

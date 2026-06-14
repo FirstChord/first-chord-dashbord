@@ -15,6 +15,7 @@ import { activateStudent, createFirstLesson, ensureBillingProfile, getStudentDet
 import { generateFcStudentId, generateFriendlyUrl, normaliseExperienceLevel, normaliseInstrument } from '@/lib/admin/fc';
 import { ADMIN_TUTORS } from '@/lib/admin/tutors';
 import { markWaitingWorkflowStudentsOnboarded } from '@/lib/admin/waiting-workflow';
+import { createFirstLessonCheckinPlanningItem } from '@/lib/admin/planning';
 
 function formatLessonDateForMessage(value) {
   const parsed = new Date(`${value}T12:00:00`);
@@ -469,6 +470,27 @@ export async function POST(request) {
       waitingCloseoutWarning = error.message || 'Waiting-list closeout failed';
     }
 
+    let firstLessonCheckin = null;
+    let firstLessonCheckinWarning = '';
+
+    try {
+      const checkin = await createFirstLessonCheckinPlanningItem({
+        mmsId: payload.mmsId,
+        studentName,
+        tutorName: tutor.fullName,
+        lessonDate: payload.lessonDate,
+        lessonTime: lessonTimeLabel,
+        actorEmail: session.user.email || '',
+      });
+      firstLessonCheckin = {
+        planningId: checkin.planningId,
+        title: checkin.title,
+        targetDate: checkin.targetDate,
+      };
+    } catch (error) {
+      firstLessonCheckinWarning = error.message || 'First-lesson check-in task creation failed';
+    }
+
     return Response.json({
       success: true,
       steps,
@@ -482,6 +504,8 @@ export async function POST(request) {
       registryAction,
       waitingCloseout,
       waitingCloseoutWarning,
+      firstLessonCheckin,
+      firstLessonCheckinWarning,
       duplicateWarnings: duplicateState.warnings,
       siblingGroup: secondStudentDetails
         ? {

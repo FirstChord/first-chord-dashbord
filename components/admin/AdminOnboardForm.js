@@ -477,6 +477,18 @@ export default function AdminOnboardForm({ initialData, tutorOptions, initialDup
               Waiting list marked onboarded for {result.waitingCloseout.map((entry) => entry.mmsId).join(', ')}.
             </div>
           ) : null}
+          {result.firstLessonCheckin ? (
+            <div className="rounded-xl border border-emerald-200 bg-white p-4 text-sm text-emerald-900">
+              First-lesson check-in task added to the Planning inbox
+              {result.firstLessonCheckin.targetDate ? ` for ${result.firstLessonCheckin.targetDate}` : ''}.
+            </div>
+          ) : null}
+          {result.firstLessonCheckinWarning ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              The student was added successfully, but the first-lesson check-in task was not created:
+              <div className="mt-2 font-mono text-xs break-words">{result.firstLessonCheckinWarning}</div>
+            </div>
+          ) : null}
           {result.duplicateWarnings?.length ? (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
               <p className="font-semibold">Duplicate warnings</p>
