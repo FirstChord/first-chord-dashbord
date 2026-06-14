@@ -44,6 +44,17 @@ Recent V4 layers include:
 - student-linked planning items visible from student detail pages
 - pause planning cards with a guarded `Mark pause completed` path that logs confirmation, aligns `payment_expectation`, and closes the planning task
 
+## Operators (who uses what)
+
+The docs describe the system but not who runs each part. This is a starting map inferred from existing docs — **FINN TO CONFIRM/CORRECT**, as roles are not authoritatively recorded elsewhere.
+
+- **Finn** — owner/admin. Onboarding, registry edits, deploys (`git push` → Railway), config generation, most issue/flag and student work.
+- **Tom** — co-leadership. Payroll (currently via MMS calendar), shares Planning ownership with Finn. *(confirm full surface list)*
+- **Fenella** — parent check-ins via `/admin/workflows/parent-understanding`. *(confirm whether she touches other surfaces)*
+- **Planning Friday reflection** — leadership rhythm (Finn/Tom).
+
+Keep this short; it is an operator pointer, not a permissions model.
+
 ## Read These First
 
 1. `docs/admin/CURRENT_STATUS.md`

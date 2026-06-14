@@ -37,6 +37,8 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 **What to watch out for:** Keep the parent-visible filter strict. Do not show copied drafts or failed delivery rows in the portal. If Sheets auth fails, portal reads should fall back to MMS. Do not remove MMS attendance writes until payroll and charging no longer depend on MMS attendance data.
 
+**Deliberate design choice (freshness):** When a parent-visible owned note exists, the portal returns it without also fetching MMS to compare which is newer. Cross-source freshness comparison would force an MMS call on every portal load even when an owned note exists, re-coupling us to the API this migration is shedding. During the transition the intended default is to prefer the owned note; MMS is consulted only when there is no visible owned note. Revisit only if a real case appears where an outdated owned note misleads parents.
+
 ### 2026-06-13 — Planning Meeting Rhythm
 
 **Feature/change:** Planning now has a `Meeting` filter, a seeded weekly Friday prompt, and a recent-reflections view for `Friday: what moved the school forward?`.
