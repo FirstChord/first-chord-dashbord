@@ -72,7 +72,7 @@ Recent V4 layers include:
 - `Parent_Understanding_State` = parent check-in campaign workflow state
 - `Planning_Items` = human-captured planning/task/initiative state
 - `Planning_Progress_Log` = append-only planning progress history
-- `Practice_Notes_Log` = append-only dashboard snapshot of Practice Chat notes before MMS handoff
+- `Practice_Notes_Log` = dashboard-owned Practice Chat note/delivery memory; sent/completed rows are parent-visible in portals before MMS fallback
 
 ## Recent Important Work
 
@@ -112,6 +112,7 @@ Practice Chat now has a dashboard bridge:
 - managed Sheets tab: `Practice_Notes_Log`
 - source-of-truth boundary: this records generated note content and student/tutor context. New Level 2 rows also carry delivery/audit fields when available. Older rows may only be snapshots, so check `email_send_status`, `mms_attendance_saved`, and recipient fields before treating a note as delivered.
 - Level 2 delivery rows use `delivery_key = student + MMS attendance + note hash` and are upserted. If a matching row already has `email_send_status = sent` or a `gmail_message_id`, retries must not send another parent email. If MMS was saved but Gmail failed, retry only the Gmail step.
+- portal note reads check sent/completed `Practice_Notes_Log` rows first via `GET /api/notes/[studentId]` and generated `getStudentData()`, then fall back to MMS when no owned note is available.
 - student detail reads recent rows through `getPracticeNoteLogRows()` and shows a read-only `Recent practice notes` panel.
 
 There is also a narrow Level 2 MMS-write test route:

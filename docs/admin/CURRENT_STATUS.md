@@ -71,6 +71,7 @@ The active surface is the private admin dashboard under `/admin`.
   - production quick links now send Practice Chat writebacks to the canonical admin/API Railway app, `https://first-chord-dashbord-production.up.railway.app`, instead of relying on whichever dashboard domain the tutor opened
   - Practice Chat Level 1 now appends an editable lesson-note snapshot to `Practice_Notes_Log` when the tutor clicks `Copy Notes`, then the tutor continues the manual MMS attendance/email flow
   - `Practice_Notes_Log` now has optional delivery/audit fields for selected MMS attendance, recipient, Gmail message IDs, send status, send timestamp, manual follow-up state, and a stable delivery key
+  - student/parent portal note reads now check safe sent/completed `Practice_Notes_Log` rows first, then fall back to MMS when no owned note is available
   - student detail pages show a read-only `Recent practice notes` panel with latest note date, tutor, lesson date, send status, recipient, MMS attendance context, and a short preview
   - the narrow Level 2 test path can preview a target MMS attendance record, show why that lesson was selected, write the note, mark attendance `Present`, and send the note through First Chord Gmail
   - the Level 2 pilot path is idempotency-aware: a duplicate request for the same student, MMS attendance, and note text returns the existing delivery instead of sending another parent email; if MMS was saved but Gmail failed, retry only attempts the email step

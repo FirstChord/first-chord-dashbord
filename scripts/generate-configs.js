@@ -201,6 +201,8 @@ function generateStudentHelpers(registry, tutorGroups) {
   let output = `// GENERATED — do not edit directly. Run: npm run generate-configs to regenerate.
 // Student portal helper functions
 import { thetaCredentials } from '@/lib/config/theta-credentials';
+import { getPracticeNoteLogRows } from '@/lib/admin/sheets';
+import { selectLatestPortalPracticeNote } from '@/lib/admin/practice-notes-helpers.mjs';
 
 // Import existing soundslice mappings
 import SOUNDSLICE_MAPPINGS from '@/lib/soundslice-mappings';
@@ -270,6 +272,26 @@ export function generateStudentUrl(studentId) {
   return \`\${baseUrl}/student/\${studentId}\`;
 }
 
+async function getFirstChordPortalNote(studentId) {
+  try {
+    const rows = await getPracticeNoteLogRows(studentId);
+    return selectLatestPortalPracticeNote(rows);
+  } catch (error) {
+    console.warn('First Chord practice note lookup failed; falling back to MMS:', error.message);
+    return null;
+  }
+}
+
+function transformMmsNotes(notesResult = {}) {
+  return {
+    lesson_date: notesResult.date,
+    notes: notesResult.notes,
+    tutor_name: notesResult.tutor,
+    attendance: notesResult.attendanceStatus,
+    source: 'mms',
+  };
+}
+
 // Get student data including notes (reuses existing API)
 export async function getStudentData(studentId) {
   if (!isValidStudentId(studentId)) {
@@ -280,24 +302,26 @@ export async function getStudentData(studentId) {
   if (!studentInfo) return null;
 
   try {
+    const ownedNote = await getFirstChordPortalNote(studentId);
+    if (ownedNote) {
+      return {
+        ...studentInfo,
+        notes: ownedNote,
+        notesSuccess: true,
+        notesSource: 'firstchord'
+      };
+    }
+
     // Use optimized API call with caching for student portals
     const mmsClient = (await import('@/lib/mms-client-cached')).default;
     const notesResult = await mmsClient.getStudentNotes(studentId, { studentPortal: true });
 
     if (notesResult.success) {
-      // Transform the MMS data format to match what StudentNotes expects
-      const transformedNotes = {
-        lesson_date: notesResult.date,
-        notes: notesResult.notes,
-        tutor_name: notesResult.tutor,
-        attendance: notesResult.attendanceStatus
-      };
-
       return {
         ...studentInfo,
-        notes: transformedNotes,
+        notes: transformMmsNotes(notesResult),
         notesSuccess: true,
-        notesSource: 'mms-direct'
+        notesSource: 'mms'
       };
     } else {
       // Return student info without notes if API fails

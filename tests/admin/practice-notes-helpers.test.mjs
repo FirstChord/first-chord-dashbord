@@ -3,11 +3,15 @@ import test from 'node:test';
 import {
   buildPracticeNoteDeliveryKey,
   buildPracticeNoteLogSheetRow,
+  buildPortalPracticeNoteText,
   findPracticeNoteDeliveryRecord,
   isPracticeNoteDeliveryEmailSent,
   isPracticeNoteDeliveryInProgress,
+  isPracticeNoteVisibleInPortal,
+  mapPracticeNoteLogRowToPortalNote,
   normalisePracticeNoteLogRow,
   normalisePracticeNotePayload,
+  selectLatestPortalPracticeNote,
 } from '../../lib/admin/practice-notes-helpers.mjs';
 
 test('normalisePracticeNotePayload requires student and note text', () => {
@@ -165,4 +169,86 @@ test('practice note delivery status helpers protect sent and in-progress rows', 
   assert.equal(isPracticeNoteDeliveryEmailSent(records[0]), false);
   assert.equal(isPracticeNoteDeliveryInProgress(records[2], now), true);
   assert.equal(isPracticeNoteDeliveryInProgress(records[0], now), false);
+});
+
+test('portal practice note visibility only allows sent or completed rows', () => {
+  assert.equal(isPracticeNoteVisibleInPortal({
+    emailSendStatus: 'sent',
+  }), true);
+  assert.equal(isPracticeNoteVisibleInPortal({
+    operationStatus: 'completed',
+  }), true);
+  assert.equal(isPracticeNoteVisibleInPortal({
+    operationStatus: 'in_progress',
+    rawNoteText: 'Draft note',
+  }), false);
+  assert.equal(isPracticeNoteVisibleInPortal({
+    rawNoteText: 'Level 1 copied note',
+  }), false);
+});
+
+test('buildPortalPracticeNoteText prefers raw note text and can build structured sections', () => {
+  assert.equal(buildPortalPracticeNoteText({
+    rawNoteText: '[What we did]\nAlready formatted note.\n\n[Practice Goals]\nKeep going.',
+    whatWeDid: 'Ignored when raw exists.',
+  }), '**What we did:**\nAlready formatted note.\n\n**Practice Goals:**\nKeep going.');
+
+  assert.equal(buildPortalPracticeNoteText({
+    whatWeDid: 'Worked on rhythm.',
+    progressChallenges: 'Counting was stronger.',
+    practiceGoals: 'Practise slowly.',
+  }), [
+    '**What we did:**\nWorked on rhythm.',
+    '**Progress & Challenges:**\nCounting was stronger.',
+    '**Practice Goals:**\nPractise slowly.',
+  ].join('\n\n'));
+});
+
+test('mapPracticeNoteLogRowToPortalNote returns the portal note shape', () => {
+  const portalNote = mapPracticeNoteLogRowToPortalNote({
+    noteId: 'practice_note:sdt_123:test',
+    lessonDate: '2026-06-11T17:00:00.000Z',
+    tutorName: 'Dean',
+    rawNoteText: 'Worked on chords.',
+    mmsAttendanceStatus: 'Present',
+    emailSentAt: '2026-06-11T17:35:00.000Z',
+  });
+
+  assert.deepEqual(portalNote, {
+    lesson_date: '2026-06-11T17:00:00.000Z',
+    notes: 'Worked on chords.',
+    tutor_name: 'Dean',
+    attendance: 'Present',
+    source: 'firstchord',
+    note_id: 'practice_note:sdt_123:test',
+    email_sent_at: '2026-06-11T17:35:00.000Z',
+  });
+});
+
+test('selectLatestPortalPracticeNote ignores drafts and chooses latest lesson date', () => {
+  const rows = [
+    {
+      noteId: 'draft',
+      lessonDate: '2026-06-18T17:00:00.000Z',
+      rawNoteText: 'Should not be visible.',
+      operationStatus: 'in_progress',
+    },
+    {
+      noteId: 'older',
+      lessonDate: '2026-06-04T17:00:00.000Z',
+      rawNoteText: 'Older sent note.',
+      emailSendStatus: 'sent',
+    },
+    {
+      noteId: 'latest',
+      lessonDate: '2026-06-11T17:00:00.000Z',
+      rawNoteText: 'Latest sent note.',
+      emailSendStatus: 'sent',
+    },
+  ];
+
+  const portalNote = selectLatestPortalPracticeNote(rows);
+
+  assert.equal(portalNote.note_id, 'latest');
+  assert.equal(portalNote.notes, 'Latest sent note.');
 });
