@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   attachPlanningProgress,
+  buildFirstLessonCheckinPlanningId,
   buildFirstLessonCheckinPlanningItem,
   buildSchoolForwardReflections,
   buildSchoolForwardPlanningItem,
@@ -78,6 +79,18 @@ test('buildFirstLessonCheckinPlanningItem is Unassigned, parent-area, and studen
   assert.equal(item.targetDate, '2026-06-17');
   assert.match(item.title, /Ada Lovelace/);
   assert.match(item.nextAction, /Finn & Tom/);
+});
+
+test('first-lesson check-in planning id is deterministic per student', () => {
+  assert.equal(buildFirstLessonCheckinPlanningId('sdt_abc123'), 'planning_first_lesson_checkin_sdt_abc123');
+  assert.equal(
+    buildFirstLessonCheckinPlanningId('sdt_abc123'),
+    buildFirstLessonCheckinPlanningId('sdt_abc123'),
+  );
+  assert.notEqual(
+    buildFirstLessonCheckinPlanningId('sdt_abc123'),
+    buildFirstLessonCheckinPlanningId('sdt_xyz789'),
+  );
 });
 
 test('buildSchoolForwardPlanningItem creates a weekly Friday prompt', () => {
