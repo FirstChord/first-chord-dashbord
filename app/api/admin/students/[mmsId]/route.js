@@ -42,8 +42,11 @@ function validatePayload(payload) {
     return ['Invalid request body'];
   }
 
-  if (payload.thetaUsername && !/^[a-z0-9]+$/.test(payload.thetaUsername)) {
-    errors.push('Theta username must be lowercase letters and numbers only');
+  // Capitals are tolerated and normalised to lowercase on save (see mapUpdates),
+  // so a pre-existing capitalised username no longer blocks unrelated edits
+  // (e.g. changing payment expectation). Only reject non-alphanumeric characters.
+  if (payload.thetaUsername && !/^[a-z0-9]+$/.test(`${payload.thetaUsername}`.toLowerCase())) {
+    errors.push('Theta username must be letters and numbers only');
   }
 
   if (payload.soundsliceUrl && !/^https:\/\/www\.soundslice\.com\/courses\/.+/.test(payload.soundsliceUrl)) {
@@ -75,6 +78,8 @@ function mapUpdates(payload, mapping) {
     if (Object.prototype.hasOwnProperty.call(payload, inputKey)) {
       if (inputKey === 'instrument') {
         acc[outputKey] = normaliseInstrument(payload[inputKey]);
+      } else if (inputKey === 'thetaUsername') {
+        acc[outputKey] = `${payload[inputKey] || ''}`.toLowerCase();
       } else if (inputKey === 'paymentMode') {
         acc[outputKey] = normalisePaymentMode(payload[inputKey]);
       } else if (inputKey === 'paymentExpectation') {

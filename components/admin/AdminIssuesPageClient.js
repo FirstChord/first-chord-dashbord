@@ -807,34 +807,51 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
       const payload = await response.json();
 
       if (!response.ok) {
-        setActionState({ pendingId: '', error: payload.error || 'Payment action failed', success: '' });
+        setActionState({ pendingId: '', issueId: issue.issueId, error: payload.error || 'Payment action failed', success: '' });
         return;
       }
 
-      setIssueList((current) => current.map((entry) => (
-        entry.issueId === issue.issueId
-          ? {
-            ...entry,
-            paymentMode: payload.student.paymentMode || entry.paymentMode,
-            paymentExpectation: payload.student.paymentExpectation || '',
-            lifecycleStatus: payload.student.lifecycleStatus || entry.lifecycleStatus,
-            lifecycleLabel: payload.student.lifecycleLabel || entry.lifecycleLabel,
-            lifecycleConfidence: payload.student.lifecycleConfidence || entry.lifecycleConfidence,
-            lifecycleReasons: payload.student.lifecycleReasons || entry.lifecycleReasons,
-            lifecycleWarnings: payload.student.lifecycleWarnings || entry.lifecycleWarnings,
-          }
-          : entry
-      )));
+      // When the action sets the expectation that resolves this flag's condition,
+      // clear the card optimistically so it visibly goes away (the next detection
+      // pass agrees). Otherwise update the row in place and keep it.
+      const nextExpectation = action.payload.paymentExpectation;
+      const resolvesIssue = (
+        (issue.type === 'PAUSE EXPECTATION MISMATCH' && nextExpectation === 'stripe_paused_expected')
+        || (issue.type === 'PAUSE EXPECTATION STALE' && ['stripe_active_expected', 'inactive_or_stopped'].includes(nextExpectation))
+      );
+
+      setIssueList((current) => {
+        if (resolvesIssue) {
+          return current.filter((entry) => entry.issueId !== issue.issueId);
+        }
+        return current.map((entry) => (
+          entry.issueId === issue.issueId
+            ? {
+              ...entry,
+              paymentMode: payload.student.paymentMode || entry.paymentMode,
+              paymentExpectation: payload.student.paymentExpectation || '',
+              lifecycleStatus: payload.student.lifecycleStatus || entry.lifecycleStatus,
+              lifecycleLabel: payload.student.lifecycleLabel || entry.lifecycleLabel,
+              lifecycleConfidence: payload.student.lifecycleConfidence || entry.lifecycleConfidence,
+              lifecycleReasons: payload.student.lifecycleReasons || entry.lifecycleReasons,
+              lifecycleWarnings: payload.student.lifecycleWarnings || entry.lifecycleWarnings,
+            }
+            : entry
+        ));
+      });
       const actionLogged = Boolean(payload.audit?.issueActionLogged);
       setActionState({
         pendingId: '',
+        issueId: issue.issueId,
         error: '',
-        success: actionLogged
-          ? `Payment action logged for ${issue.studentName || issue.mmsId}. The issue remains active until the source check clears it or you resolve it.`
-          : `No payment field changed for ${issue.studentName || issue.mmsId}; the issue remains active.`,
+        success: resolvesIssue
+          ? `Set ${issue.studentName || issue.mmsId} to ${payload.student.paymentExpectation || 'updated'} — flag cleared.`
+          : actionLogged
+            ? `Payment action logged for ${issue.studentName || issue.mmsId}. The issue remains active until the source check clears it or you resolve it.`
+            : `No payment field changed for ${issue.studentName || issue.mmsId}; the issue remains active.`,
       });
     } catch (error) {
-      setActionState({ pendingId: '', error: error.message || 'Payment action failed', success: '' });
+      setActionState({ pendingId: '', issueId: issue.issueId, error: error.message || 'Payment action failed', success: '' });
     }
   }
 
@@ -1169,6 +1186,11 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                   >
                     {actionState.pendingId === issue.issueId ? 'Saving…' : primaryQuickAction.label}
                   </button>
+                ) : null}
+                {actionState.issueId === issue.issueId && (actionState.error || actionState.success) ? (
+                  <p className={`basis-full text-sm ${actionState.error ? 'text-red-700' : 'text-emerald-700'}`}>
+                    {actionState.error || actionState.success}
+                  </p>
                 ) : null}
                 {issue.adminStudentPath ? (
                   <Link
