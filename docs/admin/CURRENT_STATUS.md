@@ -1,6 +1,6 @@
 # Admin Current Status
 
-Last updated: 2026-06-13
+Last updated: 2026-06-15
 
 This is the tracked current-status entrypoint for agents working from the `music-school-dashboard` repository.
 
@@ -77,6 +77,16 @@ The active surface is the private admin dashboard under `/admin`.
   - the Level 2 pilot path is idempotency-aware: a duplicate request for the same student, MMS attendance, and note text returns the existing delivery instead of sending another parent email; if MMS was saved but Gmail failed, retry only attempts the email step
   - Practice Chat API routes now reject no-Origin requests unless a valid shared secret header is supplied; wider rollout should set matching `PRACTICE_CHAT_API_SECRET` and `NEXT_PUBLIC_PRACTICE_CHAT_API_SECRET`
   - Level 2 is currently limited to dashboard-verified students whose tutor is Finn, Tom, or Fennella; other tutors remain on the Level 1/current copy-to-MMS workflow
+- Loop-closing additions (2026-06-15):
+  - onboarding now auto-creates a first-lesson check-in Planning card (Finn & Tom, dated to the first Mon/Wed/Fri after the first lesson), linked to the student, logged to `Event_Log`, and idempotent
+  - pause expectation now auto-reverts `stripe_paused_expected` → `stripe_active_expected` when a high-confidence subscription-ID-matched pause window ends, so `PAUSE EXPECTATION STALE` no longer needs per-student manual flipping
+  - tutor absences can be captured from Planning quick-capture ("pause tutor <name>" / "<name> off friday"): one card per day, affected students snapshotted, deep-linked to the tutor-absence workflow
+  - the tutor-absence workflow page now lists all logged absences, not just the first open one
+- Issue-queue clarity (2026-06-15):
+  - `/admin/flags` shows a read-only banner for any MMS ID shared by 2+ Students-sheet rows (silent profile-misroute protection)
+  - issue cards have a `View customer in Stripe` deep link and a copy-email button, so confirming an issue no longer requires opening the profile
+  - payment quick-action results show inline next to the card, and a pause action that resolves a flag clears the card optimistically
+  - the student PATCH route tolerates capitalised Theta usernames (lowercased on save) instead of rejecting them
 
 ## Current Slice
 

@@ -2,6 +2,29 @@
 
 This file tracks the admin dashboard build so work can be handed between agents cleanly.
 
+## 2026-06-15 — Loop Closing, Tutor-Absence Capture, Issue-Queue Friction
+
+### Scope
+- Close more admin loops automatically and remove friction from confirming issues, without adding new state machines.
+
+### What changed
+- **Onboarding first-lesson check-in:** onboarding now auto-creates a Planning card reminding Finn & Tom to check in after the first lesson but before the next week's lesson, dated to the first Mon/Wed/Fri after the lesson. Owner Unassigned, linked to the student, logged to `Event_Log`, idempotent via a deterministic planning id. Success/failure surfaced on the onboarding confirmation screen.
+- **Pause expectation auto-revert:** `buildPauseExpectationAutoSyncPlan` now reverts `stripe_paused_expected` → `stripe_active_expected` when a high-confidence, subscription-ID-matched pause window has ended (mirror of the existing start-of-pause auto-sync). Removes recurring `PAUSE EXPECTATION STALE` cleanup.
+- **Tutor absence capture from Planning:** "pause tutor <name>" / "<name> off friday" in quick-capture creates one card per day, snapshots affected students (via `getTutorAbsenceWorkflow`), and deep-links to `/admin/workflows/tutor-absence`. The workflow page now lists all logged absences (`getOpenTutorAbsences`) so every saved one is reachable, not just the first open one.
+- **Duplicate MMS ID banner:** `/admin/flags` shows a read-only banner for any MMS ID shared by 2+ Students-sheet rows (the silent-misroute class of bug — see Learning Log).
+- **Issue-queue friction:** issue cards now have a "View customer in Stripe" deep link and a copy-email button; payment quick-action results show inline next to the card; a pause action that resolves a flag clears the card optimistically.
+- **Theta username tolerance:** the student PATCH route now accepts capitalised Theta usernames and lowercases them on save, instead of rejecting (a capital had been blocking unrelated profile saves).
+
+### Operational notes
+- All of the above are read-only or write only to fields/tabs they already own (`payment_expectation`, `Planning_Items`, `Event_Log`); no new source-of-truth.
+- A per-student "pause payment in the tutor-absence workflow" feature was attempted and **reverted** after a client-side regression; revisit carefully.
+- Process change: the agent may now run `git push` to deploy, but only on an explicit user instruction and after tests+build pass (see `CLAUDE.md`).
+
+### Validation
+- `npm run test:admin` passes (225 tests)
+- `npm run build` passes
+- Deployed to `main` (Railway). Final deploy commits: `629e4b6`, `aae5d15`.
+
 ## 2026-06-13 — Guarded Pause Planning Completion + Workflow Design Principle
 
 ### Scope

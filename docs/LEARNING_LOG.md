@@ -19,6 +19,48 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-15 — Duplicate MMS ID Detection + Profile Resolution Gotcha
+
+**Feature/change:** `/admin/flags` shows a read-only banner listing any MMS ID used by 2+ Students-sheet rows. Prompted by a real incident: a row showing as "Elliot N/A" carried Yarah Love's MMS ID, so opening Elliot's profile silently showed Yarah.
+
+**Why it exists:** The admin profile route resolves a student only from the Students sheet via `sheetRows.find(r => r.mmsId === id)` — the **first** match wins. A duplicate or wrong MMS ID therefore misroutes a profile with no error. The banner turns that silent failure into a visible, named flag.
+
+**Source-of-truth impact:** None added — computed fresh each flags load (auto-clears when the sheet is fixed), no `Issue_Queue` writes. The Students sheet stays operational truth; a duplicate is fixed in the sheet, never patched in the dashboard. Related gotcha discovered same session: a student valid in MMS + registry but **missing** a Students-sheet row 404s on the profile (no row to resolve) — fix by adding/correcting the sheet row's `mms_id`.
+
+**Files/functions involved:**
+
+- `buildDuplicateMmsIdGroups()` in `lib/admin/issues-helpers.mjs`
+- `getAdminIssues()` (returns `duplicateMmsIds`)
+- `app/admin/flags/page.js` (server-rendered banner)
+- `getAdminStudentByMmsId()` in `lib/admin/students.js` (the `.find` resolution)
+
+**What to watch out for:** The banner catches only shared (duplicate) IDs, not a unique-but-wrong ID — those surface via `SHEETS ONLY` / identity-mismatch hints. A profile 404 usually means the Students sheet lacks a row for that exact `mms_id`, not a code bug.
+
+### 2026-06-15 — Pause Expectation Auto-Revert (Symmetric Sync)
+
+**Feature/change:** `buildPauseExpectationAutoSyncPlan` now also reverts `payment_expectation` from `stripe_paused_expected` back to `stripe_active_expected` when a high-confidence, subscription-ID-matched pause window has ended and none is upcoming. Previously it only auto-set "paused" at the start.
+
+**Why it exists:** `PAUSE EXPECTATION STALE` was recurring manual cleanup — every ended pause left the expectation stuck on "paused" until someone flipped it per student. Pause History already holds the end date, and Stripe self-resumes billing at window end, so the dashboard's lagging label can realign automatically.
+
+**Source-of-truth impact:** Writes `payment_expectation` on the Students sheet (its existing owner) via the existing `autoSyncPauseExpectations` loop + `Event_Log`; runs inside `getAdminIssues` and `scanLiveStripeIssues`. Never touches `inactive_or_stopped`; only subscription-ID high-confidence matches. Genuine churn still surfaces via live Stripe checks.
+
+**Files/functions involved:**
+
+- `buildPauseExpectationAutoSyncPlan()` in `lib/admin/pause-auto-sync-helpers.mjs`
+- `autoSyncPauseExpectations()` in `lib/admin/issues.js`
+
+**What to watch out for:** Low-confidence / name-matched pauses are intentionally left for a human via the STALE flag. On first deploy this clears the existing stale-paused backlog in one pass (all logged to `Event_Log`).
+
+### 2026-06-15 — Agent Deploys + Push/Rebase Workflow
+
+**Feature/change:** The agent may now run `git push` (which deploys via Railway) — but only on an explicit user instruction, after `npm run test:admin` and `npm run build` pass, never automatically, never `--force`. Granted via `Bash(git push:*)` in `~/.claude/settings.json`; documented in `CLAUDE.md`.
+
+**Why it exists:** Removes the manual push step while keeping a human go-ahead on each production deploy.
+
+**Source-of-truth impact:** None. Process/permission only.
+
+**What to watch out for:** The dashboard auto-commits registry/config on onboarding edits, so local `main` is frequently behind. Local `npm run build` regenerates `lib/config/*`, `lib/student-*.js`, and `lib/soundslice-mappings.js`, which dirties the tree. Deploy flow that works cleanly: commit feature files → discard the regenerated config changes (`git checkout -- <those files>`) → `git rebase origin/main` (feature files don't overlap the registry/config commits) → push.
+
 ### 2026-06-14 — Practice Notes Portal Read Source
 
 **Feature/change:** Student/parent portal note reads now check `Practice_Notes_Log` first and fall back to MMS only when no safe First Chord note is available.
