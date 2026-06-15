@@ -7,7 +7,10 @@ import {
   buildSchoolForwardReflections,
   buildSchoolForwardPlanningItem,
   buildPauseLessonDateSuggestions,
+  buildTutorAbsencePlanningId,
+  buildTutorAbsencePlanningItem,
   calculateFirstLessonCheckinDate,
+  detectTutorAbsenceCapture,
   calculateFridayReviewDate,
   calculateNextMeetingDate,
   buildPlanningDueSummary,
@@ -397,4 +400,81 @@ test('attaches progress rows and builds summary counts', () => {
   assert.equal(summary.activeInitiatives, 1);
   assert.equal(summary.moving, 1);
   assert.equal(summary.needsAttention, 0);
+});
+
+const TUTOR_OPTIONS = [
+  { shortName: 'Robbie', fullName: 'Robbie Tranter', teacherId: 'tch_zV9hJ2' },
+  { shortName: 'Tom', fullName: 'Tom Smith', teacherId: 'tch_tom' },
+  { shortName: 'Eléna', fullName: 'Eléna García', teacherId: 'tch_elena' },
+];
+
+test('detectTutorAbsenceCapture recognises "pause tutor robbie"', () => {
+  const result = detectTutorAbsenceCapture('pause tutor robbie', TUTOR_OPTIONS);
+  assert.equal(result.isTutorAbsence, true);
+  assert.equal(result.tutor?.shortName, 'Robbie');
+});
+
+test('detectTutorAbsenceCapture recognises name + absence shorthand "robbie off friday"', () => {
+  const result = detectTutorAbsenceCapture('robbie off friday', TUTOR_OPTIONS);
+  assert.equal(result.isTutorAbsence, true);
+  assert.equal(result.tutor?.shortName, 'Robbie');
+});
+
+test('detectTutorAbsenceCapture ignores a student pause like "pause coban for friday"', () => {
+  const result = detectTutorAbsenceCapture('pause coban for friday', TUTOR_OPTIONS);
+  assert.equal(result.isTutorAbsence, false);
+  assert.equal(result.tutor, null);
+});
+
+test('detectTutorAbsenceCapture matches accented tutor names', () => {
+  const result = detectTutorAbsenceCapture('elena off monday', TUTOR_OPTIONS);
+  assert.equal(result.isTutorAbsence, true);
+  assert.equal(result.tutor?.shortName, 'Eléna');
+});
+
+test('detectTutorAbsenceCapture flags intent but no tutor for generic "tutor off friday"', () => {
+  const result = detectTutorAbsenceCapture('tutor off friday', TUTOR_OPTIONS);
+  assert.equal(result.isTutorAbsence, true);
+  assert.equal(result.tutor, null);
+});
+
+test('buildTutorAbsencePlanningId is deterministic and keyed on tutor + date', () => {
+  assert.equal(buildTutorAbsencePlanningId('Robbie', '2026-06-19'), 'planning_tutor_absence_robbie_2026-06-19');
+  assert.equal(
+    buildTutorAbsencePlanningId('Robbie', '2026-06-19'),
+    buildTutorAbsencePlanningId('robbie', '2026-06-19'),
+  );
+});
+
+test('buildTutorAbsencePlanningItem snapshots students and targets a meeting day before the absence', () => {
+  const item = buildTutorAbsencePlanningItem({
+    tutor: { shortName: 'Robbie', fullName: 'Robbie Tranter' },
+    absenceDate: '2026-06-19', // Friday
+    lessons: [
+      { studentName: 'Charlie Mcdougall', lessonTime: '16:00' },
+      { studentName: 'Ailsa Hoebe', lessonTime: '16:30' },
+    ],
+  });
+  assert.equal(item.area, 'tutor');
+  assert.equal(item.owner, 'Unassigned');
+  assert.equal(item.linkedWorkflowId, 'tutor-absence');
+  assert.equal(item.linkedTutorId, 'Robbie');
+  assert.equal(item.linkedStudentId, '');
+  assert.equal(item.targetDate, '2026-06-18'); // Thursday before the Friday absence
+  assert.match(item.title, /Robbie Tranter/);
+  assert.match(item.notes, /Charlie Mcdougall, Ailsa Hoebe/);
+  assert.match(item.notes, /Tutor absence date: 2026-06-19/);
+  assert.match(item.notes, /tutor=Robbie&date=2026-06-19/);
+  assert.match(item.nextAction, /message 2 parents/);
+});
+
+test('buildTutorAbsencePlanningItem notes a missing MMS lesson list', () => {
+  const item = buildTutorAbsencePlanningItem({
+    tutor: { shortName: 'Robbie', fullName: 'Robbie Tranter' },
+    absenceDate: '2026-06-15', // Monday
+    lessons: [],
+  });
+  assert.match(item.notes, /No MMS lessons found/);
+  assert.equal(item.targetDate, '2026-06-12'); // previous Friday
+  assert.match(item.nextAction, /message 0 parents/);
 });

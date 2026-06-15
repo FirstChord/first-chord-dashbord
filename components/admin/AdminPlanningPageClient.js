@@ -12,6 +12,7 @@ import {
   buildSchoolForwardReflections,
   buildPauseLessonDateSuggestions,
   buildStructuredPausePlanningDraft,
+  detectTutorAbsenceCapture,
   inferPlanningTargetDateFromText,
   isMeetingPlanningItem,
   labelPlanningArea,
@@ -19,6 +20,12 @@ import {
   labelPlanningStatus,
   labelPlanningType,
 } from '@/lib/admin/planning-helpers.mjs';
+import { ADMIN_TUTORS } from '@/lib/admin/tutors-data.js';
+
+const CLIENT_TUTOR_OPTIONS = Object.entries(ADMIN_TUTORS).map(([shortName, tutor]) => ({
+  shortName,
+  fullName: tutor.fullName,
+}));
 
 const STATUS_GROUPS = [
   { key: 'inbox', title: 'Inbox', hint: 'Fresh thoughts to review later.' },
@@ -397,7 +404,7 @@ function inferQuickCapture(raw = '') {
     defaults.area = 'admin';
     defaults.itemType = 'action';
   }
-  if (/\b(tutor|cover|covering|teacher)\b/u.test(text) && /\b(away|off|cover)\b/u.test(text)) {
+  if (isTutorAbsenceCaptureText(raw)) {
     defaults.area = 'tutor';
     defaults.linkedWorkflowId = 'tutor-absence';
   }
@@ -426,6 +433,10 @@ function isPauseCaptureText(raw = '') {
   return /\bpaus(?:e|ed|ing)\b/iu.test(`${raw || ''}`);
 }
 
+function isTutorAbsenceCaptureText(raw = '') {
+  return detectTutorAbsenceCapture(raw, CLIENT_TUTOR_OPTIONS).isTutorAbsence;
+}
+
 function buildQuickCaptureItem(rawNote = '', overrides = {}, studentOptions = []) {
   const inferred = inferQuickCapture(rawNote);
   const {
@@ -438,6 +449,10 @@ function buildQuickCaptureItem(rawNote = '', overrides = {}, studentOptions = []
     showPauseBuilder,
     hidePauseBuilder,
     studentSelectionSource,
+    tutorAbsenceShortName,
+    tutorAbsenceDates,
+    showTutorAbsenceBuilder,
+    hideTutorAbsenceBuilder,
     ...safeOverrides
   } = overrides;
   const hasStudentOverride = Object.prototype.hasOwnProperty.call(safeOverrides, 'linkedStudentId');
@@ -635,6 +650,20 @@ function workflowHref(workflowId = '') {
   return routes[key] || '';
 }
 
+// Tutor-absence cards keep the generic linkedWorkflowId ('tutor-absence') and store
+// the specific tutor + date as parseable lines in notes; build the prefilled deep
+// link from those so the workflow opens ready for that tutor/date.
+function buildTutorAbsenceWorkflowHref(item = {}) {
+  const notes = `${item.notes || ''}`;
+  const dateMatch = notes.match(/Tutor absence date:\s*(\d{4}-\d{2}-\d{2})/u);
+  const tutorMatch = notes.match(/^Tutor:\s*(\S+)/mu);
+  const tutor = tutorMatch ? tutorMatch[1] : `${item.linkedTutorId || ''}`.trim();
+  if (!dateMatch || !tutor) {
+    return '/admin/workflows/tutor-absence';
+  }
+  return `/admin/workflows/tutor-absence?tutor=${encodeURIComponent(tutor)}&date=${encodeURIComponent(dateMatch[1])}`;
+}
+
 function studentHref(studentId = '') {
   const key = `${studentId || ''}`.trim();
   return key ? `/admin/students/${encodeURIComponent(key)}` : '';
@@ -789,6 +818,7 @@ function QuickBrainCapture({
   expanded,
   setExpanded,
   onSubmit,
+  onTutorAbsenceCapture,
   pending = false,
 }) {
   const inferred = inferQuickCapture(rawNote);
@@ -802,8 +832,23 @@ function QuickBrainCapture({
     ...options,
     linkedStudentId: hasManualStudentOverride ? options.linkedStudentId : inferredStudent?.mmsId || options.linkedStudentId || '',
   };
+  const tutorAbsenceDetection = detectTutorAbsenceCapture(rawNote, CLIENT_TUTOR_OPTIONS);
+  const tutorAbsenceBuilderVisible = !effectiveOptions.hideTutorAbsenceBuilder
+    && (tutorAbsenceDetection.isTutorAbsence || effectiveOptions.showTutorAbsenceBuilder);
+  const effectiveTutorShortName = effectiveOptions.tutorAbsenceShortName
+    || tutorAbsenceDetection.tutor?.shortName
+    || '';
+  const effectiveTutorDates = Array.isArray(effectiveOptions.tutorAbsenceDates) && effectiveOptions.tutorAbsenceDates.length
+    ? effectiveOptions.tutorAbsenceDates
+    : tutorAbsenceDetection.inferredDates;
+  const cleanTutorDates = effectiveTutorDates.filter(Boolean);
+  const tutorAbsenceFullName = CLIENT_TUTOR_OPTIONS.find((tutor) => tutor.shortName === effectiveTutorShortName)?.fullName
+    || effectiveTutorShortName;
+  // A tutor-absence capture takes precedence over the single-student pause builder
+  // (e.g. "pause tutor robbie"), unless the pause builder was explicitly opened.
   const pauseBuilderVisible = !effectiveOptions.hidePauseBuilder
-    && (isPauseCaptureText(rawNote) || effectiveOptions.showPauseBuilder);
+    && (effectiveOptions.showPauseBuilder
+      || (isPauseCaptureText(rawNote) && !tutorAbsenceDetection.isTutorAbsence));
   const pauseType = effectiveOptions.pauseType === 'range' ? 'range' : 'single';
   const pauseStudent = findStudentById(studentOptions, effectiveOptions.linkedStudentId);
   const pauseDateSuggestions = buildPauseLessonDateSuggestions(pauseStudent?.scheduleContext, {
@@ -829,6 +874,23 @@ function QuickBrainCapture({
       linkedStudentId: value,
       studentSelectionSource: value ? 'manual' : '',
     }));
+  }
+
+  function setTutorDate(index, value) {
+    setOptions((current) => {
+      const base = Array.isArray(current.tutorAbsenceDates)
+        ? [...current.tutorAbsenceDates]
+        : [...effectiveTutorDates];
+      base[index] = value;
+      return { ...current, tutorAbsenceDates: base };
+    });
+  }
+
+  async function handleTutorAbsenceCapture() {
+    if (!effectiveTutorShortName || !cleanTutorDates.length || !onTutorAbsenceCapture) {
+      return;
+    }
+    await onTutorAbsenceCapture(effectiveTutorShortName, cleanTutorDates);
   }
 
   function applyPauseDraft() {
@@ -1036,6 +1098,89 @@ function QuickBrainCapture({
         </button>
       )}
 
+      {tutorAbsenceBuilderVisible ? (
+        <div className="rounded-2xl border border-orange-200 bg-orange-50/80 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-700">Tutor absence</p>
+              <p className="mt-1 text-sm text-orange-950">
+                Creates one planning card per day, snapshotting the affected students and linking to the tutor absence workflow.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setOption('showTutorAbsenceBuilder', false);
+                setOption('hideTutorAbsenceBuilder', true);
+              }}
+              className="rounded-lg border border-orange-200 bg-white px-3 py-1.5 text-xs font-semibold text-orange-800 hover:bg-orange-100"
+            >
+              Hide
+            </button>
+          </div>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <SelectField
+              label="Tutor"
+              value={effectiveTutorShortName}
+              onChange={(value) => setOption('tutorAbsenceShortName', value)}
+              options={[
+                { value: '', label: 'Select tutor…' },
+                ...CLIENT_TUTOR_OPTIONS.map((tutor) => ({ value: tutor.shortName, label: tutor.fullName })),
+              ]}
+            />
+            <div className="grid gap-2">
+              <DateField
+                label="Absence date"
+                value={effectiveTutorDates[0] || ''}
+                onChange={(value) => setTutorDate(0, value)}
+              />
+              <DateField
+                label="Date 2 (optional)"
+                value={effectiveTutorDates[1] || ''}
+                onChange={(value) => setTutorDate(1, value)}
+              />
+              <DateField
+                label="Date 3 (optional)"
+                value={effectiveTutorDates[2] || ''}
+                onChange={(value) => setTutorDate(2, value)}
+              />
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-xl border border-orange-100 bg-white p-3 text-sm text-slate-700">
+            {effectiveTutorShortName && cleanTutorDates.length ? (
+              <p className="font-semibold text-slate-900">
+                Will create {cleanTutorDates.length} planning card{cleanTutorDates.length === 1 ? '' : 's'} for {tutorAbsenceFullName} ({cleanTutorDates.join(', ')}). Affected students load from MMS.
+              </p>
+            ) : (
+              <p>Select a tutor and at least one absence date.</p>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={handleTutorAbsenceCapture}
+            disabled={pending || !effectiveTutorShortName || !cleanTutorDates.length}
+            className="mt-3 inline-flex items-center gap-2 rounded-xl bg-orange-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-800 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            Capture absence
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => {
+            setOption('showTutorAbsenceBuilder', true);
+            setOption('hideTutorAbsenceBuilder', false);
+          }}
+          className="inline-flex items-center gap-2 rounded-xl border border-orange-200 bg-white px-3 py-2 text-xs font-semibold text-orange-800 hover:bg-orange-50"
+        >
+          Structure a tutor absence
+        </button>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
           <span className="rounded-full bg-slate-100 px-2.5 py-1">{labelPlanningType(effectiveOptions.itemType)}</span>
@@ -1137,7 +1282,10 @@ function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides =
   const isPauseReminder = isPausePlanningItem(item);
   const isSchoolForwardReview = item.planningId === SCHOOL_FORWARD_PLANNING_ID;
   const pausePaymentConfirmed = hasPausePaymentConfirmation(item);
-  const linkedWorkflowHref = workflowHref(item.linkedWorkflowId);
+  const isTutorAbsenceCard = item.linkedWorkflowId === 'tutor-absence' && Boolean(item.linkedTutorId);
+  const linkedWorkflowHref = isTutorAbsenceCard
+    ? buildTutorAbsenceWorkflowHref(item)
+    : workflowHref(item.linkedWorkflowId);
   const linkedStudentBase = findStudentById(studentOptions, item.linkedStudentId);
   const linkedStudent = linkedStudentBase ? {
     ...linkedStudentBase,
@@ -1273,7 +1421,7 @@ function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides =
           href={linkedWorkflowHref}
           className="mt-3 inline-flex rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-white"
         >
-          Open linked workflow
+          {isTutorAbsenceCard ? 'Open tutor absence workflow →' : 'Open linked workflow'}
         </Link>
       ) : null}
 
@@ -1716,6 +1864,32 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
     }
   }
 
+  async function handleTutorAbsenceCapture(tutorShortName, dates) {
+    setSaveState({ pending: true, error: '', savedAt: '' });
+    try {
+      const response = await fetch('/api/admin/planning/tutor-absence', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tutorShortName, dates }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Tutor absence capture failed');
+      }
+      setPlanning(data.planning);
+      setQuickNote('');
+      setQuickOptions({});
+      setQuickExpanded(false);
+      setSaveState({
+        pending: false,
+        error: '',
+        savedAt: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+      });
+    } catch (error) {
+      setSaveState({ pending: false, error: error.message, savedAt: '' });
+    }
+  }
+
   function startEdit(item) {
     setEditingItem(item);
     setEditForm({
@@ -1996,6 +2170,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
             expanded={quickExpanded}
             setExpanded={setQuickExpanded}
             onSubmit={handleCapture}
+            onTutorAbsenceCapture={handleTutorAbsenceCapture}
             pending={saveState.pending && !pendingId}
           />
         </div>
