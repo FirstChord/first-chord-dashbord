@@ -5,6 +5,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { buildIssueEvidenceSummary, formatDateTime } from '@/lib/admin/health-helpers.mjs';
 import { buildPauseWorkflowSummary } from '@/lib/admin/pause-workflow-helpers.mjs';
 
+const STRIPE_DASHBOARD_BASE = process.env.NEXT_PUBLIC_STRIPE_DASHBOARD_BASE_URL || 'https://dashboard.stripe.com';
+
 function severityClasses(severity) {
   if (severity === 'Needs action') return 'border-red-200 bg-red-50 text-red-800';
   if (severity === 'Warning') return 'border-amber-200 bg-amber-50 text-amber-800';
@@ -386,6 +388,18 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
   const [systemFilter, setSystemFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('active');
   const [actionState, setActionState] = useState({ pendingId: '', error: '', success: '' });
+  const [copiedEmailIssueId, setCopiedEmailIssueId] = useState('');
+
+  async function copyEmail(issue) {
+    if (!issue.email) return;
+    try {
+      await navigator.clipboard.writeText(issue.email);
+    } catch {
+      // best-effort; clipboard may be unavailable
+    }
+    setCopiedEmailIssueId(issue.issueId);
+    window.setTimeout(() => setCopiedEmailIssueId((current) => (current === issue.issueId ? '' : current)), 1800);
+  }
   const [stripeScanState, setStripeScanState] = useState({ pending: false, error: '', scannedAt: '', scannedCount: 0 });
   const [stripeRefreshState, setStripeRefreshState] = useState({});
 
@@ -1185,6 +1199,26 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                     className="rounded-lg border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-medium text-sky-900 transition hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {actionState.pendingId === issue.issueId ? 'Saving…' : primaryQuickAction.label}
+                  </button>
+                ) : null}
+                {issue.stripeCustomerId ? (
+                  <a
+                    href={`${STRIPE_DASHBOARD_BASE}/customers/${encodeURIComponent(issue.stripeCustomerId)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-lg border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-medium text-violet-900 transition hover:bg-violet-100"
+                  >
+                    View customer in Stripe ↗
+                  </a>
+                ) : null}
+                {issue.email ? (
+                  <button
+                    type="button"
+                    onClick={() => copyEmail(issue)}
+                    title="Copy email to search in Stripe"
+                    className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-800 transition hover:bg-slate-100"
+                  >
+                    {copiedEmailIssueId === issue.issueId ? 'Email copied ✓' : `Copy email: ${issue.email}`}
                   </button>
                 ) : null}
                 {actionState.issueId === issue.issueId && (actionState.error || actionState.success) ? (
