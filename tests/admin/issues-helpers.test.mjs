@@ -2,12 +2,35 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  buildDuplicateMmsIdGroups,
   buildIdentityMismatchHint,
   buildIssueRecord,
   buildPaymentIssueRecord,
   classifyIssue,
   isIssueActive,
 } from '../../lib/admin/issues-helpers.mjs';
+
+test('buildDuplicateMmsIdGroups flags an MMS ID shared by two students', () => {
+  const groups = buildDuplicateMmsIdGroups([
+    { mmsId: 'sdt_QP01Jp', fullName: 'Yarah Love' },
+    { mmsId: 'sdt_QP01Jp', fullName: 'Elliot N/A' },
+    { mmsId: 'sdt_yLBVJQ', fullName: 'Elliot' },
+    { mmsId: 'sdt_unique', fullName: 'Solo Student' },
+    { mmsId: '', fullName: 'No Id' },
+  ]);
+
+  assert.equal(groups.length, 1);
+  assert.equal(groups[0].mmsId, 'sdt_QP01Jp');
+  assert.deepEqual(groups[0].students, ['Yarah Love', 'Elliot N/A']);
+});
+
+test('buildDuplicateMmsIdGroups returns nothing when all MMS IDs are unique', () => {
+  const groups = buildDuplicateMmsIdGroups([
+    { mmsId: 'sdt_a', fullName: 'A' },
+    { mmsId: 'sdt_b', fullName: 'B' },
+  ]);
+  assert.deepEqual(groups, []);
+});
 
 test('classifyIssue maps current review flag types into actionable admin metadata', () => {
   assert.deepEqual(classifyIssue('TUTOR CONFLICT').severity, 'Needs action');
