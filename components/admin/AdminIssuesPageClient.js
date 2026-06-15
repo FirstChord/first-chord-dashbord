@@ -1,17 +1,10 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { buildIssueEvidenceSummary, formatDateTime } from '@/lib/admin/health-helpers.mjs';
 import { buildPauseWorkflowSummary } from '@/lib/admin/pause-workflow-helpers.mjs';
 
 const STRIPE_DASHBOARD_BASE = process.env.NEXT_PUBLIC_STRIPE_DASHBOARD_BASE_URL || 'https://dashboard.stripe.com';
-
-function severityClasses(severity) {
-  if (severity === 'Needs action') return 'border-red-200 bg-red-50 text-red-800';
-  if (severity === 'Warning') return 'border-amber-200 bg-amber-50 text-amber-800';
-  return 'border-slate-200 bg-slate-50 text-slate-700';
-}
 
 function Select({ label, value, onChange, options }) {
   return (
@@ -186,14 +179,6 @@ function getIssueKeyFact(issue) {
   return '';
 }
 
-function getIssueReasonText(issue) {
-  if (!issue.sourcePresent) {
-    return 'This issue was detected previously, but the latest source check no longer sees it.';
-  }
-
-  return isPaymentIssue(issue) ? (issue.paymentReason || issue.summary) : (issue.issueReason || issue.summary);
-}
-
 function getRecommendedActionText(issue) {
   if (!issue.sourcePresent) {
     return 'If this matches the current record, mark it resolved. Keep it active only if you want to monitor it manually.';
@@ -350,6 +335,119 @@ function getPaymentActionPath(issue) {
   return [];
 }
 
+function getStudentLabel(issue) {
+  return issue.studentName || issue.mmsId || 'This student';
+}
+
+// One plain-language sentence describing the issue in human terms — the "story".
+function getIssueStory(issue) {
+  const who = getStudentLabel(issue);
+
+  if (!issue.sourcePresent) {
+    return `${who} had an issue flagged before, but the latest check no longer sees it.`;
+  }
+
+  switch (issue.type) {
+    case 'PAYMENT_FAILED':
+      return `A payment for ${who} looks like it failed in Stripe.`;
+    case 'PAUSE EXPECTATION MISMATCH':
+      return `${who}'s pause record says they're paused, but the dashboard still has them marked as actively billed.`;
+    case 'PAUSE EXPECTATION STALE':
+      return `${who}'s pause has ended, but we've still got them marked as paused.`;
+    case 'SUBSCRIPTION_STATE_MISMATCH':
+      if (issue.paymentExpectation === 'stripe_paused_expected') {
+        return `The dashboard has ${who} down as paused, but Stripe is still actively billing them.`;
+      }
+      if (issue.paymentExpectation === 'stripe_active_expected') {
+        return `The dashboard has ${who} down as actively billing, but Stripe has them paused.`;
+      }
+      return `The dashboard's expectation for ${who} doesn't match what Stripe is actually doing.`;
+    case 'INACTIVE_STILL_BILLING':
+      return `We've got ${who} down as stopped, but Stripe is still billing them.`;
+    case 'ACTIVE_WITHOUT_SUBSCRIPTION':
+      return `${who} should be paying through Stripe, but there's no live subscription.`;
+    case 'SUBSCRIPTION_CANCELLED_UNEXPECTEDLY':
+      return `${who}'s Stripe subscription was cancelled, but we still expect them to be active.`;
+    case 'SHEETS ONLY':
+      return `${who} is in the Sheet but has no dashboard record yet.`;
+    case 'REGISTRY ONLY':
+      return `${who} has a dashboard record but isn't in the Sheet.`;
+    case 'TUTOR CONFLICT':
+      return `${who}'s tutor doesn't match between the Sheet and the dashboard.`;
+    case 'PAYMENT SETUP PENDING':
+      return `${who} isn't fully set up for Stripe payments yet.`;
+    case 'SETUP PENDING STRIPE LINKED':
+      return `${who} is linked to Stripe but still marked as setup-pending.`;
+    case 'STRIPE SETUP INCOMPLETE':
+      return `${who}'s Stripe setup looks incomplete.`;
+    case 'STRIPE CUSTOMER MISSING':
+      return `${who} has no Stripe customer linked yet.`;
+    case 'STRIPE SUBSCRIPTION MISSING':
+      return `${who} has a Stripe customer but no subscription.`;
+    default:
+      return issue.summary || issue.issueReason || 'Something here needs a look.';
+  }
+}
+
+// Short, plain imperative — the calm "what to do" line shown under the story.
+function getIssueWhatToDo(issue) {
+  if (!issue.sourcePresent) {
+    return 'If the record looks right now, mark it resolved.';
+  }
+
+  switch (issue.type) {
+    case 'PAYMENT_FAILED':
+      return "Check the latest invoice in Stripe and confirm whether it's resolved.";
+    case 'PAUSE EXPECTATION MISMATCH':
+      return 'Confirm the pause is right, then set "paused expected".';
+    case 'PAUSE EXPECTATION STALE':
+      return 'If the pause has really ended, set "active expected".';
+    case 'SUBSCRIPTION_STATE_MISMATCH':
+      if (issue.paymentExpectation === 'stripe_paused_expected') {
+        return 'If they should be paused, check the pause actually landed in Stripe. If they should be active, set "active expected".';
+      }
+      if (issue.paymentExpectation === 'stripe_active_expected') {
+        return 'If they should be active, unpause them in Stripe. If they should be paused, set "paused expected".';
+      }
+      return 'Decide which side is right, then set the matching expectation.';
+    case 'INACTIVE_STILL_BILLING':
+      return 'Keep active until Stripe stops billing, then confirm the state.';
+    case 'ACTIVE_WITHOUT_SUBSCRIPTION':
+    case 'SUBSCRIPTION_CANCELLED_UNEXPECTEDLY':
+      return 'Refresh Stripe to see the live state before changing anything.';
+    case 'SHEETS ONLY':
+      return "Create the dashboard record when you're ready.";
+    case 'REGISTRY ONLY':
+      return "Check the Sheet — delete the dashboard record if it shouldn't exist.";
+    case 'TUTOR CONFLICT':
+      return 'Decide which tutor is correct and align the records.';
+    case 'PAYMENT SETUP PENDING':
+    case 'SETUP PENDING STRIPE LINKED':
+    case 'STRIPE SETUP INCOMPLETE':
+    case 'STRIPE CUSTOMER MISSING':
+    case 'STRIPE SUBSCRIPTION MISSING':
+      return 'Finish setup, or set the right payment mode/expectation.';
+    default:
+      return issue.recommendedAction || '';
+  }
+}
+
+// Quiet category word shown alongside severity in the card corner.
+function getIssueCategoryLabel(issue) {
+  if (isPauseIssue(issue)) return 'Pause';
+  if (isPaymentIssue(issue)) return 'Payment';
+  if (isSetupIssue(issue)) return 'Setup';
+  if (isRecordIssue(issue)) return 'Records';
+  return 'Issue';
+}
+
+// Severity becomes a quiet coloured left edge instead of a loud chip.
+function severityEdgeClass(severity) {
+  if (severity === 'Needs action') return 'border-l-4 border-l-red-300';
+  if (severity === 'Warning') return 'border-l-4 border-l-amber-300';
+  return 'border-l-4 border-l-slate-200';
+}
+
 function summariseStripeSnapshot(snapshot, issues = []) {
   if (!snapshot) {
     return '';
@@ -389,6 +487,28 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
   const [statusFilter, setStatusFilter] = useState('active');
   const [actionState, setActionState] = useState({ pendingId: '', error: '', success: '' });
   const [copiedEmailIssueId, setCopiedEmailIssueId] = useState('');
+  // issueId -> { message, fading } for the brief "Sorted ✓" beat before a card leaves the queue.
+  const [fadingIssues, setFadingIssues] = useState({});
+  // { path, name } when the student-record slide-over is open; null when closed.
+  const [recordPanel, setRecordPanel] = useState(null);
+
+  // Show a card's "Sorted ✓" state, let it sit briefly, fade it, then run the list mutation.
+  function startSortedFade(issueId, message, mutate) {
+    setFadingIssues((current) => ({ ...current, [issueId]: { message, fading: false } }));
+    window.setTimeout(() => {
+      setFadingIssues((current) => (
+        current[issueId] ? { ...current, [issueId]: { ...current[issueId], fading: true } } : current
+      ));
+    }, 800);
+    window.setTimeout(() => {
+      mutate();
+      setFadingIssues((current) => {
+        const next = { ...current };
+        delete next[issueId];
+        return next;
+      });
+    }, 1600);
+  }
 
   async function copyEmail(issue) {
     if (!issue.email) return;
@@ -414,6 +534,15 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
   useEffect(() => {
     setIssueList(issues);
   }, [issues]);
+
+  useEffect(() => {
+    if (!recordPanel) return undefined;
+    function onKey(event) {
+      if (event.key === 'Escape') setRecordPanel(null);
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [recordPanel]);
 
   const filteredIssues = useMemo(
     () =>
@@ -452,16 +581,20 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
         return;
       }
 
-      setIssueList((current) => current.map((entry) => (
-        entry.issueId === issue.issueId
-          ? {
-            ...entry,
-            status: 'resolved',
-            sourcePresent: false,
-          }
-          : entry
-      )));
       setActionState({ pendingId: '', error: '', success: '' });
+      startSortedFade(
+        issue.issueId,
+        'Deleted registry entry — done.',
+        () => setIssueList((current) => current.map((entry) => (
+          entry.issueId === issue.issueId
+            ? {
+              ...entry,
+              status: 'resolved',
+              sourcePresent: false,
+            }
+            : entry
+        ))),
+      );
     } catch (error) {
       setActionState({ pendingId: '', error: error.message || 'Delete failed', success: '' });
     }
@@ -518,23 +651,27 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
         return;
       }
 
-      setIssueList((current) => current.map((entry) => (
-        entry.issueId === issue.issueId
-          ? {
-            ...entry,
-            status: 'resolved',
-            sourcePresent: false,
-            hasRegistryEntry: true,
-            registryTutor: payload.student?.registryTutor || entry.registryTutor,
-            lifecycleStatus: payload.student?.lifecycleStatus || entry.lifecycleStatus,
-            lifecycleLabel: payload.student?.lifecycleLabel || entry.lifecycleLabel,
-            lifecycleConfidence: payload.student?.lifecycleConfidence || entry.lifecycleConfidence,
-            lifecycleReasons: payload.student?.lifecycleReasons || entry.lifecycleReasons,
-            lifecycleWarnings: payload.student?.lifecycleWarnings || entry.lifecycleWarnings,
-          }
-          : entry
-      )));
       setActionState({ pendingId: '', error: '', success: '' });
+      startSortedFade(
+        issue.issueId,
+        'Created registry entry — nice one.',
+        () => setIssueList((current) => current.map((entry) => (
+          entry.issueId === issue.issueId
+            ? {
+              ...entry,
+              status: 'resolved',
+              sourcePresent: false,
+              hasRegistryEntry: true,
+              registryTutor: payload.student?.registryTutor || entry.registryTutor,
+              lifecycleStatus: payload.student?.lifecycleStatus || entry.lifecycleStatus,
+              lifecycleLabel: payload.student?.lifecycleLabel || entry.lifecycleLabel,
+              lifecycleConfidence: payload.student?.lifecycleConfidence || entry.lifecycleConfidence,
+              lifecycleReasons: payload.student?.lifecycleReasons || entry.lifecycleReasons,
+              lifecycleWarnings: payload.student?.lifecycleWarnings || entry.lifecycleWarnings,
+            }
+            : entry
+        ))),
+      );
     } catch (error) {
       setActionState({ pendingId: '', error: error.message || 'Create registry entry failed', success: '' });
     }
@@ -609,6 +746,42 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
           skippedReason: payload.skippedReason || '',
         },
       }));
+
+      // The endpoint re-evaluates the live rules. If this issue's type is no longer
+      // detected against the fresh snapshot, the live state now matches the dashboard
+      // expectation — close the loop: persist the resolution and give the "Sorted ✓" beat.
+      const freshIssues = payload.issues || [];
+      const clearedByLiveCheck = (
+        LIVE_STRIPE_TYPES.includes(issue.type)
+        && issue.sourcePresent
+        && Boolean(payload.snapshot)
+        && !freshIssues.includes(issue.type)
+      );
+
+      if (clearedByLiveCheck) {
+        try {
+          await fetch(`/api/admin/issues/${issue.mmsId}/state`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              issueId: issue.issueId,
+              nextStatus: 'resolved',
+              note: 'Cleared by live Stripe refresh — Stripe now matches the dashboard expectation.',
+            }),
+          });
+        } catch {
+          // Best-effort persistence; the optimistic clear below still applies for this session.
+        }
+        startSortedFade(
+          issue.issueId,
+          'Stripe now matches the dashboard — resolved.',
+          () => setIssueList((current) => current.map((entry) => (
+            entry.issueId === issue.issueId
+              ? { ...entry, status: 'resolved', sourcePresent: false }
+              : entry
+          ))),
+        );
+      }
     } catch (error) {
       setStripeRefreshState((current) => ({
         ...current,
@@ -653,7 +826,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
         return;
       }
 
-      setIssueList((current) => current.map((entry) => (
+      const applyUpdate = () => setIssueList((current) => current.map((entry) => (
         entry.issueId === issue.issueId
           ? {
             ...entry,
@@ -664,6 +837,17 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
           }
           : entry
       )));
+
+      // Resolving or ignoring takes the card out of the active queue — give it the
+      // brief "Sorted ✓" beat first. Keeping active stays in place, no beat.
+      if (['resolved', 'ignored'].includes(nextStatus)) {
+        setActionState({ pendingId: '', error: '', success: '' });
+        const beat = nextStatus === 'resolved' ? 'Marked resolved — done.' : 'Ignored — done.';
+        startSortedFade(issue.issueId, beat, applyUpdate);
+        return;
+      }
+
+      applyUpdate();
       setActionState({ pendingId: '', error: '', success: '' });
     } catch (error) {
       setActionState({ pendingId: '', error: error.message || 'Issue update failed', success: '' });
@@ -825,44 +1009,47 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
         return;
       }
 
-      // When the action sets the expectation that resolves this flag's condition,
-      // clear the card optimistically so it visibly goes away (the next detection
-      // pass agrees). Otherwise update the row in place and keep it.
       const nextExpectation = action.payload.paymentExpectation;
       const resolvesIssue = (
         (issue.type === 'PAUSE EXPECTATION MISMATCH' && nextExpectation === 'stripe_paused_expected')
         || (issue.type === 'PAUSE EXPECTATION STALE' && ['stripe_active_expected', 'inactive_or_stopped'].includes(nextExpectation))
       );
 
-      setIssueList((current) => {
-        if (resolvesIssue) {
-          return current.filter((entry) => entry.issueId !== issue.issueId);
-        }
-        return current.map((entry) => (
-          entry.issueId === issue.issueId
-            ? {
-              ...entry,
-              paymentMode: payload.student.paymentMode || entry.paymentMode,
-              paymentExpectation: payload.student.paymentExpectation || '',
-              lifecycleStatus: payload.student.lifecycleStatus || entry.lifecycleStatus,
-              lifecycleLabel: payload.student.lifecycleLabel || entry.lifecycleLabel,
-              lifecycleConfidence: payload.student.lifecycleConfidence || entry.lifecycleConfidence,
-              lifecycleReasons: payload.student.lifecycleReasons || entry.lifecycleReasons,
-              lifecycleWarnings: payload.student.lifecycleWarnings || entry.lifecycleWarnings,
-            }
-            : entry
-        ));
-      });
+      // When the action resolves this flag's condition, show a brief "Sorted ✓" beat
+      // and then clear the card (the next detection pass agrees). Otherwise update the
+      // row in place and keep it.
+      if (resolvesIssue) {
+        setActionState({ pendingId: '', issueId: '', error: '', success: '' });
+        startSortedFade(
+          issue.issueId,
+          `Set to ${payload.student.paymentExpectation || 'updated'} — nice one.`,
+          () => setIssueList((current) => current.filter((entry) => entry.issueId !== issue.issueId)),
+        );
+        return;
+      }
+
+      setIssueList((current) => current.map((entry) => (
+        entry.issueId === issue.issueId
+          ? {
+            ...entry,
+            paymentMode: payload.student.paymentMode || entry.paymentMode,
+            paymentExpectation: payload.student.paymentExpectation || '',
+            lifecycleStatus: payload.student.lifecycleStatus || entry.lifecycleStatus,
+            lifecycleLabel: payload.student.lifecycleLabel || entry.lifecycleLabel,
+            lifecycleConfidence: payload.student.lifecycleConfidence || entry.lifecycleConfidence,
+            lifecycleReasons: payload.student.lifecycleReasons || entry.lifecycleReasons,
+            lifecycleWarnings: payload.student.lifecycleWarnings || entry.lifecycleWarnings,
+          }
+          : entry
+      )));
       const actionLogged = Boolean(payload.audit?.issueActionLogged);
       setActionState({
         pendingId: '',
         issueId: issue.issueId,
         error: '',
-        success: resolvesIssue
-          ? `Set ${issue.studentName || issue.mmsId} to ${payload.student.paymentExpectation || 'updated'} — flag cleared.`
-          : actionLogged
-            ? `Payment action logged for ${issue.studentName || issue.mmsId}. The issue remains active until the source check clears it or you resolve it.`
-            : `No payment field changed for ${issue.studentName || issue.mmsId}; the issue remains active.`,
+        success: actionLogged
+          ? `Payment action logged for ${issue.studentName || issue.mmsId}. The issue remains active until the source check clears it or you resolve it.`
+          : `No payment field changed for ${issue.studentName || issue.mmsId}; the issue remains active.`,
       });
     } catch (error) {
       setActionState({ pendingId: '', issueId: issue.issueId, error: error.message || 'Payment action failed', success: '' });
@@ -1081,8 +1268,26 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
           </div>
         ) : (
           filteredIssues.map((issue) => (
-            <article key={issue.id} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <article
+              key={issue.id}
+              className={`rounded-2xl border bg-white p-6 shadow-sm transition-opacity duration-700 ${severityEdgeClass(issue.severity)} ${fadingIssues[issue.issueId] ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200'}`}
+              style={fadingIssues[issue.issueId]?.fading ? { opacity: 0 } : undefined}
+            >
               {(() => {
+                const fadingEntry = fadingIssues[issue.issueId] || null;
+                if (fadingEntry) {
+                  return (
+                    <div className="flex items-start gap-3">
+                      <span className="mt-0.5 text-lg text-emerald-600" aria-hidden>✓</span>
+                      <div>
+                        <p className="text-base font-semibold text-emerald-900">
+                          {getStudentLabel(issue)} — sorted
+                        </p>
+                        <p className="mt-1 text-sm text-emerald-800">{fadingEntry.message}</p>
+                      </div>
+                    </div>
+                  );
+                }
                 const paymentActionPath = isPaymentIssue(issue) ? getPaymentActionPath(issue) : [];
                 const liveStripeState = stripeRefreshState[issue.issueId] || null;
                 const paymentQuickActions = getPaymentQuickActions(issue);
@@ -1092,7 +1297,6 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                   : [];
                 const keyFact = getIssueKeyFact(issue);
                 const refreshStripeFirst = issue.sourcePresent && shouldRefreshStripeFirst(issue);
-                const reasonText = getIssueReasonText(issue);
                 const recommendedActionText = getRecommendedActionText(issue);
                 const evidence = buildIssueEvidenceSummary(issue, freshness);
                 const pauseWorkflow = isPauseIssue(issue)
@@ -1104,84 +1308,70 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                   })
                   : null;
 
+                // One obvious primary action per card; everything else lives under Details.
+                let primaryKind = 'none';
+                if (!issue.sourcePresent) primaryKind = 'resolve';
+                else if (refreshStripeFirst) primaryKind = 'refresh';
+                else if (primaryQuickAction) primaryKind = 'quick';
+                else if (needsLiveStripeReview(issue)) primaryKind = 'refresh';
+                else if (issue.type === 'SHEETS ONLY') primaryKind = 'create';
+                else if (issue.adminStudentPath) primaryKind = 'open';
+
                 return (
                   <>
-              <div className="space-y-4">
-                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                  <div className="space-y-3">
+              <div className="space-y-3">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className={`rounded-full border px-3 py-1 text-xs font-medium ${severityClasses(issue.severity)}`}>{issue.severity}</span>
-                      <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700">
-                        {issue.status}
-                      </span>
-                      <span className={`rounded-full border px-3 py-1 text-xs font-medium ${issue.sourcePresent ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-slate-100 text-slate-700'}`}>
-                        {issue.sourcePresent ? 'Detected now' : 'Not currently detected'}
-                      </span>
+                      <h3 className="text-lg font-semibold text-slate-900">{getStudentLabel(issue)}</h3>
                       {issue.reappeared ? (
-                        <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-800">
+                        <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800">
                           Reappeared
                         </span>
                       ) : null}
+                      {!issue.sourcePresent ? (
+                        <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                          No longer detected
+                        </span>
+                      ) : null}
                       {issue.status === 'resolved' && issue.sourcePresent ? (
-                        <span className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-medium text-red-800">
+                        <span className="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-800">
                           Resolved but still detected
                         </span>
                       ) : null}
-                      <span className={`rounded-full border px-3 py-1 text-xs font-medium ${freshnessClasses(evidence.status)}`}>
-                        {evidence.label}: {evidence.status}
-                      </span>
                     </div>
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{issue.type}</p>
-                      <h3 className="mt-2 text-lg font-semibold text-slate-900">{issue.studentName || issue.mmsId}</h3>
-                      <p className="mt-1 text-sm text-slate-700">
-                        {reasonText}
+                    <p className="text-base leading-relaxed text-slate-800">{getIssueStory(issue)}</p>
+                    {getIssueWhatToDo(issue) ? (
+                      <p className="text-sm text-slate-500">
+                        <span className="font-medium text-slate-600">What to do:</span> {getIssueWhatToDo(issue)}
                       </p>
-                      {keyFact ? (
-                        <p className="mt-3 text-sm font-medium text-slate-900">{keyFact}</p>
-                      ) : null}
-                    </div>
+                    ) : null}
                   </div>
-                  <div className="text-sm text-slate-500">
-                    <p>{issue.generatedDate || '—'}</p>
-                    <p className="mt-1">Last seen: {formatDateTime(issue.lastSeenAt)}</p>
-                  </div>
+                  <span className="shrink-0 whitespace-nowrap text-xs font-medium text-slate-400">
+                    {getIssueCategoryLabel(issue)} · {issue.severity?.toLowerCase()}
+                  </span>
                 </div>
 
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-xs uppercase tracking-wide text-slate-500">Recommended next action</p>
-                  <p className="mt-2 text-sm text-slate-700">{recommendedActionText}</p>
-                  {issue.resolutionNote ? (
-                    <p className="mt-3 text-sm text-slate-600">
-                      Resolution note: {issue.resolutionNote}
-                    </p>
-                  ) : null}
-                  {issue.detail && !isPaymentIssue(issue) ? (
-                    <p className="mt-3 text-sm text-slate-600">
-                      Source detail: {issue.detail}
-                    </p>
-                  ) : null}
-                  {issue.identityMismatchHint ? (
-                    <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-                      {issue.identityMismatchHint.description}
-                    </p>
-                  ) : null}
-                  {shouldShowLifecycleContext(issue) ? (
-                    <p className="mt-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-950">
-                      {getLifecycleContextText(issue)}
-                    </p>
-                  ) : null}
-                  {shouldShowPaymentValueContext(issue) ? (
-                    <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-950">
-                      {getPaymentValueContextText(issue)}
-                    </p>
-                  ) : null}
-                </div>
+                {issue.identityMismatchHint ? (
+                  <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                    {issue.identityMismatchHint.description}
+                  </p>
+                ) : null}
               </div>
 
               <div className="mt-5 space-y-3">
                 <div className="flex flex-wrap items-center gap-3">
-                {refreshStripeFirst ? (
+                {primaryKind === 'resolve' ? (
+                  <button
+                    type="button"
+                    onClick={() => handleStatusChange(issue, 'resolved')}
+                    disabled={actionState.pendingId === issue.issueId}
+                    className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {actionState.pendingId === issue.issueId ? 'Saving…' : 'Mark resolved'}
+                  </button>
+                ) : null}
+                {primaryKind === 'refresh' ? (
                   <button
                     type="button"
                     onClick={() => handleRefreshIssueStripe(issue)}
@@ -1191,7 +1381,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                     {liveStripeState?.loading ? 'Checking…' : 'Refresh Stripe'}
                   </button>
                 ) : null}
-                {primaryQuickAction ? (
+                {primaryKind === 'quick' && primaryQuickAction ? (
                   <button
                     type="button"
                     onClick={() => handlePaymentQuickAction(issue, primaryQuickAction)}
@@ -1199,6 +1389,25 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                     className="rounded-lg border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-medium text-sky-900 transition hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {actionState.pendingId === issue.issueId ? 'Saving…' : primaryQuickAction.label}
+                  </button>
+                ) : null}
+                {primaryKind === 'create' ? (
+                  <button
+                    type="button"
+                    onClick={() => handleCreateRegistry(issue)}
+                    disabled={actionState.pendingId === issue.issueId}
+                    className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {actionState.pendingId === issue.issueId ? 'Creating…' : 'Create registry entry'}
+                  </button>
+                ) : null}
+                {primaryKind === 'open' && issue.adminStudentPath ? (
+                  <button
+                    type="button"
+                    onClick={() => setRecordPanel({ path: issue.adminStudentPath, name: getStudentLabel(issue) })}
+                    className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700"
+                  >
+                    Open student record
                   </button>
                 ) : null}
                 {issue.stripeCustomerId ? (
@@ -1211,98 +1420,85 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                     View customer in Stripe ↗
                   </a>
                 ) : null}
-                {issue.email ? (
-                  <button
-                    type="button"
-                    onClick={() => copyEmail(issue)}
-                    title="Copy email to search in Stripe"
-                    className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-800 transition hover:bg-slate-100"
-                  >
-                    {copiedEmailIssueId === issue.issueId ? 'Email copied ✓' : `Copy email: ${issue.email}`}
-                  </button>
-                ) : null}
-                {actionState.issueId === issue.issueId && (actionState.error || actionState.success) ? (
-                  <p className={`basis-full text-sm ${actionState.error ? 'text-red-700' : 'text-emerald-700'}`}>
-                    {actionState.error || actionState.success}
-                  </p>
-                ) : null}
-                {issue.adminStudentPath ? (
-                  <Link
-                    href={issue.adminStudentPath}
-                    className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700"
-                  >
-                    Open student record
-                  </Link>
-                ) : null}
-                {issue.type === 'REGISTRY ONLY' ? (
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(issue)}
-                    disabled={actionState.pendingId === issue.id}
-                    className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-800 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {actionState.pendingId === issue.id ? 'Deleting…' : 'Delete registry entry'}
-                  </button>
-                ) : null}
-                {issue.type === 'SHEETS ONLY' ? (
-                  <button
-                    type="button"
-                    onClick={() => handleCreateRegistry(issue)}
-                    disabled={actionState.pendingId === issue.issueId}
-                    className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {actionState.pendingId === issue.issueId ? 'Creating…' : 'Create registry entry'}
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => handleStatusChange(issue, 'acknowledged')}
-                  disabled={actionState.pendingId === issue.issueId}
-                  className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {actionState.pendingId === issue.issueId ? 'Saving…' : 'Keep active'}
-                  </button>
-                {!issue.sourcePresent ? (
-                  <button
-                    type="button"
-                    onClick={() => handleStatusChange(issue, 'resolved')}
-                    disabled={actionState.pendingId === issue.issueId}
-                    className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {actionState.pendingId === issue.issueId ? 'Saving…' : 'Mark resolved'}
-                  </button>
-                ) : null}
-                {!refreshStripeFirst && needsLiveStripeReview(issue) && !primaryQuickAction ? (
-                  <button
-                    type="button"
-                    onClick={() => handleRefreshIssueStripe(issue)}
-                    disabled={Boolean(liveStripeState?.loading)}
-                    className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-900 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {liveStripeState?.loading ? 'Checking…' : 'Refresh Stripe'}
-                  </button>
-                ) : null}
                 <details className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700">
-                  <summary className="cursor-pointer list-none font-medium text-slate-900">More details</summary>
+                  <summary className="cursor-pointer list-none font-medium text-slate-900">Details</summary>
                   <div className="mt-4 space-y-4">
+                    <div className="flex flex-wrap gap-3">
+                      {issue.email ? (
+                        <button
+                          type="button"
+                          onClick={() => copyEmail(issue)}
+                          title="Copy email to search in Stripe"
+                          className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-800 transition hover:bg-slate-100"
+                        >
+                          {copiedEmailIssueId === issue.issueId ? 'Email copied ✓' : `Copy email: ${issue.email}`}
+                        </button>
+                      ) : null}
+                      {issue.adminStudentPath && primaryKind !== 'open' ? (
+                        <button
+                          type="button"
+                          onClick={() => setRecordPanel({ path: issue.adminStudentPath, name: getStudentLabel(issue) })}
+                          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700"
+                        >
+                          Open student record
+                        </button>
+                      ) : null}
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-xs uppercase tracking-wide text-slate-500">Recommended next action</p>
+                      <p className="mt-2 text-sm text-slate-700">{recommendedActionText}</p>
+                      {keyFact ? (
+                        <p className="mt-3 text-sm font-medium text-slate-900">{keyFact}</p>
+                      ) : null}
+                      {issue.resolutionNote ? (
+                        <p className="mt-3 text-sm text-slate-600">
+                          Resolution note: {issue.resolutionNote}
+                        </p>
+                      ) : null}
+                      {issue.detail && !isPaymentIssue(issue) ? (
+                        <p className="mt-3 text-sm text-slate-600">
+                          Source detail: {issue.detail}
+                        </p>
+                      ) : null}
+                      {shouldShowLifecycleContext(issue) ? (
+                        <p className="mt-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-950">
+                          {getLifecycleContextText(issue)}
+                        </p>
+                      ) : null}
+                      {shouldShowPaymentValueContext(issue) ? (
+                        <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-950">
+                          {getPaymentValueContextText(issue)}
+                        </p>
+                      ) : null}
+                    </div>
                     <div className="flex flex-wrap gap-3">
                       <button
                         type="button"
-                        onClick={() => handleStatusChange(issue, 'ignored')}
+                        onClick={() => handleStatusChange(issue, 'acknowledged')}
                         disabled={actionState.pendingId === issue.issueId}
-                        className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-800 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        {actionState.pendingId === issue.issueId ? 'Saving…' : 'Ignore'}
+                        {actionState.pendingId === issue.issueId ? 'Saving…' : 'Keep active'}
                       </button>
-                      {issue.sourcePresent ? (
-                      <button
-                        type="button"
-                        onClick={() => handleStatusChange(issue, 'resolved')}
-                        disabled={actionState.pendingId === issue.issueId}
-                        className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {actionState.pendingId === issue.issueId ? 'Saving…' : 'Mark resolved'}
-                      </button>
+                      {issue.sourcePresent && primaryKind !== 'resolve' ? (
+                        <button
+                          type="button"
+                          onClick={() => handleStatusChange(issue, 'resolved')}
+                          disabled={actionState.pendingId === issue.issueId}
+                          className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {actionState.pendingId === issue.issueId ? 'Saving…' : 'Mark resolved'}
+                        </button>
+                      ) : null}
+                      {issue.type === 'REGISTRY ONLY' ? (
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(issue)}
+                          disabled={actionState.pendingId === issue.id}
+                          className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-800 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {actionState.pendingId === issue.id ? 'Deleting…' : 'Delete registry entry'}
+                        </button>
                       ) : null}
                       {!refreshStripeFirst && needsLiveStripeReview(issue) && primaryQuickAction ? (
                         <button
@@ -1314,6 +1510,14 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                           {liveStripeState?.loading ? 'Checking…' : 'Refresh Stripe'}
                         </button>
                       ) : null}
+                      <button
+                        type="button"
+                        onClick={() => handleStatusChange(issue, 'ignored')}
+                        disabled={actionState.pendingId === issue.issueId}
+                        className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-800 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {actionState.pendingId === issue.issueId ? 'Saving…' : 'Ignore'}
+                      </button>
                       {secondaryQuickActions.map((action) => (
                       <button
                         key={action.label}
@@ -1455,6 +1659,11 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                   </div>
                 </details>
                 </div>
+                {actionState.issueId === issue.issueId && (actionState.error || actionState.success) ? (
+                  <p className={`text-sm ${actionState.error ? 'text-red-700' : 'text-emerald-700'}`}>
+                    {actionState.error || actionState.success}
+                  </p>
+                ) : null}
               </div>
               {needsLiveStripeReview(issue) && (liveStripeState?.error || liveStripeState?.skippedReason || liveStripeState?.snapshot) ? (
                 <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50/70 p-4">
@@ -1477,6 +1686,47 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
           ))
         )}
       </section>
+
+      {recordPanel ? (
+        <div className="fixed inset-0 z-50 flex">
+          <div
+            className="flex-1 bg-slate-900/30 backdrop-blur-[1px]"
+            onClick={() => setRecordPanel(null)}
+            aria-hidden
+          />
+          <aside className="flex h-full w-full max-w-3xl flex-col border-l border-slate-200 bg-white shadow-2xl">
+            <header className="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-3">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-slate-500">Student record</p>
+                <p className="text-sm font-semibold text-slate-900">{recordPanel.name}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href={recordPanel.path}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
+                >
+                  Open in full page ↗
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setRecordPanel(null)}
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
+                >
+                  Close ✕
+                </button>
+              </div>
+            </header>
+            <iframe
+              key={recordPanel.path}
+              src={recordPanel.path}
+              title={`Student record: ${recordPanel.name}`}
+              className="h-full w-full flex-1 border-0"
+            />
+          </aside>
+        </div>
+      ) : null}
     </div>
   );
 }

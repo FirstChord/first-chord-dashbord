@@ -224,7 +224,15 @@ function buildPaymentPausePrefillUrl({ item = {}, student = null } = {}) {
   if (!student?.mmsId) return '';
   const { startDate, endDate } = extractPauseDatesFromPlanningItem(item);
   if (!startDate || !endDate) return '';
-  const pauseToolEndDate = endDate === startDate ? addDaysToDateInput(endDate, 1) : endDate;
+
+  // For a single-lesson pause, make the window less fiddly than a tight single-day phase:
+  //   start  = the planning due date (the day you action it), not the lesson day
+  //   resume = a few days after the paused lesson
+  // so it's one clean window that comfortably covers the missed lesson.
+  const isSingleLesson = endDate === startDate;
+  const dueDate = `${item.targetDate || ''}`.match(/^\d{4}-\d{2}-\d{2}$/u) ? item.targetDate : '';
+  const pauseToolStartDate = isSingleLesson && dueDate && dueDate <= startDate ? dueDate : startDate;
+  const pauseToolEndDate = isSingleLesson ? addDaysToDateInput(startDate, 3) : endDate;
 
   const parentName = [
     student.parentFirstName || '',
@@ -236,7 +244,7 @@ function buildPaymentPausePrefillUrl({ item = {}, student = null } = {}) {
     planningId: item.planningId || '',
     studentName: student.fullName || '',
     email: student.email || '',
-    startDate,
+    startDate: pauseToolStartDate,
     endDate: pauseToolEndDate,
     reason: item.notes?.toLowerCase().includes('teacher') ? 'Teacher Holiday' : 'Student Holiday',
     mmsId: student.mmsId || '',
@@ -819,6 +827,7 @@ function QuickBrainCapture({
   setExpanded,
   onSubmit,
   onTutorAbsenceCapture,
+  onPauseCapture,
   pending = false,
 }) {
   const inferred = inferQuickCapture(rawNote);
@@ -893,13 +902,11 @@ function QuickBrainCapture({
     await onTutorAbsenceCapture(effectiveTutorShortName, cleanTutorDates);
   }
 
-  function applyPauseDraft() {
-    if (!pauseDraft.isComplete) {
+  async function captureStructuredPause() {
+    if (!pauseDraft.isComplete || !onPauseCapture) {
       return;
     }
-    setRawNote(pauseDraft.title);
-    setOptions((current) => ({
-      ...current,
+    await onPauseCapture(pauseDraft.title, {
       structuredCapture: 'pause',
       title: pauseDraft.title,
       notes: pauseDraft.notes,
@@ -909,9 +916,8 @@ function QuickBrainCapture({
       targetDate: pauseDraft.targetDate,
       nextAction: pauseDraft.nextAction,
       progressNote: pauseDraft.progressNote,
-      showPauseBuilder: true,
-      hidePauseBuilder: false,
-    }));
+      linkedStudentId: effectiveOptions.linkedStudentId || '',
+    });
   }
 
   return (
@@ -1078,11 +1084,12 @@ function QuickBrainCapture({
 
           <button
             type="button"
-            onClick={applyPauseDraft}
-            disabled={!pauseDraft.isComplete}
+            onClick={captureStructuredPause}
+            disabled={pending || !pauseDraft.isComplete}
             className="mt-3 inline-flex items-center gap-2 rounded-xl bg-violet-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Use these pause details
+            {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+            Capture pause
           </button>
         </div>
       ) : (
@@ -1248,19 +1255,21 @@ function QuickBrainCapture({
         </div>
       ) : null}
 
-      <button
-        type="submit"
-        disabled={pending || !rawNote.trim()}
-        className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-base font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
-      >
-        {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-        Capture
-      </button>
+      {pauseBuilderVisible ? null : (
+        <button
+          type="submit"
+          disabled={pending || !rawNote.trim()}
+          className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-base font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+        >
+          {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+          Capture
+        </button>
+      )}
     </form>
   );
 }
 
-function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides = {}, onStatus, onEdit, onProgress, onPauseCompleted, onRepairPauseDetails, pendingId }) {
+function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides = {}, onStatus, onEdit, onProgress, onPauseCompleted, onRepairPauseDetails, onOpenPauseTool, pendingId }) {
   const [progressNote, setProgressNote] = useState('');
   const [nextAction, setNextAction] = useState(item.nextAction || '');
   const [pauseToolRan, setPauseToolRan] = useState(false);
@@ -1357,14 +1366,23 @@ function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides =
     <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_22px_rgba(15,23,42,0.04)]">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-600">
-              {item.itemTypeLabel}
-            </span>
-            <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${momentumClasses(item.momentum)}`}>
-              {item.momentumLabel}
-            </span>
-          </div>
+          {isPauseReminder ? (
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Pause
+              {item.targetDate ? (
+                <span className="normal-case text-amber-800"> · do by {formatTargetDate(item.targetDate)}</span>
+              ) : null}
+            </p>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                {item.itemTypeLabel}
+              </span>
+              <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${momentumClasses(item.momentum)}`}>
+                {item.momentumLabel}
+              </span>
+            </div>
+          )}
           <h3 className="mt-3 text-base font-semibold text-slate-900">{item.title}</h3>
         </div>
         <button
@@ -1377,13 +1395,15 @@ function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides =
         </button>
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-600">
-        <span>{item.owner}</span>
-        <span>·</span>
-        <span>{item.areaLabel}</span>
-        <span>·</span>
-        <span>Updated {formatDateTime(item.updatedAt || item.createdAt)}</span>
-      </div>
+      {!isPauseReminder && (
+        <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-600">
+          <span>{item.owner}</span>
+          <span>·</span>
+          <span>{item.areaLabel}</span>
+          <span>·</span>
+          <span>Updated {formatDateTime(item.updatedAt || item.createdAt)}</span>
+        </div>
+      )}
 
       {item.outcome && (
         <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
@@ -1392,23 +1412,23 @@ function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides =
         </div>
       )}
 
-      {item.nextAction && (
+      {item.nextAction && !isPauseReminder && (
         <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-slate-800">
           <span className="font-semibold">Next action: </span>
           {item.nextAction}
         </div>
       )}
 
-      {item.targetDate ? (
+      {item.targetDate && !isPauseReminder ? (
         <div className="mt-3 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-sm text-amber-950">
           <span className="font-semibold">Do by: </span>
           {formatTargetDate(item.targetDate)}
         </div>
       ) : null}
 
-      {item.notes && <p className="mt-3 text-sm leading-6 text-slate-600">{shortPreview(item.notes)}</p>}
+      {item.notes && !isPauseReminder && <p className="mt-3 text-sm leading-6 text-slate-600">{shortPreview(item.notes)}</p>}
 
-      {linkFacts.length > 0 && (
+      {linkFacts.length > 0 && !isPauseReminder && (
         <div className="mt-3 flex flex-wrap gap-2">
           {linkFacts.map((fact) => (
             <LinkPill key={fact.label} label={fact.label} href={fact.href} />
@@ -1416,7 +1436,7 @@ function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides =
         </div>
       )}
 
-      {linkedWorkflowHref ? (
+      {linkedWorkflowHref && !isPauseReminder ? (
         <Link
           href={linkedWorkflowHref}
           className="mt-3 inline-flex rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-white"
@@ -1425,7 +1445,7 @@ function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides =
         </Link>
       ) : null}
 
-      {item.latestProgress && (
+      {item.latestProgress && !isPauseReminder && (
         <div className="mt-4 border-l-2 border-slate-200 pl-3 text-sm text-slate-600">
           <p className="font-semibold text-slate-800">{isSchoolForwardReview ? 'Latest reflection' : 'Latest progress'}</p>
           <p className="mt-1">{item.latestProgress.progressNote}</p>
@@ -1452,20 +1472,30 @@ function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides =
           {(
             <div className="space-y-3">
               <div>
-                <p className="text-sm font-semibold text-amber-950">Complete pause</p>
+                <p className="text-sm font-semibold text-amber-950">Complete this pause</p>
                 <p className="mt-1 text-xs leading-5 text-amber-800">
-                  Run the pause tool, send the parent confirmation, then mark this completed. The dashboard will align payment expectation and close the planning task.
+                  Run the tool, send the parent message, then mark it complete — the dashboard handles the rest.
                 </p>
               </div>
               {paymentPausePrefillUrl ? (
-                <a
-                  href={paymentPausePrefillUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex rounded-lg border border-violet-300 bg-white px-3 py-2 text-xs font-semibold text-violet-950 hover:bg-violet-50"
-                >
-                  Open payment pause tool
-                </a>
+                onOpenPauseTool ? (
+                  <button
+                    type="button"
+                    onClick={() => onOpenPauseTool(paymentPausePrefillUrl, linkedStudent?.fullName || item.title)}
+                    className="inline-flex rounded-lg border border-violet-300 bg-white px-3 py-2 text-xs font-semibold text-violet-950 hover:bg-violet-50"
+                  >
+                    Open payment pause tool
+                  </button>
+                ) : (
+                  <a
+                    href={paymentPausePrefillUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex rounded-lg border border-violet-300 bg-white px-3 py-2 text-xs font-semibold text-violet-950 hover:bg-violet-50"
+                  >
+                    Open payment pause tool
+                  </a>
+                )
               ) : (
                 <span className="rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs font-semibold text-amber-900">
                   Add structured pause dates to prefill the pause tool
@@ -1689,7 +1719,7 @@ function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides =
                 {isPending ? 'Completing...' : 'Mark pause completed'}
               </button>
               <p className="text-xs leading-5 text-amber-800">
-                This logs the confirmation, sets Stripe paused expected if needed, and marks the task done. It does not run Stripe directly.
+                Logs the confirmation and sets paused-expected if needed — doesn&apos;t run Stripe directly.
               </p>
               {!item.linkedStudentId ? (
                 <p className="rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs font-semibold text-amber-900">
@@ -1699,6 +1729,39 @@ function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides =
             </div>
           )}
         </div>
+      ) : null}
+
+      {isPauseReminder ? (
+        <details className="mt-4 rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2">
+          <summary className="cursor-pointer list-none text-xs font-semibold text-slate-700">Details</summary>
+          <div className="mt-3 space-y-3 text-sm text-slate-600">
+            <div className="flex flex-wrap gap-2 text-xs text-slate-500">
+              <span>{item.owner}</span>
+              <span>·</span>
+              <span>{item.areaLabel}</span>
+              <span>·</span>
+              <span>Updated {formatDateTime(item.updatedAt || item.createdAt)}</span>
+            </div>
+            {item.nextAction ? (
+              <p><span className="font-semibold text-slate-700">Next action: </span>{item.nextAction}</p>
+            ) : null}
+            {item.notes ? <p className="leading-6">{shortPreview(item.notes)}</p> : null}
+            {linkFacts.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {linkFacts.map((fact) => (
+                  <LinkPill key={fact.label} label={fact.label} href={fact.href} />
+                ))}
+              </div>
+            ) : null}
+            {item.latestProgress ? (
+              <div className="border-l-2 border-slate-200 pl-3">
+                <p className="font-semibold text-slate-800">Latest progress</p>
+                <p className="mt-1">{item.latestProgress.progressNote}</p>
+                <p className="mt-1 text-xs text-slate-500">{formatDateTime(item.latestProgress.createdAt)}</p>
+              </div>
+            ) : null}
+          </div>
+        </details>
       ) : null}
 
       <form
@@ -1770,6 +1833,17 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState(initialFilter);
   const [showDone, setShowDone] = useState(false);
+  // { url, name } when the pause-tool side window is open; null when closed.
+  const [pauseToolPanel, setPauseToolPanel] = useState(null);
+
+  useEffect(() => {
+    if (!pauseToolPanel) return undefined;
+    function onKey(event) {
+      if (event.key === 'Escape') setPauseToolPanel(null);
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [pauseToolPanel]);
   const editPanelRef = useRef(null);
 
   useEffect(() => {
@@ -1849,6 +1923,28 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
 
     const item = buildQuickCaptureItem(rawNote, quickOptions, studentOptions);
 
+    try {
+      await postPlanning({
+        mode: 'save',
+        item,
+        progressNote: item.progressNote,
+      });
+      setQuickNote('');
+      setQuickOptions({});
+      setQuickExpanded(false);
+    } catch (error) {
+      setSaveState({ pending: false, error: error.message, savedAt: '' });
+      setPendingId('');
+    }
+  }
+
+  async function handlePauseCapture(rawNote, overrides) {
+    const note = (rawNote || '').trim();
+    if (!note) {
+      setSaveState({ pending: false, error: 'Add the pause details before capturing.', savedAt: '' });
+      return;
+    }
+    const item = buildQuickCaptureItem(note, overrides, studentOptions);
     try {
       await postPlanning({
         mode: 'save',
@@ -2171,6 +2267,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
             setExpanded={setQuickExpanded}
             onSubmit={handleCapture}
             onTutorAbsenceCapture={handleTutorAbsenceCapture}
+            onPauseCapture={handlePauseCapture}
             pending={saveState.pending && !pendingId}
           />
         </div>
@@ -2252,6 +2349,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
                         onProgress={handleProgress}
                         onPauseCompleted={handlePauseCompleted}
                         onRepairPauseDetails={handleRepairPauseDetails}
+                        onOpenPauseTool={(url, name) => setPauseToolPanel({ url, name })}
                         pendingId={pendingId}
                       />
                     ))}
@@ -2335,6 +2433,47 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
           )}
         </aside>
       </section>
+
+      {pauseToolPanel ? (
+        <div className="fixed inset-0 z-50 flex">
+          <div
+            className="flex-1 bg-slate-900/30 backdrop-blur-[1px]"
+            onClick={() => setPauseToolPanel(null)}
+            aria-hidden
+          />
+          <aside className="flex h-full w-full max-w-3xl flex-col border-l border-slate-200 bg-white shadow-2xl">
+            <header className="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-3">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-slate-500">Payment pause tool</p>
+                <p className="text-sm font-semibold text-slate-900">{pauseToolPanel.name}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href={pauseToolPanel.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
+                >
+                  Open in full page ↗
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setPauseToolPanel(null)}
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
+                >
+                  Close ✕
+                </button>
+              </div>
+            </header>
+            <iframe
+              key={pauseToolPanel.url}
+              src={pauseToolPanel.url}
+              title={`Payment pause tool: ${pauseToolPanel.name}`}
+              className="h-full w-full flex-1 border-0"
+            />
+          </aside>
+        </div>
+      ) : null}
     </div>
   );
 }
