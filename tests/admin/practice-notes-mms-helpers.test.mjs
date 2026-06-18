@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  buildAttendanceSearchEndDate,
   buildPracticeNoteAttendancePayload,
   buildPracticeNoteEmailPayload,
   buildPracticeNoteEmailRecipients,
@@ -54,6 +55,29 @@ test('listPracticeNoteAttendanceCandidates removes future lessons beyond the saf
   ], new Date('2026-06-11T12:00:00Z'));
 
   assert.deepEqual(candidates.map((candidate) => candidate.attendanceId), ['atn_tomorrow']);
+});
+
+test('buildAttendanceSearchEndDate queries past now so a same-day lesson stays in the MMS window', () => {
+  // UK evening write-up: lesson earlier the same day must not fall on/after the EndDate boundary.
+  const now = new Date('2026-06-12T20:30:00Z');
+  const endDate = buildAttendanceSearchEndDate(now);
+  assert.equal(endDate, '2026-06-14');
+  // The lesson's own date is strictly before the EndDate, so it cannot be clipped.
+  assert.ok(endDate > '2026-06-12');
+});
+
+test('listPracticeNoteAttendanceCandidates keeps a lesson taught earlier the same day', () => {
+  const candidates = listPracticeNoteAttendanceCandidates([
+    {
+      ID: 'atn_today',
+      EventID: 'evt_today',
+      StudentID: 'sdt_test',
+      AttendanceStatus: 'Unrecorded',
+      EventStartDate: '2026-06-12T15:30:00',
+    },
+  ], new Date('2026-06-12T20:30:00Z'));
+
+  assert.deepEqual(candidates.map((candidate) => candidate.attendanceId), ['atn_today']);
 });
 
 test('selectPracticeNoteAttendanceTarget can target an explicit attendance ID', () => {
