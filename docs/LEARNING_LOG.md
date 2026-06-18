@@ -19,6 +19,20 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-18 — Tutor Dashboard Roster: StudentGroups vs BillingProfiles
+
+**Feature/change:** Fixed the roster filter in `getStudentsForTeacher()` (`lib/mms-client.js`) so a student is kept if EITHER their MMS `StudentGroups` OR their `BillingProfiles` link to the teacher. The old filter checked `StudentGroups` first and `return`ed on it, skipping the `BillingProfiles` fallback whenever `StudentGroups` was non-empty.
+
+**Why it exists:** Some MMS records carry an empty/teacherless `StudentGroups` entry (e.g. `[{}]`, `length === 1`) while the real teacher assignment lives only in `BillingProfiles`. With the early return, `StudentGroups.length > 0` was true, the empty group matched nothing, and the function returned false — silently dropping an active, correctly-assigned student. Found via Santi Freeth (active in registry/Sheet/MMS/Stripe, missing only from Finn's dashboard); the same bug was hiding **7 of Finn's 32** active students.
+
+**Source-of-truth impact:** None. The tutor dashboard roster is read live from MMS (`/api/sync` → `getStudentsForTeacher`); this only changes which MMS rows survive the post-fetch filter. MMS stays operational truth; the registry/Sheet were already correct.
+
+**Files/functions involved:**
+
+- `getStudentsForTeacher()` filter + `.map()` in `lib/mms-client.js`
+
+**What to watch out for:** If an active student is missing from one tutor's dashboard but present in the registry/Sheet/MMS, it is almost never a deletion — check their MMS record's `StudentGroups` vs `BillingProfiles`. A teacher link in `BillingProfiles` with an empty `StudentGroups` is the signature. Do **not** "fix" it by editing the registry. Probe with a teacher-scoped `/search/students` (`Statuses:["Active"]`, `TeacherIDs:[id]`) and compare the raw count to the filtered count. See `docs/admin/BUG_FIXES.md`.
+
 ### 2026-06-15 — Duplicate MMS ID Detection + Profile Resolution Gotcha
 
 **Feature/change:** `/admin/flags` shows a read-only banner listing any MMS ID used by 2+ Students-sheet rows. Prompted by a real incident: a row showing as "Elliot N/A" carried Yarah Love's MMS ID, so opening Elliot's profile silently showed Yarah.

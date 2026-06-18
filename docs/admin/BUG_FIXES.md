@@ -2,6 +2,34 @@
 
 Short notes for production issues we have already seen and how to recover them.
 
+## Active student missing from a tutor's dashboard
+
+**Date:** 18 Jun 2026
+
+**Symptom**
+
+- An active student is present in the registry, the Google Sheet, MMS, and Stripe, but does **not** appear on their tutor's `/dashboard` roster. First seen with Santi Freeth (Finn) — and it was simultaneously hiding 7 of Finn's 32 active students.
+
+**Root cause**
+
+- The roster comes live from MMS via `getStudentsForTeacher()` in `lib/mms-client.js`. Its post-fetch filter checked `StudentGroups` first and `return`ed on it, skipping the `BillingProfiles` fallback. Students whose MMS teacher link lives only in `BillingProfiles`, but who also carry an empty `StudentGroups` entry (`[{}]`, `length === 1`), matched nothing in `StudentGroups` and were dropped before `BillingProfiles` was ever checked.
+
+**How to confirm**
+
+```bash
+# 1. Prove it's not a deletion — student should be active across systems:
+python3 brain.py lookup "Student Name"     # from first-chord-brain/
+
+# 2. Inspect their MMS record. The signature is a teacher link in BillingProfiles
+#    with an empty StudentGroups. Query /search/students with
+#    Statuses:["Active"], TeacherIDs:[<teacherId>] and read the student's
+#    StudentGroups vs BillingProfiles (teacher IDs map is in lib/mms-client.js).
+```
+
+**Fix (applied 18 Jun 2026)**
+
+- Keep the student if **either** `StudentGroups` **or** `BillingProfiles` links to the teacher (no early return). Do **not** edit the registry/Sheet to "add them back" — those are already correct; the bug is in the MMS-derived roster filter only.
+
 ## Railway 502 on tutor dashboard
 
 **Date:** 20 May 2026
