@@ -734,6 +734,34 @@ function TextAreaField({ label, value, onChange, placeholder = '', rows = 3 }) {
   );
 }
 
+// Renders multi-line notes/reflections with line breaks preserved (the box is
+// plain text, not Markdown), collapsing long entries to a few lines with a
+// Show more/less toggle so a full meeting summary reads cleanly without
+// dominating the card.
+function ExpandableText({ text = '', previewLines = 4, className = '' }) {
+  const [expanded, setExpanded] = useState(false);
+  const full = `${text || ''}`.trim();
+  const lines = full.split(/\r?\n/);
+  const isLong = lines.length > previewLines || full.length > 400;
+  const preview = lines.slice(0, previewLines).join('\n').slice(0, 400);
+  const shown = expanded || !isLong ? full : preview;
+
+  return (
+    <div className={className}>
+      <p className="whitespace-pre-line">{shown}{!expanded && isLong ? '…' : ''}</p>
+      {isLong ? (
+        <button
+          type="button"
+          onClick={() => setExpanded((value) => !value)}
+          className="mt-1 text-xs font-semibold text-blue-700 hover:text-blue-900"
+        >
+          {expanded ? 'Show less' : 'Show more'}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 function buildSearchText(item) {
   return [
     item.title,
@@ -1640,7 +1668,7 @@ function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides =
       {item.latestProgress && !isPauseReminder && (
         <div className="mt-4 border-l-2 border-slate-200 pl-3 text-sm text-slate-600">
           <p className="font-semibold text-slate-800">{isSchoolForwardReview ? 'Latest reflection' : 'Latest progress'}</p>
-          <p className="mt-1">{item.latestProgress.progressNote}</p>
+          <ExpandableText text={item.latestProgress.progressNote} className="mt-1" />
           <p className="mt-1 text-xs text-slate-500">{formatDateTime(item.latestProgress.createdAt)}</p>
         </div>
       )}
@@ -1948,7 +1976,7 @@ function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides =
             {item.latestProgress ? (
               <div className="border-l-2 border-slate-200 pl-3">
                 <p className="font-semibold text-slate-800">Latest progress</p>
-                <p className="mt-1">{item.latestProgress.progressNote}</p>
+                <ExpandableText text={item.latestProgress.progressNote} className="mt-1" />
                 <p className="mt-1 text-xs text-slate-500">{formatDateTime(item.latestProgress.createdAt)}</p>
               </div>
             ) : null}
@@ -2400,7 +2428,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
                 {schoolForwardReflections.map((reflection) => (
                   <div key={reflection.progressId} className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
                     <p className="text-xs font-semibold text-slate-500">{formatDateTime(reflection.createdAt)}</p>
-                    <p className="mt-1 text-sm leading-6 text-slate-700">{shortPreview(reflection.progressNote, 180)}</p>
+                    <ExpandableText text={reflection.progressNote} className="mt-1 text-sm leading-6 text-slate-700" />
                   </div>
                 ))}
               </div>
