@@ -19,6 +19,28 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-19 — Planning Pause Polish, Multi-Student Links, and a Sheet Name-Data Repair
+
+**Feature/change:** A cluster of Planning-capture fixes plus a Students-sheet data repair.
+- Linked-student **"Clear" now sticks** — clearing was resetting the selection to empty, which re-enabled name auto-detection, so the student named in the note re-attached instantly. An explicit clear is tracked distinctly (`studentSelectionSource: 'cleared'`) and suppresses inference.
+- **Stop-word guard** in `inferStudentFromText` — "the" was prefix-matching "Theodore". Common/short tokens are ignored and a token must be 4+ chars to prefix-match a first name.
+- **Multiple students per plan** — stored comma-separated in the existing `linked_student_id` column (no schema change). `normalisePlanningItem` exposes both `linkedStudentId` (primary/first) and `linkedStudentIds` (full list); pause/schedule flows stay bound to the primary.
+- **Inline "Refresh from MMS"** in the pause builder — pulls the schedule live via `/api/admin/students/[mmsId]/schedule` when the cached `Schedule_Context` row is stale/missing, instead of sending the user to the student record.
+- **Adult-learner pause message** — `buildPauseConfirmationMessage` addresses students with no parent on record directly ("you / your payment"), not in third person.
+- **Surname data fix** — surnames were sitting in a stray first column (header `san`) with the real `Student Surname` column empty, so the parser read blank surnames for ~197/198 students. Fixed in the **sheet**, not in code.
+
+**Why it exists:** All surfaced from real use. The pause "couldn't find Lloyd's lessons" report turned out to be a month-stale cache (MMS had the lessons), which led to both the inline refresh and discovering the systemic surname issue.
+
+**Source-of-truth impact:** None new. Multi-student reuses the same column. The surname repair reinforced the rule: fix canonical sheet data in the sheet, never patch the consumer.
+
+**Files/functions involved:**
+
+- `components/admin/AdminPlanningPageClient.js` — `inferStudentFromText`, `StudentSearchField` (multi + clear), `buildQuickCaptureItem`, `buildPauseConfirmationMessage`, `refreshPauseSchedule`
+- `lib/admin/planning-helpers.mjs` — `parseLinkedStudentIds`, `serializeLinkedStudentIds`, `normalisePlanningItem`
+- `lib/admin/planning.js` — `mergePlanningItem`
+
+**What to watch out for:** A cached value that can silently go stale (like `Schedule_Context`) should offer a one-click live refresh rather than a "go elsewhere" note. For sheet data, check the canonical source first — and beware header whitespace and duplicate headers: after renaming `san` the column briefly became `"Student Surname "` (trailing space) alongside a second empty `Student Surname`, and the empty duplicate would win.
+
 ### 2026-06-18 — Tutor Dashboard Roster: StudentGroups vs BillingProfiles
 
 **Feature/change:** Fixed the roster filter in `getStudentsForTeacher()` (`lib/mms-client.js`) so a student is kept if EITHER their MMS `StudentGroups` OR their `BillingProfiles` link to the teacher. The old filter checked `StudentGroups` first and `return`ed on it, skipping the `BillingProfiles` fallback whenever `StudentGroups` was non-empty.

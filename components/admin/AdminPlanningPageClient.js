@@ -269,11 +269,23 @@ function buildPauseConfirmationMessage({ item = {}, student = null } = {}) {
   const { startDate, endDate } = extractPauseDatesFromPlanningItem(item);
   if (!startDate || !endDate) return '';
 
-  const parentName = firstName(student.parentFirstName) || firstName(student.parentLastName) || 'there';
-  const studentName = firstName(student.fullName) || student.fullName || 'the lesson';
+  const studentFirst = firstName(student.fullName) || student.fullName || '';
+  const studentName = studentFirst || 'the lesson';
   const startLabel = formatFriendlyPauseDate(startDate);
   const endLabel = formatFriendlyPauseDate(endDate);
 
+  // Adult learners have no parent on record — address them directly ("you")
+  // instead of talking about them to a parent ("they").
+  const parentFirst = firstName(student.parentFirstName) || firstName(student.parentLastName);
+  if (!parentFirst) {
+    const greetingName = studentFirst || 'there';
+    if (startDate === endDate) {
+      return `Hi ${greetingName}, just confirming we have paused payment for your lesson on ${startLabel}. Thanks!`;
+    }
+    return `Hi ${greetingName}, just confirming we have paused your payment from ${startLabel}. You are expected back from ${endLabel}, so lessons and payment should continue as normal from then. Thanks!`;
+  }
+
+  const parentName = parentFirst;
   if (startDate === endDate) {
     return `Hi ${parentName}, just confirming we have paused payment for ${studentName}'s lesson on ${startLabel}. Thanks!`;
   }
