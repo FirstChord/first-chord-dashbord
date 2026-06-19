@@ -19,6 +19,22 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-19 — Monday Scheduling Loop (back-half of the Friday reflection)
+
+**Feature/change:** A recurring Monday prompt that closes the Friday loop. Friday reflects/decides (captures a "next improvement to make time for" list); Monday schedules/commits. A `MONDAY_SCHEDULE_PLANNING_ID` system item is auto-created/refreshed each week (mirrors the Friday `SCHOOL_FORWARD_PLANNING_ID` plumbing via a shared `ensureRecurringSystemItem`). A top "Monday scheduling" panel on `/admin/planning` extracts the intentions from the latest reflection (`extractReflectionIntentions` + `getLatestSchoolForwardReflectionNote`) and gives each a "Schedule this" button that creates a dated action item (active, Unassigned, Do-by this Friday, `parentPlanningId` = the reflection).
+
+**Why it exists:** "Next improvement to make time for" was captured as free text inside a reflection note and otherwise evaporated — nothing turned intentions into owned, dated work. This is the same close-the-loop pattern as pause-resume and onboarding check-ins.
+
+**Source-of-truth impact:** None new. Scheduled items are ordinary `Planning_Items` linked back to the reflection via `parentPlanningId`. The Monday item is a system-generated recurring planning item like the Friday one.
+
+**Files/functions involved:**
+
+- `lib/admin/planning-helpers.mjs` — `MONDAY_SCHEDULE_PLANNING_ID`, `calculateMondayScheduleDate`, `buildMondaySchedulePlanningItem`, `isMondaySchedulePlanningItem`, `shouldRefreshMondaySchedulePlanningItem`, `getLatestSchoolForwardReflectionNote`, `extractReflectionIntentions`; Monday id added to `isMeetingPlanningItem`
+- `lib/admin/planning.js` — `ensureRecurringSystemItem` (shared) + `ensureSystemPlanningItems`
+- `components/admin/AdminPlanningPageClient.js` — Monday panel + `handleScheduleIntention`
+
+**What to watch out for:** `extractReflectionIntentions` is a deliberately light parse — it keys off a line matching "next improvement" and stops at the next `Section:` heading. It is a convenience, not task classification; the human still clicks to schedule. Already-scheduled intentions are detected by matching `parentPlanningId` + lowercased title so reloads don't offer duplicates. The panel currently shows whenever the Monday item is open and intentions exist (persistent nudge), not strictly on Mondays — gate on the date if that changes.
+
 ### 2026-06-19 — Planning Pause Polish, Multi-Student Links, and a Sheet Name-Data Repair
 
 **Feature/change:** A cluster of Planning-capture fixes plus a Students-sheet data repair.

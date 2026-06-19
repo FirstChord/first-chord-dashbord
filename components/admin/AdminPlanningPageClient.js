@@ -9,7 +9,11 @@ import {
   PLANNING_OWNERS,
   PLANNING_STATUSES,
   SCHOOL_FORWARD_PLANNING_ID,
+  MONDAY_SCHEDULE_PLANNING_ID,
   buildSchoolForwardReflections,
+  calculateFridayReviewDate,
+  extractReflectionIntentions,
+  getLatestSchoolForwardReflectionNote,
   buildPauseLessonDateSuggestions,
   buildStructuredPausePlanningDraft,
   detectTutorAbsenceCapture,
@@ -2050,6 +2054,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
   const [saveState, setSaveState] = useState({ pending: false, error: '', savedAt: '' });
   const [pendingId, setPendingId] = useState('');
   const [paymentExpectationOverrides, setPaymentExpectationOverrides] = useState({});
+  const [scheduledIntentions, setScheduledIntentions] = useState({});
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState(initialFilter);
   const [showDone, setShowDone] = useState(false);
@@ -2152,6 +2157,36 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
       setQuickNote('');
       setQuickOptions({});
       setQuickExpanded(false);
+    } catch (error) {
+      setSaveState({ pending: false, error: error.message, savedAt: '' });
+      setPendingId('');
+    }
+  }
+
+  // Monday review: turn one "next improvement" intention from Friday's reflection
+  // into a dated, owned action item linked back to the reflection.
+  async function handleScheduleIntention(text) {
+    const title = `${text || ''}`.trim();
+    if (!title) {
+      return;
+    }
+    try {
+      await postPlanning({
+        mode: 'save',
+        item: {
+          title,
+          notes: title,
+          itemType: 'action',
+          owner: 'Unassigned',
+          status: 'active',
+          area: 'other',
+          parentPlanningId: SCHOOL_FORWARD_PLANNING_ID,
+          targetDate: calculateFridayReviewDate(new Date()),
+          progressNote: 'Scheduled from Friday reflection.',
+        },
+        progressNote: 'Scheduled from Friday reflection.',
+      });
+      setScheduledIntentions((current) => ({ ...current, [title.toLowerCase()]: true }));
     } catch (error) {
       setSaveState({ pending: false, error: error.message, savedAt: '' });
       setPendingId('');
@@ -2379,6 +2414,35 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
     [planning.items],
   );
 
+  const mondayItem = useMemo(
+    () => (planning.items || []).find((item) => item.planningId === MONDAY_SCHEDULE_PLANNING_ID) || null,
+    [planning.items],
+  );
+  const latestReflectionNote = useMemo(
+    () => getLatestSchoolForwardReflectionNote(planning.items || []),
+    [planning.items],
+  );
+  const reflectionIntentions = useMemo(
+    () => extractReflectionIntentions(latestReflectionNote?.progressNote || ''),
+    [latestReflectionNote],
+  );
+  // Intentions already turned into linked action items (so they don't get
+  // re-scheduled across reloads), keyed by lowercased title.
+  const alreadyScheduledTitles = useMemo(() => {
+    const set = new Set();
+    for (const item of planning.items || []) {
+      if (item.parentPlanningId === SCHOOL_FORWARD_PLANNING_ID && `${item.title || ''}`.trim()) {
+        set.add(`${item.title}`.trim().toLowerCase());
+      }
+    }
+    return set;
+  }, [planning.items]);
+  const mondayReviewOpen = Boolean(
+    mondayItem
+    && !['done', 'parked'].includes(mondayItem.status)
+    && reflectionIntentions.length > 0,
+  );
+
   return (
     <div className="space-y-8">
       <section>
@@ -2393,6 +2457,53 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
           Capture ideas quickly, turn chosen work into initiatives, and keep momentum visible through next actions and progress notes.
         </p>
       </section>
+
+      {mondayReviewOpen ? (
+        <section className="rounded-[1.2rem] border border-blue-100 bg-blue-50/70 p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">Monday scheduling</p>
+              <h3 className="mt-1 text-base font-semibold text-slate-900">Schedule what we said we’d work on</h3>
+              <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">
+                From Friday’s reflection ({formatDateTime(latestReflectionNote.createdAt)}). Turn each “next improvement” into a dated, owned task — each gets a “Do by” of this Friday and links back to the reflection.
+              </p>
+            </div>
+            <Link
+              href="/admin/planning?filter=meeting"
+              className="whitespace-nowrap rounded-full border border-blue-200 bg-white px-2.5 py-1 text-xs font-semibold text-blue-800 hover:bg-blue-50"
+            >
+              Meeting view
+            </Link>
+          </div>
+          <div className="mt-3 space-y-2">
+            {reflectionIntentions.map((intention) => {
+              const scheduled = scheduledIntentions[intention.toLowerCase()] || alreadyScheduledTitles.has(intention.toLowerCase());
+              return (
+                <div key={intention} className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-white px-3 py-2">
+                  <span className="text-sm text-slate-800">{intention}</span>
+                  {scheduled ? (
+                    <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                      <Check className="h-3.5 w-3.5" /> Scheduled
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleScheduleIntention(intention)}
+                      disabled={saveState.pending}
+                      className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-blue-200 bg-white px-2.5 py-1 text-xs font-semibold text-blue-800 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <Plus className="h-3.5 w-3.5" /> Schedule this
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <p className="mt-3 text-xs leading-5 text-slate-500">
+            Scheduled items appear on the board as dated actions. Mark the Monday card done once you’ve scheduled this week’s work.
+          </p>
+        </section>
+      ) : null}
 
       {filter === 'meeting' ? (
         <section className="rounded-[1.2rem] border border-emerald-100 bg-emerald-50/80 p-5">

@@ -12,7 +12,12 @@ import {
   calculateFirstLessonCheckinDate,
   detectTutorAbsenceCapture,
   calculateFridayReviewDate,
+  calculateMondayScheduleDate,
   calculateNextMeetingDate,
+  buildMondaySchedulePlanningItem,
+  extractReflectionIntentions,
+  shouldRefreshMondaySchedulePlanningItem,
+  MONDAY_SCHEDULE_PLANNING_ID,
   buildPlanningDueSummary,
   buildPlanningSummary,
   buildStructuredPausePlanningDraft,
@@ -66,6 +71,57 @@ test('calculates Friday review and next meeting dates', () => {
   assert.equal(calculateFridayReviewDate(new Date('2026-06-12T10:00:00.000Z')), '2026-06-12');
   assert.equal(calculateFridayReviewDate(new Date('2026-06-12T10:00:00.000Z'), { skipToday: true }), '2026-06-19');
   assert.equal(calculateNextMeetingDate(new Date('2026-06-13T10:00:00.000Z')), '2026-06-15');
+});
+
+test('calculates the Monday scheduling date', () => {
+  assert.equal(calculateMondayScheduleDate(new Date('2026-06-03T12:00:00.000Z')), '2026-06-08'); // Wed -> next Mon
+  assert.equal(calculateMondayScheduleDate(new Date('2026-06-08T10:00:00.000Z')), '2026-06-08'); // Mon -> same Mon
+  assert.equal(calculateMondayScheduleDate(new Date('2026-06-08T10:00:00.000Z'), { skipToday: true }), '2026-06-15'); // Mon -> next Mon
+});
+
+test('builds the Monday scheduling item dated to Monday', () => {
+  const item = buildMondaySchedulePlanningItem({ now: new Date('2026-06-03T12:00:00.000Z') });
+  assert.equal(item.planningId, MONDAY_SCHEDULE_PLANNING_ID);
+  assert.equal(item.targetDate, '2026-06-08');
+  assert.equal(item.area, 'workflow');
+  assert.equal(item.status, 'waiting');
+});
+
+test('refreshes the Monday item when missing or completed-and-past', () => {
+  assert.equal(shouldRefreshMondaySchedulePlanningItem({}, NOW), true);
+  assert.equal(shouldRefreshMondaySchedulePlanningItem(
+    { planningId: MONDAY_SCHEDULE_PLANNING_ID, targetDate: '2026-06-08', status: 'waiting' }, NOW), false);
+  assert.equal(shouldRefreshMondaySchedulePlanningItem(
+    { planningId: MONDAY_SCHEDULE_PLANNING_ID, targetDate: '2026-06-01', status: 'done' }, NOW), true);
+});
+
+test('extracts next-improvement intentions from a reflection note', () => {
+  const note = [
+    'What moved forward:',
+    '- New chairs',
+    '',
+    'Next improvement to make time for:',
+    '',
+    '- Develop the marketing campaign',
+    'Recruit a piano teacher',
+    '* Explore drum lessons',
+  ].join('\n');
+  assert.deepEqual(extractReflectionIntentions(note), [
+    'Develop the marketing campaign',
+    'Recruit a piano teacher',
+    'Explore drum lessons',
+  ]);
+  assert.deepEqual(extractReflectionIntentions('No section here'), []);
+});
+
+test('stops extracting intentions at the next section heading', () => {
+  const note = [
+    'Next improvement to make time for:',
+    '- First thing',
+    'Another section:',
+    '- Should be ignored',
+  ].join('\n');
+  assert.deepEqual(extractReflectionIntentions(note), ['First thing']);
 });
 
 test('first-lesson check-in lands on the first Mon/Wed/Fri after the lesson', () => {
