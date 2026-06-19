@@ -19,6 +19,20 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-19 — Calm "Due Today" Planning View
+
+**Feature/change:** The `/admin/planning?filter=due_now` view (the "on the day" surface, linked from the overview's Due Now count) now renders calm, focused cards instead of the full status-grouped board. New `DueTodayCard` shows a plain-language headline (`getPlanningStory`), a "what to do" line (`getPlanningWhatToDo`), and a minimal due chip (`dueChipLabel`: "Today" / "Overdue N days") + owner — sorted overdue-first, no status groups. Primary action is **Mark done** (or, for pauses, the steps shown inline); plus **Defer until next meeting** (`handleDefer` → `calculateNextMeetingDate`, Mon/Thu/Fri) and a **Details** toggle. `PlanningCard` gained a `compact` prop that hides the header/title-restate, Edit, and the status-button row; pause cards embed it in compact mode so the pause workflow (open pause tool on the side screen, copy parent message, run/sent checklist, complete, date repair) shows unhidden without the noise. Every other filter view is unchanged.
+
+**Why it exists:** The day-of view reused the heavy multi-purpose `PlanningCard` grouped by Inbox/Active/Waiting/…, which is too noisy for a focused "what needs doing today" moment. Mirrors the calm `/admin/flags` issue-card pattern (story + what-to-do + one obvious action, rest under Details).
+
+**Source-of-truth impact:** None. Pure client presentation over the same `Planning_Items`; Mark done reuses the status update, Defer is an ordinary save that bumps `targetDate`.
+
+**Files/functions involved:**
+
+- `components/admin/AdminPlanningPageClient.js` — `DueTodayCard`, `getPlanningStory`, `getPlanningWhatToDo`, `dueChipLabel`, `handleDefer`, the `filter === 'due_now'` render branch, and `PlanningCard`'s `compact` prop. Pattern reference: `AdminIssuesPageClient.js` `getIssueStory`/`getIssueWhatToDo`.
+
+**What to watch out for:** `compact` only hides the header + status-button row; the pause-completion controls live inside the pause block, so they survive compact mode — don't move them into the header. Keep full tooling reachable (pause inline; others under Details) so nothing is lost versus the full board.
+
 ### 2026-06-19 — Monday Scheduling Loop (back-half of the Friday reflection)
 
 **Feature/change:** A recurring Monday prompt that closes the Friday loop. Friday reflects/decides (captures a "next improvement to make time for" list); Monday schedules/commits. A `MONDAY_SCHEDULE_PLANNING_ID` system item is auto-created/refreshed each week (mirrors the Friday `SCHOOL_FORWARD_PLANNING_ID` plumbing via a shared `ensureRecurringSystemItem`). A top "Monday scheduling" panel on `/admin/planning` extracts the intentions from the latest reflection (`extractReflectionIntentions` + `getLatestSchoolForwardReflectionNote`) and gives each a "Schedule this" button that creates a dated action item (active, Unassigned, Do-by this Friday, `parentPlanningId` = the reflection).

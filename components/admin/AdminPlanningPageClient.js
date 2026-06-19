@@ -12,6 +12,7 @@ import {
   MONDAY_SCHEDULE_PLANNING_ID,
   buildSchoolForwardReflections,
   calculateFridayReviewDate,
+  calculateNextMeetingDate,
   extractReflectionIntentions,
   getLatestSchoolForwardReflectionNote,
   buildPauseLessonDateSuggestions,
@@ -327,6 +328,56 @@ function isDueNowPlanningItem(item = {}, now = new Date()) {
 
 function isOpenPlanningItem(item = {}) {
   return !['done', 'parked'].includes(item.status);
+}
+
+// Plain-language headline for the calm "due today" cards. Auto-generated pause
+// cards get a calmer framing; user-written items already read as human, so we
+// use their title. (Mirrors getIssueStory in AdminIssuesPageClient.)
+function getPlanningStory(item = {}, studentOptions = []) {
+  if (isPausePlanningItem(item)) {
+    const name = findStudentById(studentOptions, item.linkedStudentId)?.fullName || 'a student';
+    const { startDate, endDate } = extractPauseDatesFromPlanningItem(item);
+    if (startDate && endDate && startDate !== endDate) {
+      return `Pause ${name} from ${formatTargetDate(startDate)} until ${formatTargetDate(endDate)}.`;
+    }
+    if (startDate) {
+      return `Pause ${name}'s lesson on ${formatTargetDate(startDate)}.`;
+    }
+    return `Sort out ${name}'s pause.`;
+  }
+  return `${item.title || ''}`.trim() || 'This needs a look today.';
+}
+
+// The calm "what to do" line beneath the headline.
+function getPlanningWhatToDo(item = {}) {
+  const next = `${item.nextAction || ''}`.trim();
+  if (next) {
+    return next;
+  }
+  if (isPausePlanningItem(item)) {
+    return 'Open the pause steps: pause the payment, then send the confirmation message.';
+  }
+  if (item.linkedWorkflowId === 'tutor-absence') {
+    return 'Open the tutor-absence workflow to arrange cover.';
+  }
+  return 'Take the next step, then mark it done.';
+}
+
+// A small due chip: "Today" or "Overdue N days".
+function dueChipLabel(targetDate = '', now = new Date()) {
+  const date = `${targetDate || ''}`.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return 'No date';
+  }
+  const today = formatDateInput(now);
+  if (date === today) {
+    return 'Today';
+  }
+  if (date < today) {
+    const days = Math.round((new Date(`${today}T00:00:00`) - new Date(`${date}T00:00:00`)) / 86_400_000);
+    return days === 1 ? 'Overdue 1 day' : `Overdue ${days} days`;
+  }
+  return formatTargetDate(date);
 }
 
 function hasPlanningLink(item = {}) {
@@ -1492,7 +1543,7 @@ function QuickBrainCapture({
   );
 }
 
-function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides = {}, onStatus, onEdit, onProgress, onPauseCompleted, onRepairPauseDetails, onOpenPauseTool, pendingId }) {
+function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides = {}, onStatus, onEdit, onProgress, onPauseCompleted, onRepairPauseDetails, onOpenPauseTool, pendingId, compact = false }) {
   const [progressNote, setProgressNote] = useState('');
   const [nextAction, setNextAction] = useState(item.nextAction || '');
   const [pauseToolRan, setPauseToolRan] = useState(false);
@@ -1587,39 +1638,41 @@ function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides =
   }
 
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_22px_rgba(15,23,42,0.04)]">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          {isPauseReminder ? (
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Pause
-              {item.targetDate ? (
-                <span className="normal-case text-amber-800"> · do by {formatTargetDate(item.targetDate)}</span>
-              ) : null}
-            </p>
-          ) : (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                {item.itemTypeLabel}
-              </span>
-              <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${momentumClasses(item.momentum)}`}>
-                {item.momentumLabel}
-              </span>
-            </div>
-          )}
-          <h3 className="mt-3 text-base font-semibold text-slate-900">{item.title}</h3>
+    <article className={compact ? '' : 'rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_22px_rgba(15,23,42,0.04)]'}>
+      {!compact && (
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            {isPauseReminder ? (
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Pause
+                {item.targetDate ? (
+                  <span className="normal-case text-amber-800"> · do by {formatTargetDate(item.targetDate)}</span>
+                ) : null}
+              </p>
+            ) : (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                  {item.itemTypeLabel}
+                </span>
+                <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${momentumClasses(item.momentum)}`}>
+                  {item.momentumLabel}
+                </span>
+              </div>
+            )}
+            <h3 className="mt-3 text-base font-semibold text-slate-900">{item.title}</h3>
+          </div>
+          <button
+            type="button"
+            onClick={() => onEdit(item)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            Edit
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => onEdit(item)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-        >
-          <Pencil className="h-3.5 w-3.5" />
-          Edit
-        </button>
-      </div>
+      )}
 
-      {!isPauseReminder && (
+      {!compact && !isPauseReminder && (
         <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-600">
           <span>{item.owner}</span>
           <span>·</span>
@@ -1677,19 +1730,21 @@ function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides =
         </div>
       )}
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        {['active', 'waiting', 'done', 'parked'].map((status) => (
-          <button
-            key={status}
-            type="button"
-            disabled={isPending || item.status === status || (status === 'done' && isPauseReminder && !pausePaymentConfirmed)}
-            onClick={() => onStatus(item, status)}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {labelPlanningStatus(status)}
-          </button>
-        ))}
-      </div>
+      {!compact && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {['active', 'waiting', 'done', 'parked'].map((status) => (
+            <button
+              key={status}
+              type="button"
+              disabled={isPending || item.status === status || (status === 'done' && isPauseReminder && !pausePaymentConfirmed)}
+              onClick={() => onStatus(item, status)}
+              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {labelPlanningStatus(status)}
+            </button>
+          ))}
+        </div>
+      )}
 
       {isPauseReminder ? (
         <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2">
@@ -2044,6 +2099,100 @@ function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides =
   );
 }
 
+// Calm, focused card for the "due today" view. Shows a plain-language headline +
+// next step + minimal meta, with one obvious action. Deeper work (and the full
+// pause toolkit) lives behind "Details", which renders the full PlanningCard with
+// every handler passed through — so the pause checklist, the side-screen pause
+// tool, and the copy-message button all still work.
+function DueTodayCard({
+  item,
+  studentOptions = [],
+  paymentExpectationOverrides = {},
+  onStatus,
+  onEdit,
+  onProgress,
+  onPauseCompleted,
+  onRepairPauseDetails,
+  onOpenPauseTool,
+  onDefer,
+  pendingId,
+}) {
+  const isPause = isPausePlanningItem(item);
+  const [expanded, setExpanded] = useState(false);
+  const story = getPlanningStory(item, studentOptions);
+  const whatToDo = getPlanningWhatToDo(item);
+  const due = dueChipLabel(item.targetDate);
+  const overdue = due.startsWith('Overdue');
+  const isPending = pendingId === item.planningId;
+
+  return (
+    <article className={`rounded-2xl border bg-white p-5 shadow-sm ${overdue ? 'border-amber-200' : 'border-slate-200'}`}>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${overdue ? 'bg-amber-50 text-amber-800' : 'bg-blue-50 text-blue-800'}`}>
+          {due}
+        </span>
+        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+          {item.owner && item.owner !== 'Unassigned' ? item.owner : 'Unassigned'}
+        </span>
+      </div>
+
+      <h3 className="mt-2 text-base font-semibold text-slate-900">{story}</h3>
+      {!isPause && whatToDo ? <p className="mt-1 text-sm leading-6 text-slate-600">{whatToDo}</p> : null}
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        {!isPause && (
+          <button
+            type="button"
+            onClick={() => onStatus(item, 'done')}
+            disabled={isPending}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            Mark done
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => onDefer(item)}
+          disabled={isPending}
+          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Defer until next meeting
+        </button>
+        {!isPause && (
+          <button
+            type="button"
+            onClick={() => setExpanded((value) => !value)}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+          >
+            {expanded ? 'Hide details' : 'Details'}
+          </button>
+        )}
+      </div>
+
+      {/* Pause cards show the steps inline (unhidden, minus the noise); other
+          cards reveal the full card under Details. Both use compact mode. */}
+      {isPause || expanded ? (
+        <div className="mt-4 border-t border-slate-100 pt-4">
+          <PlanningCard
+            item={item}
+            studentOptions={studentOptions}
+            paymentExpectationOverrides={paymentExpectationOverrides}
+            onStatus={onStatus}
+            onEdit={onEdit}
+            onProgress={onProgress}
+            onPauseCompleted={onPauseCompleted}
+            onRepairPauseDetails={onRepairPauseDetails}
+            onOpenPauseTool={onOpenPauseTool}
+            pendingId={pendingId}
+            compact
+          />
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
 export default function AdminPlanningPageClient({ initialPlanning, initialFilter = 'all', studentOptions = [] }) {
   const [planning, setPlanning] = useState(initialPlanning || { items: [], summary: {} });
   const [quickNote, setQuickNote] = useState('');
@@ -2289,6 +2438,26 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
         mode: 'status',
         planningId: item.planningId,
         status,
+      }, item.planningId);
+    } catch (error) {
+      setSaveState({ pending: false, error: error.message, savedAt: '' });
+      setPendingId('');
+    }
+  }
+
+  // Push an item's "do by" to the next meeting day (Mon/Thu/Fri), used by the
+  // calm due-today view. A save merges over the existing row, so only title +
+  // targetDate need to be sent.
+  async function handleDefer(item) {
+    const tomorrow = new Date();
+    tomorrow.setHours(12, 0, 0, 0);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const nextMeeting = calculateNextMeetingDate(tomorrow);
+    try {
+      await postPlanning({
+        mode: 'save',
+        planningId: item.planningId,
+        item: { title: item.title, targetDate: nextMeeting },
       }, item.planningId);
     } catch (error) {
       setSaveState({ pending: false, error: error.message, savedAt: '' });
@@ -2652,7 +2821,34 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
           </label>
 
           <div className="mt-5 space-y-6">
-            {STATUS_GROUPS.map((group) => {
+            {filter === 'due_now' ? (
+              <div className="space-y-3">
+                <div>
+                  <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">On today</h4>
+                  <p className="mt-1 text-xs text-slate-500">
+                    What needs doing today, calmly — overdue first. Open “Details” for the full card and tools.
+                  </p>
+                </div>
+                {[...filteredItems]
+                  .sort((a, b) => `${a.targetDate || ''}`.localeCompare(`${b.targetDate || ''}`))
+                  .map((item) => (
+                    <DueTodayCard
+                      key={item.planningId}
+                      item={item}
+                      studentOptions={studentOptions}
+                      paymentExpectationOverrides={paymentExpectationOverrides}
+                      onStatus={handleStatus}
+                      onEdit={startEdit}
+                      onProgress={handleProgress}
+                      onPauseCompleted={handlePauseCompleted}
+                      onRepairPauseDetails={handleRepairPauseDetails}
+                      onOpenPauseTool={(url, name) => setPauseToolPanel({ url, name })}
+                      onDefer={handleDefer}
+                      pendingId={pendingId}
+                    />
+                  ))}
+              </div>
+            ) : STATUS_GROUPS.map((group) => {
               const groupItems = filteredItems.filter((item) => item.status === group.key);
               if (!groupItems.length) {
                 return null;
