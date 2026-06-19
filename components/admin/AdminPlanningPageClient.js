@@ -19,6 +19,7 @@ import {
   labelPlanningMomentum,
   labelPlanningStatus,
   labelPlanningType,
+  parseLinkedStudentIds,
 } from '@/lib/admin/planning-helpers.mjs';
 import { ADMIN_TUTORS } from '@/lib/admin/tutors-data.js';
 
@@ -60,6 +61,7 @@ const EMPTY_FORM = {
   area: 'other',
   linkedWorkflowId: '',
   linkedStudentId: '',
+  linkedStudentIds: [],
   linkedTutorId: '',
   parentPlanningId: '',
   outcome: '',
@@ -283,6 +285,23 @@ function normaliseSearchText(value = '') {
   return `${value || ''}`.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 }
 
+// Everyday words that should never auto-attach a student to a captured note.
+// Without this, "the" prefix-matched "Theodore" and "and" matched "Andrew".
+const STUDENT_MATCH_STOP_WORDS = new Set([
+  'the', 'and', 'for', 'are', 'was', 'were', 'this', 'that', 'with', 'has', 'have',
+  'will', 'but', 'not', 'all', 'any', 'who', 'why', 'how', 'when', 'what', 'where',
+  'you', 'your', 'our', 'her', 'his', 'him', 'she', 'they', 'them', 'their',
+  'from', 'into', 'onto', 'out', 'over', 'about', 'after', 'before', 'then',
+  'today', 'tomorrow', 'week', 'next', 'now', 'soon', 'add', 'new', 'get', 'got',
+]);
+
+// A token only counts toward auto-inferring a student if it's substantial enough
+// to be a name and isn't a common word. Manual search (StudentSearchField) is
+// unaffected — this guards only the automatic note→student detection.
+function isMeaningfulNameTerm(term = '') {
+  return term.length >= 3 && !STUDENT_MATCH_STOP_WORDS.has(term);
+}
+
 function isDueNowPlanningItem(item = {}, now = new Date()) {
   const targetDate = `${item.targetDate || ''}`.trim();
   return !['done', 'parked'].includes(item.status)
@@ -366,23 +385,29 @@ function inferStudentFromText(studentOptions = [], rawText = '') {
     .replace(/\b(please|can|could|you|we|need|to|for|from|until|pause|paused|pausing|lesson|lessons|away|off|holiday|holidays)\b/gu, ' ')
     .replace(/\s+/gu, ' ')
     .trim();
-  if (studentQuery) {
-    const queryTerms = studentQuery.split(/\s+/).filter(Boolean);
-    const exactFirstNameMatches = studentOptions.filter((student) => {
-      const firstName = normaliseSearchText(student.fullName).split(/\s+/)[0] || '';
-      return queryTerms.some((term) => firstName === term);
-    });
-    if (exactFirstNameMatches.length === 1) {
-      return exactFirstNameMatches[0];
-    }
+  // Drop common words and ultra-short tokens so everyday language can't latch
+  // onto a name. If nothing substantial is left, don't guess a student.
+  const queryTerms = studentQuery.split(/\s+/).filter(isMeaningfulNameTerm);
+  if (!queryTerms.length) {
+    return null;
   }
 
-  const suggestions = findStudentSuggestions(studentOptions, studentQuery || rawText, 3);
-  if (suggestions.length > 1 && studentQuery) {
-    const queryTerms = studentQuery.split(/\s+/).filter(Boolean);
+  const exactFirstNameMatches = studentOptions.filter((student) => {
+    const firstName = normaliseSearchText(student.fullName).split(/\s+/)[0] || '';
+    return queryTerms.includes(firstName);
+  });
+  if (exactFirstNameMatches.length === 1) {
+    return exactFirstNameMatches[0];
+  }
+
+  const cleanQuery = queryTerms.join(' ');
+  const suggestions = findStudentSuggestions(studentOptions, cleanQuery, 3);
+  if (suggestions.length > 1) {
     const firstNameMatches = suggestions.filter((student) => {
       const firstName = normaliseSearchText(student.fullName).split(/\s+/)[0] || '';
-      return queryTerms.some((term) => firstName === term || firstName.startsWith(term));
+      // Only a length-4+ token may prefix-match (so "theo" finds Theodore but
+      // "the" never does); shorter tokens must match the first name exactly.
+      return queryTerms.some((term) => firstName === term || (term.length >= 4 && firstName.startsWith(term)));
     });
     if (firstNameMatches.length === 1) {
       return firstNameMatches[0];
@@ -457,21 +482,32 @@ function buildQuickCaptureItem(rawNote = '', overrides = {}, studentOptions = []
     showPauseBuilder,
     hidePauseBuilder,
     studentSelectionSource,
+    linkedStudentId: overrideStudentId,
+    linkedStudentIds: overrideStudentIds,
     tutorAbsenceShortName,
     tutorAbsenceDates,
     showTutorAbsenceBuilder,
     hideTutorAbsenceBuilder,
     ...safeOverrides
   } = overrides;
-  const hasStudentOverride = Object.prototype.hasOwnProperty.call(safeOverrides, 'linkedStudentId');
+  // A student list is explicit when the user touched it (manual/cleared) or when
+  // a caller passed ids directly (e.g. a pause capture). Otherwise we infer one.
+  const hasStudentOverride = studentSelectionSource === 'manual'
+    || studentSelectionSource === 'cleared'
+    || overrideStudentIds !== undefined
+    || overrideStudentId !== undefined;
   const inferredStudent = hasStudentOverride ? null : inferStudentFromText(studentOptions, rawNote);
+  const linkedStudentIds = hasStudentOverride
+    ? parseLinkedStudentIds(overrideStudentIds ?? overrideStudentId)
+    : (inferredStudent ? [inferredStudent.mmsId] : []);
   const item = {
     ...EMPTY_FORM,
     ...inferred,
     ...safeOverrides,
     title: safeOverrides.title || truncateTitle(rawNote),
     notes: safeOverrides.notes || rawNote.trim(),
-    linkedStudentId: hasStudentOverride ? safeOverrides.linkedStudentId : inferredStudent?.mmsId || '',
+    linkedStudentId: linkedStudentIds[0] || '',
+    linkedStudentIds,
     targetDate: safeOverrides.targetDate || inferPlanningTargetDateFromText(rawNote),
     progressNote: safeOverrides.progressNote || 'Captured from quick brain capture.',
   };
@@ -559,9 +595,68 @@ function DateField({ label, value, onChange }) {
   );
 }
 
-function StudentSearchField({ label = 'Linked Student', value, onChange, studentOptions = [] }) {
-  const selectedStudent = findStudentById(studentOptions, value);
+function StudentSearchField({ label = 'Linked Student', value, onChange, studentOptions = [], multiple = false }) {
   const [query, setQuery] = useState('');
+
+  // Multi-select: selected students show as removable chips and the search box
+  // stays available to add more (e.g. for a group lesson). `value` is an array
+  // of MMS ids and `onChange` is called with the updated array.
+  if (multiple) {
+    const ids = parseLinkedStudentIds(value);
+    const selectedStudents = ids.map((id) => findStudentById(studentOptions, id) || { mmsId: id, fullName: id });
+    const suggestions = findStudentSuggestions(studentOptions, query).filter((student) => !ids.includes(student.mmsId));
+
+    return (
+      <div className="block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+        {label}
+        {selectedStudents.length ? (
+          <div className="mt-2 flex flex-wrap gap-2 normal-case tracking-normal">
+            {selectedStudents.map((student) => (
+              <span
+                key={student.mmsId}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-blue-100 bg-blue-50 px-2.5 py-1 text-sm font-medium text-slate-900"
+              >
+                {student.fullName || student.mmsId}
+                <button
+                  type="button"
+                  onClick={() => onChange(ids.filter((id) => id !== student.mmsId))}
+                  className="text-base leading-none text-slate-500 hover:text-slate-800"
+                  aria-label={`Remove ${student.fullName || student.mmsId}`}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        ) : null}
+        <input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder={selectedStudents.length ? 'Add another student' : 'Type a student name'}
+          className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium normal-case tracking-normal text-slate-800 placeholder:text-slate-400"
+        />
+        {suggestions.length ? (
+          <div className="mt-2 space-y-1 rounded-xl border border-slate-200 bg-white p-2 normal-case tracking-normal">
+            {suggestions.map((student) => (
+              <button
+                key={student.mmsId}
+                type="button"
+                onClick={() => {
+                  onChange([...ids, student.mmsId]);
+                  setQuery('');
+                }}
+                className="block w-full rounded-lg px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-50"
+              >
+                {studentLabel(student)}
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  const selectedStudent = findStudentById(studentOptions, value);
   const suggestions = findStudentSuggestions(studentOptions, query);
 
   return (
@@ -636,7 +731,7 @@ function buildSearchText(item) {
     item.statusLabel,
     item.itemTypeLabel,
     item.linkedWorkflowId,
-    item.linkedStudentId,
+    (item.linkedStudentIds || [item.linkedStudentId]).join(' '),
     item.linkedTutorId,
     item.outcome,
     item.nextAction,
@@ -765,8 +860,10 @@ function ItemForm({
               placeholder="parent-understanding"
             />
             <StudentSearchField
-              value={form.linkedStudentId}
-              onChange={(value) => setValue('linkedStudentId', value)}
+              label="Linked Students"
+              multiple
+              value={form.linkedStudentIds ?? form.linkedStudentId}
+              onChange={(ids) => onChange({ ...form, linkedStudentIds: ids, linkedStudentId: ids[0] || '' })}
               studentOptions={studentOptions}
             />
             <TextField
@@ -832,14 +929,24 @@ function QuickBrainCapture({
 }) {
   const inferred = inferQuickCapture(rawNote);
   const inferredTargetDate = inferPlanningTargetDateFromText(rawNote);
-  const hasManualStudentOverride = options.studentSelectionSource === 'manual';
+  // Both an explicit pick ('manual') and an explicit clear ('cleared') suppress
+  // auto-inference — otherwise clearing would immediately re-detect the student
+  // mentioned in the note text and the name would never go away.
+  const hasManualStudentOverride = options.studentSelectionSource === 'manual'
+    || options.studentSelectionSource === 'cleared';
   const inferredStudent = hasManualStudentOverride ? null : inferStudentFromText(studentOptions, rawNote);
+  // The full linked-student list (group lessons can have several); when nothing
+  // is manually set we seed it from the single inferred student. The primary
+  // (first) student drives the single-student pause/schedule flows below.
+  const effectiveStudentIds = hasManualStudentOverride
+    ? parseLinkedStudentIds(options.linkedStudentIds)
+    : (inferredStudent ? [inferredStudent.mmsId] : []);
   const effectiveOptions = {
     ...inferred,
     targetDate: inferredTargetDate,
-    linkedStudentId: hasManualStudentOverride ? options.linkedStudentId : inferredStudent?.mmsId || options.linkedStudentId || '',
     ...options,
-    linkedStudentId: hasManualStudentOverride ? options.linkedStudentId : inferredStudent?.mmsId || options.linkedStudentId || '',
+    linkedStudentId: effectiveStudentIds[0] || '',
+    linkedStudentIds: effectiveStudentIds,
   };
   const tutorAbsenceDetection = detectTutorAbsenceCapture(rawNote, CLIENT_TUTOR_OPTIONS);
   const tutorAbsenceBuilderVisible = !effectiveOptions.hideTutorAbsenceBuilder
@@ -877,12 +984,22 @@ function QuickBrainCapture({
     setOptions((current) => ({ ...current, [key]: value }));
   }
 
-  function setStudentOption(value) {
+  // The full linked-student list (group lessons). Marks the selection explicit so
+  // auto-inference stops re-detecting names from the note text.
+  function setStudentIds(ids) {
+    const list = parseLinkedStudentIds(ids);
     setOptions((current) => ({
       ...current,
-      linkedStudentId: value,
-      studentSelectionSource: value ? 'manual' : '',
+      linkedStudentIds: list,
+      linkedStudentId: list[0] || '',
+      studentSelectionSource: list.length ? 'manual' : 'cleared',
     }));
+  }
+
+  // Single-student picker used by the pause builder (pause stays bound to one
+  // student); picking replaces the list with just that student.
+  function setStudentOption(value) {
+    setStudentIds(value ? [value] : []);
   }
 
   function setTutorDate(index, value) {
@@ -1198,11 +1315,11 @@ function QuickBrainCapture({
           {effectiveOptions.targetDate ? (
             <span className="rounded-full bg-amber-50 px-2.5 py-1 text-amber-800">Do by {formatTargetDate(effectiveOptions.targetDate)}</span>
           ) : null}
-          {effectiveOptions.linkedStudentId ? (
-            <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-800">
-              Student: {findStudentById(studentOptions, effectiveOptions.linkedStudentId)?.fullName || effectiveOptions.linkedStudentId}
+          {effectiveOptions.linkedStudentIds.map((id) => (
+            <span key={id} className="rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-800">
+              Student: {findStudentById(studentOptions, id)?.fullName || id}
             </span>
-          ) : null}
+          ))}
         </div>
         <button
           type="button"
@@ -1247,8 +1364,10 @@ function QuickBrainCapture({
           />
           <div className="md:col-span-5">
             <StudentSearchField
-              value={effectiveOptions.linkedStudentId}
-              onChange={setStudentOption}
+              label="Linked Students"
+              multiple
+              value={effectiveOptions.linkedStudentIds}
+              onChange={setStudentIds}
               studentOptions={studentOptions}
             />
           </div>
@@ -1332,12 +1451,13 @@ function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides =
     && (pauseToolRan || pauseExpectationAlreadySet)
     && (pauseMessageConfirmed || pausePaymentConfirmed)
   );
+  const linkedStudentIds = parseLinkedStudentIds(item.linkedStudentIds ?? item.linkedStudentId);
   const linkFacts = [
     item.linkedWorkflowId ? { label: `Workflow: ${item.linkedWorkflowId}`, href: linkedWorkflowHref } : null,
-    item.linkedStudentId ? {
-      label: `Student: ${findStudentById(studentOptions, item.linkedStudentId)?.fullName || item.linkedStudentId}`,
-      href: studentHref(item.linkedStudentId),
-    } : null,
+    ...linkedStudentIds.map((id) => ({
+      label: `Student: ${findStudentById(studentOptions, id)?.fullName || id}`,
+      href: studentHref(id),
+    })),
     item.linkedTutorId ? { label: `Tutor: ${item.linkedTutorId}`, href: '' } : null,
   ].filter(Boolean);
 
@@ -1998,6 +2118,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
       area: item.area,
       linkedWorkflowId: item.linkedWorkflowId,
       linkedStudentId: item.linkedStudentId,
+      linkedStudentIds: parseLinkedStudentIds(item.linkedStudentIds ?? item.linkedStudentId),
       linkedTutorId: item.linkedTutorId,
       parentPlanningId: item.parentPlanningId,
       outcome: item.outcome,

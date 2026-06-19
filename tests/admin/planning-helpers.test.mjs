@@ -21,8 +21,11 @@ import {
   isMeetingPlanningItem,
   normalisePlanningArea,
   normalisePlanningItemType,
+  normalisePlanningItem,
   normalisePlanningOwner,
   normalisePlanningStatus,
+  parseLinkedStudentIds,
+  serializeLinkedStudentIds,
 } from '../../lib/admin/planning-helpers.mjs';
 
 const NOW = new Date('2026-06-03T12:00:00.000Z');
@@ -36,6 +39,27 @@ test('normalises planning defaults conservatively', () => {
   assert.equal(normalisePlanningArea('random'), 'other');
   assert.equal(normalisePlanningOwner('Tom'), 'Tom');
   assert.equal(normalisePlanningOwner('Fenella'), 'Unassigned');
+});
+
+test('parses and serializes multi-student links from the single column', () => {
+  // Strings (comma-separated), arrays, blanks, dupes, and whitespace all normalise.
+  assert.deepEqual(parseLinkedStudentIds('sdt_a'), ['sdt_a']);
+  assert.deepEqual(parseLinkedStudentIds(' sdt_a , sdt_b ,sdt_a'), ['sdt_a', 'sdt_b']);
+  assert.deepEqual(parseLinkedStudentIds(['sdt_a', '', 'sdt_b', 'sdt_a']), ['sdt_a', 'sdt_b']);
+  assert.deepEqual(parseLinkedStudentIds(''), []);
+  assert.deepEqual(parseLinkedStudentIds(undefined), []);
+  assert.equal(serializeLinkedStudentIds(['sdt_a', 'sdt_b']), 'sdt_a,sdt_b');
+  assert.equal(serializeLinkedStudentIds('sdt_a, sdt_b'), 'sdt_a,sdt_b');
+});
+
+test('normalisePlanningItem exposes both primary id and full student list', () => {
+  const item = normalisePlanningItem({ linkedStudentId: 'sdt_a,sdt_b' });
+  assert.equal(item.linkedStudentId, 'sdt_a'); // primary stays a single id for pause/schedule
+  assert.deepEqual(item.linkedStudentIds, ['sdt_a', 'sdt_b']);
+
+  const fromArray = normalisePlanningItem({ linkedStudentIds: ['sdt_x', 'sdt_y'] });
+  assert.equal(fromArray.linkedStudentId, 'sdt_x');
+  assert.deepEqual(fromArray.linkedStudentIds, ['sdt_x', 'sdt_y']);
 });
 
 test('calculates Friday review and next meeting dates', () => {

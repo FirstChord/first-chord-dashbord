@@ -19,7 +19,7 @@ export default async function AdminStudentDetailPage({ params }) {
   }
 
   const linkedPlanningItems = (planning.items || [])
-    .filter((item) => item.linkedStudentId === student.mmsId)
+    .filter((item) => (item.linkedStudentIds || [item.linkedStudentId]).includes(student.mmsId))
     .filter((item) => !['done', 'parked'].includes(item.status))
     .map((item) => ({
       planningId: item.planningId,
