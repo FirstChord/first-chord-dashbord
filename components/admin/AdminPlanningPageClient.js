@@ -927,6 +927,10 @@ function QuickBrainCapture({
   onPauseCapture,
   pending = false,
 }) {
+  // Live schedule refreshes done from this builder, keyed by MMS id. These take
+  // precedence over the cached scheduleContext (which can be stale or missing).
+  const [refreshedSchedules, setRefreshedSchedules] = useState({});
+  const [scheduleRefreshState, setScheduleRefreshState] = useState({ pendingId: '', error: '' });
   const inferred = inferQuickCapture(rawNote);
   const inferredTargetDate = inferPlanningTargetDateFromText(rawNote);
   // Both an explicit pick ('manual') and an explicit clear ('cleared') suppress
@@ -967,7 +971,12 @@ function QuickBrainCapture({
       || (isPauseCaptureText(rawNote) && !tutorAbsenceDetection.isTutorAbsence));
   const pauseType = effectiveOptions.pauseType === 'range' ? 'range' : 'single';
   const pauseStudent = findStudentById(studentOptions, effectiveOptions.linkedStudentId);
-  const pauseDateSuggestions = buildPauseLessonDateSuggestions(pauseStudent?.scheduleContext, {
+  // Prefer a just-fetched live schedule over the cached one (cache can be a month
+  // stale or absent), so the suggested dates reflect MMS right now.
+  const pauseStudentSchedule = refreshedSchedules[effectiveOptions.linkedStudentId]
+    || pauseStudent?.scheduleContext
+    || null;
+  const pauseDateSuggestions = buildPauseLessonDateSuggestions(pauseStudentSchedule, {
     count: 6,
     startDate: pauseType === 'range' ? effectiveOptions.pauseFirstPauseDate || '' : '',
   });
@@ -1000,6 +1009,27 @@ function QuickBrainCapture({
   // student); picking replaces the list with just that student.
   function setStudentOption(value) {
     setStudentIds(value ? [value] : []);
+  }
+
+  // Pull this student's schedule live from MMS (and refresh the cache) so the
+  // suggested lesson dates are current even if the cached row is stale/missing.
+  async function refreshPauseSchedule() {
+    const mmsId = effectiveOptions.linkedStudentId;
+    if (!mmsId) return;
+    setScheduleRefreshState({ pendingId: mmsId, error: '' });
+    try {
+      const response = await fetch(`/api/admin/students/${encodeURIComponent(mmsId)}/schedule`, {
+        method: 'POST',
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Schedule refresh failed');
+      }
+      setRefreshedSchedules((current) => ({ ...current, [mmsId]: data.scheduleContext }));
+      setScheduleRefreshState({ pendingId: '', error: '' });
+    } catch (error) {
+      setScheduleRefreshState({ pendingId: '', error: error.message || 'Schedule refresh failed' });
+    }
   }
 
   function setTutorDate(index, value) {
@@ -1092,18 +1122,34 @@ function QuickBrainCapture({
             </div>
           </div>
 
-          {pauseStudent?.scheduleContext?.status === 'found' ? (
+          {pauseStudentSchedule?.status === 'found' ? (
             <div className="mt-4 rounded-xl border border-violet-100 bg-white p-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-700">
-                Suggested lesson dates
-              </p>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-700">
+                  Suggested lesson dates
+                </p>
+                <button
+                  type="button"
+                  onClick={refreshPauseSchedule}
+                  disabled={scheduleRefreshState.pendingId === effectiveOptions.linkedStudentId}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-white px-2.5 py-1 text-xs font-semibold text-violet-800 hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {scheduleRefreshState.pendingId === effectiveOptions.linkedStudentId
+                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    : <Search className="h-3.5 w-3.5" />}
+                  Refresh from MMS
+                </button>
+              </div>
               <p className="mt-1 text-sm text-slate-700">
                 Usual lesson: {[
-                  pauseStudent.scheduleContext.usualWeekday,
-                  pauseStudent.scheduleContext.usualTime,
-                  pauseStudent.scheduleContext.teacherName ? `with ${pauseStudent.scheduleContext.teacherName}` : '',
+                  pauseStudentSchedule.usualWeekday,
+                  pauseStudentSchedule.usualTime,
+                  pauseStudentSchedule.teacherName ? `with ${pauseStudentSchedule.teacherName}` : '',
                 ].filter(Boolean).join(' ') || 'cached schedule found'}
               </p>
+              {scheduleRefreshState.error ? (
+                <p className="mt-1 text-sm text-rose-700">{scheduleRefreshState.error}</p>
+              ) : null}
               {pauseDateSuggestions.length ? (
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
                   {pauseDateSuggestions.map((suggestion) => (
@@ -1143,9 +1189,23 @@ function QuickBrainCapture({
               )}
             </div>
           ) : effectiveOptions.linkedStudentId ? (
-            <p className="mt-3 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-              No cached lesson schedule for this student yet. Use the date fields manually, or refresh schedule context from the student record later.
-            </p>
+            <div className="mt-3 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              <p>No cached lesson schedule for this student yet. Pull it live from MMS to get suggested dates, or fill the date fields manually.</p>
+              <button
+                type="button"
+                onClick={refreshPauseSchedule}
+                disabled={scheduleRefreshState.pendingId === effectiveOptions.linkedStudentId}
+                className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-white px-2.5 py-1 text-xs font-semibold text-amber-900 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {scheduleRefreshState.pendingId === effectiveOptions.linkedStudentId
+                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  : <Search className="h-3.5 w-3.5" />}
+                Refresh from MMS
+              </button>
+              {scheduleRefreshState.error ? (
+                <p className="mt-1 text-rose-700">{scheduleRefreshState.error}</p>
+              ) : null}
+            </div>
           ) : null}
 
           {pauseType === 'single' ? (
