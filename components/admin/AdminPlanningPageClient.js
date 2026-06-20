@@ -330,6 +330,23 @@ function isOpenPlanningItem(item = {}) {
   return !['done', 'parked'].includes(item.status);
 }
 
+// Fire-and-forget record of a parent message that was copied to send. Never
+// throws and never blocks the copy — the Communication Log is a passive record,
+// so a failed write must not affect the workflow.
+function logCommunicationCopy({ category, channel = 'whatsapp', mmsId, studentName, body, source }) {
+  if (!`${body || ''}`.trim()) return;
+  try {
+    fetch('/api/admin/communications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category, channel, mmsId, studentName, body, source }),
+      keepalive: true,
+    }).catch(() => {});
+  } catch {
+    // swallow — logging must never break copying
+  }
+}
+
 // Plain-language headline for the calm "due today" cards. Auto-generated pause
 // cards get a calmer framing; user-written items already read as human, so we
 // use their title. (Mirrors getIssueStory in AdminIssuesPageClient.)
@@ -1946,6 +1963,13 @@ function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides =
                       try {
                         await navigator.clipboard.writeText(pauseConfirmationMessage);
                         setCopyState('Copied');
+                        logCommunicationCopy({
+                          category: 'pause',
+                          mmsId: item.linkedStudentId,
+                          studentName: linkedStudent?.fullName || '',
+                          body: pauseConfirmationMessage,
+                          source: 'pause_card',
+                        });
                       } catch (error) {
                         setCopyState('Copy failed');
                       }

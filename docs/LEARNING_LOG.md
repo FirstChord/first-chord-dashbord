@@ -19,6 +19,26 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-21 — Communication Log (record-only, no workflow change)
+
+**Feature/change:** A passive record of parent messages. The existing "Copy message" buttons (pause card; parent-understanding templates) now *also* fire-and-forget a write to a new append-only `Communication_Log` tab — same button, same click, no new steps, no approval, nothing sent. A read-only `/admin/communications` ("Messages Sent") page lists what's been recorded (newest first, linked to the student). `logCommunication()` de-duplicates a repeated copy of the same message to the same student within a 10-minute window.
+
+**Why it exists:** The dashboard generated good parent copy but kept no record of it — "did we message this parent, and when?" was unanswerable. Deliberately scoped *down* from the full draft→approve→send gate after discussion: no learning/training, and "approve" adds no value while sending is manual. This is the lean honest version — a logbook — and the trail a future WhatsApp-send feature would build on.
+
+**Key design choice:** the hook is the **copy action**, so "copied to send" is the proxy for "sent" and the workflow is genuinely unchanged. Logging is fire-and-forget and errors are swallowed — copying must never break.
+
+**Source-of-truth impact:** None. Append-only dashboard-owned log; student/contact facts still come from Sheets/MMS/registry. No `Event_Log` lifecycle rows — this tab *is* the record.
+
+**Files/functions involved:**
+
+- `lib/admin/sheets.js` — `Communication_Log` tab, `getCommunicationLogRows`, `appendCommunicationLogRow`
+- `lib/admin/communications-helpers.mjs` — `normaliseCommunicationLogEntry`, `communicationFingerprint`, `isDuplicateCommunication`, `groupCommunicationLog`
+- `lib/admin/communications.js` — `logCommunication` (dedup), `getCommunicationLog`
+- `app/api/admin/communications/route.js`, `app/admin/communications/page.js` + client
+- Copy hooks in `AdminPlanningPageClient.js` (pause) and `AdminParentUnderstandingPageClient.js` (parent)
+
+**What to watch out for:** "Copied" ≠ guaranteed "sent" — it's a pragmatic proxy chosen to keep the workflow untouched. If a stronger signal is ever needed, hook "Mark pause completed" instead. Do not add sending here without re-opening the draft→approve→send design.
+
 ### 2026-06-20 — Scheduled (bi-weekly) Schedule-Cache Refresh
 
 **Feature/change:** A GitHub Action cron (dashboard repo, `refresh-schedules.yml`, 1st + 15th monthly) calls a new secret-protected endpoint `POST /api/cron/refresh-schedules` on the live Railway app. The endpoint computes its own target set server-side via `buildScheduledRefreshTargets()` — operational students whose cache is missing, **older than the cadence (10 days)**, or unresolved — then refreshes a bounded batch (80/run, sequential) and returns `remaining`; the workflow loops (up to 8 batches) until the cohort is current. Auth is a shared secret (`SCHEDULE_REFRESH_SECRET`) checked with a timing-safe compare, mirroring the Practice Chat secret pattern, since there's no admin session on a cron call.

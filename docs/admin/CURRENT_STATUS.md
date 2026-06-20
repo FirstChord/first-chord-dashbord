@@ -101,6 +101,8 @@ The active surface is the private admin dashboard under `/admin`.
   - FC regeneration (`first-chord-brain`) made resilient: `fetch_sheets_students()` now reads raw values and tolerates blank/duplicate headers instead of `get_all_records()`. The 2026-06-19 sheet edit had left duplicate blank headers and broke the hourly GitHub Action; the tolerant read mirrors how the dashboard reads the same sheet.
   - **Schedule-context hardening**: `/admin/capacity` now lists the specific students with a stale/missing/behind-MMS cache (`buildScheduleHealthList`, including a new "past lesson" signal for `found` rows whose `nextLessonAt` is already past), with per-row refresh + a bounded `Refresh all stale` (`POST /api/admin/schedule/refresh-stale`, capped/sequential, admin-triggered only). Closes the Lloyd-class gap where a behind-MMS cache silently fed suspect pause dates.
   - **Scheduled schedule-cache refresh**: a bi-weekly GitHub Action (`refresh-schedules.yml`) calls a secret-protected `POST /api/cron/refresh-schedules`, which refreshes operational students whose cache is missing/older-than-10-days/unresolved (`buildScheduledRefreshTargets`), batched (80/run) and looped until current. Needs `SCHEDULE_REFRESH_SECRET` in **both** Railway env and the dashboard repo's GitHub secrets. Keeps the cohort fresh so the manual panel is an exception-handler.
+- Communication record (2026-06-21):
+  - **Communication Log** (record-only): the existing "Copy message" buttons (pause card, parent-understanding templates) now also fire-and-forget a write to a new append-only `Communication_Log` tab, with a read-only `/admin/communications` ("Messages Sent") page to look back. No approval, no sending, no workflow change; "copied to send" is the proxy for "sent". This is the deliberately-lean first step of the communication layer gate — the trail a future WhatsApp-send feature would build on.
 
 ## Current Slice
 
@@ -178,7 +180,7 @@ npm run build
 
 ## Best Next Slices
 
-Progress note (2026-06-20): the 2026-06-18→20 work advanced **pause loop maturity** (inline MMS refresh, clearer pause steps, adult/parent message), **planning link refinement** (multi-student links, stop-word guard, clear fix), added a calm due-today view + the Monday scheduling loop, and delivered **schedule-context hardening** (slice #2 below — `/admin/capacity` now surfaces and refreshes stale/behind-MMS schedule caches). The strongest remaining documented priority is now the **communication draft layer** (slice #8 — the gate everything message-related waits behind). Pick the next slice deliberately rather than continuing to extend Planning UX by default.
+Progress note (2026-06-21): recent work advanced **pause loop maturity** (inline MMS refresh, clearer pause steps, adult/parent message), **planning link refinement** (multi-student links, stop-word guard, clear fix), added a calm due-today view + the Monday scheduling loop, delivered **schedule-context hardening** (slice #2 — `/admin/capacity` surfaces + refreshes stale caches, plus a bi-weekly cron), and took the **first step of the communication layer** (slice #8) as a deliberately-lean **record-only Communication Log** (no approval/sending). Natural fast-follows: extend the copy-logging to other message buttons, and a per-student "messages logged" panel. The full draft→approve→send gate remains available to revisit only if/when actual automated sending is wanted.
 
 1. **V4.1 performance hardening**
    - Add TTL caching to other expensive overview checks if they still feel slow, especially MMS/GitHub health.
@@ -245,6 +247,7 @@ Progress note (2026-06-20): the 2026-06-18→20 work advanced **pause loop matur
 - `Parent_Understanding_State` = dashboard workflow state for parent check-in campaign records
 - `Planning_Items` = dashboard-owned human planning/task/initiative state
 - `Planning_Progress_Log` = append-only progress history for planning items
+- `Communication_Log` = append-only record of parent messages copied to send (record-only; not a sender)
 - `Pause History` = intentional pause-window truth
 - generated FC tabs and generated dashboard config files = derived outputs
 

@@ -37,6 +37,12 @@ const workflowSections = [
     description: 'Handle a tutor being off: find affected lessons, choose cancel or cover, and track parent messages.',
     status: 'Action flow',
   },
+  {
+    href: '/admin/communications',
+    title: 'Messages Sent',
+    description: 'Read-only record of parent messages copied to send from the dashboard. A logbook, not a sender.',
+    status: 'Record',
+  },
 ];
 
 function WorkflowCard({ section }) {
