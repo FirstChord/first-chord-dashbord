@@ -4,10 +4,37 @@ import assert from 'node:assert/strict';
 import {
   buildFreeSlotSummary,
   buildScheduleCacheSummary,
+  buildScheduleHealthList,
   buildWaitingCapacityMatches,
   isFreeCalendarEvent,
   normaliseFreeCalendarSlot,
 } from '../../lib/admin/capacity-helpers.mjs';
+
+test('buildScheduleHealthList flags stale, past-lesson, missing, and low-confidence rows', () => {
+  const now = new Date('2026-06-20T12:00:00Z');
+  const rows = [
+    // healthy: recent check, future lesson, high confidence → excluded
+    { mmsId: 'sdt_ok', studentName: 'OK', status: 'found', confidence: 'high', teacherId: 'tch_1', durationMinutes: '30', nextLessonAt: '2026-06-22 18:30:00', checkedAt: '2026-06-19T10:00:00Z' },
+    // found but the cached next lesson already happened → "past lesson"
+    { mmsId: 'sdt_past', studentName: 'Past', status: 'found', confidence: 'high', teacherId: 'tch_1', durationMinutes: '30', nextLessonAt: '2026-05-18 18:30:00', checkedAt: '2026-06-19T10:00:00Z' },
+    // checked over 21 days ago → "stale"
+    { mmsId: 'sdt_stale', studentName: 'Stale', status: 'found', confidence: 'high', teacherId: 'tch_1', durationMinutes: '30', nextLessonAt: '2026-07-01 18:30:00', checkedAt: '2026-05-01T10:00:00Z' },
+    // no schedule found at all
+    { mmsId: 'sdt_none', studentName: 'None', status: 'not_found', confidence: 'low', nextLessonAt: '', checkedAt: '2026-06-19T10:00:00Z' },
+    { mmsId: '', studentName: 'No id', status: 'found' }, // skipped (no mmsId)
+  ];
+
+  const list = buildScheduleHealthList(rows, { now });
+  const byId = Object.fromEntries(list.map((entry) => [entry.mmsId, entry]));
+
+  assert.equal(list.length, 3);
+  assert.equal(byId.sdt_ok, undefined); // healthy excluded
+  assert.ok(byId.sdt_past.reasons.includes('past lesson'));
+  assert.ok(byId.sdt_stale.reasons.includes('stale'));
+  assert.ok(byId.sdt_none.reasons.includes('no schedule'));
+  // "no schedule" outranks "past lesson" outranks "stale" in the sort
+  assert.equal(list[0].mmsId, 'sdt_none');
+});
 
 test('isFreeCalendarEvent only matches the MMS Free category', () => {
   assert.equal(isFreeCalendarEvent({ EventCategory: { Name: 'Free' } }), true);

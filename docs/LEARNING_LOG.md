@@ -19,6 +19,22 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-20 — Schedule-Context Hardening (visible + fixable stale caches)
+
+**Feature/change:** `/admin/capacity` now lists the specific students whose cached schedule needs attention and lets you refresh them. New `buildScheduleHealthList()` returns per-student rows tagged with a reason: `no schedule`, `past lesson` (a `found` row whose `nextLessonAt` is already in the past — the cache is behind MMS), `stale` (checked >21d ago), `low confidence`, `missing teacher`, `missing duration`. A new client `ScheduleHealthPanel` shows the list with per-row **Refresh** + **Refresh all stale**, calling a new `POST /api/admin/schedule/refresh-stale` route. The route refreshes only the requested IDs, sequentially, capped at 60/run with a small delay, and is strictly admin-triggered (no auto-polling). After a refresh the client calls `router.refresh()` so healed rows drop off.
+
+**Why it exists:** The Lloyd incident — a `found`, high-confidence cache row pointing at a month-old `nextLessonAt`. The aggregate health counts on `/admin/capacity` couldn't show *which* students were affected and there was no bulk refresh; the "past lesson" staleness signal didn't exist at all. The pause-date suggestions read `Schedule_Context`, so a behind-MMS cache silently produced suspect dates.
+
+**Source-of-truth impact:** None new. Refresh writes the existing `Schedule_Context` cache via `upsertScheduleContextRow`; MMS stays the lesson truth. Explicit refresh only, matching the vendor-truth guardrail (no polling on page load).
+
+**Files/functions involved:**
+
+- `lib/admin/capacity-helpers.mjs` — `buildScheduleHealthList()` (adds the missing "past lesson" signal)
+- `app/api/admin/schedule/refresh-stale/route.js` — bounded bulk refresh
+- `components/admin/ScheduleHealthPanel.js` + `app/admin/capacity/page.js` — the actionable list
+
+**What to watch out for:** Bulk refresh is N MMS calendar searches — keep it explicit, capped, and sequential; never auto-trigger it. Note a pre-existing quirk: `buildScheduleCacheSummary` counts `status === 'missing'`, but `deriveScheduleContextFromMms` actually emits `not_found` / `missing_identity`; the new health list treats any non-`found`, non-`error` status as "no schedule" so it doesn't under-report.
+
 ### 2026-06-19 — Calm "Due Today" Planning View
 
 **Feature/change:** The `/admin/planning?filter=due_now` view (the "on the day" surface, linked from the overview's Due Now count) now renders calm, focused cards instead of the full status-grouped board. New `DueTodayCard` shows a plain-language headline (`getPlanningStory`), a "what to do" line (`getPlanningWhatToDo`), and a minimal due chip (`dueChipLabel`: "Today" / "Overdue N days") + owner — sorted overdue-first, no status groups. Primary action is **Mark done** (or, for pauses, the steps shown inline); plus **Defer until next meeting** (`handleDefer` → `calculateNextMeetingDate`, Mon/Thu/Fri) and a **Details** toggle. `PlanningCard` gained a `compact` prop that hides the header/title-restate, Edit, and the status-button row; pause cards embed it in compact mode so the pause workflow (open pause tool on the side screen, copy parent message, run/sent checklist, complete, date repair) shows unhidden without the noise. Every other filter view is unchanged.

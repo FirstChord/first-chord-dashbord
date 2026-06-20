@@ -1,7 +1,8 @@
 import { getMmsFreeCalendarSlotContext } from '@/lib/admin/mms';
 import { getScheduleContextRows } from '@/lib/admin/sheets';
-import { buildFreeSlotSummary, buildScheduleCacheSummary } from '@/lib/admin/capacity-helpers.mjs';
+import { buildFreeSlotSummary, buildScheduleCacheSummary, buildScheduleHealthList } from '@/lib/admin/capacity-helpers.mjs';
 import { getOperationalAdminStudents } from '@/lib/admin/students';
+import ScheduleHealthPanel from '@/components/admin/ScheduleHealthPanel';
 
 function formatDateTime(value) {
   if (!value) return '—';
@@ -37,6 +38,7 @@ export default async function AdminCapacityPage() {
   const operationalStudentIds = new Set(operationalStudents.map((student) => student.mmsId).filter(Boolean));
   const operationalScheduleRows = scheduleRows.filter((row) => !row.mmsId || operationalStudentIds.has(row.mmsId));
   const scheduleSummary = buildScheduleCacheSummary(operationalScheduleRows);
+  const scheduleHealth = buildScheduleHealthList(operationalScheduleRows);
   const freeSlots = freeSlotResult.slots;
   const freeSlotSummary = buildFreeSlotSummary(freeSlots);
   const upcomingSlots = freeSlots.slice(0, 40);
@@ -139,6 +141,7 @@ export default async function AdminCapacityPage() {
           {statCard('Missing teacher', scheduleSummary.missingTeacher)}
           {statCard('Missing duration', scheduleSummary.missingDuration)}
         </div>
+        <ScheduleHealthPanel items={scheduleHealth} />
       </section>
     </div>
   );

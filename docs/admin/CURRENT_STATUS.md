@@ -99,6 +99,7 @@ The active surface is the private admin dashboard under `/admin`.
 - Data + tooling hygiene (2026-06-19 → 2026-06-20):
   - Students sheet: surnames were sitting in a stray `san` column with the real `Student Surname` column empty; fixed in the **canonical sheet** (now resolves for ~198 students). Recommend protecting the Students header row in Google Sheets with an edit-warning.
   - FC regeneration (`first-chord-brain`) made resilient: `fetch_sheets_students()` now reads raw values and tolerates blank/duplicate headers instead of `get_all_records()`. The 2026-06-19 sheet edit had left duplicate blank headers and broke the hourly GitHub Action; the tolerant read mirrors how the dashboard reads the same sheet.
+  - **Schedule-context hardening**: `/admin/capacity` now lists the specific students with a stale/missing/behind-MMS cache (`buildScheduleHealthList`, including a new "past lesson" signal for `found` rows whose `nextLessonAt` is already past), with per-row refresh + a bounded `Refresh all stale` (`POST /api/admin/schedule/refresh-stale`, capped/sequential, admin-triggered only). Closes the Lloyd-class gap where a behind-MMS cache silently fed suspect pause dates.
 
 ## Current Slice
 
@@ -176,7 +177,7 @@ npm run build
 
 ## Best Next Slices
 
-Progress note (2026-06-20): the 2026-06-18→20 work advanced **pause loop maturity** (inline MMS refresh, clearer pause steps, adult/parent message) and **planning link refinement** (multi-student links, stop-word guard, clear fix) and added a calm due-today view + the Monday scheduling loop. The still-untouched documented priorities below remain the strongest candidates — especially the **communication draft layer** (the gate everything message-related waits behind) and **schedule-context hardening**. Pick the next slice deliberately rather than continuing to extend Planning UX by default.
+Progress note (2026-06-20): the 2026-06-18→20 work advanced **pause loop maturity** (inline MMS refresh, clearer pause steps, adult/parent message), **planning link refinement** (multi-student links, stop-word guard, clear fix), added a calm due-today view + the Monday scheduling loop, and delivered **schedule-context hardening** (slice #2 below — `/admin/capacity` now surfaces and refreshes stale/behind-MMS schedule caches). The strongest remaining documented priority is now the **communication draft layer** (slice #8 — the gate everything message-related waits behind). Pick the next slice deliberately rather than continuing to extend Planning UX by default.
 
 1. **V4.1 performance hardening**
    - Add TTL caching to other expensive overview checks if they still feel slow, especially MMS/GitHub health.
