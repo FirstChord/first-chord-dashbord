@@ -5,10 +5,25 @@ import {
   buildFreeSlotSummary,
   buildScheduleCacheSummary,
   buildScheduleHealthList,
+  buildScheduledRefreshTargets,
   buildWaitingCapacityMatches,
   isFreeCalendarEvent,
   normaliseFreeCalendarSlot,
 } from '../../lib/admin/capacity-helpers.mjs';
+
+test('buildScheduledRefreshTargets picks missing, cadence-old, and unresolved operational caches', () => {
+  const now = new Date('2026-06-20T12:00:00Z');
+  const rows = [
+    { mmsId: 'sdt_fresh', status: 'found', checkedAt: '2026-06-18T10:00:00Z' }, // 2 days old → skip
+    { mmsId: 'sdt_old', status: 'found', checkedAt: '2026-06-01T10:00:00Z' }, // 19 days old → include
+    { mmsId: 'sdt_unresolved', status: 'not_found', checkedAt: '2026-06-19T10:00:00Z' }, // recent but unresolved → include
+    { mmsId: 'sdt_other', status: 'found', checkedAt: '2020-01-01' }, // not operational → ignored
+  ];
+  const operational = ['sdt_fresh', 'sdt_old', 'sdt_unresolved', 'sdt_nocache'];
+
+  const targets = buildScheduledRefreshTargets(rows, operational, { now, olderThanDays: 10 });
+  assert.deepEqual([...targets].sort(), ['sdt_nocache', 'sdt_old', 'sdt_unresolved']);
+});
 
 test('buildScheduleHealthList flags stale, past-lesson, missing, and low-confidence rows', () => {
   const now = new Date('2026-06-20T12:00:00Z');

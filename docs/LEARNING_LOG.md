@@ -19,6 +19,26 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-20 — Scheduled (bi-weekly) Schedule-Cache Refresh
+
+**Feature/change:** A GitHub Action cron (dashboard repo, `refresh-schedules.yml`, 1st + 15th monthly) calls a new secret-protected endpoint `POST /api/cron/refresh-schedules` on the live Railway app. The endpoint computes its own target set server-side via `buildScheduledRefreshTargets()` — operational students whose cache is missing, **older than the cadence (10 days)**, or unresolved — then refreshes a bounded batch (80/run, sequential) and returns `remaining`; the workflow loops (up to 8 batches) until the cohort is current. Auth is a shared secret (`SCHEDULE_REFRESH_SECRET`) checked with a timing-safe compare, mirroring the Practice Chat secret pattern, since there's no admin session on a cron call.
+
+**Why it exists:** The manual `/admin/capacity` refresh (same-day slice) makes stale caches fixable but still relies on someone noticing. A rare scheduled snapshot keeps the whole cohort under ~2 weeks behind so the manual panel becomes an exception-handler. This is the "scheduled snapshot" option the V3 vendor-truth loop explicitly allows, and stays within "keep cohort-wide API calls rare."
+
+**Key design note:** the cron refreshes by **cadence (>10 days)**, deliberately *not* the 21-day display-stale threshold used by `buildScheduleHealthList`. A bi-weekly job gated on ">21 days" would often find nothing; gating on ">10 days" keeps everything fresh between runs.
+
+**Source-of-truth impact:** None new. Writes the existing `Schedule_Context` cache; MMS stays lesson truth. Scheduled + bounded, not per-page polling.
+
+**Files/functions involved:**
+
+- `lib/admin/capacity-helpers.mjs` — `buildScheduledRefreshTargets()`
+- `app/api/cron/refresh-schedules/route.js` — secret-auth, batched endpoint
+- `.github/workflows/refresh-schedules.yml` — bi-weekly cron that loops until `remaining = 0`
+
+**Setup required (one-time):** add `SCHEDULE_REFRESH_SECRET` to **both** Railway env vars and the dashboard repo's GitHub Actions secrets (same value). Until set, the endpoint returns 503 and the workflow fails fast.
+
+**What to watch out for:** This is the only cohort-wide automatic MMS read in the dashboard — keep it rare (bi-weekly), bounded (80/batch, 8 batches), and sequential. Don't lower the cron interval without revisiting batch sizes.
+
 ### 2026-06-20 — Schedule-Context Hardening (visible + fixable stale caches)
 
 **Feature/change:** `/admin/capacity` now lists the specific students whose cached schedule needs attention and lets you refresh them. New `buildScheduleHealthList()` returns per-student rows tagged with a reason: `no schedule`, `past lesson` (a `found` row whose `nextLessonAt` is already in the past — the cache is behind MMS), `stale` (checked >21d ago), `low confidence`, `missing teacher`, `missing duration`. A new client `ScheduleHealthPanel` shows the list with per-row **Refresh** + **Refresh all stale**, calling a new `POST /api/admin/schedule/refresh-stale` route. The route refreshes only the requested IDs, sequentially, capped at 60/run with a small delay, and is strictly admin-triggered (no auto-polling). After a refresh the client calls `router.refresh()` so healed rows drop off.

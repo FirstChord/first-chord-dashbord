@@ -1,0 +1,48 @@
+name: Refresh Schedule Caches
+
+# Keeps the Schedule_Context cache fresh so pause-date suggestions reflect MMS.
+# Calls the secret-protected endpoint on the live Railway app, which refreshes a
+# bounded batch per call and reports how many remain; we loop until the cohort is
+# current. Cohort-wide MMS calls stay rare (bi-weekly) per the vendor-truth guardrail.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 1,15 * *" # ~bi-weekly: 1st and 15th of each month, 06:00 UTC
+
+concurrency:
+  group: refresh-schedules
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Refresh stale schedule caches
+        env:
+          ENDPOINT: https://first-chord-dashbord-production.up.railway.app/api/cron/refresh-schedules
+          SECRET: ${{ secrets.SCHEDULE_REFRESH_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SECRET}" ]; then
+            echo "SCHEDULE_REFRESH_SECRET is not set in repo secrets"; exit 1
+          fi
+          for i in $(seq 1 8); do
+            resp=$(curl -sS -X POST "$ENDPOINT" \
+              -H "x-firstchord-schedule-secret: ${SECRET}" \
+              -H "content-type: application/json" \
+              --max-time 600)
+            echo "Batch ${i}: ${resp}"
+            ok=$(echo "${resp}" | jq -r '.success // false')
+            if [ "${ok}" != "true" ]; then
+              echo "Endpoint returned an error"; exit 1
+            fi
+            processed=$(echo "${resp}" | jq -r '.processed // 0')
+            remaining=$(echo "${resp}" | jq -r '.remaining // 0')
+            if [ "${processed}" = "0" ] || [ "${remaining}" = "0" ]; then
+              echo "Cohort current. remaining=${remaining}"
+              break
+            fi
+            sleep 5
+          done
