@@ -1,6 +1,6 @@
 # Admin Current Status
 
-Last updated: 2026-06-15
+Last updated: 2026-06-20
 
 This is the tracked current-status entrypoint for agents working from the `music-school-dashboard` repository.
 
@@ -87,6 +87,18 @@ The active surface is the private admin dashboard under `/admin`.
   - issue cards have a `View customer in Stripe` deep link and a copy-email button, so confirming an issue no longer requires opening the profile
   - payment quick-action results show inline next to the card, and a pause action that resolves a flag clears the card optimistically
   - the student PATCH route tolerates capitalised Theta usernames (lowercased on save) instead of rejecting them
+- Planning surface + pause UX focus (2026-06-18 → 2026-06-20):
+  - tutor dashboard roster fix: `getStudentsForTeacher()` keeps a student if EITHER MMS `StudentGroups` OR `BillingProfiles` link to the teacher (the old early-return dropped ~7 of Finn's active students)
+  - calmer issue cards continued: plain-language story + what-to-do, `View customer in Stripe`, student record in a slide-over (stay on the page), Stripe-refresh auto-resolve, clearer dashboard-vs-Stripe wording
+  - pause capture/UX: single-lesson pause date window, the payment-pause tool opens in a side panel, one-button structured pause capture, and an inline `Refresh from MMS` in the pause builder (explicit vendor refresh that writes back to `Schedule_Context`)
+  - pause confirmation message now addresses adult learners directly ("you / your payment") instead of the parent-facing third person
+  - planning quick-capture fixes: clearing a linked student now sticks; a stop-word guard stops common words ("the" → Theodore) auto-attaching names; a plan can link **multiple students** (group lessons), stored comma-separated in the existing `linked_student_id` column — pause/schedule stay bound to the primary (first) student
+  - reflections/progress notes now preserve line breaks and expand (Show more), so a full Friday meeting summary reads cleanly
+  - **Monday scheduling loop**: a recurring Monday prompt surfaces last Friday's "next improvement" intentions with one-tap `Schedule this` → dated, owned action items linked back to the reflection (reuses the Friday seeded-item pattern via a shared `ensureRecurringSystemItem`; no new workflow engine)
+  - **calm "due today" view**: `/admin/planning?filter=due_now` renders focused `DueTodayCard`s (plain headline, what-to-do, due chip, one obvious action: Mark done / Defer until next meeting) instead of the full status-grouped board; pause cards show their steps inline via a new `compact` PlanningCard mode; all other filters are unchanged
+- Data + tooling hygiene (2026-06-19 → 2026-06-20):
+  - Students sheet: surnames were sitting in a stray `san` column with the real `Student Surname` column empty; fixed in the **canonical sheet** (now resolves for ~198 students). Recommend protecting the Students header row in Google Sheets with an edit-warning.
+  - FC regeneration (`first-chord-brain`) made resilient: `fetch_sheets_students()` now reads raw values and tolerates blank/duplicate headers instead of `get_all_records()`. The 2026-06-19 sheet edit had left duplicate blank headers and broke the hourly GitHub Action; the tolerant read mirrors how the dashboard reads the same sheet.
 
 ## Current Slice
 
@@ -163,6 +175,8 @@ npm run build
 ```
 
 ## Best Next Slices
+
+Progress note (2026-06-20): the 2026-06-18→20 work advanced **pause loop maturity** (inline MMS refresh, clearer pause steps, adult/parent message) and **planning link refinement** (multi-student links, stop-word guard, clear fix) and added a calm due-today view + the Monday scheduling loop. The still-untouched documented priorities below remain the strongest candidates — especially the **communication draft layer** (the gate everything message-related waits behind) and **schedule-context hardening**. Pick the next slice deliberately rather than continuing to extend Planning UX by default.
 
 1. **V4.1 performance hardening**
    - Add TTL caching to other expensive overview checks if they still feel slow, especially MMS/GitHub health.
