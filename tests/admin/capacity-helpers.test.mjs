@@ -231,6 +231,7 @@ test('buildWaitingCapacityMatches suggests only instrument-compatible free slots
           teacherId: 'tch_piano',
           teacherName: 'Chloe Mak',
           matchedInstruments: ['piano'],
+          coverageCount: 1,
           slots: [
             {
               startTime: '17:00',
@@ -349,4 +350,70 @@ test('buildWaitingCapacityMatches returns up to five compact matching days by de
     'Thursday',
     'Friday',
   ]);
+});
+
+test('buildWaitingCapacityMatches ranks broader coverage first and reports covered/uncovered', () => {
+  const guitarPianoSlot = normaliseFreeCalendarSlot({
+    ID: 'evt_gp', StartDate: '2026-05-18T16:30:00', Duration: 30,
+    TeacherID: 'tch_gp', Teacher: { DisplayName: 'Alex Multi' }, EventCategory: { Name: 'Free' },
+  });
+  const guitarOnlySlot = normaliseFreeCalendarSlot({
+    ID: 'evt_g', StartDate: '2026-05-18T17:00:00', Duration: 30,
+    TeacherID: 'tch_g', Teacher: { DisplayName: 'Sam Guitar' }, EventCategory: { Name: 'Free' },
+  });
+
+  const [student] = buildWaitingCapacityMatches({
+    waitingStudents: [{ mmsId: 'sdt_gp', instruments: ['Guitar', 'Piano'] }],
+    freeSlots: [guitarPianoSlot, guitarOnlySlot],
+    tutors: [
+      { fullName: 'Alex Multi', teacherId: 'tch_gp', instruments: ['guitar', 'piano'] },
+      { fullName: 'Sam Guitar', teacherId: 'tch_g', instruments: ['guitar'] },
+    ],
+  });
+
+  assert.equal(student.capacityMatchStatus, 'matched');
+  assert.deepEqual(student.coveredInstruments, ['Guitar', 'Piano']);
+  assert.deepEqual(student.uncoveredInstruments, []);
+  // Monday has both tutors; the one covering more instruments (Alex, 2) ranks first.
+  const monday = student.capacityMatchDays.find((day) => day.weekday === 'Monday');
+  assert.equal(monday.tutors[0].teacherName, 'Alex Multi');
+  assert.equal(monday.tutors[0].coverageCount, 2);
+  assert.equal(monday.tutors[1].coverageCount, 1);
+});
+
+test('buildWaitingCapacityMatches matches instrument synonyms on both sides (voice/vocals, keyboard)', () => {
+  const slot = normaliseFreeCalendarSlot({
+    ID: 'evt_v', StartDate: '2026-05-18T16:30:00', Duration: 30,
+    TeacherID: 'tch_v', Teacher: { DisplayName: 'Val Voice' }, EventCategory: { Name: 'Free' },
+  });
+  // Student wants "Voice" (→ Singing); tutor's instrument is recorded as "vocals"
+  // (→ Singing) and "keyboard" (→ Piano). Previously the tutor side was only
+  // lowercased, so "vocals" would not have matched "singing".
+  const [student] = buildWaitingCapacityMatches({
+    waitingStudents: [{ mmsId: 'sdt_k', instruments: ['Voice'] }],
+    freeSlots: [slot],
+    tutors: [{ fullName: 'Val Voice', teacherId: 'tch_v', instruments: ['vocals', 'keyboard'] }],
+  });
+  assert.equal(student.capacityMatchStatus, 'matched');
+  assert.deepEqual(student.coveredInstruments, ['Singing']);
+});
+
+test('buildWaitingCapacityMatches distinguishes not-taught from no-free-slot in no_match reason', () => {
+  // Drums: nobody teaches it.
+  const [drummer] = buildWaitingCapacityMatches({
+    waitingStudents: [{ mmsId: 'sdt_d', instruments: ['Drums'] }],
+    freeSlots: [],
+    tutors: [{ fullName: 'Sam Guitar', teacherId: 'tch_g', instruments: ['guitar'] }],
+  });
+  assert.equal(drummer.capacityMatchStatus, 'no_match');
+  assert.match(drummer.capacityMatchReason, /No tutor currently teaches Drums/);
+
+  // Guitar: taught, but no free slots.
+  const [guitarist] = buildWaitingCapacityMatches({
+    waitingStudents: [{ mmsId: 'sdt_g', instruments: ['Guitar'] }],
+    freeSlots: [],
+    tutors: [{ fullName: 'Sam Guitar', teacherId: 'tch_g', instruments: ['guitar'] }],
+  });
+  assert.equal(guitarist.capacityMatchStatus, 'no_match');
+  assert.match(guitarist.capacityMatchReason, /no tutor has a free slot/);
 });

@@ -19,6 +19,24 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-21 — Waiting-List Capacity Matching Refinement
+
+**Feature/change:** Sharpened `buildWaitingCapacityMatches` (`lib/admin/capacity-helpers.mjs`) and the `/admin/waiting` "Possible slots" UI:
+- **Multi-instrument awareness:** per student we now compute `coveredInstruments` / `uncoveredInstruments` (each uncovered tagged `not_taught` vs `no_free_slots`), so a "guitar + piano" enquiry clearly shows which half has slots.
+- **Ranking:** within a day, tutors are sorted by how many requested instruments they cover (`coverageCount`) then earliest slot — best fit leads, instead of plain weekday/time order.
+- **Synonym matching (both sides):** tutor instruments now run through `normaliseInstrument` (not just lowercase), matching the waiting side. A tutor recorded as `vocals`/`keyboard` now matches `singing`/`piano` instead of silently missing.
+- **Better "why":** `capacityMatchReason` distinguishes "no tutor teaches X" from "taught but no free slot right now," for both partial-match and no-match cases.
+
+**Why it exists:** matching was instrument-exact, unranked, and gave a dead-end "no match" with no reason. These are hints for placement, made more useful — still suggestions, not decisions.
+
+**Source-of-truth impact:** None. Pure derivation over MMS Free slots + waiting students + tutor data. No new state, no writes.
+
+**Deferred — day/time preference matching (#3):** intentionally NOT built. The MMS sign-up note parser (`parseNoteFields`) extracts instrument/age/experience/genre/songs but **no availability**, so there's nothing reliable to filter slots by. Plan: improve the onboarding/sign-up form to capture day/time availability first, then parse it and filter `buildWaitingCapacityMatches` by it. See `docs/admin/CURRENT_STATUS.md` Best Next Slices.
+
+**Files/functions involved:** `lib/admin/capacity-helpers.mjs` (`buildWaitingCapacityMatches`, `groupMatchesByDay`, `buildTutorLookup`, new `instrumentKey`), `components/admin/AdminWaitingPageClient.js`.
+
+**What to watch out for:** synonyms covered are exactly what `normaliseInstrument` handles (piano/keyboard, ukulele/uke, singing/voice/vocal, bass, guitar, ukulele orchestra) — extend that one function if a new term appears, rather than special-casing here. Keep matches as hints; do not auto-assign tutors or reserve slots.
+
 ### 2026-06-21 — Communication Log (record-only, no workflow change)
 
 **Feature/change:** A passive record of parent messages. The existing "Copy message" buttons (pause card; parent-understanding templates) now *also* fire-and-forget a write to a new append-only `Communication_Log` tab — same button, same click, no new steps, no approval, nothing sent. A read-only `/admin/communications` ("Messages Sent") page lists what's been recorded (newest first, linked to the student). `logCommunication()` de-duplicates a repeated copy of the same message to the same student within a 10-minute window.

@@ -405,6 +405,20 @@ export default function AdminWaitingPageClient({ initialStudents, initialCapacit
                   <p className="text-xs uppercase tracking-wide text-sky-700">Possible slots</p>
                   <p className="text-xs text-sky-800">{student.capacityMatchReason}</p>
                 </div>
+                {student.uncoveredInstruments?.length ? (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {student.coveredInstruments?.map((instrument) => (
+                      <span key={`covered-${instrument}`} className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-800">
+                        {instrument} ✓
+                      </span>
+                    ))}
+                    {student.uncoveredInstruments.map((entry) => (
+                      <span key={`uncovered-${entry.instrument}`} className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800">
+                        {entry.instrument}: {entry.reason === 'not_taught' ? 'not taught here' : 'no free slot'}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
                 {student.capacityMatchDays?.length ? (
                   <div className="mt-3 grid gap-2 md:grid-cols-3 xl:grid-cols-5">
                     {student.capacityMatchDays.map((day) => (
@@ -443,7 +457,7 @@ export default function AdminWaitingPageClient({ initialStudents, initialCapacit
                   <p className="mt-3 text-sm text-slate-700">
                     {student.capacityMatchStatus === 'instrument_unknown'
                       ? 'Add or clarify the instrument in the MMS sign-up note before trusting slot suggestions.'
-                      : 'No matching MMS Free slots found for the parsed instrument.'}
+                      : student.capacityMatchReason}
                   </p>
                 )}
               </div>
