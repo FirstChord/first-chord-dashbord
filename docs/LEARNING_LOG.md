@@ -19,6 +19,22 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-21 — Retry transient Google Sheets errors (stop spurious job-failure alerts)
+
+**Feature/change:** Both the dashboard and the brain now retry transient Google Sheets API errors (429/500/502/503/504) with exponential backoff instead of hard-failing on the first blip.
+- Dashboard: `withSheetsRetry()` in `lib/admin/sheets.js` wraps the read (`values.get` in `getSheetValues`) and the managed-row writes (`append`/`update` in `upsertManagedSheetRow`) — 4 attempts, 600ms base, doubling.
+- Brain: `gspread_retry()` in `first-chord-brain/generate_fc_ids.py` wraps the gspread reads (`open_by_key`, `worksheet`, `get_all_values`) and writes (`worksheets`, `add_worksheet`, `clear`, `update`, `update_title`) — 4 attempts, 1.5s base.
+
+**Why it exists:** the hourly "Regenerate FC IDs" job was occasionally failing with `gspread APIError [503]: service unavailable` — a momentary Google outage, not our bug — and emailing a job-failure alert each time. The dashboard's schedule-refresh cron has the same exposure on its initial reads. Retrying transient errors makes a brief wobble self-heal silently.
+
+**Why not batching:** investigated — these failures are transient Google outages (503), not call-volume/quota. The dashboard refresh already tolerates per-student quota errors (collected, not fatal). `batchGet` would ease quota pressure but would not have prevented these; retry is the correct fix. (batchGet remains a future scaling lever.)
+
+**Source-of-truth impact:** None. Same reads/writes, just resilient to transient failures.
+
+**Files/functions involved:** `lib/admin/sheets.js` (`withSheetsRetry`), `first-chord-brain/generate_fc_ids.py` (`gspread_retry`).
+
+**What to watch out for:** only *transient* statuses are retried — a real error (auth, bad range, 400) still fails fast. If a genuine outage lasts longer than ~4 backoff steps the job still fails (correctly). Brain read path validated live (234 rows); dashboard tests + build pass.
+
 ### 2026-06-21 — Overview Snappiness (cached + streamed health)
 
 **Feature/change:** The Overview page no longer blocks on its slowest data. `getAdminHealthSummary` (which makes 3 uncached external calls — MMS + 2 GitHub Actions APIs) is now (1) **cached** with a 60s TTL, and (2) **streamed**: health was removed from the page's blocking `Promise.all`, and the two health-derived pieces — the "Trust" strip and the "System checks" panel — render inside their own `<Suspense>` boundaries with small fallbacks. The rest of the Overview (needs-attention, next-work, lifecycle, payment) renders immediately; health fills in a beat later (instant on repeat visits within the cache window).
