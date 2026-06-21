@@ -3,14 +3,16 @@ import { getAdminStudentByMmsId } from '@/lib/admin/students';
 import { getAllTutorOptions } from '@/lib/admin/tutors';
 import { getPlanningDashboard } from '@/lib/admin/planning';
 import { getPracticeNoteLogRows } from '@/lib/admin/sheets';
+import { getCommunicationLogForStudent } from '@/lib/admin/communications';
 import AdminStudentDetailClient from '@/components/admin/AdminStudentDetailClient';
 
 export default async function AdminStudentDetailPage({ params }) {
   const resolvedParams = await params;
-  const [student, planning, recentPracticeNotes] = await Promise.all([
+  const [student, planning, recentPracticeNotes, recentCommunications] = await Promise.all([
     getAdminStudentByMmsId(resolvedParams.mmsId),
     getPlanningDashboard(),
     getPracticeNoteLogRows(resolvedParams.mmsId),
+    getCommunicationLogForStudent(resolvedParams.mmsId, { limit: 5 }),
   ]);
   const tutorOptions = getAllTutorOptions();
 
@@ -39,6 +41,7 @@ export default async function AdminStudentDetailPage({ params }) {
       tutorOptions={tutorOptions}
       linkedPlanningItems={linkedPlanningItems}
       recentPracticeNotes={recentPracticeNotes.slice(0, 5)}
+      recentCommunications={recentCommunications}
     />
   );
 }

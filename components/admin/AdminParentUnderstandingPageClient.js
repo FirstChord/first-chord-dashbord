@@ -9,6 +9,7 @@ import {
   deriveParentUnderstandingRiskSignals,
   PARENT_UNDERSTANDING_STATUS_OPTIONS,
 } from '@/lib/admin/parent-understanding-helpers.mjs';
+import { logCommunicationCopy } from '@/lib/admin/log-communication-copy.js';
 
 const UNDERSTANDING_AREAS = [
   {
@@ -548,25 +549,14 @@ export default function AdminParentUnderstandingPageClient({ initialWorkflow }) 
     }
     setCopiedTemplate(label);
     window.setTimeout(() => setCopiedTemplate((current) => (current === label ? '' : current)), 1800);
-    // Fire-and-forget record of the copied parent message — never blocks copying.
-    if (selectedRecord && `${body || ''}`.trim()) {
-      try {
-        fetch('/api/admin/communications', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            category: 'parent',
-            channel: 'whatsapp',
-            mmsId: selectedRecord.student.mmsId,
-            studentName: selectedRecord.student.studentName,
-            body,
-            source: 'parent_understanding',
-          }),
-          keepalive: true,
-        }).catch(() => {});
-      } catch {
-        // swallow — logging must never break copying
-      }
+    if (selectedRecord) {
+      logCommunicationCopy({
+        category: 'parent',
+        mmsId: selectedRecord.student.mmsId,
+        studentName: selectedRecord.student.studentName,
+        body,
+        source: 'parent_understanding',
+      });
     }
   }
 

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Check, Copy, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { logCommunicationCopy } from '@/lib/admin/log-communication-copy.js';
 
 const WAITING_STATUS_OPTIONS = [
   { value: 'new', label: 'New' },
@@ -132,6 +133,13 @@ export default function AdminWaitingPageClient({ initialStudents, initialCapacit
 
     setCopiedId(student.mmsId);
     window.setTimeout(() => setCopiedId((current) => (current === student.mmsId ? '' : current)), 1800);
+    logCommunicationCopy({
+      category: 'waiting',
+      mmsId: student.mmsId,
+      studentName: student.fullName || '',
+      body: student.welcomeGroupMessage,
+      source: 'waiting_welcome',
+    });
   }
 
   async function handleSave(student, updates = {}) {

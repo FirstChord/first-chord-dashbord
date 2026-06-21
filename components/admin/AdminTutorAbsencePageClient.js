@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { Check, Copy, Loader2, Search, Trash2 } from 'lucide-react';
 import { buildTutorAbsenceMessage, formatTutorAbsenceDate, summariseTutorAbsenceState } from '@/lib/admin/tutor-absence-helpers.mjs';
+import { logCommunicationCopy } from '@/lib/admin/log-communication-copy.js';
 
 function cardClasses(extra = '') {
   return `rounded-[1.2rem] border border-blue-100 bg-white/90 p-5 shadow-[0_12px_36px_rgba(15,23,42,0.06)] ${extra}`;
@@ -24,11 +25,11 @@ function decisionLabel(decision = '') {
   return 'No decision yet';
 }
 
-function MessageButton({ body, copiedId, copyId, onCopy }) {
+function MessageButton({ body, copiedId, copyId, onCopy, context = null }) {
   return (
     <button
       type="button"
-      onClick={() => onCopy(copyId, body)}
+      onClick={() => onCopy(copyId, body, context)}
       className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-blue-50"
     >
       {copiedId === copyId ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5 text-slate-500" />}
@@ -75,7 +76,7 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
     setSaveState({ pending: false, error: '', savedAt: '' });
   }
 
-  async function copyMessage(copyId, body) {
+  async function copyMessage(copyId, body, context = null) {
     try {
       await navigator.clipboard.writeText(body);
     } catch {
@@ -88,6 +89,15 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
     }
     setCopiedId(copyId);
     window.setTimeout(() => setCopiedId((current) => (current === copyId ? '' : current)), 1800);
+    if (context) {
+      logCommunicationCopy({
+        category: 'tutor_absence',
+        mmsId: context.mmsId,
+        studentName: context.studentName,
+        body,
+        source: 'tutor_absence',
+      });
+    }
   }
 
   async function saveAbsence(status = 'in_progress') {
@@ -295,7 +305,7 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
                       </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <MessageButton body={message} copiedId={copiedId} copyId={lesson.eventId} onCopy={copyMessage} />
+                      <MessageButton body={message} copiedId={copiedId} copyId={lesson.eventId} onCopy={copyMessage} context={{ mmsId: lesson.studentMmsId, studentName: lesson.studentName }} />
                       <label className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700">
                         <input
                           type="checkbox"

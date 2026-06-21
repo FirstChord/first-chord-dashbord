@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { buildPauseWorkflowSummary } from '@/lib/admin/pause-workflow-helpers.mjs';
+import { labelCommunicationCategory } from '@/lib/admin/communications-helpers.mjs';
 
 const INSTRUMENT_OPTIONS = ['Guitar', 'Piano', 'Bass', 'Singing', 'Ukulele', 'Ukulele Orchestra'];
 const PAYMENT_MODE_OPTIONS = [
@@ -117,6 +118,7 @@ export default function AdminStudentDetailClient({
   tutorOptions,
   linkedPlanningItems = [],
   recentPracticeNotes = [],
+  recentCommunications = [],
 }) {
   const [form, setForm] = useState({
     firstName: student.firstName || '',
@@ -656,6 +658,44 @@ export default function AdminStudentDetailClient({
         ) : (
           <p className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
             No Practice Chat notes have been logged for this student yet.
+          </p>
+        )}
+      </section>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900">Messages logged</h3>
+            <p className="mt-1 text-sm text-slate-600">
+              Parent messages copied to send for this student (pause confirmations, parent check-ins, and similar). A record, not a sender.
+            </p>
+          </div>
+          {recentCommunications.length ? (
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
+              {recentCommunications.length} recent
+            </span>
+          ) : null}
+        </div>
+        {recentCommunications.length ? (
+          <div className="mt-4 space-y-3">
+            {recentCommunications.map((entry) => (
+              <article key={entry.messageId} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-800">
+                    {labelCommunicationCategory(entry.category)}
+                  </span>
+                  <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-600 capitalize">
+                    {entry.channel}
+                  </span>
+                  <span className="text-xs text-slate-400">{formatDateTime(entry.loggedAt)}</span>
+                </div>
+                <p className="mt-2 text-sm text-slate-700 whitespace-pre-line">{entry.body}</p>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+            No parent messages have been logged for this student yet.
           </p>
         )}
       </section>
