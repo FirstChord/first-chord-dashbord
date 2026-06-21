@@ -419,12 +419,22 @@ export default function AdminWaitingPageClient({ initialStudents, initialCapacit
                     ))}
                   </div>
                 ) : null}
+                {student.availabilityDays?.length || student.availabilityTimes?.length ? (
+                  <p className="mt-2 text-xs text-sky-800">
+                    Prefers: {[
+                      student.availabilityDays?.length ? student.availabilityDays.join(', ') : '',
+                      student.availabilityTimes?.length
+                        ? student.availabilityTimes.map((bucket) => (bucket === 'evening' ? 'evenings' : 'earlier')).join(' / ')
+                        : '',
+                    ].filter(Boolean).join(' · ')} — matching slots ranked first.
+                  </p>
+                ) : null}
                 {student.capacityMatchDays?.length ? (
                   <div className="mt-3 grid gap-2 md:grid-cols-3 xl:grid-cols-5">
                     {student.capacityMatchDays.map((day) => (
                       <div
                         key={`${student.mmsId}-${day.weekday}`}
-                        className="rounded-lg border border-sky-200 bg-white/80 px-3 py-2"
+                        className={`rounded-lg border bg-white/80 px-3 py-2 ${day.dayFits ? 'border-emerald-300 ring-1 ring-emerald-100' : 'border-sky-200'}`}
                       >
                         <p className="text-sm font-semibold text-slate-900">{day.weekday}</p>
                         <div className="mt-1.5 space-y-1.5">
@@ -434,6 +444,9 @@ export default function AdminWaitingPageClient({ initialStudents, initialCapacit
                                 <span className="font-medium text-slate-900">{tutor.teacherName}</span>
                                 {tutor.matchedInstruments?.length ? (
                                   <span className="text-xs text-slate-500"> ({formatMatchedInstruments(tutor.matchedInstruments)})</span>
+                                ) : null}
+                                {tutor.fitsAvailability ? (
+                                  <span className="ml-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">fits availability</span>
                                 ) : null}
                               </p>
                               <div className="mt-1 flex flex-wrap gap-1.5">

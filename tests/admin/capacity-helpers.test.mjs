@@ -9,6 +9,9 @@ import {
   buildWaitingCapacityMatches,
   isFreeCalendarEvent,
   normaliseFreeCalendarSlot,
+  parseAvailabilityDays,
+  parseAvailabilityTimes,
+  slotTimeBucket,
 } from '../../lib/admin/capacity-helpers.mjs';
 
 test('buildScheduledRefreshTargets picks missing, cadence-old, and unresolved operational caches', () => {
@@ -226,12 +229,14 @@ test('buildWaitingCapacityMatches suggests only instrument-compatible free slots
   assert.deepEqual(student.capacityMatchDays, [
     {
       weekday: 'Tuesday',
+      dayFits: null,
       tutors: [
         {
           teacherId: 'tch_piano',
           teacherName: 'Chloe Mak',
           matchedInstruments: ['piano'],
           coverageCount: 1,
+          fitsAvailability: null,
           slots: [
             {
               startTime: '17:00',
@@ -416,4 +421,40 @@ test('buildWaitingCapacityMatches distinguishes not-taught from no-free-slot in 
   });
   assert.equal(guitarist.capacityMatchStatus, 'no_match');
   assert.match(guitarist.capacityMatchReason, /no tutor has a free slot/);
+});
+
+test('parseAvailabilityDays / parseAvailabilityTimes read sign-up note answers', () => {
+  assert.deepEqual(parseAvailabilityDays('Tuesday, Thursday, Saturday'), ['Tuesday', 'Thursday', 'Saturday']);
+  assert.deepEqual(parseAvailabilityDays('weekdays only'), []); // coarse word, no specific day
+  assert.deepEqual(parseAvailabilityTimes('Evenings (after 5pm)'), ['evening']);
+  assert.deepEqual(parseAvailabilityTimes('Earlier (before 5pm), Evenings (after 5pm)'), ['evening', 'earlier']);
+});
+
+test('slotTimeBucket splits on the 5pm cutoff', () => {
+  assert.equal(slotTimeBucket('16:30'), 'earlier');
+  assert.equal(slotTimeBucket('17:00'), 'evening');
+  assert.equal(slotTimeBucket('18:30'), 'evening');
+});
+
+test('buildWaitingCapacityMatches ranks availability-fitting slots first without hiding others', () => {
+  const slots = [
+    // Monday earlier (does NOT fit: wants Tue/evening)
+    normaliseFreeCalendarSlot({ ID: 'm', StartDate: '2026-05-18T16:00:00', Duration: 30, TeacherID: 'tch_g', Teacher: { DisplayName: 'Sam Guitar' }, EventCategory: { Name: 'Free' } }),
+    // Tuesday evening (fits: Tue + evening)
+    normaliseFreeCalendarSlot({ ID: 't', StartDate: '2026-05-19T18:00:00', Duration: 30, TeacherID: 'tch_g', Teacher: { DisplayName: 'Sam Guitar' }, EventCategory: { Name: 'Free' } }),
+  ];
+  const [student] = buildWaitingCapacityMatches({
+    waitingStudents: [{ mmsId: 'sdt_a', instruments: ['Guitar'], availabilityDays: ['Tuesday'], availabilityTimes: ['evening'] }],
+    freeSlots: slots,
+    tutors: [{ fullName: 'Sam Guitar', teacherId: 'tch_g', instruments: ['guitar'] }],
+  });
+
+  // Both days still present (ranked, not hidden)...
+  assert.deepEqual(student.capacityMatchDays.map((d) => d.weekday), ['Tuesday', 'Monday']);
+  // ...with the fitting day first and flagged.
+  assert.equal(student.capacityMatchDays[0].dayFits, true);
+  assert.equal(student.capacityMatchDays[0].tutors[0].fitsAvailability, true);
+  assert.equal(student.capacityMatchDays[1].dayFits, false);
+  assert.equal(student.capacityMatchDays[1].tutors[0].fitsAvailability, false);
+  assert.deepEqual(student.availabilityDays, ['Tuesday']);
 });

@@ -19,6 +19,20 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-21 — Waiting-List Day/Time Availability Matching
+
+**Feature/change:** The deferred day/time sub-slice is now live. The MMS sign-up form gained two checkbox questions — **Preferred days** (Monday–Saturday, no Sunday) and **Preferred times** (Earlier before 5pm / Evenings after 5pm). `parseNoteFields` extracts the `preferred days` / `preferred times` lines; `parseAvailabilityDays` / `parseAvailabilityTimes` (in `capacity-helpers.mjs`) normalise them onto each waiting student (`availabilityDays`, `availabilityTimes`). `buildWaitingCapacityMatches` now **ranks** matching slots by an availability **score** (day weighted higher than time: full fit = 3, day-only = 2, time-only = 1, neither = 0) — days, tutors, and slots all order by score. `/admin/waiting` shows "Prefers: …", rings preferred days, and badges tutors that fit. **Ranked, not filtered** — non-matching options stay visible.
+
+**Why it exists:** previously matching ignored when families could actually attend. Capturing day (per-weekday, precise) and time (coarse buckets, how families think) lets the placement hints reflect real availability. Score-based ranking (vs day-first) means when nothing fully fits, a time-matching slot still surfaces above a total miss instead of being buried.
+
+**Source-of-truth impact:** None. Availability is parsed from the MMS note (MMS stays the sign-up truth); pure derivation, no new state.
+
+**Format contract:** the matcher is tolerant (weekday names; "even" → evening; "earl/before 5/morning/afternoon/after school" → earlier), but the MMS question labels must keep containing "day"/"time" and the day options must be full weekday names. Verified against a real test sign-up note: `Preferred days: Tuesday, Thursday, Friday` / `Preferred times: Earlier (before 5pm)` parsed correctly.
+
+**Files/functions involved:** `lib/admin/mms-helpers.mjs` (`parseNoteFields`), `lib/admin/capacity-helpers.mjs` (`parseAvailabilityDays/Times`, `slotTimeBucket`, scored `groupMatchesByDay`, `buildWaitingCapacityMatches`), `lib/admin/mms.js` (`normaliseWaitingStudent`), `components/admin/AdminWaitingPageClient.js`.
+
+**What to watch out for:** existing waiting students (signed up before the questions existed) have no availability lines → they match as before, no "Prefers" line. Don't reword the MMS option labels without checking the parser. Matches remain suggestions — no auto-assign.
+
 ### 2026-06-21 — Monday Scheduling Panel: shape-before-schedule
 
 **Feature/change:** The Monday scheduling panel on `/admin/planning` no longer one-taps the raw reflection line onto the board. Each "next improvement" is now **click-to-expand** (`MondayIntentionRow`): a small editor pre-filled with the line — editable **Title**, optional **Description**, **Owner** (Finn/Tom/Unassigned), and **Do by** (defaults to this Friday) — then **Add to board** creates a shaped, owned, dated planning card. The row then shows "Scheduled ✓ · do by <date>".
