@@ -19,6 +19,20 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-21 — Navigation Snappiness (loading skeletons + longer sheet TTL)
+
+**Feature/change:** Two changes to make moving between admin pages feel faster.
+- **`app/admin/loading.js`** — a single shared skeleton at the admin segment shows instantly (via the Suspense boundary) while any `/admin` page fetches its server data. The layout's nav/header stays put; only the `<main>` content area swaps to the skeleton. Covers every admin route, no per-page files needed. Pure perceived-speed win, zero data risk.
+- **Sheets read cache TTL 15s → 60s** (`SHEETS_READ_TTL_MS` in `lib/admin/sheets.js`). Repeat navigations within the window reuse cached sheet reads instead of re-fetching every tab. Safe because dashboard writes already call `invalidateSheetReadCache` for the affected tab, so the admin's own edits still appear immediately — only passive cross-source drift can lag up to 60s.
+
+**Why it exists:** admin pages are server components that fetch Sheets/MMS on each navigation with no loading state, so the previous page sat frozen until data resolved. Skeletons fix the *felt* speed; the longer TTL fixes *actual* speed on repeat moves. This is documented Best Next Slice #1 (V4.1 performance hardening).
+
+**Source-of-truth impact:** None. No data shape change; the TTL only affects how long a read is reused.
+
+**Files/functions involved:** `app/admin/loading.js` (new), `lib/admin/sheets.js` (`SHEETS_READ_TTL_MS`).
+
+**What to watch out for:** the skeleton is generic (it covers all pages), so it won't match any single page's exact layout — that's fine for a brief flash. If a specific page ever needs a tailored skeleton, add a `loading.js` in that route folder to override. The 60s TTL is a freshness/speed trade — if a page ever needs near-real-time passive data, give it an explicit refresh rather than shortening the global TTL. Also fixed alongside: the pause-complete button no longer flickers between its sequential save steps (`postPlanning` gained a `silent` option).
+
 ### 2026-06-21 — Waiting-List Day/Time Availability Matching
 
 **Feature/change:** The deferred day/time sub-slice is now live. The MMS sign-up form gained two checkbox questions — **Preferred days** (Monday–Saturday, no Sunday) and **Preferred times** (Earlier before 5pm / Evenings after 5pm). `parseNoteFields` extracts the `preferred days` / `preferred times` lines; `parseAvailabilityDays` / `parseAvailabilityTimes` (in `capacity-helpers.mjs`) normalise them onto each waiting student (`availabilityDays`, `availabilityTimes`). `buildWaitingCapacityMatches` now **ranks** matching slots by an availability **score** (day weighted higher than time: full fit = 3, day-only = 2, time-only = 1, neither = 0) — days, tutors, and slots all order by score. `/admin/waiting` shows "Prefers: …", rings preferred days, and badges tutors that fit. **Ranked, not filtered** — non-matching options stay visible.
