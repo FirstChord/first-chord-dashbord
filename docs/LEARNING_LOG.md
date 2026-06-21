@@ -19,6 +19,18 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-21 — Overview Snappiness (cached + streamed health)
+
+**Feature/change:** The Overview page no longer blocks on its slowest data. `getAdminHealthSummary` (which makes 3 uncached external calls — MMS + 2 GitHub Actions APIs) is now (1) **cached** with a 60s TTL, and (2) **streamed**: health was removed from the page's blocking `Promise.all`, and the two health-derived pieces — the "Trust" strip and the "System checks" panel — render inside their own `<Suspense>` boundaries with small fallbacks. The rest of the Overview (needs-attention, next-work, lifecycle, payment) renders immediately; health fills in a beat later (instant on repeat visits within the cache window).
+
+**Why it exists:** `await Promise.all([...6...])` meant the whole Overview waited on the slowest fetch (health's external round-trips). Caching removes the cost on repeat visits; streaming removes it on the first/cold visit too. Documented Best-Next-Slice #1.
+
+**Source-of-truth impact:** None. Health is status info; the 60s cache only affects how long a health read is reused. No data shape change.
+
+**Files/functions involved:** `lib/admin/health.js` (`getAdminHealthSummary` cache wrapper + `computeAdminHealthSummary`), `app/admin/page.js` (`OverviewTrustStrip` + `OverviewSystemChecks` streamed async components; `buildPrioritySentence` no longer takes systemHealth — health surfaces in its own streamed section).
+
+**What to watch out for:** the system-health signal no longer feeds the instant "priority sentence"/attention cards (it lives in the streamed Trust strip / System checks now) — a deliberate trade so the page doesn't block on health. Streaming requires the route to be dynamically rendered (it is, via live data). If health is ever needed in the blocking top-line again, it'd re-introduce the wait.
+
 ### 2026-06-21 — Navigation Snappiness (loading skeletons + longer sheet TTL)
 
 **Feature/change:** Two changes to make moving between admin pages feel faster.

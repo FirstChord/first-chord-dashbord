@@ -184,10 +184,10 @@ npm run build
 
 Progress note (2026-06-21): recent work advanced **pause loop maturity** (inline MMS refresh, clearer pause steps, adult/parent message), **planning link refinement** (multi-student links, stop-word guard, clear fix), added a calm due-today view + the Monday scheduling loop, delivered **schedule-context hardening** (slice #2 — `/admin/capacity` surfaces + refreshes stale caches, plus a bi-weekly cron), and took the **first step of the communication layer** (slice #8) as a deliberately-lean **record-only Communication Log** (no approval/sending). Natural fast-follows: extend the copy-logging to other message buttons, and a per-student "messages logged" panel. The full draft→approve→send gate remains available to revisit only if/when actual automated sending is wanted.
 
-1. **V4.1 performance hardening** — first pass DONE (2026-06-21): a shared `app/admin/loading.js` skeleton (instant feedback on every navigation) + Sheets read TTL raised 15s → 60s (snappier repeat navigation; writes still invalidate per-tab). Remaining if still slow:
-   - Add TTL caching to other expensive overview checks, especially MMS/GitHub health.
-   - Keep automatic cohort-wide API calls rare; prefer cached summaries plus explicit refresh actions.
+1. **V4.1 performance hardening** — DONE (2026-06-21): shared `app/admin/loading.js` skeleton; Sheets read TTL 15s → 60s; Overview health cached (60s) AND streamed via `<Suspense>` (page no longer blocks on MMS/GitHub health calls). Remaining only if still slow:
+   - Sheets `batchGet` to collapse per-tab reads into one round-trip (also eases the read quota).
    - Review which admin pages should be daily top-level navigation versus planning/background tools.
+   - Interaction-speed (vs navigation): the very large planning client bundle could be code-split.
 
 2. **Schedule context hardening**
    - Confirm the bulk MMS schedule refresh is cheap enough operationally.

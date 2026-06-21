@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { getOperationalAdminStudents } from '@/lib/admin/students';
 import { getParentUnderstandingStateRows, getReviewFlagsRows } from '@/lib/admin/sheets';
@@ -42,7 +43,6 @@ function buildPrioritySentence({
   unknownPaymentMode,
   planningDueNow,
   planningNeedsAttention,
-  systemHealth,
 }) {
   const priorities = [];
   if (tutorAbsences > 0) priorities.push('tutor absences');
@@ -51,7 +51,6 @@ function buildPrioritySentence({
   if (planningNeedsAttention > 0 && planningDueNow === 0) priorities.push('planning items needing next action');
   if (openIssues > 0) priorities.push('open flags');
   if (unknownPaymentMode > 0) priorities.push('unknown payment modes');
-  if (systemHealth !== 'healthy') priorities.push('system health');
 
   return priorities.length
     ? `Suggested priority: review ${priorities.slice(0, 2).join(', ')}.`
@@ -157,10 +156,12 @@ function SectionHeader({ title, copy = '' }) {
 }
 
 export default async function AdminHomePage() {
-  const [students, flags, health, tutorAbsenceSummary, parentUnderstandingRows, planningDashboard] = await Promise.all([
+  // Health is intentionally NOT in this blocking fetch — it makes 3 uncached
+  // external calls (MMS + 2 GitHub), so it's streamed separately (see OverviewHealth)
+  // and the rest of the page renders immediately.
+  const [students, flags, tutorAbsenceSummary, parentUnderstandingRows, planningDashboard] = await Promise.all([
     getOperationalAdminStudents(),
     getReviewFlagsRows(),
-    getAdminHealthSummary(),
     getTutorAbsenceOverviewSummary(),
     getParentUnderstandingStateRows(),
     getPlanningDashboard(),
@@ -171,8 +172,6 @@ export default async function AdminHomePage() {
   const parentUnderstandingSummary = buildParentUnderstandingOverview(parentUnderstandingRows);
   const planningSummary = planningDashboard.summary || {};
   const planningDueNow = planningSummary.dueNow || 0;
-  const systemHealth = healthPriority(health);
-  const trustItems = buildTrustItems(health, systemHealth);
   const prioritySentence = buildPrioritySentence({
     openIssues: flags.length,
     tutorAbsences: tutorAbsenceSummary.openAbsences,
@@ -180,7 +179,6 @@ export default async function AdminHomePage() {
     unknownPaymentMode: paymentSummary.unknownPaymentMode,
     planningDueNow,
     planningNeedsAttention: planningSummary.needsAttention || 0,
-    systemHealth,
   });
   const tutorAbsenceHref = tutorAbsenceSummary.firstOpenAbsence
     ? `/admin/workflows/tutor-absence?tutor=${encodeURIComponent(tutorAbsenceSummary.firstOpenAbsence.tutorShortName)}&date=${encodeURIComponent(tutorAbsenceSummary.firstOpenAbsence.absenceDate)}`
@@ -244,13 +242,6 @@ export default async function AdminHomePage() {
       helper: 'Needs classification',
       tone: 'border-slate-200 bg-slate-50/80',
     } : null,
-    systemHealth !== 'healthy' ? {
-      label: 'System health',
-      value: systemHealth,
-      href: '/admin',
-      helper: 'MMS, workflows, flags',
-      tone: 'border-amber-100 bg-amber-50/70',
-    } : null,
   ].filter(Boolean);
   const attentionLabels = new Set(attentionItems.map((item) => item.label));
   const workQueueItems = [
@@ -291,35 +282,6 @@ export default async function AdminHomePage() {
     } : null,
   ].filter(Boolean);
 
-  const healthCards = [
-    {
-      label: 'MMS API',
-      status: health.mms.status,
-      detail: calmHealthDetail(health.mms.detail),
-      updatedAt: health.mms.checkedAt,
-    },
-    {
-      label: 'Generate Configs',
-      status: health.configWorkflow.status,
-      detail: calmHealthDetail(health.configWorkflow.detail),
-      updatedAt: health.configWorkflow.updatedAt,
-      link: health.configWorkflow.htmlUrl,
-    },
-    {
-      label: 'Regenerate FC IDs',
-      status: health.fcWorkflow.status,
-      detail: calmHealthDetail(health.fcWorkflow.detail),
-      updatedAt: health.fcWorkflow.updatedAt,
-      link: health.fcWorkflow.htmlUrl,
-    },
-    {
-      label: 'Review Flags Freshness',
-      status: health.flagsFreshness.status,
-      detail: health.flagsFreshness.statusDetail,
-      updatedAt: health.flagsFreshness.latestGeneratedAt,
-    },
-  ];
-
   return (
     <div className="space-y-8">
       <section>
@@ -348,10 +310,9 @@ export default async function AdminHomePage() {
             No active overview loops are demanding attention. Check waiting/onboarding or planned workflow work next.
           </div>
         )}
-        <div className="rounded-2xl border border-slate-200 bg-white/90 px-5 py-3 text-sm text-slate-600 shadow-[0_10px_28px_rgba(15,23,42,0.04)]">
-          <span className="font-medium text-slate-800">Trust:</span>{' '}
-          {trustItems.join(' · ')}
-        </div>
+        <Suspense fallback={<TrustStripFallback />}>
+          <OverviewTrustStrip />
+        </Suspense>
       </section>
 
       {workQueueItems.length ? (
@@ -402,27 +363,98 @@ export default async function AdminHomePage() {
         </div>
       </details>
 
-      <details className="rounded-2xl border border-blue-100 bg-white/90 p-5 shadow-[0_12px_36px_rgba(15,23,42,0.05)]">
-        <summary className="cursor-pointer text-sm font-semibold text-slate-900">System checks</summary>
-        <p className="mt-2 text-sm text-slate-600">Service checks, automation freshness, and workflow links.</p>
-        <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {healthCards.map((item) => (
-            <div key={item.label} className="rounded-2xl border border-blue-100 bg-white/90 p-6 shadow-[0_12px_36px_rgba(15,23,42,0.06)] backdrop-blur-sm">
-              <div className="flex items-start justify-between gap-3">
-                <p className="text-sm text-slate-500">{item.label}</p>
-                <span className={`rounded-full border px-3 py-1 text-xs font-medium ${statusClasses(item.status)}`}>{item.status}</span>
-              </div>
-              <p className="mt-3 text-sm text-slate-700">{item.detail}</p>
-              <p className="mt-4 text-xs text-slate-500">Last update: {formatDateTime(item.updatedAt)}</p>
-              {item.link ? (
-                <a href={item.link} target="_blank" rel="noreferrer" className="mt-3 inline-block text-sm font-medium text-slate-900 underline-offset-2 hover:underline">
-                  Open workflow run
-                </a>
-              ) : null}
+      <Suspense fallback={<SystemChecksFallback />}>
+        <OverviewSystemChecks />
+      </Suspense>
+    </div>
+  );
+}
+
+// --- Streamed health section -------------------------------------------------
+// Health makes 3 uncached external calls (MMS + 2 GitHub), so these two pieces
+// stream in separately — the rest of the Overview renders immediately, and these
+// fill in a moment later (instantly on repeat visits thanks to the 60s cache).
+
+async function OverviewTrustStrip() {
+  const health = await getAdminHealthSummary();
+  const systemHealth = healthPriority(health);
+  const trustItems = buildTrustItems(health, systemHealth);
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white/90 px-5 py-3 text-sm text-slate-600 shadow-[0_10px_28px_rgba(15,23,42,0.04)]">
+      <span className="font-medium text-slate-800">Trust:</span>{' '}
+      {trustItems.join(' · ')}
+    </div>
+  );
+}
+
+function TrustStripFallback() {
+  return (
+    <div className="animate-pulse rounded-2xl border border-slate-200 bg-white/90 px-5 py-3 shadow-[0_10px_28px_rgba(15,23,42,0.04)]">
+      <div className="h-4 w-64 rounded bg-slate-200/70" />
+    </div>
+  );
+}
+
+async function OverviewSystemChecks() {
+  const health = await getAdminHealthSummary();
+  const healthCards = [
+    {
+      label: 'MMS API',
+      status: health.mms.status,
+      detail: calmHealthDetail(health.mms.detail),
+      updatedAt: health.mms.checkedAt,
+    },
+    {
+      label: 'Generate Configs',
+      status: health.configWorkflow.status,
+      detail: calmHealthDetail(health.configWorkflow.detail),
+      updatedAt: health.configWorkflow.updatedAt,
+      link: health.configWorkflow.htmlUrl,
+    },
+    {
+      label: 'Regenerate FC IDs',
+      status: health.fcWorkflow.status,
+      detail: calmHealthDetail(health.fcWorkflow.detail),
+      updatedAt: health.fcWorkflow.updatedAt,
+      link: health.fcWorkflow.htmlUrl,
+    },
+    {
+      label: 'Review Flags Freshness',
+      status: health.flagsFreshness.status,
+      detail: health.flagsFreshness.statusDetail,
+      updatedAt: health.flagsFreshness.latestGeneratedAt,
+    },
+  ];
+
+  return (
+    <details className="rounded-2xl border border-blue-100 bg-white/90 p-5 shadow-[0_12px_36px_rgba(15,23,42,0.05)]">
+      <summary className="cursor-pointer text-sm font-semibold text-slate-900">System checks</summary>
+      <p className="mt-2 text-sm text-slate-600">Service checks, automation freshness, and workflow links.</p>
+      <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {healthCards.map((item) => (
+          <div key={item.label} className="rounded-2xl border border-blue-100 bg-white/90 p-6 shadow-[0_12px_36px_rgba(15,23,42,0.06)] backdrop-blur-sm">
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-sm text-slate-500">{item.label}</p>
+              <span className={`rounded-full border px-3 py-1 text-xs font-medium ${statusClasses(item.status)}`}>{item.status}</span>
             </div>
-          ))}
-        </div>
-      </details>
+            <p className="mt-3 text-sm text-slate-700">{item.detail}</p>
+            <p className="mt-4 text-xs text-slate-500">Last update: {formatDateTime(item.updatedAt)}</p>
+            {item.link ? (
+              <a href={item.link} target="_blank" rel="noreferrer" className="mt-3 inline-block text-sm font-medium text-slate-900 underline-offset-2 hover:underline">
+                Open workflow run
+              </a>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </details>
+  );
+}
+
+function SystemChecksFallback() {
+  return (
+    <div className="animate-pulse rounded-2xl border border-blue-100 bg-white/90 p-5 shadow-[0_12px_36px_rgba(15,23,42,0.05)]">
+      <div className="h-4 w-32 rounded bg-slate-200/70" />
     </div>
   );
 }
