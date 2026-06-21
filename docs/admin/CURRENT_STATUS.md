@@ -1,6 +1,6 @@
 # Admin Current Status
 
-Last updated: 2026-06-20
+Last updated: 2026-06-21
 
 This is the tracked current-status entrypoint for agents working from the `music-school-dashboard` repository.
 
@@ -105,6 +105,8 @@ The active surface is the private admin dashboard under `/admin`.
   - **Communication Log** (record-only): the existing "Copy message" buttons now also fire-and-forget a write to a new append-only `Communication_Log` tab, with a read-only `/admin/communications` ("Messages Sent") page to look back. No approval, no sending, no workflow change; "copied to send" is the proxy for "sent". This is the deliberately-lean first step of the communication layer gate — the trail a future WhatsApp-send feature would build on. Hooked buttons: pause card, parent-understanding, **waiting welcome**, and **tutor-absence** (broadcast showcase/holiday templates intentionally excluded — not per-parent). Student detail pages show a **"Messages logged"** panel per student.
   - **Waiting-list capacity matching refinement**: `/admin/waiting` "Possible slots" now shows multi-instrument coverage (covered vs uncovered, tagged not-taught vs no-free-slot), ranks tutors by how many requested instruments they cover, matches instrument synonyms on both tutor and student sides (via `normaliseInstrument`), and gives a clearer "why" for partial/no matches. Hints only — no auto-assign.
   - **Waiting-list day/time availability matching** (the previously-deferred sub-slice, now done): MMS sign-up form added `Preferred days` (Mon–Sat) + `Preferred times` (Earlier/Evenings) checkbox questions; the dashboard parses them onto each waiting student and **ranks** matching slots by an availability score (day weighted over time: full=3, day=2, time=1, neither=0). `/admin/waiting` shows "Prefers: …", rings preferred days, badges fitting tutors. Ranked not filtered. Verified against a real test sign-up note.
+  - **Navigation performance** (V4.1 first pass): shared `app/admin/loading.js` skeleton; Sheets read TTL 15s → 60s; Overview health cached (60s) + streamed via `<Suspense>`. Pause-complete button no longer flickers (`postPlanning` `silent` option).
+  - **Transient-error resilience**: both repos retry transient Google Sheets errors (429/5xx) with backoff — dashboard `withSheetsRetry()` in `lib/admin/sheets.js`, brain `gspread_retry()` in `generate_fc_ids.py`. This (not batching) was the fix for recurring "job failed" alerts caused by Google 503 blips. `batchGet` remains a future scaling lever, not a fix for these.
 
 ## Current Slice
 
