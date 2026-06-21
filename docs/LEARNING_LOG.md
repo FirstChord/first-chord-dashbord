@@ -19,6 +19,18 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-21 — Monday Scheduling Panel: shape-before-schedule
+
+**Feature/change:** The Monday scheduling panel on `/admin/planning` no longer one-taps the raw reflection line onto the board. Each "next improvement" is now **click-to-expand** (`MondayIntentionRow`): a small editor pre-filled with the line — editable **Title**, optional **Description**, **Owner** (Finn/Tom/Unassigned), and **Do by** (defaults to this Friday) — then **Add to board** creates a shaped, owned, dated planning card. The row then shows "Scheduled ✓ · do by <date>".
+
+**Why it exists:** the old behaviour created cards with the long raw sentence as both title and note, owner Unassigned — clunky, and you had to go edit each one. Shaping happens up front now.
+
+**Source-of-truth impact:** None. Still ordinary `Planning_Items` linked to the reflection via `parentPlanningId`; the row form just supplies a better title/notes/owner/do-by.
+
+**Files/functions involved:** `components/admin/AdminPlanningPageClient.js` — new `MondayIntentionRow`, `handleScheduleIntention(intention, { title, notes, owner, targetDate })`, `alreadyScheduledByTitle` (Map title→do-by).
+
+**What to watch out for:** there is no per-card detail route, so the confirmation is a "Scheduled ✓ · do by" badge, not a link. Scheduled-state is keyed by the original intention line (flips even if the title is edited); cross-reload detection still matches by card title, so an edited-title line could reappear as schedulable until the Monday card is marked done (which hides the panel). Low harm; store the original line on the card if bulletproofing is ever needed.
+
 ### 2026-06-21 — Waiting-List Capacity Matching Refinement
 
 **Feature/change:** Sharpened `buildWaitingCapacityMatches` (`lib/admin/capacity-helpers.mjs`) and the `/admin/waiting` "Possible slots" UI:

@@ -2201,6 +2201,62 @@ function DueTodayCard({
   );
 }
 
+// One "next improvement" from Friday's reflection on the Monday panel. Click to
+// expand into a small editor (shape the title, add a note, pick an owner and a
+// do-by) before it becomes a planning card — rather than scheduling the raw line.
+function MondayIntentionRow({ intention, scheduled, scheduledTargetDate = '', defaultDueDate, onSchedule, pending }) {
+  const [expanded, setExpanded] = useState(false);
+  const [title, setTitle] = useState(intention);
+  const [notes, setNotes] = useState('');
+  const [owner, setOwner] = useState('Unassigned');
+  const [targetDate, setTargetDate] = useState(defaultDueDate);
+
+  if (scheduled) {
+    return (
+      <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-white px-3 py-2">
+        <span className="text-sm text-slate-500">{intention}</span>
+        <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+          <Check className="h-3.5 w-3.5" /> Scheduled{scheduledTargetDate ? ` · do by ${formatTargetDate(scheduledTargetDate)}` : ''}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-slate-100 bg-white px-3 py-2">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-sm text-slate-800">{intention}</span>
+        <button
+          type="button"
+          onClick={() => setExpanded((value) => !value)}
+          className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-blue-200 bg-white px-2.5 py-1 text-xs font-semibold text-blue-800 hover:bg-blue-50"
+        >
+          {expanded ? 'Cancel' : <><Plus className="h-3.5 w-3.5" /> Schedule</>}
+        </button>
+      </div>
+      {expanded ? (
+        <div className="mt-3 space-y-3 border-t border-slate-100 pt-3">
+          <TextField label="Title" value={title} onChange={setTitle} placeholder="Shorten into a clear task" />
+          <TextAreaField label="Description (optional)" value={notes} onChange={setNotes} rows={2} placeholder="Any extra context" />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SelectField label="Owner" value={owner} onChange={setOwner} options={PLANNING_OWNERS} />
+            <DateField label="Do by" value={targetDate} onChange={setTargetDate} />
+          </div>
+          <button
+            type="button"
+            onClick={() => onSchedule({ title, notes, owner, targetDate })}
+            disabled={pending || !title.trim()}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+            Add to board
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default function AdminPlanningPageClient({ initialPlanning, initialFilter = 'all', studentOptions = [] }) {
   const [planning, setPlanning] = useState(initialPlanning || { items: [], summary: {} });
   const [quickNote, setQuickNote] = useState('');
@@ -2321,29 +2377,34 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
   }
 
   // Monday review: turn one "next improvement" intention from Friday's reflection
-  // into a dated, owned action item linked back to the reflection.
-  async function handleScheduleIntention(text) {
-    const title = `${text || ''}`.trim();
-    if (!title) {
+  // into a dated, owned action item linked back to the reflection. The row's
+  // editor supplies the shaped title/notes/owner/do-by; we key the scheduled
+  // state by the original intention line so it flips even if the title was edited.
+  async function handleScheduleIntention(intention, { title, notes, owner, targetDate } = {}) {
+    const cleanTitle = `${title || ''}`.trim();
+    if (!cleanTitle) {
       return;
     }
     try {
       await postPlanning({
         mode: 'save',
         item: {
-          title,
-          notes: title,
+          title: cleanTitle,
+          notes: `${notes || ''}`.trim() || cleanTitle,
           itemType: 'action',
-          owner: 'Unassigned',
+          owner: owner || 'Unassigned',
           status: 'active',
           area: 'other',
           parentPlanningId: SCHOOL_FORWARD_PLANNING_ID,
-          targetDate: calculateFridayReviewDate(new Date()),
+          targetDate: targetDate || calculateFridayReviewDate(new Date()),
           progressNote: 'Scheduled from Friday reflection.',
         },
         progressNote: 'Scheduled from Friday reflection.',
       });
-      setScheduledIntentions((current) => ({ ...current, [title.toLowerCase()]: true }));
+      setScheduledIntentions((current) => ({
+        ...current,
+        [`${intention || cleanTitle}`.toLowerCase()]: { targetDate: targetDate || calculateFridayReviewDate(new Date()) },
+      }));
     } catch (error) {
       setSaveState({ pending: false, error: error.message, savedAt: '' });
       setPendingId('');
@@ -2604,16 +2665,17 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
     [latestReflectionNote],
   );
   // Intentions already turned into linked action items (so they don't get
-  // re-scheduled across reloads), keyed by lowercased title.
-  const alreadyScheduledTitles = useMemo(() => {
-    const set = new Set();
+  // re-scheduled across reloads), keyed by lowercased title → the card's do-by.
+  const alreadyScheduledByTitle = useMemo(() => {
+    const map = new Map();
     for (const item of planning.items || []) {
       if (item.parentPlanningId === SCHOOL_FORWARD_PLANNING_ID && `${item.title || ''}`.trim()) {
-        set.add(`${item.title}`.trim().toLowerCase());
+        map.set(`${item.title}`.trim().toLowerCase(), { targetDate: item.targetDate || '' });
       }
     }
-    return set;
+    return map;
   }, [planning.items]);
+  const mondayDefaultDueDate = useMemo(() => calculateFridayReviewDate(new Date()), []);
   const mondayReviewOpen = Boolean(
     mondayItem
     && !['done', 'parked'].includes(mondayItem.status)
@@ -2654,25 +2716,19 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
           </div>
           <div className="mt-3 space-y-2">
             {reflectionIntentions.map((intention) => {
-              const scheduled = scheduledIntentions[intention.toLowerCase()] || alreadyScheduledTitles.has(intention.toLowerCase());
+              const key = intention.toLowerCase();
+              const sessionEntry = scheduledIntentions[key];
+              const existing = alreadyScheduledByTitle.get(key);
               return (
-                <div key={intention} className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-white px-3 py-2">
-                  <span className="text-sm text-slate-800">{intention}</span>
-                  {scheduled ? (
-                    <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                      <Check className="h-3.5 w-3.5" /> Scheduled
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => handleScheduleIntention(intention)}
-                      disabled={saveState.pending}
-                      className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-blue-200 bg-white px-2.5 py-1 text-xs font-semibold text-blue-800 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      <Plus className="h-3.5 w-3.5" /> Schedule this
-                    </button>
-                  )}
-                </div>
+                <MondayIntentionRow
+                  key={intention}
+                  intention={intention}
+                  scheduled={Boolean(sessionEntry || existing)}
+                  scheduledTargetDate={sessionEntry?.targetDate || existing?.targetDate || ''}
+                  defaultDueDate={mondayDefaultDueDate}
+                  onSchedule={(values) => handleScheduleIntention(intention, values)}
+                  pending={saveState.pending}
+                />
               );
             })}
           </div>
