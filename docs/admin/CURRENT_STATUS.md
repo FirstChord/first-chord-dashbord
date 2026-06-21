@@ -149,6 +149,7 @@ The active V4 slice is context + ownership layering, not broad automation.
   - student-linked pause planning can update `payment_expectation` only through an explicit human completion action
   - generic `Done` does not itself change payment state; `Mark pause completed` is the guarded pause-specific action that logs confirmation, aligns `payment_expectation`, and closes the task
 - Dashboard-owned state tabs and write patterns are now documented in `docs/admin/STATE_TABS_SCHEMA.md`. Treat that as the schema map before adding another Sheets tab.
+- `docs/admin/STATE_TABS_SCHEMA.md` is the canonical state lane map. Do not create another source-of-truth/state-map document.
 - Pause planning guardrail:
   - pause reminders should be linked to a student before billing actions
   - the admin must confirm the payment pause tool was run and the parent confirmation was sent/copied
@@ -174,6 +175,7 @@ The active V4 slice is context + ownership layering, not broad automation.
   - lesson selection must stay explicit/visible before real tutor rollout
   - final tutor rollout still needs a real-student pilot, broader auth, and a retry design that does not duplicate MMS writes or parent emails
   - transactional lesson-note email is now documented as the narrow automated-email exception; payment, pause, onboarding, WhatsApp, and marketing messages remain approval-first
+  - before widening beyond Finn/Tom/Fenella, update `docs/admin/PRACTICE_CHAT_DELIVERY_AUDIT.md`; caller identity, caller/student authorisation, config-driven rollout, and duplicate-send concurrency are blockers
 
 Before deployment, verify with:
 
@@ -217,13 +219,18 @@ Progress note (2026-06-21): recent work advanced **pause loop maturity** (inline
    - Add draft and approval records before any WhatsApp Cloud API integration.
    - Do not auto-send.
 
-9. **Parent understanding hardening**
+9. **Practice Chat Level 2 delivery audit**
+   - Read-only audit first; do not change code until the current delivery path has been rechecked.
+   - Caller identity, caller/student authorisation, config-driven rollout, and duplicate-send concurrency are widening blockers.
+   - Keep the real-student pilot limited to Finn/Tom/Fenella until those are resolved.
+
+10. **Parent understanding hardening**
    - Manually test 2-3 real students before handing to Fenella.
    - Confirm the labels match how Fenella naturally asks the questions.
    - Keep improving next-action wording before adding more fields.
    - Do not auto-update MMS contact details from this page; keep this as flag/note only for now.
 
-10. **Planning link refinement**
+11. **Planning link refinement**
    - Improve student matching only if real captures show ambiguity.
    - Consider linking planning items to issue IDs after the student-link loop is calm.
    - Keep ownership simple: Finn, Tom, or Unassigned unless a real delegation need appears.
@@ -251,6 +258,14 @@ Progress note (2026-06-21): recent work advanced **pause loop maturity** (inline
 - `Communication_Log` = append-only record of parent messages copied to send (record-only; not a sender)
 - `Pause History` = intentional pause-window truth
 - generated FC tabs and generated dashboard config files = derived outputs
+
+Use `docs/admin/STATE_TABS_SCHEMA.md` as the canonical state lane map for dashboard-owned Sheets tabs.
+
+Known fragile format contracts:
+
+- MMS sign-up labels `Preferred days` and `Preferred times` feed waiting-list availability matching. If the MMS form wording changes, update the parser/tests.
+- The Google Sheets `Students` header row is a system contract. Protect it in Google Sheets with an edit warning; if headers change, update dashboard and FC-regeneration readers deliberately.
+- GitHub scheduled workflows, including schedule refresh, can silently stop after long inactivity. Keep this in the operations/health rhythm.
 
 ## Read Order
 

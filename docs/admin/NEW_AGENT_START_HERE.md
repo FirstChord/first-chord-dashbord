@@ -1,6 +1,6 @@
 # New Agent Start Here — Admin Dashboard
 
-Last updated: 2026-06-13
+Last updated: 2026-06-21
 
 This is the practical handoff note for a new Codex/AI agent working on the First Chord admin dashboard.
 
@@ -9,7 +9,15 @@ This is the practical handoff note for a new Codex/AI agent working on the First
 - Repo: `/Users/finnlemarinel/Desktop/FirstChord/music-school-dashboard`
 - Obsidian vault: `/Users/finnlemarinel/FirstChordOS`
 - Obsidian OS docs: `/Users/finnlemarinel/FirstChordOS/docs/obsidian`
-- Live Railway app: `https://efficient-sparkle-production.up.railway.app`
+- Canonical admin/API Railway app: `https://first-chord-dashbord-production.up.railway.app`
+- Legacy/public tutor-student dashboard Railway app: `https://efficient-sparkle-production.up.railway.app`
+- Practice Chat speech relay Railway app: `https://enhanced-music-lesson-notes-production.up.railway.app`
+
+Railway service map:
+
+- `pure-spontaneity` / `first-chord-dashbord` = canonical admin/API runtime. Use this for `/admin`, Practice Chat writebacks, Gmail sends, Sheets writes, Stripe scans, schedule refresh cron, and internal operating-system work.
+- `efficient-sparkle` = legacy/public tutor-student dashboard runtime. `/dashboard` works here, but `/admin` is not fully configured and should not be used for admin/API writebacks.
+- `awake-connection` / `enhanced-music-lesson-notes` = Practice Chat speech/Whisper relay.
 
 ## First Checks
 
@@ -43,6 +51,11 @@ Recent V4 layers include:
 - Planning Meeting view with a seeded Friday reflection prompt; entries append to `Planning_Progress_Log` for future monthly/quarterly summaries
 - student-linked planning items visible from student detail pages
 - pause planning cards with a guarded `Mark pause completed` path that logs confirmation, aligns `payment_expectation`, and closes the planning task
+- Monday scheduling loop that turns Friday reflections into dated work
+- calm Due Now view for meeting/day-of action
+- schedule cache health and scheduled schedule refresh
+- communication record layer for copied parent messages
+- Practice Chat note ownership: sent/completed First Chord notes are now read by portals before MMS fallback
 
 ## Operators (who uses what)
 
@@ -60,17 +73,20 @@ Keep this short; it is an operator pointer, not a permissions model.
 1. `docs/admin/CURRENT_STATUS.md`
 2. `docs/admin/V3_LOOP_ARCHITECTURE.md`
 3. `docs/admin/OWNERSHIP_MATRIX.md`
-4. `docs/admin/STATE_TABS_SCHEMA.md`
+4. `docs/admin/STATE_TABS_SCHEMA.md` — canonical state lane map
 5. `docs/admin/WORKFLOW_DESIGN_PRINCIPLES.md`
 6. `docs/admin/HYGIENE_AND_SECRETS.md`
 7. `docs/admin/DOCUMENTATION_MAP.md`
 8. `docs/admin/SCHOOL_POLICY.md`
 9. `docs/admin/PAYMENTS_RULES.md` if touching Stripe, pauses, or payment expectations
 10. `docs/admin/BUG_FIXES.md` if debugging Railway, MMS calendar times, or recent production issues
-11. Obsidian: `08 Operations/Current System Map.md`
-12. Obsidian: `08 Operations/Active Roadmap.md`
+11. `docs/admin/PRACTICE_CHAT_DELIVERY_AUDIT.md` if touching Practice Chat Level 2 delivery or rollout
+12. Obsidian: `08 Operations/Current System Map.md`
+13. Obsidian: `08 Operations/Active Roadmap.md`
 
 ## Source-of-Truth Rules
+
+For dashboard-owned Sheets tabs, use `docs/admin/STATE_TABS_SCHEMA.md` as the canonical state lane map. It marks each tab as truth, cache, workflow state, append-only log, or derived context.
 
 - Sheets = operational school truth
 - Registry = portal config truth
@@ -83,6 +99,7 @@ Keep this short; it is an operator pointer, not a permissions model.
 - `Parent_Understanding_State` = parent check-in campaign workflow state
 - `Planning_Items` = human-captured planning/task/initiative state
 - `Planning_Progress_Log` = append-only planning progress history
+- `Communication_Log` = append-only record of parent messages copied to send; record-only, not a sender
 - `Practice_Notes_Log` = dashboard-owned Practice Chat note/delivery memory; sent/completed rows are parent-visible in portals before MMS fallback
 
 ## Recent Important Work
@@ -108,6 +125,8 @@ Planning now captures human Brain-style work without becoming full project manag
 - meeting filters: Due Now, Unassigned, Waiting, Linked, No Next Action
 - Meeting filter: a curated planning review surface for clearing admin loops and protecting time for school-improvement work
 - weekly seeded prompt: `Friday: what moved the school forward?`
+- Monday scheduling prompt: turns last Friday's improvement intentions into dated action items
+- calm Due Now filter: focused day-of/overdue action cards instead of the full planning board
 - student linking: Planning receives compact student options from `getAdminStudents()`
 - student detail: open linked planning items appear on `/admin/students/[mmsId]`
 - workflow principle: reduce admin cognitive load by making the next safe action clear, not by adding fields
@@ -136,8 +155,26 @@ There is also a narrow Level 2 MMS-write test route:
 - local testing proves note write + attendance save; MMS `emailnotes` may fail unless MMS sees the principal as a teacher, so the current test path uses `GMAIL_*` send-only OAuth env vars instead
 - API route guard: no-Origin requests are rejected unless a valid `X-FirstChord-PracticeChat-Secret` header is supplied. For rollout, set matching `PRACTICE_CHAT_API_SECRET` and `NEXT_PUBLIC_PRACTICE_CHAT_API_SECRET`; this is a coarse bridge secret, not per-tutor auth.
 - do not generalise this until lesson targeting is visible/explicit, Gmail delivery has been tested, retry/idempotency is designed, and at least one safe real-student workflow has been verified
+- before widening beyond Finn/Tom/Fenella, update and act on `docs/admin/PRACTICE_CHAT_DELIVERY_AUDIT.md`; caller identity, caller/student authorisation, config-driven rollout, and duplicate-send concurrency are blockers
 
 Do not create a second source of truth unless the user explicitly agrees.
+
+Communication logging is now intentionally record-only:
+
+- page: `/admin/communications`
+- API: `POST /api/admin/communications`
+- helper: `lib/admin/communications.js`
+- managed Sheets tab: `Communication_Log`
+- current meaning: "this parent message was copied to send"
+- not current meaning: "the dashboard sent this message"
+- no approval workflow, WhatsApp API, or auto-send exists yet
+
+Schedule cache refresh is now both manual and scheduled:
+
+- manual exception handling: `/admin/capacity` and `POST /api/admin/schedule/refresh-stale`
+- scheduled cohort refresh: GitHub Action `.github/workflows/refresh-schedules.yml` calls `POST /api/cron/refresh-schedules`
+- required secret in both Railway and GitHub repo secrets: `SCHEDULE_REFRESH_SECRET`
+- source boundary: `Schedule_Context` is still a cache of selected MMS facts, not truth
 
 ## What To Avoid Rushing
 

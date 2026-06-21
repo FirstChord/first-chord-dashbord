@@ -85,6 +85,10 @@ Workflows should be explicit about what they read and write:
 
 A workflow should not silently promote derived context into truth.
 
+Before adding a new state tab or external read, check `docs/admin/STATE_TABS_SCHEMA.md`. It is the canonical lane map for dashboard-owned state: truth, cache, workflow state, append-only log, and derived context.
+
+Do not add page-load MMS calls casually. MMS should be read on explicit refresh, scheduled refresh, or when the workflow genuinely needs live vendor truth. If a page can use `Schedule_Context`, cached free-slot context, or existing state rows, prefer that.
+
 ## Approval Boundaries
 
 Keep these approval-first:
@@ -97,6 +101,13 @@ Keep these approval-first:
 - MMS status or lesson changes
 
 The dashboard can prepare, prefill, copy, and log. The human approves the consequential step.
+
+Communication boundary:
+
+- `Communication_Log` records messages copied to send.
+- Copied is not the same as sent.
+- The dashboard currently does not send WhatsApp messages.
+- Practice Chat lesson-note email is the narrow automated-email exception; do not treat it as precedent for payment, pause, onboarding, WhatsApp, marketing, or general parent messaging.
 
 ## Current Workflow Surfaces
 
@@ -161,6 +172,8 @@ State:
 `/admin/planning` captures human-created work: ideas, initiatives, and actions.
 
 Planning is not project management. It exists to stop useful operational thoughts disappearing in WhatsApp, and to make meeting actions visible by owner/date/status.
+
+Planning should stay scoped to capture, ownership, due work, meeting rhythm, initiatives, and student-linked operational tasks. Do not turn it into full project management, a generic ticketing system, or a second issue queue.
 
 Planning has a `Meeting` view that separates the meeting rhythm into:
 

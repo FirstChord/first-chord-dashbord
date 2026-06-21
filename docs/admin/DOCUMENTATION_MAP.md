@@ -1,6 +1,6 @@
 # Documentation Map
 
-Last updated: 2026-06-10
+Last updated: 2026-06-21
 
 The docs are useful, but there are many entry points. This map defines the canonical ones so future agents do not treat old drafts as current authority.
 
@@ -11,11 +11,12 @@ Read in this order:
 1. `docs/admin/NEW_AGENT_START_HERE.md`
 2. `docs/admin/CURRENT_STATUS.md`
 3. `docs/admin/V3_LOOP_ARCHITECTURE.md`
-4. `docs/admin/STATE_TABS_SCHEMA.md`
+4. `docs/admin/STATE_TABS_SCHEMA.md` — canonical dashboard state lane map
 5. `docs/admin/HYGIENE_AND_SECRETS.md`
 6. `docs/admin/OWNERSHIP_MATRIX.md`
 7. `docs/admin/SCHOOL_POLICY.md`
 8. `docs/admin/PAYMENTS_RULES.md` when touching payments, pauses, Stripe, or setup-pending logic
+9. `docs/admin/PRACTICE_CHAT_DELIVERY_AUDIT.md` when touching Practice Chat Level 2 delivery or rollout
 
 `docs/admin/AUDIT_2026-06-10.md` is critique input, not a live plan. Use judgement before implementing its recommendations.
 
@@ -53,4 +54,5 @@ Older V1/V2 docs remain useful for background. They should not override:
 - `CURRENT_STATUS.md`
 - `NEW_AGENT_START_HERE.md`
 - `V3_LOOP_ARCHITECTURE.md`
+- `STATE_TABS_SCHEMA.md`
 - current code/tests
