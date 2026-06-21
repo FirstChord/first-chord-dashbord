@@ -2327,9 +2327,14 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
     });
   }, [planning.items, query, filter, showDone]);
 
-  async function postPlanning(payload, targetId = '') {
-    setSaveState({ pending: true, error: '', savedAt: '' });
-    setPendingId(targetId);
+  // `silent` skips the pending/savedAt/pendingId bookkeeping so a multi-step
+  // action (e.g. completing a pause) can own that state across several calls
+  // without the button flickering enabled between steps.
+  async function postPlanning(payload, targetId = '', { silent = false } = {}) {
+    if (!silent) {
+      setSaveState({ pending: true, error: '', savedAt: '' });
+      setPendingId(targetId);
+    }
     const response = await fetch('/api/admin/planning', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -2342,12 +2347,14 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
     }
 
     setPlanning(data.planning);
-    setSaveState({
-      pending: false,
-      error: '',
-      savedAt: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
-    });
-    setPendingId('');
+    if (!silent) {
+      setSaveState({
+        pending: false,
+        error: '',
+        savedAt: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+      });
+      setPendingId('');
+    }
     return data.planning;
   }
 
@@ -2595,7 +2602,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
           progressNote: PAUSE_PAYMENT_CONFIRMATION_NOTE,
           progressType: 'action_completed',
           nextAction: item.nextAction,
-        }, item.planningId);
+        }, item.planningId, { silent: true });
       }
 
       const linkedStudent = findStudentById(studentOptions, item.linkedStudentId);
@@ -2625,7 +2632,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
           progressNote: PAUSE_EXPECTATION_SET_NOTE,
           progressType: 'action_completed',
           nextAction: item.nextAction,
-        }, item.planningId);
+        }, item.planningId, { silent: true });
         setPaymentExpectationOverrides((current) => ({
           ...current,
           [item.linkedStudentId]: 'stripe_paused_expected',
@@ -2639,7 +2646,16 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
         progressNote: PAUSE_COMPLETED_NOTE,
         progressType: 'action_completed',
         nextAction: item.nextAction,
-      }, item.planningId);
+      }, item.planningId, { silent: true });
+
+      // Clear the shared pending/pendingId once, after all steps — the button stays
+      // in "Completing…" the whole time instead of flickering between calls.
+      setSaveState({
+        pending: false,
+        error: '',
+        savedAt: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+      });
+      setPendingId('');
     } catch (error) {
       setSaveState({ pending: false, error: error.message || 'Pause completion failed', savedAt: '' });
       setPendingId('');
