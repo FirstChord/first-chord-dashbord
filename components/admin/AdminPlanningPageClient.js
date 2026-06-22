@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Check, Loader2, Pencil, Plus, Search, SlidersHorizontal } from 'lucide-react';
+import { Check, Loader2, Pencil, Plus, Search, SlidersHorizontal, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   PLANNING_AREAS,
@@ -10,9 +10,11 @@ import {
   PLANNING_STATUSES,
   SCHOOL_FORWARD_PLANNING_ID,
   MONDAY_SCHEDULE_PLANNING_ID,
+  buildReflectionIntentionDismissalNote,
   buildSchoolForwardReflections,
   calculateFridayReviewDate,
   calculateNextMeetingDate,
+  extractDismissedReflectionIntentions,
   extractReflectionIntentions,
   getLatestSchoolForwardReflectionNote,
   buildPauseLessonDateSuggestions,
@@ -24,6 +26,7 @@ import {
   labelPlanningMomentum,
   labelPlanningStatus,
   labelPlanningType,
+  normaliseReflectionIntentionKey,
   parseLinkedStudentIds,
 } from '@/lib/admin/planning-helpers.mjs';
 import { ADMIN_TUTORS } from '@/lib/admin/tutors-data.js';
@@ -2241,35 +2244,35 @@ function DueTodayCard({
 // One "next improvement" from Friday's reflection on the Monday panel. Click to
 // expand into a small editor (shape the title, add a note, pick an owner and a
 // do-by) before it becomes a planning card — rather than scheduling the raw line.
-function MondayIntentionRow({ intention, scheduled, scheduledTargetDate = '', defaultDueDate, onSchedule, pending }) {
+function MondayIntentionRow({ intention, defaultDueDate, onSchedule, onDismiss, pending }) {
   const [expanded, setExpanded] = useState(false);
   const [title, setTitle] = useState(intention);
   const [notes, setNotes] = useState('');
   const [owner, setOwner] = useState('Unassigned');
   const [targetDate, setTargetDate] = useState(defaultDueDate);
 
-  if (scheduled) {
-    return (
-      <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-white px-3 py-2">
-        <span className="text-sm text-slate-500">{intention}</span>
-        <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-          <Check className="h-3.5 w-3.5" /> Scheduled{scheduledTargetDate ? ` · do by ${formatTargetDate(scheduledTargetDate)}` : ''}
-        </span>
-      </div>
-    );
-  }
-
   return (
     <div className="rounded-xl border border-slate-100 bg-white px-3 py-2">
       <div className="flex items-center justify-between gap-3">
         <span className="text-sm text-slate-800">{intention}</span>
-        <button
-          type="button"
-          onClick={() => setExpanded((value) => !value)}
-          className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-blue-200 bg-white px-2.5 py-1 text-xs font-semibold text-blue-800 hover:bg-blue-50"
-        >
-          {expanded ? 'Cancel' : <><Plus className="h-3.5 w-3.5" /> Schedule</>}
-        </button>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setExpanded((value) => !value)}
+            className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-blue-200 bg-white px-2.5 py-1 text-xs font-semibold text-blue-800 hover:bg-blue-50"
+          >
+            {expanded ? 'Cancel' : <><Plus className="h-3.5 w-3.5" /> Schedule</>}
+          </button>
+          <button
+            type="button"
+            onClick={() => onDismiss(intention)}
+            disabled={pending}
+            title="Remove this suggestion from the Monday scheduling list"
+            className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <X className="h-3.5 w-3.5" /> Dismiss
+          </button>
+        </div>
       </div>
       {expanded ? (
         <div className="mt-3 space-y-3 border-t border-slate-100 pt-3">
@@ -2434,7 +2437,10 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
         mode: 'save',
         item: {
           title: cleanTitle,
-          notes: `${notes || ''}`.trim() || cleanTitle,
+          notes: [
+            `Friday intention: ${intention}`,
+            `${notes || ''}`.trim(),
+          ].filter(Boolean).join('\n'),
           itemType: 'action',
           owner: owner || 'Unassigned',
           status: 'active',
@@ -2447,8 +2453,26 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
       });
       setScheduledIntentions((current) => ({
         ...current,
-        [`${intention || cleanTitle}`.toLowerCase()]: { targetDate: targetDate || calculateFridayReviewDate(new Date()) },
+        [normaliseReflectionIntentionKey(intention || cleanTitle)]: { targetDate: targetDate || calculateFridayReviewDate(new Date()) },
       }));
+    } catch (error) {
+      setSaveState({ pending: false, error: error.message, savedAt: '' });
+      setPendingId('');
+    }
+  }
+
+  async function handleDismissIntention(intention) {
+    if (!mondayItem?.planningId) {
+      return;
+    }
+    try {
+      await postPlanning({
+        mode: 'progress',
+        planningId: mondayItem.planningId,
+        progressNote: buildReflectionIntentionDismissalNote(intention),
+        progressType: 'decision',
+        nextAction: mondayItem.nextAction,
+      }, mondayItem.planningId);
     } catch (error) {
       setSaveState({ pending: false, error: error.message, savedAt: '' });
       setPendingId('');
@@ -2717,22 +2741,39 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
     () => extractReflectionIntentions(latestReflectionNote?.progressNote || ''),
     [latestReflectionNote],
   );
+  const dismissedIntentions = useMemo(
+    () => extractDismissedReflectionIntentions(mondayItem || {}),
+    [mondayItem],
+  );
   // Intentions already turned into linked action items (so they don't get
   // re-scheduled across reloads), keyed by lowercased title → the card's do-by.
   const alreadyScheduledByTitle = useMemo(() => {
     const map = new Map();
     for (const item of planning.items || []) {
       if (item.parentPlanningId === SCHOOL_FORWARD_PLANNING_ID && `${item.title || ''}`.trim()) {
-        map.set(`${item.title}`.trim().toLowerCase(), { targetDate: item.targetDate || '' });
+        map.set(normaliseReflectionIntentionKey(item.title), { targetDate: item.targetDate || '' });
+        const intentionLine = `${item.notes || ''}`.split(/\r?\n/u)
+          .find((line) => /^Friday intention:/iu.test(line.trim()));
+        const sourceIntention = intentionLine ? intentionLine.replace(/^Friday intention:\s*/iu, '') : '';
+        const sourceKey = normaliseReflectionIntentionKey(sourceIntention);
+        if (sourceKey) {
+          map.set(sourceKey, { targetDate: item.targetDate || '' });
+        }
       }
     }
     return map;
   }, [planning.items]);
+  const openReflectionIntentions = useMemo(() => reflectionIntentions.filter((intention) => {
+    const key = normaliseReflectionIntentionKey(intention);
+    const sessionEntry = scheduledIntentions[key];
+    const existing = alreadyScheduledByTitle.get(key);
+    return !sessionEntry && !existing && !dismissedIntentions.has(key);
+  }), [alreadyScheduledByTitle, dismissedIntentions, reflectionIntentions, scheduledIntentions]);
   const mondayDefaultDueDate = useMemo(() => calculateFridayReviewDate(new Date()), []);
   const mondayReviewOpen = Boolean(
     mondayItem
     && !['done', 'parked'].includes(mondayItem.status)
-    && reflectionIntentions.length > 0,
+    && openReflectionIntentions.length > 0,
   );
 
   return (
@@ -2768,22 +2809,16 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
             </Link>
           </div>
           <div className="mt-3 space-y-2">
-            {reflectionIntentions.map((intention) => {
-              const key = intention.toLowerCase();
-              const sessionEntry = scheduledIntentions[key];
-              const existing = alreadyScheduledByTitle.get(key);
-              return (
-                <MondayIntentionRow
-                  key={intention}
-                  intention={intention}
-                  scheduled={Boolean(sessionEntry || existing)}
-                  scheduledTargetDate={sessionEntry?.targetDate || existing?.targetDate || ''}
-                  defaultDueDate={mondayDefaultDueDate}
-                  onSchedule={(values) => handleScheduleIntention(intention, values)}
-                  pending={saveState.pending}
-                />
-              );
-            })}
+            {openReflectionIntentions.map((intention) => (
+              <MondayIntentionRow
+                key={intention}
+                intention={intention}
+                defaultDueDate={mondayDefaultDueDate}
+                onSchedule={(values) => handleScheduleIntention(intention, values)}
+                onDismiss={handleDismissIntention}
+                pending={saveState.pending}
+              />
+            ))}
           </div>
           <p className="mt-3 text-xs leading-5 text-slate-500">
             Scheduled items appear on the board as dated actions. Mark the Monday card done once you’ve scheduled this week’s work.

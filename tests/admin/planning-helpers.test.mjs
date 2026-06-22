@@ -16,6 +16,10 @@ import {
   calculateNextMeetingDate,
   buildMondaySchedulePlanningItem,
   extractReflectionIntentions,
+  buildReflectionIntentionDismissalNote,
+  extractDismissedReflectionIntentions,
+  isReflectionIntentionDismissed,
+  normaliseReflectionIntentionKey,
   shouldRefreshMondaySchedulePlanningItem,
   MONDAY_SCHEDULE_PLANNING_ID,
   buildPlanningDueSummary,
@@ -122,6 +126,27 @@ test('stops extracting intentions at the next section heading', () => {
     '- Should be ignored',
   ].join('\n');
   assert.deepEqual(extractReflectionIntentions(note), ['First thing']);
+});
+
+test('tracks dismissed reflection intentions by stable key', () => {
+  const intention = '  Explore launching drum lessons.  ';
+  const note = buildReflectionIntentionDismissalNote(intention);
+  assert.equal(note, 'Dismissed Friday reflection intention: Explore launching drum lessons.');
+  assert.equal(normaliseReflectionIntentionKey('Explore   Launching Drum Lessons.'), 'explore launching drum lessons.');
+
+  const mondayItem = {
+    progress: [
+      { progressNote: note },
+      { progressNote: 'Scheduled from Friday reflection.' },
+    ],
+  };
+
+  assert.deepEqual(
+    [...extractDismissedReflectionIntentions(mondayItem)],
+    ['explore launching drum lessons.'],
+  );
+  assert.equal(isReflectionIntentionDismissed(mondayItem, 'Explore launching drum lessons.'), true);
+  assert.equal(isReflectionIntentionDismissed(mondayItem, 'Recruit a piano teacher'), false);
 });
 
 test('first-lesson check-in lands on the first Mon/Wed/Fri after the lesson', () => {

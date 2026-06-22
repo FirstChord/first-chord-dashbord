@@ -333,12 +333,11 @@ export default async function AdminHomePage() {
             <h4 className="text-sm font-semibold text-slate-900">Lifecycle snapshot</h4>
             <p className="text-xs text-slate-500">{students.length} operational students. Derived state, separate from payment expectation.</p>
           </div>
-          <div className="mt-3 grid gap-3 sm:grid-cols-3 xl:grid-cols-6">
+          <div className="mt-3 grid gap-3 sm:grid-cols-3 xl:grid-cols-5">
             {[
               ['Active', lifecycleCounts.active || 0],
               ['Lifecycle setup', lifecycleCounts.setup_pending || 0],
               ['Currently paused', lifecycleCounts.paused || 0],
-              ['Waiting', lifecycleCounts.waiting || 0],
               ['Needs review', lifecycleCounts.needs_review || 0],
               ['Stopped', lifecycleCounts.stopped || 0],
             ].map(([label, value]) => (
