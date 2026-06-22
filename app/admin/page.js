@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
+import { PawPrint } from 'lucide-react';
 import { getOperationalAdminStudents } from '@/lib/admin/students';
 import { getParentUnderstandingStateRows, getReviewFlagsRows } from '@/lib/admin/sheets';
 import { getAdminHealthSummary } from '@/lib/admin/health';
@@ -41,20 +42,18 @@ function buildPrioritySentence({
   tutorAbsences,
   linkingGaps,
   unknownPaymentMode,
-  planningDueNow,
   planningNeedsAttention,
 }) {
   const priorities = [];
   if (tutorAbsences > 0) priorities.push('tutor absences');
-  if (planningDueNow > 0) priorities.push("today's planning tasks");
   if (linkingGaps > 0) priorities.push('payment/linking gaps');
-  if (planningNeedsAttention > 0 && planningDueNow === 0) priorities.push('planning items needing next action');
   if (openIssues > 0) priorities.push('open flags');
+  if (planningNeedsAttention > 0) priorities.push('planning items needing next action');
   if (unknownPaymentMode > 0) priorities.push('unknown payment modes');
 
   return priorities.length
-    ? `Suggested priority: review ${priorities.slice(0, 2).join(', ')}.`
-    : 'Suggested priority: no urgent overview items; check waiting/onboarding work next.';
+    ? `Suggested priority: clear ${priorities.slice(0, 2).join(', ')}.`
+    : 'No open operational loops are pressing right now.';
 }
 
 function buildParentUnderstandingOverview(rows = []) {
@@ -83,14 +82,38 @@ function buildWaitingOverview(students = []) {
   };
 }
 
-function buildTrustItems(health, systemHealth) {
-  return [
-    `MMS ${String(health.mms.status || 'unknown').toLowerCase()}`,
-    `Review flags ${String(health.flagsFreshness.status || 'unknown').toLowerCase()}`,
-    systemHealth === 'healthy'
-      ? 'Automation checks quiet'
-      : `System health ${systemHealth}`,
-  ];
+function buildTrustSummary(health, systemHealth) {
+  if (systemHealth === 'healthy') {
+    return {
+      label: 'All clear',
+      tone: 'border-emerald-100 bg-emerald-50/70 text-emerald-950',
+      detail: 'MMS healthy · Review flags fresh · Automation quiet',
+      href: '',
+    };
+  }
+
+  const details = [];
+  if (['Failing', 'Stale', 'Running', 'Aging'].includes(health.mms.status)) {
+    details.push(`MMS ${String(health.mms.status || 'unknown').toLowerCase()}`);
+  }
+  if (['Failing', 'Stale', 'Running', 'Aging'].includes(health.flagsFreshness.status)) {
+    details.push(`Review flags ${String(health.flagsFreshness.status || 'unknown').toLowerCase()}`);
+  }
+  if (['Failing', 'Stale', 'Running', 'Aging'].includes(health.configWorkflow.status)) {
+    details.push(`Generate configs ${String(health.configWorkflow.status || 'unknown').toLowerCase()}`);
+  }
+  if (['Failing', 'Stale', 'Running', 'Aging'].includes(health.fcWorkflow.status)) {
+    details.push(`Regenerate FC IDs ${String(health.fcWorkflow.status || 'unknown').toLowerCase()}`);
+  }
+
+  return {
+    label: systemHealth === 'watch' ? 'Worth checking' : 'Check before acting',
+    tone: systemHealth === 'watch'
+      ? 'border-amber-100 bg-amber-50/80 text-amber-950'
+      : 'border-red-100 bg-red-50/80 text-red-950',
+    detail: details.length ? details.join(' · ') : `System health ${systemHealth}`,
+    href: '#system-checks',
+  };
 }
 
 function calmHealthDetail(detail = '') {
@@ -123,6 +146,30 @@ function ActionCard({ label, value, href, helper = '', tone = 'border-slate-200 
       <p className="mt-2 text-3xl font-semibold text-slate-950">{value}</p>
       {helper ? <p className="mt-2 text-xs text-slate-600">{helper}</p> : null}
     </Link>
+  );
+}
+
+function ThemeCard({ title, copy, prompt, href = '/admin/planning' }) {
+  return (
+    <Link
+      href={href}
+      className="block rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-[0_12px_36px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-[0_16px_42px_rgba(15,23,42,0.08)]"
+    >
+      <p className="text-base font-semibold text-slate-950">{title}</p>
+      <p className="mt-2 text-sm leading-6 text-slate-600">{copy}</p>
+      <p className="mt-4 rounded-xl border border-blue-100 bg-blue-50/70 px-3 py-2 text-xs font-medium leading-5 text-slate-700">
+        {prompt}
+      </p>
+    </Link>
+  );
+}
+
+function EmptyState({ title, copy }) {
+  return (
+    <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-5 text-sm text-emerald-950 shadow-[0_12px_36px_rgba(15,23,42,0.05)]">
+      <p className="font-semibold">{title}</p>
+      <p className="mt-1 text-emerald-900">{copy}</p>
+    </div>
   );
 }
 
@@ -177,29 +224,14 @@ export default async function AdminHomePage() {
     tutorAbsences: tutorAbsenceSummary.openAbsences,
     linkingGaps: paymentSummary.stripeLinkingGaps,
     unknownPaymentMode: paymentSummary.unknownPaymentMode,
-    planningDueNow,
     planningNeedsAttention: planningSummary.needsAttention || 0,
   });
   const tutorAbsenceHref = tutorAbsenceSummary.firstOpenAbsence
     ? `/admin/workflows/tutor-absence?tutor=${encodeURIComponent(tutorAbsenceSummary.firstOpenAbsence.tutorShortName)}&date=${encodeURIComponent(tutorAbsenceSummary.firstOpenAbsence.absenceDate)}`
     : '/admin/workflows/tutor-absence';
-  const attentionItems = [
-    flags.length > 0 ? {
-      label: 'Open issues',
-      value: flags.length,
-      href: '/admin/flags',
-      helper: 'Review queue',
-      tone: 'border-red-100 bg-red-50/70',
-    } : null,
-    tutorAbsenceSummary.openAbsences > 0 ? {
-      label: 'Tutor absences',
-      value: tutorAbsenceSummary.openAbsences,
-      href: tutorAbsenceHref,
-      helper: `${tutorAbsenceSummary.unresolvedMessages} parent messages left`,
-      tone: 'border-orange-100 bg-orange-50/70',
-    } : null,
+  const todayItems = [
     planningDueNow > 0 ? {
-      label: "Today's planning",
+      label: "Do today's planning work",
       value: planningDueNow,
       href: '/admin/planning?filter=due_now',
       helper: planningSummary.overdue > 0
@@ -207,36 +239,45 @@ export default async function AdminHomePage() {
         : `${planningSummary.dueToday || 0} due today`,
       tone: 'border-violet-100 bg-violet-50/70',
     } : null,
+  ].filter(Boolean);
+  const attentionItems = [
+    flags.length > 0 ? {
+      label: 'Review open issues',
+      value: flags.length,
+      href: '/admin/flags',
+      helper: 'Flags that still need a decision',
+      tone: 'border-red-100 bg-red-50/70',
+    } : null,
+    tutorAbsenceSummary.openAbsences > 0 ? {
+      label: 'Handle tutor absences',
+      value: tutorAbsenceSummary.openAbsences,
+      href: tutorAbsenceHref,
+      helper: `${tutorAbsenceSummary.unresolvedMessages} parent messages left`,
+      tone: 'border-orange-100 bg-orange-50/70',
+    } : null,
     paymentSummary.stripeLinkingGaps > 0 ? {
-      label: 'Payment/linking gaps',
+      label: 'Fix payment/linking gaps',
       value: paymentSummary.stripeLinkingGaps,
       href: '/admin/flags',
       helper: 'Outside setup pending',
       tone: 'border-amber-100 bg-amber-50/70',
     } : null,
     parentUnderstandingSummary.followUps > 0 ? {
-      label: 'Parent follow-ups',
+      label: 'Close parent follow-ups',
       value: parentUnderstandingSummary.followUps,
       href: '/admin/workflows/parent-understanding',
       helper: 'Communication loops still open',
       tone: 'border-blue-100 bg-blue-50/70',
     } : null,
-    (planningSummary.needsAttention || 0) > 0 && planningDueNow === 0 ? {
-      label: 'Planning needs action',
-      value: planningSummary.needsAttention,
-      href: '/admin/planning',
-      helper: `${planningSummary.noNextAction || 0} no next action · ${planningSummary.stalled || 0} stalled`,
-      tone: 'border-purple-100 bg-purple-50/70',
-    } : null,
     waitingSummary.onboardingReady > 0 ? {
-      label: 'Ready to onboard',
+      label: 'Onboard waiting students',
       value: waitingSummary.onboardingReady,
       href: '/admin/waiting',
       helper: 'Waiting-list students marked ready',
       tone: 'border-emerald-100 bg-emerald-50/70',
     } : null,
     paymentSummary.unknownPaymentMode > 0 ? {
-      label: 'Unknown payment mode',
+      label: 'Classify payment mode',
       value: paymentSummary.unknownPaymentMode,
       href: '/admin/students',
       helper: 'Needs classification',
@@ -252,7 +293,7 @@ export default async function AdminHomePage() {
       helper: `${waitingSummary.onboardingReady} ready to onboard`,
       tone: 'border-emerald-100 bg-emerald-50/70',
     } : null,
-    parentUnderstandingSummary.openRecords > 0 && !attentionLabels.has('Parent follow-ups') ? {
+    parentUnderstandingSummary.openRecords > 0 && !attentionLabels.has('Close parent follow-ups') ? {
       label: 'Parent understanding',
       value: parentUnderstandingSummary.openRecords,
       href: '/admin/workflows/parent-understanding',
@@ -266,35 +307,50 @@ export default async function AdminHomePage() {
       helper: 'Students not yet fully billing',
       tone: 'border-amber-100 bg-amber-50/70',
     } : null,
-    tutorAbsenceSummary.openAbsences > 0 && !attentionLabels.has('Tutor absences') ? {
+    tutorAbsenceSummary.openAbsences > 0 && !attentionLabels.has('Handle tutor absences') ? {
       label: 'Tutor absences',
       value: tutorAbsenceSummary.openAbsences,
       href: tutorAbsenceHref,
       helper: `${tutorAbsenceSummary.unresolvedMessages} messages left`,
       tone: 'border-orange-100 bg-orange-50/70',
     } : null,
-    (planningSummary.open || 0) > 0 && !attentionLabels.has('Planning needs action') ? {
-      label: 'Planning inbox',
-      value: planningSummary.open,
-      href: '/admin/planning',
-      helper: `${planningSummary.inbox || 0} inbox · ${planningSummary.active || 0} active`,
-      tone: 'border-purple-100 bg-purple-50/70',
-    } : null,
   ].filter(Boolean);
 
   return (
     <div className="space-y-8">
-      <section>
-        <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Operational view</p>
+      <section className="text-center">
         <h2
-          className="mt-2 text-3xl font-bold uppercase tracking-wide text-slate-800"
-          style={{ fontFamily: '"Cooper Hewitt", "Nimbus Sans L", "Arial", sans-serif' }}
+          className="text-3xl font-black uppercase tracking-wide text-slate-900 sm:text-4xl"
+          style={{ fontFamily: '"Nexa Rust Sans Black", "Nexa Rust Sans", "Cooper Hewitt", "Arial Black", Impact, sans-serif' }}
         >
-          Overview
+          The First Chord Mega Brain
         </h2>
-        <p className="mt-2 text-sm text-slate-600">
-          Daily admin control for issues, payment follow-up, school operations, and system health.
+        <p
+          className="mx-auto mt-3 flex max-w-2xl items-center justify-center gap-2 text-base italic text-slate-600"
+          style={{ fontFamily: 'Georgia, "Iowan Old Style", "Palatino Linotype", serif' }}
+        >
+          <span>Curated tasks and big thoughts designed by Vincey Boy the Young Man Himself.</span>
+          <PawPrint className="h-4 w-4 shrink-0 text-slate-500" aria-label="Vince sign-off" />
         </p>
+      </section>
+
+      <section className="space-y-4">
+        <SectionHeader title="Today’s work" copy="Use this first on meeting days. If it is clear, move to open loops or planning." />
+        {todayItems.length ? (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {todayItems.map((item) => (
+              <ActionCard key={item.label} {...item} />
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            title="All clear for today."
+            copy="No dated planning work is due from the overview right now."
+          />
+        )}
+        <Suspense fallback={<TrustStripFallback />}>
+          <OverviewTrustStrip />
+        </Suspense>
       </section>
 
       <section className="space-y-4">
@@ -306,18 +362,47 @@ export default async function AdminHomePage() {
             ))}
           </div>
         ) : (
-          <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-5 text-sm text-emerald-900 shadow-[0_12px_36px_rgba(15,23,42,0.05)]">
-            No active overview loops are demanding attention. Check waiting/onboarding or planned workflow work next.
-          </div>
+          <EmptyState
+            title="No open loops are pressing."
+            copy="Issues, payment gaps, tutor absence messages, parent follow-ups, and onboarding-ready queues are quiet."
+          />
         )}
-        <Suspense fallback={<TrustStripFallback />}>
-          <OverviewTrustStrip />
-        </Suspense>
+      </section>
+
+      <section className="space-y-4">
+        <SectionHeader title="Let’s work on the school" copy="Use this after the daily work is clear: stimulus, conversation, notes, decisions, then executable actions." />
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <ThemeCard
+            title="Growth"
+            copy="Recruitment, enquiries, marketing, new offers, and how more students find us."
+            prompt="What experiment or campaign should we move forward next?"
+          />
+          <ThemeCard
+            title="Learning"
+            copy="Books, teaching ideas, tutor development, student progress, and what we are learning as leaders."
+            prompt="What idea from recent reading/listening should we try or discuss?"
+          />
+          <ThemeCard
+            title="Finance"
+            copy="Pricing, payroll, cashflow, owner-teaching reduction, and cleaner financial visibility."
+            prompt="What number or assumption needs clarified before we decide?"
+          />
+          <ThemeCard
+            title="Student Experience"
+            copy="Parent communication, practice support, resources, showcases, and student engagement."
+            prompt="What would make families feel clearer, supported, or more excited?"
+          />
+          <ThemeCard
+            title="Systems"
+            copy="Dashboard, automation, delegation, documentation, and repeatable operating loops."
+            prompt="What admin load can we remove or make calmer next?"
+          />
+        </div>
       </section>
 
       {workQueueItems.length ? (
         <section className="space-y-4">
-          <SectionHeader title="Next work" copy="Useful queues that are open but not already leading today's attention." />
+          <SectionHeader title="Open queues" copy="Useful queues that are active but not already leading today’s attention." />
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {workQueueItems.map((item) => (
               <StatCard key={item.label} {...item} />
@@ -326,9 +411,10 @@ export default async function AdminHomePage() {
         </section>
       ) : null}
 
-      <section className="space-y-4">
-        <SectionHeader title="School context" copy="Useful background numbers, not the daily command surface." />
-        <div className="rounded-2xl border border-blue-100 bg-white/90 p-5 shadow-[0_12px_36px_rgba(15,23,42,0.05)]">
+      <details className="rounded-2xl border border-blue-100 bg-white/90 p-5 shadow-[0_12px_36px_rgba(15,23,42,0.05)]">
+        <summary className="cursor-pointer text-sm font-semibold text-slate-900">School context</summary>
+        <p className="mt-2 text-sm text-slate-600">Useful background numbers, not the daily command surface.</p>
+        <div className="mt-4">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <h4 className="text-sm font-semibold text-slate-900">Lifecycle snapshot</h4>
             <p className="text-xs text-slate-500">{students.length} operational students. Derived state, separate from payment expectation.</p>
@@ -345,7 +431,7 @@ export default async function AdminHomePage() {
             ))}
           </div>
         </div>
-      </section>
+      </details>
 
       <details className="rounded-2xl border border-blue-100 bg-white/90 p-5 shadow-[0_12px_36px_rgba(15,23,42,0.05)]">
         <summary className="cursor-pointer text-sm font-semibold text-slate-900">Payment context</summary>
@@ -377,13 +463,15 @@ export default async function AdminHomePage() {
 async function OverviewTrustStrip() {
   const health = await getAdminHealthSummary();
   const systemHealth = healthPriority(health);
-  const trustItems = buildTrustItems(health, systemHealth);
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white/90 px-5 py-3 text-sm text-slate-600 shadow-[0_10px_28px_rgba(15,23,42,0.04)]">
-      <span className="font-medium text-slate-800">Trust:</span>{' '}
-      {trustItems.join(' · ')}
+  const trust = buildTrustSummary(health, systemHealth);
+  const content = (
+    <div className={`rounded-2xl border px-5 py-3 text-sm shadow-[0_10px_28px_rgba(15,23,42,0.04)] ${trust.tone}`}>
+      <span className="font-semibold">Trust: {trust.label}</span>
+      <span className="ml-2">{trust.detail}</span>
     </div>
   );
+
+  return trust.href ? <a href={trust.href}>{content}</a> : content;
 }
 
 function TrustStripFallback() {
@@ -426,7 +514,7 @@ async function OverviewSystemChecks() {
   ];
 
   return (
-    <details className="rounded-2xl border border-blue-100 bg-white/90 p-5 shadow-[0_12px_36px_rgba(15,23,42,0.05)]">
+    <details id="system-checks" className="rounded-2xl border border-blue-100 bg-white/90 p-5 shadow-[0_12px_36px_rgba(15,23,42,0.05)]">
       <summary className="cursor-pointer text-sm font-semibold text-slate-900">System checks</summary>
       <p className="mt-2 text-sm text-slate-600">Service checks, automation freshness, and workflow links.</p>
       <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
