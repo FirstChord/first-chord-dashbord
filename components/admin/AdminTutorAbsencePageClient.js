@@ -5,6 +5,8 @@ import { Check, Copy, Loader2, Search, Trash2 } from 'lucide-react';
 import { buildTutorAbsenceMessage, formatTutorAbsenceDate, summariseTutorAbsenceState } from '@/lib/admin/tutor-absence-helpers.mjs';
 import { logCommunicationCopy } from '@/lib/admin/log-communication-copy.js';
 
+const PAYMENT_PAUSE_PWA_URL = process.env.NEXT_PUBLIC_PAYMENT_PAUSE_PWA_URL || 'https://payment-pause-pwa.web.app/';
+
 function cardClasses(extra = '') {
   return `rounded-[1.2rem] border border-blue-100 bg-white/90 p-5 shadow-[0_12px_36px_rgba(15,23,42,0.06)] ${extra}`;
 }
@@ -23,6 +25,62 @@ function decisionLabel(decision = '') {
   if (decision === 'cancel_day') return 'Cancel day';
   if (decision === 'cover') return 'Cover lessons';
   return 'No decision yet';
+}
+
+function addDaysToDateInput(value = '', days = 0) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return '';
+  const date = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return '';
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function buildTutorAbsencePaymentPauseUrl({ lesson = {}, workflow = {} } = {}) {
+  if (!lesson.studentMmsId || !workflow.selectedDate) return '';
+
+  const url = new URL(PAYMENT_PAUSE_PWA_URL);
+  const parentName = lesson.parentName || '';
+  const params = {
+    source: 'dashboard-tutor-absence',
+    absenceId: workflow.absenceId || '',
+    studentName: lesson.studentName || '',
+    email: lesson.parentEmail || '',
+    startDate: workflow.selectedDate,
+    endDate: addDaysToDateInput(workflow.selectedDate, 3),
+    reason: 'Teacher Holiday',
+    mmsId: lesson.studentMmsId || '',
+    customerId: lesson.stripeCustomerId || '',
+    subscriptionId: lesson.stripeSubscriptionId || '',
+    tutor: lesson.tutor || workflow.selectedTutor?.fullName || '',
+    parentName,
+  };
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (`${value || ''}`.trim()) {
+      url.searchParams.set(key, value);
+    }
+  });
+
+  return url.toString();
+}
+
+function paymentSummary(lesson = {}) {
+  const mode = lesson.paymentMode || 'unknown';
+  const expectation = lesson.paymentExpectation || 'not set';
+  return `${mode} · ${expectation}`;
+}
+
+function resolveHint({ decision = '', summary = {}, selectedCoverTutor = null } = {}) {
+  if (!decision) return 'Choose cancel or cover before resolving.';
+  if (!summary.allMessaged) return 'Resolve unlocks once all affected parents are marked messaged.';
+  if (decision === 'cover') {
+    if (!selectedCoverTutor) return 'Choose a cover tutor before resolving.';
+    if (!summary.coverReady) return 'Confirm the cover tutor and notes/context before resolving.';
+  }
+  if (decision === 'cancel_day' && !summary.paymentComplete) {
+    return 'Resolve unlocks once every affected lesson has payment handled or explicitly skipped.';
+  }
+  return '';
 }
 
 function MessageButton({ body, copiedId, copyId, onCopy, context = null }) {
@@ -45,13 +103,17 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
   const [note, setNote] = useState(workflow.state.note || '');
   const [saveState, setSaveState] = useState({ pending: false, error: '', savedAt: '' });
   const [copiedId, setCopiedId] = useState('');
+  const [paymentUpdateState, setPaymentUpdateState] = useState({ pendingId: '', error: '' });
   const hasSavedAbsence = Boolean(workflow.state.createdAt || workflow.state.updatedAt || workflow.state.resolvedAt);
 
   const selectedCoverTutor = workflow.coverOptions.find((tutor) => tutor.shortName === coverTutorShortName) || null;
+  const workflowChecklist = messageState.__workflow || {};
   const summary = useMemo(() => summariseTutorAbsenceState({
     lessons: workflow.lessons,
     messageState,
-  }), [workflow.lessons, messageState]);
+    decision,
+    coverTutorName: selectedCoverTutor?.fullName || '',
+  }), [workflow.lessons, messageState, decision, selectedCoverTutor?.fullName]);
 
   function updateMessageState(eventId, patch) {
     setMessageState((current) => ({
@@ -64,8 +126,19 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
     setSaveState({ pending: false, error: '', savedAt: '' });
   }
 
+  function updateWorkflowChecklist(patch) {
+    setMessageState((current) => ({
+      ...current,
+      __workflow: {
+        ...(current.__workflow || {}),
+        ...patch,
+      },
+    }));
+    setSaveState({ pending: false, error: '', savedAt: '' });
+  }
+
   function setAllMessaged() {
-    const next = {};
+    const next = { __workflow: messageState.__workflow || {} };
     for (const lesson of workflow.lessons) {
       next[lesson.eventId] = {
         ...(messageState[lesson.eventId] || {}),
@@ -97,6 +170,35 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
         body,
         source: 'tutor_absence',
       });
+    }
+  }
+
+  async function setPausedExpected(lesson) {
+    if (!lesson.studentMmsId) return;
+    setPaymentUpdateState({ pendingId: lesson.eventId, error: '' });
+    try {
+      const response = await fetch(`/api/admin/students/${encodeURIComponent(lesson.studentMmsId)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paymentExpectation: 'stripe_paused_expected',
+          auditContext: {
+            source: 'admin_pause_workflow_action',
+            actionLabel: 'Complete tutor absence payment pause',
+            note: `Tutor absence: ${workflow.selectedTutor?.fullName || workflow.selectedTutor?.shortName || 'Tutor'} on ${workflow.selectedDate}`,
+          },
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Payment expectation update failed');
+      }
+
+      updateMessageState(lesson.eventId, { paymentExpectationAligned: true });
+      setPaymentUpdateState({ pendingId: '', error: '' });
+    } catch (error) {
+      setPaymentUpdateState({ pendingId: '', error: error.message || 'Payment expectation update failed' });
     }
   }
 
@@ -263,6 +365,49 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
                 ))}
               </select>
               {!workflow.coverOptions.length ? <p className="mt-2 text-sm text-amber-800">No same-instrument cover tutors found from the current tutor instrument map.</p> : null}
+              <div className="mt-4 grid gap-3 md:grid-cols-3">
+                <label className="flex items-start gap-2 rounded-xl border border-emerald-100 bg-white px-3 py-2 text-sm font-medium text-emerald-950">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(workflowChecklist.coverTutorConfirmed)}
+                    onChange={(event) => updateWorkflowChecklist({ coverTutorConfirmed: event.target.checked })}
+                    className="mt-1 h-4 w-4 rounded border-emerald-300 text-emerald-800"
+                  />
+                  Cover tutor confirmed
+                </label>
+                <label className="flex items-start gap-2 rounded-xl border border-emerald-100 bg-white px-3 py-2 text-sm font-medium text-emerald-950">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(workflowChecklist.coverTutorBriefed)}
+                    onChange={(event) => updateWorkflowChecklist({ coverTutorBriefed: event.target.checked })}
+                    className="mt-1 h-4 w-4 rounded border-emerald-300 text-emerald-800"
+                  />
+                  Notes/context passed on
+                </label>
+                <label className="flex items-start gap-2 rounded-xl border border-emerald-100 bg-white px-3 py-2 text-sm font-medium text-emerald-950">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(workflowChecklist.calendarUpdated)}
+                    onChange={(event) => updateWorkflowChecklist({ calendarUpdated: event.target.checked })}
+                    className="mt-1 h-4 w-4 rounded border-emerald-300 text-emerald-800"
+                  />
+                  MMS/calendar updated or not needed
+                </label>
+              </div>
+              <p className="mt-3 text-xs leading-5 text-emerald-900">
+                Cover lessons should not trigger payment pauses. Only use the cancel path if a specific lesson is not going ahead.
+              </p>
+            </div>
+          ) : null}
+          {decision === 'cancel_day' ? (
+            <div className="mt-5 rounded-2xl border border-amber-100 bg-amber-50/70 p-4">
+              <p className="text-sm font-semibold text-amber-950">Cancel-day payment handling</p>
+              <p className="mt-1 text-xs leading-5 text-amber-800">
+                Each affected student needs the pause tool run and payment expectation aligned, unless payment handling is not needed.
+              </p>
+              <p className="mt-3 text-sm font-semibold text-amber-950">
+                {summary.paymentHandledCount} / {summary.totalLessons} payment action{summary.totalLessons === 1 ? '' : 's'} handled
+              </p>
             </div>
           ) : null}
         </section>
@@ -294,6 +439,8 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
                 coverTutorName: selectedCoverTutor?.fullName || '',
               });
               const state = messageState[lesson.eventId] || {};
+              const pauseUrl = buildTutorAbsencePaymentPauseUrl({ lesson, workflow });
+              const paymentHandled = Boolean(state.pauseSkipped || (state.pauseToolRan && state.paymentExpectationAligned));
 
               return (
                 <div key={lesson.eventId} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -316,6 +463,69 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
                       </label>
                     </div>
                   </div>
+                  {decision === 'cancel_day' ? (
+                    <div className="mt-4 rounded-xl border border-amber-100 bg-white p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-amber-950">Payment pause</p>
+                          <p className="mt-1 text-xs text-amber-800">{paymentSummary(lesson)}</p>
+                        </div>
+                        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${paymentHandled ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-800'}`}>
+                          {paymentHandled ? 'Handled' : 'Needs payment check'}
+                        </span>
+                      </div>
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        {pauseUrl ? (
+                          <a
+                            href={pauseUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex rounded-lg border border-violet-300 bg-white px-3 py-1.5 text-xs font-semibold text-violet-950 hover:bg-violet-50"
+                          >
+                            Open payment pause tool
+                          </a>
+                        ) : null}
+                        <label className="inline-flex items-center gap-2 rounded-lg border border-amber-100 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-950">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(state.pauseToolRan)}
+                            disabled={Boolean(state.pauseSkipped)}
+                            onChange={(event) => updateMessageState(lesson.eventId, { pauseToolRan: event.target.checked })}
+                          />
+                          Pause tool run
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setPausedExpected(lesson)}
+                          disabled={Boolean(state.pauseSkipped) || paymentUpdateState.pendingId === lesson.eventId || Boolean(state.paymentExpectationAligned)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-950 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {paymentUpdateState.pendingId === lesson.eventId ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                          {state.paymentExpectationAligned ? 'Paused expected set' : 'Set paused expected'}
+                        </button>
+                        <label className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(state.pauseSkipped)}
+                            onChange={(event) => updateMessageState(lesson.eventId, {
+                              pauseSkipped: event.target.checked,
+                              pauseToolRan: event.target.checked ? false : state.pauseToolRan,
+                              paymentExpectationAligned: event.target.checked ? false : state.paymentExpectationAligned,
+                            })}
+                          />
+                          Not needed
+                        </label>
+                      </div>
+                      {state.pauseSkipped ? (
+                        <input
+                          value={state.pauseSkipReason || ''}
+                          onChange={(event) => updateMessageState(lesson.eventId, { pauseSkipReason: event.target.value })}
+                          placeholder="Why payment pause is not needed"
+                          className="mt-3 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 placeholder:text-slate-400"
+                        />
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
               );
             }) : (
@@ -324,6 +534,9 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
               </div>
             )}
           </div>
+          {paymentUpdateState.error ? (
+            <p className="mt-3 text-sm font-semibold text-red-700">{paymentUpdateState.error}</p>
+          ) : null}
         </section>
       ) : null}
 
@@ -353,7 +566,7 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
             <button
               type="button"
               onClick={() => saveAbsence('resolved')}
-              disabled={saveState.pending || !summary.allMessaged}
+              disabled={saveState.pending || !summary.canResolve}
               className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-5 py-2 text-sm font-semibold text-emerald-900 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Check className="h-4 w-4" />
@@ -373,8 +586,8 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
             {saveState.savedAt ? <span className="text-sm text-emerald-700">Saved at {saveState.savedAt}</span> : null}
             {saveState.error ? <span className="text-sm text-red-700">{saveState.error}</span> : null}
           </div>
-          {!summary.allMessaged && workflow.lessons.length ? (
-            <p className="mt-3 text-sm text-amber-800">Resolve unlocks once all affected parents are marked messaged.</p>
+          {resolveHint({ decision, summary, selectedCoverTutor }) && workflow.lessons.length ? (
+            <p className="mt-3 text-sm text-amber-800">{resolveHint({ decision, summary, selectedCoverTutor })}</p>
           ) : null}
         </section>
       ) : null}
