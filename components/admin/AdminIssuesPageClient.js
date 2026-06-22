@@ -81,6 +81,36 @@ function isRecordIssue(issue) {
   ].includes(issue.type);
 }
 
+function buildPaymentQuickActionAuditNote(issue, action) {
+  const issueLabel = issue.type ? ` for ${issue.type}` : '';
+  const summary = issue.summary ? ` ${issue.summary}` : '';
+  return `${action.label}${issueLabel}.${summary}`.trim();
+}
+
+function paymentQuickActionResolvesIssue(issue, action) {
+  const nextExpectation = action.payload?.paymentExpectation || '';
+  if (!nextExpectation) {
+    return false;
+  }
+
+  if (issue.type === 'PAUSE EXPECTATION MISMATCH') {
+    return nextExpectation === 'stripe_paused_expected';
+  }
+
+  if (issue.type === 'PAUSE EXPECTATION STALE') {
+    return ['stripe_active_expected', 'inactive_or_stopped'].includes(nextExpectation);
+  }
+
+  if (issue.type === 'SUBSCRIPTION_STATE_MISMATCH') {
+    return (
+      (issue.paymentExpectation === 'stripe_paused_expected' && nextExpectation === 'stripe_active_expected') ||
+      (issue.paymentExpectation === 'stripe_active_expected' && nextExpectation === 'stripe_paused_expected')
+    );
+  }
+
+  return false;
+}
+
 function isPaymentIssue(issue) {
   return [
     'PAYMENT SETUP PENDING',
@@ -969,20 +999,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
   }
 
   async function handlePaymentQuickAction(issue, action) {
-    const note = window.prompt(
-      `Why are you taking "${action.label}" for ${issue.studentName || issue.mmsId}? This note is saved to the payment audit log.`,
-      '',
-    );
-
-    if (note === null) {
-      return;
-    }
-
-    const trimmedNote = note.trim();
-    if (!trimmedNote) {
-      setActionState({ pendingId: '', error: 'A short note is required for payment actions from the issues page.', success: '' });
-      return;
-    }
+    const auditNote = buildPaymentQuickActionAuditNote(issue, action);
 
     setActionState({ pendingId: issue.issueId, error: '', success: '' });
 
@@ -997,7 +1014,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
             issueId: issue.issueId,
             issueType: issue.type,
             actionLabel: action.label,
-            note: trimmedNote,
+            note: auditNote,
           },
         }),
       });
@@ -1009,16 +1026,25 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
         return;
       }
 
-      const nextExpectation = action.payload.paymentExpectation;
-      const resolvesIssue = (
-        (issue.type === 'PAUSE EXPECTATION MISMATCH' && nextExpectation === 'stripe_paused_expected')
-        || (issue.type === 'PAUSE EXPECTATION STALE' && ['stripe_active_expected', 'inactive_or_stopped'].includes(nextExpectation))
-      );
+      const resolvesIssue = paymentQuickActionResolvesIssue(issue, action);
 
       // When the action resolves this flag's condition, show a brief "Sorted ✓" beat
       // and then clear the card (the next detection pass agrees). Otherwise update the
       // row in place and keep it.
       if (resolvesIssue) {
+        try {
+          await fetch(`/api/admin/issues/${issue.mmsId}/state`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              issueId: issue.issueId,
+              nextStatus: 'resolved',
+              note: auditNote,
+            }),
+          });
+        } catch {
+          // Best-effort persistence; the optimistic clear below still applies for this session.
+        }
         setActionState({ pendingId: '', issueId: '', error: '', success: '' });
         startSortedFade(
           issue.issueId,

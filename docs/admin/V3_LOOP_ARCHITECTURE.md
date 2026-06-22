@@ -144,7 +144,7 @@ Current boundary:
 
 The recent audit change was the right direction:
 
-- issue-page quick actions require a note
+- bounded, reversible payment-expectation toggles on the issues page auto-record an audit note (action + issue type + summary); a free-text human note is no longer required for these self-documenting actions, but every action is still logged. (Updated 2026-06-22 — the old blanket "require a note" was friction without information gain when the action *is* the reason, e.g. "set active expected" on a `PAUSE EXPECTATION STALE` flag. A free-text note is still warranted for less-bounded/consequential actions.)
 - payment field changes are logged
 - issue-level payment actions are logged
 - the issue is not auto-resolved simply because a field changed
@@ -206,6 +206,6 @@ Auto-send should remain out of scope until approval state is working.
 - Use normalized helper functions for issue, payment, pause, and workflow state.
 - Keep raw vendor payloads out of UI decisions where possible.
 - Prefer small, typed payloads in `payload_json` over new Sheets columns unless filtering/reporting requires columns.
-- Require notes for issue-originated actions that change operational truth.
+- Log every issue-originated action that changes operational truth. Require a free-text human note for less-bounded/consequential actions; bounded reversible toggles (e.g. payment-expectation flips) may auto-record the note since the action is self-documenting.
 - Keep checklist completion fast and low-friction.
 - Let source refresh clear issues; do not resolve them just because an admin clicked a field fix.

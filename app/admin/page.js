@@ -2,12 +2,13 @@ import { Suspense } from 'react';
 import Link from 'next/link';
 import { PawPrint } from 'lucide-react';
 import { getOperationalAdminStudents } from '@/lib/admin/students';
-import { getParentUnderstandingStateRows, getReviewFlagsRows } from '@/lib/admin/sheets';
+import { getParentUnderstandingStateRows } from '@/lib/admin/sheets';
 import { getAdminHealthSummary } from '@/lib/admin/health';
 import { formatDateTime } from '@/lib/admin/health-helpers.mjs';
 import { buildPaymentOperationsSummary } from '@/lib/admin/payment-summary.mjs';
 import { getTutorAbsenceOverviewSummary } from '@/lib/admin/tutor-absence';
 import { getPlanningDashboard } from '@/lib/admin/planning';
+import { getAdminIssues } from '@/lib/admin/issues';
 
 function statusClasses(status) {
   if (status === 'Healthy' || status === 'Fresh') return 'border-emerald-200 bg-emerald-50 text-emerald-800';
@@ -195,9 +196,9 @@ function ContextRow({ label, value, href = '', tone = '' }) {
 
 function SectionHeader({ title, copy = '' }) {
   return (
-    <div>
-      <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
-      {copy ? <p className="mt-1 text-sm text-slate-600">{copy}</p> : null}
+    <div className="mx-auto max-w-3xl text-center">
+      <h3 className="text-xl font-semibold tracking-tight text-slate-950 sm:text-2xl">{title}</h3>
+      {copy ? <p className="mt-2 text-sm leading-6 text-slate-600">{copy}</p> : null}
     </div>
   );
 }
@@ -206,13 +207,15 @@ export default async function AdminHomePage() {
   // Health is intentionally NOT in this blocking fetch — it makes 3 uncached
   // external calls (MMS + 2 GitHub), so it's streamed separately (see OverviewHealth)
   // and the rest of the page renders immediately.
-  const [students, flags, tutorAbsenceSummary, parentUnderstandingRows, planningDashboard] = await Promise.all([
+  const [students, issuesResult, tutorAbsenceSummary, parentUnderstandingRows, planningDashboard] = await Promise.all([
     getOperationalAdminStudents(),
-    getReviewFlagsRows(),
+    getAdminIssues(),
     getTutorAbsenceOverviewSummary(),
     getParentUnderstandingStateRows(),
     getPlanningDashboard(),
   ]);
+  const issues = issuesResult.issues || [];
+  const activeIssues = issues.filter((issue) => ['open', 'acknowledged'].includes(issue.status));
   const paymentSummary = buildPaymentOperationsSummary(students);
   const lifecycleCounts = buildLifecycleCounts(students);
   const waitingSummary = buildWaitingOverview(students);
@@ -220,7 +223,7 @@ export default async function AdminHomePage() {
   const planningSummary = planningDashboard.summary || {};
   const planningDueNow = planningSummary.dueNow || 0;
   const prioritySentence = buildPrioritySentence({
-    openIssues: flags.length,
+    openIssues: activeIssues.length,
     tutorAbsences: tutorAbsenceSummary.openAbsences,
     linkingGaps: paymentSummary.stripeLinkingGaps,
     unknownPaymentMode: paymentSummary.unknownPaymentMode,
@@ -241,9 +244,9 @@ export default async function AdminHomePage() {
     } : null,
   ].filter(Boolean);
   const attentionItems = [
-    flags.length > 0 ? {
+    activeIssues.length > 0 ? {
       label: 'Review open issues',
-      value: flags.length,
+      value: activeIssues.length,
       href: '/admin/flags',
       helper: 'Flags that still need a decision',
       tone: 'border-red-100 bg-red-50/70',
@@ -334,8 +337,12 @@ export default async function AdminHomePage() {
         </p>
       </section>
 
+      <Suspense fallback={null}>
+        <OverviewTrustStrip placement="top" />
+      </Suspense>
+
       <section className="space-y-4">
-        <SectionHeader title="Today’s work" copy="Use this first on meeting days. If it is clear, move to open loops or planning." />
+        <SectionHeader title="Things to Do Today" copy="Use this first on meeting days. If it is clear, move to open loops or planning." />
         {todayItems.length ? (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {todayItems.map((item) => (
@@ -348,13 +355,10 @@ export default async function AdminHomePage() {
             copy="No dated planning work is due from the overview right now."
           />
         )}
-        <Suspense fallback={<TrustStripFallback />}>
-          <OverviewTrustStrip />
-        </Suspense>
       </section>
 
       <section className="space-y-4">
-        <SectionHeader title="Needs attention" copy={prioritySentence} />
+        <SectionHeader title="Things That Need Attention" copy={prioritySentence} />
         {attentionItems.length ? (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {attentionItems.map((item) => (
@@ -370,7 +374,7 @@ export default async function AdminHomePage() {
       </section>
 
       <section className="space-y-4">
-        <SectionHeader title="Let’s work on the school" copy="Use this after the daily work is clear: stimulus, conversation, notes, decisions, then executable actions." />
+        <SectionHeader title="Let’s Work on the School" copy="Use this after the daily work is clear: stimulus, conversation, notes, decisions, then executable actions." />
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           <ThemeCard
             title="Growth"
@@ -451,6 +455,10 @@ export default async function AdminHomePage() {
       <Suspense fallback={<SystemChecksFallback />}>
         <OverviewSystemChecks />
       </Suspense>
+
+      <Suspense fallback={<TrustStripFallback />}>
+        <OverviewTrustStrip placement="bottom" />
+      </Suspense>
     </div>
   );
 }
@@ -460,9 +468,13 @@ export default async function AdminHomePage() {
 // stream in separately — the rest of the Overview renders immediately, and these
 // fill in a moment later (instantly on repeat visits thanks to the 60s cache).
 
-async function OverviewTrustStrip() {
+async function OverviewTrustStrip({ placement = 'bottom' }) {
   const health = await getAdminHealthSummary();
   const systemHealth = healthPriority(health);
+  if ((placement === 'top') !== (systemHealth !== 'healthy')) {
+    return null;
+  }
+
   const trust = buildTrustSummary(health, systemHealth);
   const content = (
     <div className={`rounded-2xl border px-5 py-3 text-sm shadow-[0_10px_28px_rgba(15,23,42,0.04)] ${trust.tone}`}>
