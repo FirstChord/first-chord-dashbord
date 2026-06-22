@@ -107,6 +107,9 @@ The active surface is the private admin dashboard under `/admin`.
   - **Waiting-list day/time availability matching** (the previously-deferred sub-slice, now done): MMS sign-up form added `Preferred days` (Mon–Sat) + `Preferred times` (Earlier/Evenings) checkbox questions; the dashboard parses them onto each waiting student and **ranks** matching slots by an availability score (day weighted over time: full=3, day=2, time=1, neither=0). `/admin/waiting` shows "Prefers: …", rings preferred days, badges fitting tutors. Ranked not filtered. Verified against a real test sign-up note.
   - **Navigation performance** (V4.1 first pass): shared `app/admin/loading.js` skeleton; Sheets read TTL 15s → 60s; Overview health cached (60s) + streamed via `<Suspense>`. Pause-complete button no longer flickers (`postPlanning` `silent` option).
   - **Transient-error resilience**: both repos retry transient Google Sheets errors (429/5xx) with backoff — dashboard `withSheetsRetry()` in `lib/admin/sheets.js`, brain `gspread_retry()` in `generate_fc_ids.py`. This (not batching) was the fix for recurring "job failed" alerts caused by Google 503 blips. `batchGet` remains a future scaling lever, not a fix for these.
+- Pause message + adult-detection polish (2026-06-22):
+  - away-period pause message now reads "[Tutor] will next see [Student] on [return date] and payment will continue as normal from then" (adult: "…will next see you on…"); pause-tool prefill for away periods starts on the action day and resumes two days before the return.
+  - **adult detection fix**: adults are recorded as their own contact (parent fields echo the student's own name), which mis-routed them to parent wording. New `isStudentOwnContact()` treats "no parent" OR "parent name == student name" as adult, so they get "your lesson" not "[name]'s lesson".
 
 ## Current Slice
 

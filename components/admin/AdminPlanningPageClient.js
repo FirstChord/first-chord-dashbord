@@ -159,6 +159,29 @@ function firstName(value = '') {
   return `${value || ''}`.trim().split(/\s+/u).filter(Boolean)[0] || '';
 }
 
+// Adult students are usually recorded as their own contact — the parent fields echo
+// the student's own name (e.g. parent "Sian Malyin" for student "Sian Malyin").
+// Treat "no parent" OR "parent name == student name" as the student being their own
+// contact, so messages address them directly ("your lesson") not third-person.
+function isStudentOwnContact(student = {}) {
+  const norm = (value) => `${value || ''}`.trim().toLowerCase().replace(/\s+/gu, ' ');
+  const parentFirst = firstName(student.parentFirstName) || firstName(student.parentLastName);
+  if (!parentFirst) return true;
+
+  const studentFull = norm(student.fullName);
+  const parentFull = norm([student.parentFirstName, student.parentLastName].filter(Boolean).join(' '));
+  if (parentFull && parentFull === studentFull) return true;
+
+  const studentWords = `${student.fullName || ''}`.trim().split(/\s+/u).filter(Boolean);
+  const studentLast = norm(studentWords.length > 1 ? studentWords[studentWords.length - 1] : '');
+  const pFirst = norm(parentFirst);
+  const sFirst = norm(firstName(student.fullName));
+  const pLast = norm(student.parentLastName);
+  if (sFirst && pFirst === sFirst && (!pLast || pLast === studentLast)) return true;
+
+  return false;
+}
+
 function formatDateInput(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
@@ -233,14 +256,21 @@ function buildPaymentPausePrefillUrl({ item = {}, student = null } = {}) {
   const { startDate, endDate } = extractPauseDatesFromPlanningItem(item);
   if (!startDate || !endDate) return '';
 
-  // For a single-lesson pause, make the window less fiddly than a tight single-day phase:
+  // Single-lesson pause: one clean window that comfortably covers the missed lesson —
   //   start  = the planning due date (the day you action it), not the lesson day
   //   resume = a few days after the paused lesson
-  // so it's one clean window that comfortably covers the missed lesson.
+  // Away-period pause:
+  //   start  = the day we're actually doing the pause (action day), so billing pauses from now
+  //   resume = a couple of days before the return lesson, so billing is active again by then
   const isSingleLesson = endDate === startDate;
   const dueDate = `${item.targetDate || ''}`.match(/^\d{4}-\d{2}-\d{2}$/u) ? item.targetDate : '';
-  const pauseToolStartDate = isSingleLesson && dueDate && dueDate <= startDate ? dueDate : startDate;
-  const pauseToolEndDate = isSingleLesson ? addDaysToDateInput(startDate, 3) : endDate;
+  const today = formatDateInput(new Date());
+  const pauseToolStartDate = isSingleLesson
+    ? (dueDate && dueDate <= startDate ? dueDate : startDate)
+    : (dueDate || today);
+  const pauseToolEndDate = isSingleLesson
+    ? addDaysToDateInput(startDate, 3)
+    : addDaysToDateInput(endDate, -2);
 
   const parentName = [
     student.parentFirstName || '',
@@ -277,18 +307,22 @@ function buildPauseConfirmationMessage({ item = {}, student = null } = {}) {
 
   const studentFirst = firstName(student.fullName) || student.fullName || '';
   const studentName = studentFirst || 'the lesson';
+  const tutorFirst = firstName(student.tutor);
   const startLabel = formatFriendlyPauseDate(startDate);
   const endLabel = formatFriendlyPauseDate(endDate);
 
-  // Adult learners have no parent on record — address them directly ("you")
-  // instead of talking about them to a parent ("they").
+  // Adult learners are their own contact (no parent, or parent fields echo the
+  // student's own name) — address them directly ("you") not third-person ("they").
   const parentFirst = firstName(student.parentFirstName) || firstName(student.parentLastName);
-  if (!parentFirst) {
+  if (isStudentOwnContact(student)) {
     const greetingName = studentFirst || 'there';
     if (startDate === endDate) {
       return `Hi ${greetingName}, just confirming we have paused payment for your lesson on ${startLabel}. Thanks!`;
     }
-    return `Hi ${greetingName}, just confirming we have paused your payment from ${startLabel}. You are expected back from ${endLabel}, so lessons and payment should continue as normal from then. Thanks!`;
+    const adultReturn = tutorFirst
+      ? `${tutorFirst} will next see you on ${endLabel} and payment will continue as normal from then.`
+      : `You're back on ${endLabel} and payment will continue as normal from then.`;
+    return `Hi ${greetingName}, just confirming we have paused your payment from ${startLabel}. ${adultReturn} Thanks!`;
   }
 
   const parentName = parentFirst;
@@ -296,7 +330,10 @@ function buildPauseConfirmationMessage({ item = {}, student = null } = {}) {
     return `Hi ${parentName}, just confirming we have paused payment for ${studentName}'s lesson on ${startLabel}. Thanks!`;
   }
 
-  return `Hi ${parentName}, just confirming we have paused payment for ${studentName} from ${startLabel}. They are expected back from ${endLabel}, so lessons and payment should continue as normal from then. Thanks!`;
+  const parentReturn = tutorFirst
+    ? `${tutorFirst} will next see ${studentName} on ${endLabel} and payment will continue as normal from then.`
+    : `${studentName} is back on ${endLabel} and payment will continue as normal from then.`;
+  return `Hi ${parentName}, just confirming we have paused payment for ${studentName} from ${startLabel}. ${parentReturn} Thanks!`;
 }
 
 function normaliseSearchText(value = '') {
