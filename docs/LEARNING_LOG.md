@@ -19,6 +19,18 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-23 — Read-quota resilience (cache issue reads + wrap remaining raw reads)
+
+**Feature/change:** The Sheets read-quota limit ("Read requests per minute per user") actually fired in dev, hard-crashing the overview at `getIssueQueueRows`. Two read paths were bypassing the `withSheetsRetry` wrapper and the read cache: `getIssueQueueRows`' own `values.get`, and `ensureManagedSheet`'s header `values.get`. Fixes: wrap both in `withSheetsRetry` (so a 429/5xx backs off and self-heals instead of crashing), and route the issue-queue read through the existing 60s read cache (so the overview + flags page don't each re-fetch it).
+
+**Why it exists:** the overview now reads issues on every load (active-issue count) on top of all the other tabs, which pushed per-minute reads over the limit. Retry stops the hard-fail; caching cuts the read volume that caused it. This is the documented "quota recurs" trigger firing — the parked `batchGet` lever remains the deeper structural answer if it returns.
+
+**Source-of-truth impact:** None. Caching is safe because every issue write goes through `upsertManagedSheetRow` / `upsertIssueQueueRows`, both of which invalidate this sheet's read cache — so a resolve/update is reflected immediately.
+
+**Files/functions involved:** `lib/admin/sheets.js` (`getIssueQueueRows`, `ensureManagedSheet`).
+
+**What to watch out for:** if quota errors recur despite this, the cause is genuine read volume → do the `batchGet` consolidation (collapse the overview's ~8 tab reads into one call), not more retry. Don't cache reads whose writers don't invalidate the cache.
+
 ### 2026-06-23 — School Notes Inside Planning
 
 **Feature/change:** Planning now has first-class `Learning note` and `Strategic note` item types, plus a `Work on the school notes` capture block. Notes can hold open transcript summaries, learning notes, key ideas, possible First Chord applications, and an optional next action. A note with a next action can create a linked `Action` card while preserving the original thinking.
