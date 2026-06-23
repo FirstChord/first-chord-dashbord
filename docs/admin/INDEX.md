@@ -20,6 +20,8 @@ This admin index is the map of durable admin documentation. Older V1/V2 drafts a
   Dashboard-owned Sheets state tabs, keys, write patterns, concurrency notes, and limits.
 - [WORKFLOW_DESIGN_PRINCIPLES.md](./WORKFLOW_DESIGN_PRINCIPLES.md)
   Shared workflow design rulebook: reduce admin cognitive load, keep source-of-truth boundaries clear, and make risky actions explicit and logged.
+- [COPY_AND_TONE.md](./COPY_AND_TONE.md)
+  Lightweight voice guide for calm, human, action-led dashboard copy.
 - [HYGIENE_AND_SECRETS.md](./HYGIENE_AND_SECRETS.md)
   Trust-floor notes for the home-directory git repo, Theta credentials, test students, and secret handling.
 - [OPERATING_DASHBOARD_BUILD_BLUEPRINT.md](./OPERATING_DASHBOARD_BUILD_BLUEPRINT.md)

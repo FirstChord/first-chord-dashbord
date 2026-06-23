@@ -56,8 +56,8 @@ function buildPrioritySentence({
   if (unknownPaymentMode > 0) priorities.push('unknown payment modes');
 
   return priorities.length
-    ? `Suggested priority: clear ${priorities.slice(0, 2).join(', ')}.`
-    : 'No open operational loops are pressing right now.';
+    ? `Start with ${priorities.slice(0, 2).join(', ')}.`
+    : 'Nothing is asking for urgent attention right now.';
 }
 
 function buildParentUnderstandingOverview(rows = []) {
@@ -76,14 +76,6 @@ function buildParentUnderstandingOverview(rows = []) {
 
 function buildWaitingCardValue(summary = {}) {
   return summary.newThisWeek > 0 ? `${summary.newThisWeek} new` : 'Review';
-}
-
-function buildWaitingCardHelper(summary = {}) {
-  const parts = [];
-  if (summary.onboardingReady > 0) parts.push(`${summary.onboardingReady} ready`);
-  if (summary.noResponse > 0) parts.push(`${summary.noResponse} no response`);
-  if (summary.newThisWeek > 0) parts.push('new in last 7 days');
-  return parts.length ? parts.join(' · ') : 'Open waiting-list queue';
 }
 
 function buildWaitingOverview(waitingStudents = []) {
@@ -173,11 +165,15 @@ function ActionCard({ label, value, href, helper = '', tone = 'border-slate-200 
   return (
     <Link
       href={href}
-      className={`block rounded-2xl border p-5 shadow-[0_12px_36px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_42px_rgba(15,23,42,0.08)] ${tone}`}
+      className={`block rounded-2xl border p-5 shadow-[0_10px_28px_rgba(15,23,42,0.045)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(15,23,42,0.07)] ${tone}`}
     >
-      <p className="text-sm font-medium text-slate-700">{label}</p>
-      <p className="mt-2 text-3xl font-semibold text-slate-950">{value}</p>
-      {helper ? <p className="mt-2 text-xs text-slate-600">{helper}</p> : null}
+      <div className="flex items-start justify-between gap-4">
+        <p className="text-base font-semibold leading-6 text-slate-900">{label}</p>
+        <span className="shrink-0 rounded-full border border-white/70 bg-white/80 px-3 py-1 text-sm font-semibold text-slate-800 shadow-[0_4px_14px_rgba(15,23,42,0.04)]">
+          {value}
+        </span>
+      </div>
+      {helper ? <p className="mt-3 text-sm leading-6 text-slate-600">{helper}</p> : null}
     </Link>
   );
 }
@@ -271,78 +267,53 @@ export default async function AdminHomePage() {
       value: planningDueNow,
       href: '/admin/planning?filter=due_now',
       helper: planningSummary.overdue > 0
-        ? `${planningSummary.overdue} overdue · ${planningSummary.dueToday || 0} due today`
-        : `${planningSummary.dueToday || 0} due today`,
-      tone: 'border-violet-100 bg-violet-50/70',
+        ? `${planningSummary.overdue} overdue, ${planningSummary.dueToday || 0} due today`
+        : `${planningSummary.dueToday || 0} for today`,
+      tone: 'border-violet-100 bg-violet-50/60',
     } : null,
   ].filter(Boolean);
   const attentionItems = [
     activeIssues.length > 0 ? {
-      label: 'Review open issues',
+      label: 'Review Issues',
       value: activeIssues.length,
       href: '/admin/flags',
-      helper: 'Flags that still need a decision',
-      tone: 'border-red-100 bg-red-50/70',
+      helper: '',
+      tone: 'border-rose-100 bg-rose-50/60',
     } : null,
     tutorAbsenceSummary.openAbsences > 0 ? {
-      label: 'Handle tutor absences',
+      label: 'Tutor Absences',
       value: tutorAbsenceSummary.openAbsences,
       href: tutorAbsenceHref,
-      helper: `${tutorAbsenceSummary.unresolvedMessages} parent messages left`,
-      tone: 'border-orange-100 bg-orange-50/70',
+      helper: '',
+      tone: 'border-orange-100 bg-orange-50/60',
     } : null,
     waitingSummary.waiting > 0 || waitingSummary.onboardingReady > 0 || waitingSummary.noResponse > 0 ? {
-      label: 'Work waiting list',
+      label: 'Waiting list',
       value: buildWaitingCardValue(waitingSummary),
       href: '/admin/waiting',
-      helper: buildWaitingCardHelper(waitingSummary),
-      tone: 'border-emerald-100 bg-emerald-50/70',
+      helper: '',
+      tone: 'border-emerald-100 bg-emerald-50/60',
     } : null,
     parentUnderstandingSummary.followUps > 0 ? {
       label: 'Close parent follow-ups',
       value: parentUnderstandingSummary.followUps,
       href: '/admin/workflows/parent-understanding',
-      helper: 'Communication loops still open',
-      tone: 'border-blue-100 bg-blue-50/70',
-    } : null,
-    paymentSummary.unknownPaymentMode > 0 ? {
-      label: 'Classify payment mode',
-      value: paymentSummary.unknownPaymentMode,
-      href: '/admin/students',
-      helper: 'Needs classification',
-      tone: 'border-slate-200 bg-slate-50/80',
-    } : null,
-  ].filter(Boolean);
-  const attentionLabels = new Set(attentionItems.map((item) => item.label));
-  const workQueueItems = [
-    (waitingSummary.waiting > 0 || waitingSummary.onboardingReady > 0 || waitingSummary.noResponse > 0)
-      && !attentionLabels.has('Work waiting list') ? {
-      label: 'Waiting list',
-      value: buildWaitingCardValue(waitingSummary),
-      href: '/admin/waiting',
-      helper: buildWaitingCardHelper(waitingSummary),
-      tone: 'border-emerald-100 bg-emerald-50/70',
-    } : null,
-    parentUnderstandingSummary.openRecords > 0 && !attentionLabels.has('Close parent follow-ups') ? {
-      label: 'Parent understanding',
-      value: parentUnderstandingSummary.openRecords,
-      href: '/admin/workflows/parent-understanding',
-      helper: `${parentUnderstandingSummary.followUps} follow-ups`,
-      tone: 'border-blue-100 bg-blue-50/70',
+      helper: parentUnderstandingSummary.followUps === 1 ? 'One family needs a follow-up' : 'Families need follow-up',
+      tone: 'border-sky-100 bg-sky-50/60',
     } : null,
     paymentSummary.setupPending > 0 ? {
       label: 'Payment setup pending',
       value: paymentSummary.setupPending,
       href: '/admin/students?paymentExpectation=setup_pending',
-      helper: 'Students not yet fully billing',
-      tone: 'border-amber-100 bg-amber-50/70',
+      helper: '',
+      tone: 'border-amber-100 bg-amber-50/60',
     } : null,
-    tutorAbsenceSummary.openAbsences > 0 && !attentionLabels.has('Handle tutor absences') ? {
-      label: 'Tutor absences',
-      value: tutorAbsenceSummary.openAbsences,
-      href: tutorAbsenceHref,
-      helper: `${tutorAbsenceSummary.unresolvedMessages} messages left`,
-      tone: 'border-orange-100 bg-orange-50/70',
+    paymentSummary.unknownPaymentMode > 0 ? {
+      label: 'Classify payment mode',
+      value: paymentSummary.unknownPaymentMode,
+      href: '/admin/students',
+      helper: 'So payment checks know what to expect',
+      tone: 'border-slate-200 bg-slate-50/80',
     } : null,
   ].filter(Boolean);
 
@@ -379,7 +350,7 @@ export default async function AdminHomePage() {
         ) : (
           <EmptyState
             title="All clear for today."
-            copy="No dated planning work is due from the overview right now."
+            copy="No dated planning work is asking for you from the overview right now."
           />
         )}
       </section>
@@ -395,7 +366,7 @@ export default async function AdminHomePage() {
         ) : (
           <EmptyState
             title="No open loops are pressing."
-            copy="Issues, payment gaps, tutor absence messages, parent follow-ups, and onboarding-ready queues are quiet."
+            copy="Issues, tutor absence messages, parent follow-ups, payment unknowns, and waiting-list actions are quiet."
           />
         )}
       </section>
@@ -430,17 +401,6 @@ export default async function AdminHomePage() {
           />
         </div>
       </section>
-
-      {workQueueItems.length ? (
-        <section className="space-y-4">
-          <SectionHeader title="Open queues" copy="Useful queues that are active but not already leading today’s attention." />
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {workQueueItems.map((item) => (
-              <StatCard key={item.label} {...item} />
-            ))}
-          </div>
-        </section>
-      ) : null}
 
       <details className="rounded-2xl border border-blue-100 bg-white/90 p-5 shadow-[0_12px_36px_rgba(15,23,42,0.05)]">
         <summary className="cursor-pointer text-sm font-semibold text-slate-900">School context</summary>
