@@ -19,6 +19,24 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-23 — Financial layer slice A: read-only revenue run-rate (estimate, B-ready seam)
+
+**Feature/change:** First financial surface — a read-only recurring-revenue run-rate at `/admin/finance`, linked from the Planning → Planning context aside (the documented home for future finance/capacity layers, not top nav while it's still an estimate). New pure helper `lib/admin/finance-helpers.mjs`: `buildRevenueRunRate(students, { stripeAmounts })` aggregates active-only weekly/monthly/annual, reports paused separately as "not billing", and breaks down by lesson kind (1:1/group/orchestra) and payment mode (stripe/manual). The page reuses `derivePaymentValueContext` via the resolver.
+
+**Why it exists:** Foundation for projecting/modelling. Built A (estimate) first to settle revenue *definitions* (active-only, paused excluded, period, manual payers) on cheap data before touching the vendor layer.
+
+**A→B seam:** `resolveStudentRevenue(student, { stripeAmounts })` is the single source-of-revenue resolver. Today it returns `source: 'estimate'`; when cached Stripe actuals exist, pass `stripeAmounts[mmsId] = { weekly, ... }` and it flips to `source: 'stripe_actual'` — aggregation and UI unchanged. `isEstimateOnly` drives the prominent "estimate, not Stripe actuals" banner.
+
+**Source-of-truth impact:** None for revenue itself (read-only, no writes, no Stripe calls). One canonical data fix landed alongside (below).
+
+**Two detection issues found while validating against ground truth:**
+1. The bulk `getAdminStudents()` list does **not** attach `scheduleContext` (only the single-student fetch does), so group detection via shared-slot count was blind (groups 4→14 once attached) and several students came back unpriced ("Uke"/"group" in the lesson-length field). Fix: the finance page attaches `scheduleContext` itself via `getScheduleContextRows()` + `enrichScheduleContextsWithSharedSlots` (cached read, read-only) before aggregating. Did **not** add it to the shared `getAdminStudents` to avoid an extra sheet read on a hot path (read-quota concern).
+2. Ukulele Orchestra members had a **blank instrument** (only the lesson-length field said "uke"), so they priced as group/one-to-one instead of £42.50/mo orchestra. Fixed **upstream in the canonical registry** (added `instrument: 'Ukulele Orchestra'` to Alister McGhee, Carolyn Hilliard, Katrina Caldwell, Thomas Ward, and Anji Goddard — matching Claire McGinness's existing entry), then `npm run generate-configs`. Orchestra now detects 6; Katrina and Anji are manual/cash payers. Note: Anji had **no found MMS schedule slot** (`scheduleStatus: not_found`), so shared-slot inference could never catch her and she was mispriced as £25/wk one-to-one — the registry `instrument` fallback is the only thing that classifies her correctly. This is the general lesson: shared-slot detection is best-effort and silently fails for students without a current MMS slot; canonical instrument data is the durable fix.
+
+**Files/functions involved:** `lib/admin/finance-helpers.mjs` (new), `app/admin/finance/page.js` (new), `components/admin/AdminPlanningPageClient.js` (Planning-context link), `lib/config/students-registry.js` (4 instrument fields), `tests/admin/finance-helpers.test.mjs` (11 new tests). Reuses `derivePaymentValueContext`, `getScheduleContextRows`, `enrichScheduleContextsWithSharedSlots`.
+
+**What to watch out for:** The headline figure is an *estimate* (schedule × price table), including for manual payers — the banner must stay prominent until slice B. Slice B = read each student's recurring Stripe amount, cache it like `Schedule_Context`, feed `stripeAmounts`. Annual = weekly × 52 (ignores holidays/pauses) — indicative only. The registry's `instrument` is a fallback used only when the MMS-synced sheet instrument is blank; if MMS later populates these instruments, the registry value is harmless.
+
 ### 2026-06-23 — Read-quota resilience (cache issue reads + wrap remaining raw reads)
 
 **Feature/change:** The Sheets read-quota limit ("Read requests per minute per user") actually fired in dev, hard-crashing the overview at `getIssueQueueRows`. Two read paths were bypassing the `withSheetsRetry` wrapper and the read cache: `getIssueQueueRows`' own `values.get`, and `ensureManagedSheet`'s header `values.get`. Fixes: wrap both in `withSheetsRetry` (so a 429/5xx backs off and self-heals instead of crashing), and route the issue-queue read through the existing 60s read cache (so the overview + flags page don't each re-fetch it).

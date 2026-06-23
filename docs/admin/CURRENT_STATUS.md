@@ -26,6 +26,7 @@ The active surface is the private admin dashboard under `/admin`.
 
 ## Recent Completed Work
 
+- Financial layer slice A: read-only revenue run-rate at `/admin/finance` (estimate from schedule × price table, B-ready `resolveStudentRevenue` seam for cached Stripe actuals), linked from Planning context; orchestra instruments corrected upstream in the registry
 - Persistent `/admin/flags` issue loop using `Issue_Queue` and `Event_Log`
 - calmer flag cards with clearer primary actions and collapsed detail
 - system-cleared bulk resolve for stale no-longer-detected issues
