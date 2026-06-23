@@ -41,10 +41,14 @@ const NOW = new Date('2026-06-03T12:00:00.000Z');
 
 test('normalises planning defaults conservatively', () => {
   assert.equal(normalisePlanningItemType('Initiative'), 'initiative');
+  assert.equal(normalisePlanningItemType('Learning_Note'), 'learning_note');
+  assert.equal(normalisePlanningItemType('strategic_note'), 'strategic_note');
   assert.equal(normalisePlanningItemType('bad'), 'idea');
   assert.equal(normalisePlanningStatus('WAITING'), 'waiting');
   assert.equal(normalisePlanningStatus('unknown'), 'inbox');
   assert.equal(normalisePlanningArea('Finance'), 'finance');
+  assert.equal(normalisePlanningArea('Learning'), 'learning');
+  assert.equal(normalisePlanningArea('student_experience'), 'student_experience');
   assert.equal(normalisePlanningArea('random'), 'other');
   assert.equal(normalisePlanningOwner('Tom'), 'Tom');
   assert.equal(normalisePlanningOwner('Fenella'), 'Unassigned');
@@ -484,6 +488,24 @@ test('attaches progress rows and builds summary counts', () => {
       area: 'other',
       updatedAt: '2026-06-02T10:00:00.000Z',
     },
+    {
+      planningId: 'planning_3',
+      title: 'Customer experience audiobook notes',
+      itemType: 'learning_note',
+      status: 'active',
+      owner: 'Tom',
+      area: 'learning',
+      updatedAt: '2026-06-02T10:00:00.000Z',
+    },
+    {
+      planningId: 'planning_4',
+      title: 'Back to school growth idea',
+      itemType: 'strategic_note',
+      status: 'parked',
+      owner: 'Finn',
+      area: 'growth',
+      updatedAt: '2026-06-02T10:00:00.000Z',
+    },
   ], [
     {
       progressId: 'progress_1',
@@ -498,12 +520,16 @@ test('attaches progress rows and builds summary counts', () => {
   assert.equal(items[0].latestProgress.progressNote, 'Built V1 workflow page');
   assert.equal(items[0].momentum, 'moving');
   assert.equal(items[1].momentum, 'inbox');
-  assert.equal(summary.total, 2);
-  assert.equal(summary.open, 2);
+  assert.equal(summary.total, 4);
+  assert.equal(summary.open, 3);
   assert.equal(summary.inbox, 1);
   assert.equal(summary.initiatives, 1);
   assert.equal(summary.activeInitiatives, 1);
-  assert.equal(summary.moving, 1);
+  assert.equal(summary.schoolNotes, 2);
+  assert.equal(summary.activeSchoolNotes, 1);
+  assert.equal(summary.learningNotes, 1);
+  assert.equal(summary.strategicNotes, 1);
+  assert.equal(summary.moving, 2);
   assert.equal(summary.needsAttention, 0);
 });
 

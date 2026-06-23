@@ -19,6 +19,30 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-23 — School Notes Inside Planning
+
+**Feature/change:** Planning now has first-class `Learning note` and `Strategic note` item types, plus a `Work on the school notes` capture block. Notes can hold open transcript summaries, learning notes, key ideas, possible First Chord applications, and an optional next action. A note with a next action can create a linked `Action` card while preserving the original thinking.
+
+**Why it exists:** some work-on-the-school conversations are not tasks yet. They still need to be logged so Finn/Tom can resume learning, strategic threads, and transcript summaries later without forcing everything into project-management language.
+
+**Source-of-truth impact:** No new state tab. Uses existing dashboard-owned `Planning_Items` and `Planning_Progress_Log`. These notes are workflow/planning memory, not external truth and not finance forecasts.
+
+**Files/functions involved:** `components/admin/AdminPlanningPageClient.js`, `lib/admin/planning-helpers.mjs`, `app/admin/planning/page.js`, `app/admin/page.js`, `tests/admin/planning-helpers.test.mjs`.
+
+**What to watch out for:** keep the body open enough for real conversation summaries. Do not turn this into a full knowledge-management system or finance layer. Executable work should become linked actions so the note remains context and the task can close.
+
+### 2026-06-23 — Overview Cards Must Earn Their Place
+
+**Feature/change:** The `/admin` overview was tightened from a broad status board into a calmer meeting-start surface. Front-page cards now prioritise actionable work: today's tasks, issue decisions, tutor absences, waiting-list placement, payment setup pending, and prompts for working on the school. Passive queues and context were removed or pushed lower.
+
+**Why it exists:** big numbers and useful-but-passive panels create cognitive load. The overview should help Finn/Tom enter a meeting, clear the work that needs doing, then protect energy for meaningful school improvement.
+
+**Source-of-truth impact:** None. This was a presentation and prioritisation change only.
+
+**Files/functions involved:** `app/admin/page.js`, `docs/admin/COPY_AND_TONE.md`, `docs/admin/CURRENT_STATUS.md`, `docs/admin/WORKFLOW_DESIGN_PRINCIPLES.md`.
+
+**What to watch out for:** do not add a front-page panel just because a metric exists. Ask whether the card creates a meaningful click/action during a meeting. Health/context can still exist, but should move up only when something needs attention.
+
 ### 2026-06-21 — Retry transient Google Sheets errors (stop spurious job-failure alerts)
 
 **Feature/change:** Both the dashboard and the brain now retry transient Google Sheets API errors (429/500/502/503/504) with exponential backoff instead of hard-failing on the first blip.

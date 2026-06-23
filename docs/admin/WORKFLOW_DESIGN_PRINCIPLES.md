@@ -72,6 +72,19 @@ Use these questions when designing a workflow:
 
 Do not make workflows dense just because more data exists. Details can live behind panels, links, or student pages.
 
+## Overview / Meeting Surface Rule
+
+The `/admin` overview is not a full status board. It is the place Finn and Tom start a meeting or admin session.
+
+Front-page cards should earn attention by answering one of these:
+
+- What must be done today?
+- What needs attention soon?
+- What loop is open and actionable?
+- What prompt helps us work on the school after the admin is clear?
+
+Background context, health checks, and useful-but-passive numbers should stay lower on the page or inside their own workflow pages unless something is wrong. Big numbers should be used sparingly; prefer human labels and smaller count pills when the number is supporting detail.
+
 ## Source-Of-Truth Boundaries
 
 Workflows should be explicit about what they read and write:
@@ -183,6 +196,16 @@ Planning has a `Meeting` view that separates the meeting rhythm into:
 It includes due work, waiting items, unassigned items, stalled/no-next-action items, tutor absence work, and the weekly Friday prompt: `Friday: what moved the school forward?`
 
 The Friday prompt is intentionally a reflection record, not just a task. Writing into it appends dated entries to `Planning_Progress_Log`; the Meeting view shows recent reflections so future monthly or quarterly summaries can be built from real operating history.
+
+Planning also supports lightweight school notes:
+
+- `Learning note` = books, podcasts, courses, conversations, or teaching/leadership ideas being worked through
+- `Strategic note` = bigger scratchpad thinking that is not yet a task
+- the body can be open and messy: transcript summary, rough notes, bullets, or copied ChatGPT summary
+- the wrapper should stay structured enough to retrieve later: title, area, owner, status, key ideas, First Chord applications, optional next action
+- when something becomes executable, create a linked `Action` rather than replacing the original note
+
+Finance can appear as an area label, but a real finance/forecasting layer should be designed separately. Do not turn school notes into an unreliable finance model.
 
 State:
 

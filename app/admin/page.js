@@ -378,26 +378,31 @@ export default async function AdminHomePage() {
             title="Growth"
             copy="Recruitment, enquiries, marketing, new offers, and how more students find us."
             prompt="What experiment or campaign should we move forward next?"
+            href="/admin/planning?filter=strategic_note"
           />
           <ThemeCard
             title="Learning"
             copy="Books, teaching ideas, tutor development, student progress, and what we are learning as leaders."
             prompt="What idea from recent reading/listening should we try or discuss?"
+            href="/admin/planning?filter=learning_note"
           />
           <ThemeCard
             title="Finance"
             copy="Pricing, payroll, cashflow, owner-teaching reduction, and cleaner financial visibility."
             prompt="What number or assumption needs clarified before we decide?"
+            href="/admin/planning?filter=strategic_note"
           />
           <ThemeCard
             title="Student Experience"
             copy="Parent communication, practice support, resources, showcases, and student engagement."
             prompt="What would make families feel clearer, supported, or more excited?"
+            href="/admin/planning?filter=strategic_note"
           />
           <ThemeCard
             title="Systems"
             copy="Dashboard, automation, delegation, documentation, and repeatable operating loops."
             prompt="What admin load can we remove or make calmer next?"
+            href="/admin/planning?filter=strategic_note"
           />
         </div>
       </section>

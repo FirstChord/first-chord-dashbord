@@ -7,6 +7,9 @@ import { getAdminStudents } from '@/lib/admin/students';
 const ALLOWED_INITIAL_FILTERS = new Set([
   'due_now',
   'meeting',
+  'school_notes',
+  'learning_note',
+  'strategic_note',
   'unassigned',
   'no_next_action',
   'waiting_status',

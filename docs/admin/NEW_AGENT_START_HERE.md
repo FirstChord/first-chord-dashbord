@@ -1,6 +1,6 @@
 # New Agent Start Here — Admin Dashboard
 
-Last updated: 2026-06-21
+Last updated: 2026-06-23
 
 This is the practical handoff note for a new Codex/AI agent working on the First Chord admin dashboard.
 
@@ -56,6 +56,9 @@ Recent V4 layers include:
 - schedule cache health and scheduled schedule refresh
 - communication record layer for copied parent messages
 - Practice Chat note ownership: sent/completed First Chord notes are now read by portals before MMS fallback
+- calmer `/admin` overview: front-page cards now need to earn attention by representing today's work, near-term action, or deliberate school-improvement prompts
+- copy/tone layer: `docs/admin/COPY_AND_TONE.md` captures the dashboard's current voice and the rule that wording should reduce cognitive load
+- `Work on the school notes` inside Planning: learning notes and strategic notes use existing `Planning_Items`/`Planning_Progress_Log`, with open transcript-summary bodies and optional linked actions
 
 ## Operators (who uses what)
 
@@ -75,14 +78,15 @@ Keep this short; it is an operator pointer, not a permissions model.
 3. `docs/admin/OWNERSHIP_MATRIX.md`
 4. `docs/admin/STATE_TABS_SCHEMA.md` — canonical state lane map
 5. `docs/admin/WORKFLOW_DESIGN_PRINCIPLES.md`
-6. `docs/admin/HYGIENE_AND_SECRETS.md`
-7. `docs/admin/DOCUMENTATION_MAP.md`
-8. `docs/admin/SCHOOL_POLICY.md`
-9. `docs/admin/PAYMENTS_RULES.md` if touching Stripe, pauses, or payment expectations
-10. `docs/admin/BUG_FIXES.md` if debugging Railway, MMS calendar times, or recent production issues
-11. `docs/admin/PRACTICE_CHAT_DELIVERY_AUDIT.md` if touching Practice Chat Level 2 delivery or rollout
-12. Obsidian: `08 Operations/Current System Map.md`
-13. Obsidian: `08 Operations/Active Roadmap.md`
+6. `docs/admin/COPY_AND_TONE.md`
+7. `docs/admin/HYGIENE_AND_SECRETS.md`
+8. `docs/admin/DOCUMENTATION_MAP.md`
+9. `docs/admin/SCHOOL_POLICY.md`
+10. `docs/admin/PAYMENTS_RULES.md` if touching Stripe, pauses, or payment expectations
+11. `docs/admin/BUG_FIXES.md` if debugging Railway, MMS calendar times, or recent production issues
+12. `docs/admin/PRACTICE_CHAT_DELIVERY_AUDIT.md` if touching Practice Chat Level 2 delivery or rollout
+13. Obsidian: `08 Operations/Current System Map.md`
+14. Obsidian: `08 Operations/Active Roadmap.md`
 
 ## Source-of-Truth Rules
 
@@ -132,6 +136,21 @@ Planning now captures human Brain-style work without becoming full project manag
 - workflow principle: reduce admin cognitive load by making the next safe action clear, not by adding fields
 - pause guardrail: linked pause planning items can open the prefilled payment-pause PWA, generate/copy the parent confirmation message, then use `Mark pause completed` after confirming the pause tool was run and the message was sent/copied
 - pause completion writes `payment_expectation = stripe_paused_expected` through the existing student PATCH route if needed, logs progress, appends the consequential action to `Event_Log`, and marks the planning task done
+- school notes:
+  - item types: `learning_note`, `strategic_note`
+  - use cases: audiobook/book notes, transcript summaries, strategic scratchpad, bigger school-improvement thinking
+  - stored in existing `Planning_Items`; original note stays as context
+  - optional `nextAction` can create a linked `action` item via `parentPlanningId`
+  - not a finance model, not a knowledge-management rewrite, and not a replacement for Friday reflection
+
+Overview now acts as the meeting-start surface:
+
+- page: `/admin`
+- principle: start with what needs doing today, then what needs attention, then school-improvement prompts
+- current front-page work cards: Review Issues, Tutor Absences, Waiting List, Payment setup pending, and Planning due-today when present
+- deliberately not front-page by default: parent understanding, broad school/payment context, and system health when everything is quiet
+- design rule: do not add a card because the data exists; add it only if Finn/Tom would click it in a meeting and do work
+- copy/tone guide: `docs/admin/COPY_AND_TONE.md`
 
 Practice Chat now has a dashboard bridge:
 

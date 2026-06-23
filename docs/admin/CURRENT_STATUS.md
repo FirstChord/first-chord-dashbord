@@ -1,6 +1,6 @@
 # Admin Current Status
 
-Last updated: 2026-06-21
+Last updated: 2026-06-23
 
 This is the tracked current-status entrypoint for agents working from the `music-school-dashboard` repository.
 
@@ -19,6 +19,8 @@ V3 established the dashboard's loop-closing pattern:
 V4 is now adding lightweight context layers on top of those loops. The goal is to make each student, issue, payment, and workflow easier to understand and delegate without adding a large state machine or new database.
 
 A guiding workflow principle is now explicit: reduce admin cognitive load. Workflows should turn recurring memory-heavy admin into clear context, safe next actions, and logged outcomes.
+
+The admin overview is now treated as a strict meeting-start surface, not a complete status board. Cards must earn their place by helping Finn/Tom see what needs doing today, what needs attention soon, or where to spend leadership energy once the admin loop is clear.
 
 The active surface is the private admin dashboard under `/admin`.
 
@@ -110,6 +112,17 @@ The active surface is the private admin dashboard under `/admin`.
 - Pause message + adult-detection polish (2026-06-22):
   - away-period pause message now reads "[Tutor] will next see [Student] on [return date] and payment will continue as normal from then" (adult: "…will next see you on…"); pause-tool prefill for away periods starts on the action day and resumes two days before the return.
   - **adult detection fix**: adults are recorded as their own contact (parent fields echo the student's own name), which mis-routed them to parent wording. New `isStudentOwnContact()` treats "no parent" OR "parent name == student name" as adult, so they get "your lesson" not "[name]'s lesson".
+- Overview + copy/tone focus (2026-06-23):
+  - `/admin` is now calmer and more selective: `Things To Do Today`, `Things That Need Attention`, and `Let's Work On The School` are the main bands; the old open-queues/status-board feel was removed.
+  - The front page keeps `Review Issues`, `Tutor Absences`, `Waiting List`, and `Payment setup pending` because they create or unblock real work. Parent understanding and broader context are intentionally not front-page cards unless they need action.
+  - Card copy now favours label-first language and softer count pills instead of large stressful numbers. Background school/payment context is available lower down or in specific pages, but does not compete with today's work.
+  - `docs/admin/COPY_AND_TONE.md` records the current language layer: calm, human, action-led, and specific to First Chord's operating rhythm.
+- Work-on-the-school notes (2026-06-23):
+  - `/admin/planning` now has a focused `Work on the school notes` capture block for `Learning note` and `Strategic note` item types.
+  - The note shape is intentionally "structured wrapper, open body": title, type, area, owner/status, main note or transcript summary, key ideas, possible First Chord applications, and optional next action.
+  - Notes are stored in existing `Planning_Items`; progress remains in `Planning_Progress_Log`. No new tab or knowledge-management system was added.
+  - Notes with a next action can create a linked `Action` card, preserving the original thinking while turning the usable part into executable work.
+  - Overview "Let's Work On The School" cards now route into the relevant Planning note views (`learning_note` or `strategic_note`) instead of the whole board.
 
 ## Current Slice
 
@@ -143,12 +156,19 @@ The active V4 slice is context + ownership layering, not broad automation.
   - `Issues` = detected problems and issue-loop actions
   - `Workflows` = waiting list, onboarding, showcase, holidays, and future task/communication flows
   - `Planning` = capacity, schedule health, seasonal planning, and future finance/capacity layers
+- Overview placement rule:
+  - top-page cards should represent work to do today, work needing attention, or deliberate school-improvement prompts
+  - background health/context belongs lower down unless something is wrong
+  - big counts should be used sparingly; prefer human labels and small pills where the number is supporting detail
+  - do not add a front-page panel just because the data exists
 - Student records remain important context, but they are accessed through header search, issue links, workflow links, or `/admin/students`; they are not a primary top-nav mode.
 - Planning state is dashboard-owned work state, not external truth:
   - Sheets tabs: `Planning_Items` and `Planning_Progress_Log`
   - linked student IDs point at existing `Students` rows
   - progress notes are append-only planning memory
   - the Friday school-forward prompt is a seeded planning item, not a separate workflow engine
+  - learning/strategic school notes are planning items, not external truth or finance forecasts
+  - school notes preserve the original thinking/transcript summary; linked actions carry the executable work
   - student-linked pause planning can update `payment_expectation` only through an explicit human completion action
   - generic `Done` does not itself change payment state; `Mark pause completed` is the guarded pause-specific action that logs confirmation, aligns `payment_expectation`, and closes the task
 - Dashboard-owned state tabs and write patterns are now documented in `docs/admin/STATE_TABS_SCHEMA.md`. Treat that as the schema map before adding another Sheets tab.
@@ -190,6 +210,10 @@ npm run build
 ## Best Next Slices
 
 Progress note (2026-06-21): recent work advanced **pause loop maturity** (inline MMS refresh, clearer pause steps, adult/parent message), **planning link refinement** (multi-student links, stop-word guard, clear fix), added a calm due-today view + the Monday scheduling loop, delivered **schedule-context hardening** (slice #2 — `/admin/capacity` surfaces + refreshes stale caches, plus a bi-weekly cron), and took the **first step of the communication layer** (slice #8) as a deliberately-lean **record-only Communication Log** (no approval/sending). Natural fast-follows: extend the copy-logging to other message buttons, and a per-student "messages logged" panel. The full draft→approve→send gate remains available to revisit only if/when actual automated sending is wanted.
+
+Progress note (2026-06-23): the Overview page moved closer to a daily operating room than a metrics board. Front-page cards now need an action reason: today's dated tasks, issue decisions, tutor absence work, waiting-list placement, or setup-pending payment work. Removed open-queue clutter and softened card typography so the page invites a meeting flow instead of creating number stress. Future overview changes should ask: "would Finn/Tom click this during a meeting and do something meaningful?"
+
+Progress note (2026-06-23, Planning): added a lightweight school-notes layer inside Planning for learning notes and strategic scratchpad entries. This is deliberately not finance forecasting, CRM, or project management. It exists to log conversations, transcript summaries, book/podcast learning, and bigger thoughts so they can be resumed later and converted into linked actions when ready.
 
 1. **V4.1 performance hardening** — DONE (2026-06-21): shared `app/admin/loading.js` skeleton; Sheets read TTL 15s → 60s; Overview health cached (60s) AND streamed via `<Suspense>` (page no longer blocks on MMS/GitHub health calls). Remaining only if still slow:
    - Sheets `batchGet` to collapse per-tab reads into one round-trip (also eases the read quota).

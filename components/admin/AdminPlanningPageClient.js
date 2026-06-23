@@ -48,6 +48,9 @@ const STATUS_GROUPS = [
 const MOMENTUM_FILTERS = [
   { value: 'all', label: 'All' },
   { value: 'meeting', label: 'Meeting' },
+  { value: 'school_notes', label: 'School Notes' },
+  { value: 'learning_note', label: 'Learning Notes' },
+  { value: 'strategic_note', label: 'Strategic Notes' },
   { value: 'due_now', label: 'Due Now' },
   { value: 'unassigned', label: 'Unassigned' },
   { value: 'no_next_action', label: 'No Next Action' },
@@ -86,6 +89,20 @@ const QUICK_CAPTURE_DEFAULTS = {
   status: 'inbox',
   linkedWorkflowId: '',
 };
+
+const EMPTY_SCHOOL_NOTE_FORM = {
+  noteKind: 'learning_note',
+  title: '',
+  owner: 'Unassigned',
+  status: 'active',
+  area: 'learning',
+  mainNote: '',
+  keyIdeas: '',
+  applications: '',
+  nextAction: '',
+};
+
+const SCHOOL_NOTE_TYPES = new Set(['learning_note', 'strategic_note']);
 
 const PAYMENT_PAUSE_PWA_URL = process.env.NEXT_PUBLIC_PAYMENT_PAUSE_PWA_URL || 'https://payment-pause-pwa.web.app/';
 const PAUSE_PAYMENT_CONFIRMATION_NOTE = 'Payment pause confirmation message sent.';
@@ -927,6 +944,10 @@ function isPausePlanningItem(item = {}) {
   ].join(' '));
 }
 
+function isSchoolNotePlanningItem(item = {}) {
+  return SCHOOL_NOTE_TYPES.has(item.itemType);
+}
+
 function hasPausePaymentConfirmation(item = {}) {
   return (item.progress || []).some((entry) => (
     `${entry.progressNote || ''}`.toLowerCase().includes(PAUSE_PAYMENT_CONFIRMATION_NOTE.toLowerCase())
@@ -1045,6 +1066,139 @@ function ItemForm({
       >
         {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
         {submitLabel}
+      </button>
+    </form>
+  );
+}
+
+function buildSchoolNoteItem(form = {}) {
+  const mainNote = `${form.mainNote || ''}`.trim();
+  const keyIdeas = `${form.keyIdeas || ''}`.trim();
+  const applications = `${form.applications || ''}`.trim();
+  const sections = [
+    mainNote ? `Main note / transcript summary:\n${mainNote}` : '',
+    keyIdeas ? `Key ideas:\n${keyIdeas}` : '',
+    applications ? `Possible First Chord applications:\n${applications}` : '',
+  ].filter(Boolean);
+  const itemType = SCHOOL_NOTE_TYPES.has(form.noteKind) ? form.noteKind : 'learning_note';
+
+  return {
+    title: `${form.title || ''}`.trim(),
+    notes: sections.join('\n\n'),
+    itemType,
+    owner: form.owner || 'Unassigned',
+    status: form.status || 'active',
+    area: form.area || (itemType === 'learning_note' ? 'learning' : 'other'),
+    linkedWorkflowId: 'school-notes',
+    nextAction: `${form.nextAction || ''}`.trim(),
+    progressNote: itemType === 'learning_note'
+      ? 'Captured as a learning note.'
+      : 'Captured as a strategic note.',
+  };
+}
+
+function SchoolNoteCapture({ form, onChange, onSubmit, pending = false }) {
+  const setValue = (key, value) => {
+    const next = { ...form, [key]: value };
+    if (key === 'noteKind') {
+      next.area = value === 'learning_note' ? 'learning' : (form.area === 'learning' ? 'growth' : form.area);
+    }
+    onChange(next);
+  };
+  const isLearning = form.noteKind === 'learning_note';
+
+  return (
+    <form onSubmit={onSubmit} className="space-y-4">
+      <div className="flex flex-wrap gap-2">
+        {[
+          { value: 'learning_note', label: 'Learning note' },
+          { value: 'strategic_note', label: 'Strategic note' },
+        ].map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => setValue('noteKind', option.value)}
+            className={`rounded-xl border px-3 py-2 text-sm font-semibold ${
+              form.noteKind === option.value
+                ? 'border-slate-900 bg-slate-900 text-white'
+                : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+            }`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+
+      <TextField
+        label="Title"
+        value={form.title}
+        onChange={(value) => setValue('title', value)}
+        placeholder={isLearning ? 'Book, podcast, conversation, or idea source' : 'Strategic thought or question'}
+      />
+
+      <div className="grid gap-3 md:grid-cols-3">
+        <SelectField
+          label="Area"
+          value={form.area}
+          onChange={(value) => setValue('area', value)}
+          options={PLANNING_AREAS.map((value) => ({ value, label: labelPlanningArea(value) }))}
+        />
+        <SelectField
+          label="Owner"
+          value={form.owner}
+          onChange={(value) => setValue('owner', value)}
+          options={PLANNING_OWNERS}
+        />
+        <SelectField
+          label="Status"
+          value={form.status}
+          onChange={(value) => setValue('status', value)}
+          options={[
+            { value: 'active', label: 'Active' },
+            { value: 'parked', label: 'Parked' },
+            { value: 'done', label: 'Finished' },
+            { value: 'inbox', label: 'Inbox' },
+          ]}
+        />
+      </div>
+
+      <TextAreaField
+        label="Main note / transcript summary"
+        value={form.mainNote}
+        onChange={(value) => setValue('mainNote', value)}
+        placeholder="Paste the summary from a conversation, audiobook notes, or rough thinking here."
+        rows={6}
+      />
+      <div className="grid gap-3 md:grid-cols-2">
+        <TextAreaField
+          label="Key ideas"
+          value={form.keyIdeas}
+          onChange={(value) => setValue('keyIdeas', value)}
+          placeholder="What ideas are worth keeping?"
+          rows={4}
+        />
+        <TextAreaField
+          label="Possible First Chord applications"
+          value={form.applications}
+          onChange={(value) => setValue('applications', value)}
+          placeholder="How could this affect teaching, parents, growth, systems, or culture?"
+          rows={4}
+        />
+      </div>
+      <TextField
+        label="Optional next action"
+        value={form.nextAction}
+        onChange={(value) => setValue('nextAction', value)}
+        placeholder="If this should become work, name the next concrete step"
+      />
+
+      <button
+        type="submit"
+        disabled={pending || !form.title.trim() || !form.mainNote.trim()}
+        className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+        Save note
       </button>
     </form>
   );
@@ -1584,7 +1738,7 @@ function QuickBrainCapture({
   );
 }
 
-function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides = {}, onStatus, onEdit, onProgress, onPauseCompleted, onRepairPauseDetails, onOpenPauseTool, pendingId, compact = false }) {
+function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides = {}, onStatus, onEdit, onProgress, onPauseCompleted, onRepairPauseDetails, onOpenPauseTool, onCreateLinkedAction, pendingId, compact = false }) {
   const [progressNote, setProgressNote] = useState('');
   const [nextAction, setNextAction] = useState(item.nextAction || '');
   const [pauseToolRan, setPauseToolRan] = useState(false);
@@ -1604,6 +1758,7 @@ function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides =
   });
   const isPending = pendingId === item.planningId;
   const isPauseReminder = isPausePlanningItem(item);
+  const isSchoolNote = isSchoolNotePlanningItem(item);
   const isSchoolForwardReview = item.planningId === SCHOOL_FORWARD_PLANNING_ID;
   const pausePaymentConfirmed = hasPausePaymentConfirmation(item);
   const isTutorAbsenceCard = item.linkedWorkflowId === 'tutor-absence' && Boolean(item.linkedTutorId);
@@ -1770,6 +1925,23 @@ function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides =
           <p className="mt-1 text-xs text-slate-500">{formatDateTime(item.latestProgress.createdAt)}</p>
         </div>
       )}
+
+      {isSchoolNote && item.nextAction && item.status !== 'done' ? (
+        <div className="mt-4 rounded-xl border border-violet-100 bg-violet-50 px-3 py-2">
+          <p className="text-sm font-semibold text-slate-900">Turn this thinking into work</p>
+          <p className="mt-1 text-sm leading-6 text-slate-700">
+            Keep the note as context, then create a linked action from the next step.
+          </p>
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={() => onCreateLinkedAction?.(item)}
+            className="mt-3 inline-flex rounded-lg border border-violet-200 bg-white px-3 py-1.5 text-xs font-semibold text-violet-900 hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Create linked action
+          </button>
+        </div>
+      ) : null}
 
       {!compact && (
         <div className="mt-4 flex flex-wrap gap-2">
@@ -2162,6 +2334,7 @@ function DueTodayCard({
   onPauseCompleted,
   onRepairPauseDetails,
   onOpenPauseTool,
+  onCreateLinkedAction,
   onDefer,
   pendingId,
 }) {
@@ -2242,6 +2415,7 @@ function DueTodayCard({
             onPauseCompleted={onPauseCompleted}
             onRepairPauseDetails={onRepairPauseDetails}
             onOpenPauseTool={onOpenPauseTool}
+            onCreateLinkedAction={onCreateLinkedAction}
             pendingId={pendingId}
             compact
           />
@@ -2312,6 +2486,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
   const [quickNote, setQuickNote] = useState('');
   const [quickOptions, setQuickOptions] = useState({});
   const [quickExpanded, setQuickExpanded] = useState(false);
+  const [schoolNoteForm, setSchoolNoteForm] = useState(EMPTY_SCHOOL_NOTE_FORM);
   const [editingItem, setEditingItem] = useState(null);
   const [editForm, setEditForm] = useState(EMPTY_FORM);
   const [saveState, setSaveState] = useState({ pending: false, error: '', savedAt: '' });
@@ -2355,6 +2530,9 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
       if (filter === 'meeting') {
         return isMeetingPlanningItem(item);
       }
+      if (filter === 'school_notes') {
+        return SCHOOL_NOTE_TYPES.has(item.itemType);
+      }
       if (filter === 'unassigned') {
         return isOpenPlanningItem(item) && item.owner === 'Unassigned';
       }
@@ -2370,7 +2548,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
       if (filter === 'done') {
         return item.status === 'done';
       }
-      if (['idea', 'initiative', 'action'].includes(filter)) {
+      if (PLANNING_ITEM_TYPES.includes(filter)) {
         return item.itemType === filter;
       }
       return item.momentum === filter;
@@ -2427,6 +2605,64 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
       setQuickNote('');
       setQuickOptions({});
       setQuickExpanded(false);
+    } catch (error) {
+      setSaveState({ pending: false, error: error.message, savedAt: '' });
+      setPendingId('');
+    }
+  }
+
+  async function handleSchoolNoteCapture(event) {
+    event.preventDefault();
+    const item = buildSchoolNoteItem(schoolNoteForm);
+    if (!item.title || !item.notes) {
+      setSaveState({ pending: false, error: 'Add a title and main note before saving.', savedAt: '' });
+      return;
+    }
+
+    try {
+      await postPlanning({
+        mode: 'save',
+        item,
+        progressNote: item.progressNote,
+      });
+      setSchoolNoteForm(EMPTY_SCHOOL_NOTE_FORM);
+      setFilter('school_notes');
+    } catch (error) {
+      setSaveState({ pending: false, error: error.message, savedAt: '' });
+      setPendingId('');
+    }
+  }
+
+  async function handleCreateLinkedAction(item) {
+    const title = `${item.nextAction || ''}`.trim();
+    if (!title) {
+      setSaveState({ pending: false, error: 'Add a next action before creating a linked action.', savedAt: '' });
+      return;
+    }
+
+    try {
+      await postPlanning({
+        mode: 'save',
+        item: {
+          title,
+          notes: `Created from ${item.itemTypeLabel || labelPlanningType(item.itemType)}: ${item.title}`,
+          itemType: 'action',
+          owner: item.owner || 'Unassigned',
+          status: 'active',
+          area: item.area || 'other',
+          parentPlanningId: item.planningId,
+          nextAction: title,
+        },
+        progressNote: `Created linked action from: ${item.title}`,
+      }, item.planningId);
+
+      await postPlanning({
+        mode: 'progress',
+        planningId: item.planningId,
+        progressNote: `Created linked action: ${title}`,
+        progressType: 'decision',
+        nextAction: item.nextAction,
+      }, item.planningId);
     } catch (error) {
       setSaveState({ pending: false, error: error.message, savedAt: '' });
       setPendingId('');
@@ -2891,14 +3127,39 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
           ['Open planning', summary.open || 0],
           ['Active', summary.active || 0],
           ['Inbox', summary.inbox || 0],
+          ['School notes', summary.activeSchoolNotes || 0],
           ['No next action', summary.noNextAction || 0],
-          ['Stalled', summary.stalled || 0],
         ].map(([label, value]) => (
           <div key={label} className="rounded-2xl border border-blue-100 bg-white/90 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.05)]">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
             <p className="mt-2 text-3xl font-bold text-slate-900">{value}</p>
           </div>
         ))}
+      </section>
+
+      <section className={cardClasses('border-violet-100 bg-violet-50/50')}>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-semibold text-slate-900">Work on the school notes</h3>
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">
+              Use this for learning notes, transcript summaries, and strategic scratchpad thoughts. Keep the thinking here, then turn the useful bit into a linked action when it is ready.
+            </p>
+          </div>
+          <Link
+            href="/admin/planning?filter=school_notes"
+            className="rounded-full border border-violet-200 bg-white px-3 py-1 text-xs font-semibold text-violet-900 hover:bg-violet-50"
+          >
+            View school notes
+          </Link>
+        </div>
+        <div className="mt-5 rounded-2xl border border-violet-100 bg-white/90 p-4">
+          <SchoolNoteCapture
+            form={schoolNoteForm}
+            onChange={setSchoolNoteForm}
+            onSubmit={handleSchoolNoteCapture}
+            pending={saveState.pending && !pendingId}
+          />
+        </div>
       </section>
 
       <section className={cardClasses()}>
@@ -3005,6 +3266,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
                       onPauseCompleted={handlePauseCompleted}
                       onRepairPauseDetails={handleRepairPauseDetails}
                       onOpenPauseTool={(url, name) => setPauseToolPanel({ url, name })}
+                      onCreateLinkedAction={handleCreateLinkedAction}
                       onDefer={handleDefer}
                       pendingId={pendingId}
                     />
@@ -3040,6 +3302,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
                         onPauseCompleted={handlePauseCompleted}
                         onRepairPauseDetails={handleRepairPauseDetails}
                         onOpenPauseTool={(url, name) => setPauseToolPanel({ url, name })}
+                        onCreateLinkedAction={handleCreateLinkedAction}
                         pendingId={pendingId}
                       />
                     ))}
