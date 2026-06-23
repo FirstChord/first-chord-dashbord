@@ -9,6 +9,9 @@ import { buildPaymentOperationsSummary } from '@/lib/admin/payment-summary.mjs';
 import { getTutorAbsenceOverviewSummary } from '@/lib/admin/tutor-absence';
 import { getPlanningDashboard } from '@/lib/admin/planning';
 import { getAdminIssues } from '@/lib/admin/issues';
+import { getWaitingWorkflowStudents } from '@/lib/admin/waiting-workflow';
+
+export const dynamic = 'force-dynamic';
 
 function statusClasses(status) {
   if (status === 'Healthy' || status === 'Fresh') return 'border-emerald-200 bg-emerald-50 text-emerald-800';
@@ -41,13 +44,13 @@ function healthPriority(health) {
 function buildPrioritySentence({
   openIssues,
   tutorAbsences,
-  linkingGaps,
+  waitingWork,
   unknownPaymentMode,
   planningNeedsAttention,
 }) {
   const priorities = [];
   if (tutorAbsences > 0) priorities.push('tutor absences');
-  if (linkingGaps > 0) priorities.push('payment/linking gaps');
+  if (waitingWork > 0) priorities.push('waiting-list work');
   if (openIssues > 0) priorities.push('open flags');
   if (planningNeedsAttention > 0) priorities.push('planning items needing next action');
   if (unknownPaymentMode > 0) priorities.push('unknown payment modes');
@@ -71,16 +74,45 @@ function buildParentUnderstandingOverview(rows = []) {
   };
 }
 
-function buildWaitingOverview(students = []) {
-  const waitingStudents = students.filter((student) => student.lifecycleStatus === 'waiting');
-  const onboardingReady = students.filter((student) => student.waitingStatus === 'onboarding_ready');
-  const noResponse = students.filter((student) => student.waitingStatus === 'no_response');
+function buildWaitingCardValue(summary = {}) {
+  return summary.newThisWeek > 0 ? `${summary.newThisWeek} new` : 'Review';
+}
+
+function buildWaitingCardHelper(summary = {}) {
+  const parts = [];
+  if (summary.onboardingReady > 0) parts.push(`${summary.onboardingReady} ready`);
+  if (summary.noResponse > 0) parts.push(`${summary.noResponse} no response`);
+  if (summary.newThisWeek > 0) parts.push('new in last 7 days');
+  return parts.length ? parts.join(' · ') : 'Open waiting-list queue';
+}
+
+function buildWaitingOverview(waitingStudents = []) {
+  const openWaitingStudents = waitingStudents.filter((student) => !['onboarded', 'closed'].includes(student.waitingStatus));
+  const onboardingReady = waitingStudents.filter((student) => student.waitingStatus === 'onboarding_ready');
+  const noResponse = waitingStudents.filter((student) => student.waitingStatus === 'no_response');
+  const newThisWeek = openWaitingStudents.filter((student) => {
+    if (Number.isFinite(student.ageInDays)) return student.ageInDays <= 7;
+    if (!student.dateStarted) return false;
+    const started = new Date(student.dateStarted);
+    if (Number.isNaN(started.getTime())) return false;
+    return Date.now() - started.getTime() <= 7 * 24 * 60 * 60 * 1000;
+  });
 
   return {
-    waiting: waitingStudents.length,
+    waiting: openWaitingStudents.length,
     onboardingReady: onboardingReady.length,
     noResponse: noResponse.length,
+    newThisWeek: newThisWeek.length,
   };
+}
+
+async function getSafeWaitingWorkflowStudents() {
+  try {
+    return await getWaitingWorkflowStudents();
+  } catch (error) {
+    console.warn('Admin overview waiting-list summary failed:', error);
+    return [];
+  }
 }
 
 function buildTrustSummary(health, systemHealth) {
@@ -207,25 +239,26 @@ export default async function AdminHomePage() {
   // Health is intentionally NOT in this blocking fetch — it makes 3 uncached
   // external calls (MMS + 2 GitHub), so it's streamed separately (see OverviewHealth)
   // and the rest of the page renders immediately.
-  const [students, issuesResult, tutorAbsenceSummary, parentUnderstandingRows, planningDashboard] = await Promise.all([
+  const [students, issuesResult, tutorAbsenceSummary, parentUnderstandingRows, planningDashboard, waitingStudents] = await Promise.all([
     getOperationalAdminStudents(),
     getAdminIssues(),
     getTutorAbsenceOverviewSummary(),
     getParentUnderstandingStateRows(),
     getPlanningDashboard(),
+    getSafeWaitingWorkflowStudents(),
   ]);
   const issues = issuesResult.issues || [];
   const activeIssues = issues.filter((issue) => ['open', 'acknowledged'].includes(issue.status));
   const paymentSummary = buildPaymentOperationsSummary(students);
   const lifecycleCounts = buildLifecycleCounts(students);
-  const waitingSummary = buildWaitingOverview(students);
+  const waitingSummary = buildWaitingOverview(waitingStudents);
   const parentUnderstandingSummary = buildParentUnderstandingOverview(parentUnderstandingRows);
   const planningSummary = planningDashboard.summary || {};
   const planningDueNow = planningSummary.dueNow || 0;
   const prioritySentence = buildPrioritySentence({
     openIssues: activeIssues.length,
     tutorAbsences: tutorAbsenceSummary.openAbsences,
-    linkingGaps: paymentSummary.stripeLinkingGaps,
+    waitingWork: waitingSummary.waiting + waitingSummary.onboardingReady + waitingSummary.noResponse,
     unknownPaymentMode: paymentSummary.unknownPaymentMode,
     planningNeedsAttention: planningSummary.needsAttention || 0,
   });
@@ -258,12 +291,12 @@ export default async function AdminHomePage() {
       helper: `${tutorAbsenceSummary.unresolvedMessages} parent messages left`,
       tone: 'border-orange-100 bg-orange-50/70',
     } : null,
-    paymentSummary.stripeLinkingGaps > 0 ? {
-      label: 'Fix payment/linking gaps',
-      value: paymentSummary.stripeLinkingGaps,
-      href: '/admin/flags',
-      helper: 'Outside setup pending',
-      tone: 'border-amber-100 bg-amber-50/70',
+    waitingSummary.waiting > 0 || waitingSummary.onboardingReady > 0 || waitingSummary.noResponse > 0 ? {
+      label: 'Work waiting list',
+      value: buildWaitingCardValue(waitingSummary),
+      href: '/admin/waiting',
+      helper: buildWaitingCardHelper(waitingSummary),
+      tone: 'border-emerald-100 bg-emerald-50/70',
     } : null,
     parentUnderstandingSummary.followUps > 0 ? {
       label: 'Close parent follow-ups',
@@ -271,13 +304,6 @@ export default async function AdminHomePage() {
       href: '/admin/workflows/parent-understanding',
       helper: 'Communication loops still open',
       tone: 'border-blue-100 bg-blue-50/70',
-    } : null,
-    waitingSummary.onboardingReady > 0 ? {
-      label: 'Onboard waiting students',
-      value: waitingSummary.onboardingReady,
-      href: '/admin/waiting',
-      helper: 'Waiting-list students marked ready',
-      tone: 'border-emerald-100 bg-emerald-50/70',
     } : null,
     paymentSummary.unknownPaymentMode > 0 ? {
       label: 'Classify payment mode',
@@ -289,11 +315,12 @@ export default async function AdminHomePage() {
   ].filter(Boolean);
   const attentionLabels = new Set(attentionItems.map((item) => item.label));
   const workQueueItems = [
-    waitingSummary.waiting > 0 || waitingSummary.onboardingReady > 0 ? {
+    (waitingSummary.waiting > 0 || waitingSummary.onboardingReady > 0 || waitingSummary.noResponse > 0)
+      && !attentionLabels.has('Work waiting list') ? {
       label: 'Waiting list',
-      value: waitingSummary.waiting,
+      value: buildWaitingCardValue(waitingSummary),
       href: '/admin/waiting',
-      helper: `${waitingSummary.onboardingReady} ready to onboard`,
+      helper: buildWaitingCardHelper(waitingSummary),
       tone: 'border-emerald-100 bg-emerald-50/70',
     } : null,
     parentUnderstandingSummary.openRecords > 0 && !attentionLabels.has('Close parent follow-ups') ? {
