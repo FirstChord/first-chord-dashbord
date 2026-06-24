@@ -1,10 +1,46 @@
+import { randomUUID } from 'node:crypto';
+import { revalidatePath } from 'next/cache';
+import { getServerSession } from 'next-auth';
 import { getOperationalAdminStudents } from '@/lib/admin/students';
-import { getScheduleContextRows, getTutorPayRows, getExpenseRows } from '@/lib/admin/sheets';
+import { appendExpenseLogRow, getScheduleContextRows, getTutorPayRows, getExpenseRows, getExpenseLogRows } from '@/lib/admin/sheets';
 import { enrichScheduleContextsWithSharedSlots } from '@/lib/admin/schedule-context-helpers.mjs';
 import { buildFinanceOverview, formatMoney } from '@/lib/admin/finance-helpers.mjs';
-import { parseTutorPay } from '@/lib/admin/cost-helpers.mjs';
+import { buildExpenseLogSummary, EXPENSE_LOG_CATEGORIES, parseTutorPay } from '@/lib/admin/cost-helpers.mjs';
+import { authOptions } from '@/lib/admin/auth';
 
 export const dynamic = 'force-dynamic';
+
+async function addExpenseLogAction(formData) {
+  'use server';
+
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.isAdmin) {
+    throw new Error('Not authorised');
+  }
+
+  const amount = `${formData.get('amount') || ''}`.trim();
+  const description = `${formData.get('description') || ''}`.trim();
+  if (!amount || !description) {
+    throw new Error('Expense amount and description are required');
+  }
+
+  const now = new Date();
+  await appendExpenseLogRow({
+    expense_id: `expense_${now.getTime()}_${randomUUID().slice(0, 8)}`,
+    date: `${formData.get('date') || now.toISOString().slice(0, 10)}`.trim(),
+    amount,
+    category: `${formData.get('category') || 'Other'}`.trim(),
+    description,
+    paid_by: `${formData.get('paid_by') || ''}`.trim(),
+    reimbursable: formData.get('reimbursable') === 'on' ? 'yes' : 'no',
+    linked_area: `${formData.get('linked_area') || ''}`.trim(),
+    notes: `${formData.get('notes') || ''}`.trim(),
+    created_at: now.toISOString(),
+    created_by: session.user.email || '',
+  });
+
+  revalidatePath('/admin/finance');
+}
 
 function StatCard({ label, value, helper = '', tone = 'border-blue-100 bg-white/90' }) {
   return (
@@ -25,12 +61,36 @@ function Row({ label, value, strong = false }) {
   );
 }
 
+function formatDate(value) {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function TextInput({ label, name, type = 'text', required = false, placeholder = '', defaultValue = '' }) {
+  return (
+    <label className="block">
+      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{label}</span>
+      <input
+        type={type}
+        name={name}
+        required={required}
+        placeholder={placeholder}
+        defaultValue={defaultValue}
+        className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+      />
+    </label>
+  );
+}
+
 export default async function AdminFinancePage() {
-  const [students, scheduleRows, tutorPayRows, expenseRows] = await Promise.all([
+  const [students, scheduleRows, tutorPayRows, expenseRows, expenseLogRows] = await Promise.all([
     getOperationalAdminStudents(),
     getScheduleContextRows(),
     getTutorPayRows(),
     getExpenseRows(),
+    getExpenseLogRows(),
   ]);
   const scheduleByMmsId = enrichScheduleContextsWithSharedSlots(scheduleRows);
   const enriched = students.map((student) => ({
@@ -38,10 +98,12 @@ export default async function AdminFinancePage() {
     scheduleContext: scheduleByMmsId.get(student.mmsId) || student.scheduleContext || null,
   }));
   const tutorPay = parseTutorPay(tutorPayRows);
-  const o = buildFinanceOverview(enriched, { tutorPay, expenseRows });
+  const o = buildFinanceOverview(enriched, { tutorPay, expenseRows, expenseLogRows });
   const { revenue, cost, expenses, totals } = o;
+  const spend = o.actualSpend || buildExpenseLogSummary(expenseLogRows);
 
   const marginTone = totals.marginMonthly >= 0 ? 'border-emerald-200 bg-emerald-50' : 'border-rose-200 bg-rose-50';
+  const today = new Date().toISOString().slice(0, 10);
 
   return (
     <div className="space-y-8">
@@ -101,6 +163,7 @@ export default async function AdminFinancePage() {
 
       <section className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
         <h2 className="text-sm font-semibold text-slate-900">Overhead lines</h2>
+        <p className="mt-1 text-xs text-slate-500">Recurring assumptions that affect the run-rate margin.</p>
         <div className="mt-2 divide-y divide-slate-100">
           {expenses.lines.length
             ? expenses.lines.map((line) => (
@@ -108,11 +171,123 @@ export default async function AdminFinancePage() {
               ))
             : <p className="px-4 py-2 text-sm text-slate-500">No expense lines yet - add them to the Expenses sheet.</p>}
         </div>
+        {expenses.skippedGeneralMonthly ? (
+          <p className="mt-3 px-4 text-xs text-slate-500">
+            General buffer excluded: {formatMoney(expenses.skippedGeneralMonthly)}/mo. Miscellaneous spend now comes from Expense_Log.
+          </p>
+        ) : null}
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+        <form action={addExpenseLogAction} className="rounded-[1.6rem] border border-blue-100 bg-white/90 p-5 shadow-sm">
+          <h2 className="text-base font-semibold text-slate-900">Add actual spend</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Quick log for things from the bank account: paint, repairs, coffees, lunches, one-off room improvements.
+            This does not change the run-rate margin.
+          </p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <TextInput label="Date" name="date" type="date" required defaultValue={today} />
+            <TextInput label="Amount" name="amount" type="number" required placeholder="42.50" />
+            <label className="block sm:col-span-2">
+              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Description</span>
+              <input
+                name="description"
+                required
+                placeholder="Paint for neighbouring room"
+                className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Category</span>
+              <select
+                name="category"
+                defaultValue="Other"
+                className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+              >
+                {EXPENSE_LOG_CATEGORIES.map((category) => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+              </select>
+            </label>
+            <TextInput label="Paid by" name="paid_by" placeholder="Finn / Tom / First Chord" />
+            <TextInput label="Area" name="linked_area" placeholder="Room / Showcase / Marketing" />
+            <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+              <input name="reimbursable" type="checkbox" className="h-4 w-4 rounded border-slate-300" />
+              Needs reimbursed
+            </label>
+            <label className="block sm:col-span-2">
+              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Notes</span>
+              <textarea
+                name="notes"
+                rows={3}
+                placeholder="Optional context for month-end bank check"
+                className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+              />
+            </label>
+          </div>
+          <button
+            type="submit"
+            className="mt-4 rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-700"
+          >
+            Save spend
+          </button>
+        </form>
+
+        <div className="rounded-[1.6rem] border border-slate-200 bg-white/90 p-5 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-base font-semibold text-slate-900">Actual spend this month</h2>
+              <p className="mt-1 text-sm text-slate-600">
+                Use this at month-end to check the bank account and fill in any missing one-off spend.
+              </p>
+            </div>
+            <div className="rounded-2xl bg-slate-100 px-4 py-2 text-right">
+              <p className="text-xs text-slate-500">{spend.currentMonth}</p>
+              <p className="text-2xl font-semibold text-slate-900">{formatMoney(spend.monthTotal)}</p>
+            </div>
+          </div>
+          <p className="mt-3 rounded-2xl bg-blue-50 px-4 py-3 text-sm text-blue-900">
+            Cash-view margin after this month&apos;s actual spend: <strong>{formatMoney(totals.cashViewMarginMonthToDate)}</strong>.
+            This month-to-date spend is included in `Finance_Snapshot`; the main run-rate margin still excludes it.
+          </p>
+
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3">
+              <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">By category</h3>
+              <div className="mt-2 divide-y divide-slate-100">
+                {spend.byCategory.length
+                  ? spend.byCategory.map((line) => (
+                    <Row key={line.category} label={`${line.category} · ${line.count}`} value={formatMoney(line.amount)} />
+                  ))
+                  : <p className="px-4 py-2 text-sm text-slate-500">No spend logged this month yet.</p>}
+              </div>
+            </div>
+            <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3">
+              <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Latest entries</h3>
+              <div className="mt-2 space-y-2">
+                {spend.latestEntries.length
+                  ? spend.latestEntries.map((entry) => (
+                    <div key={entry.expenseId || `${entry.date}-${entry.description}`} className="rounded-xl bg-white px-3 py-2 text-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-medium text-slate-900">{entry.description}</p>
+                          <p className="text-xs text-slate-500">{formatDate(entry.date)} · {entry.category}{entry.paidBy ? ` · ${entry.paidBy}` : ''}</p>
+                        </div>
+                        <p className="font-semibold tabular-nums text-slate-900">{formatMoney(entry.amount)}</p>
+                      </div>
+                    </div>
+                  ))
+                  : <p className="text-sm text-slate-500">No actual spend rows yet.</p>}
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       <p className="text-xs text-slate-500">
         Estimate from schedule × price table; tutor pay modelled from scheduled active slots (per slot, paused excluded).
-        Salaries and overhead come from the Tutor_Pay and Expenses sheets. Weekly snapshots are logged to Finance_Snapshot.
+        Salaries and overhead come from the Tutor_Pay and Expenses sheets. Actual spend is logged separately in Expense_Log.
+        Weekly and monthly snapshots include the current calendar month&apos;s actual spend so the number resets naturally each month.
       </p>
     </div>
   );

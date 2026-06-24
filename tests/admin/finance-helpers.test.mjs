@@ -145,17 +145,20 @@ test('buildFinanceOverview composes revenue minus variable, salaries and fixed i
   ];
   const tutorPay = parseTutorPay([{ tutor: 'Salaried Tutor', pay_model: 'salary', monthly_salary: '1000' }]);
   const expenseRows = [{ name: 'Rent', amount: '1100', period: 'monthly' }];
-  const o = buildFinanceOverview(students, { tutorPay, expenseRows });
+  const expenseLogRows = [{ expense_id: 'e1', date: '2026-06-24', amount: '50', category: 'Room improvement', description: 'Paint' }];
+  const o = buildFinanceOverview(students, { tutorPay, expenseRows, expenseLogRows, at: new Date('2026-06-24T12:00:00Z') });
 
   const weeksPerMonth = 52 / 12;
   assert.equal(o.totals.revenueMonthly, Math.round(41.5 * weeksPerMonth * 100) / 100);
   assert.equal(o.totals.variableMonthly, Math.round(24 * weeksPerMonth * 100) / 100);
   assert.equal(o.totals.salariedMonthly, 1000);
   assert.equal(o.totals.fixedMonthly, 1100);
+  assert.equal(o.totals.actualSpendMonthToDate, 50);
   assert.equal(
     o.totals.marginMonthly,
     Math.round((o.totals.revenueMonthly - o.totals.variableMonthly - 1000 - 1100) * 100) / 100,
   );
+  assert.equal(o.totals.cashViewMarginMonthToDate, o.totals.marginMonthly - 50);
 });
 
 test('buildFinanceSnapshotRow keeps estimate quality counters flat and visible', () => {
@@ -163,12 +166,17 @@ test('buildFinanceSnapshotRow keeps estimate quality counters flat and visible',
     oneToOne30({ mmsId: 'priced' }),
     { mmsId: 'unpriced-revenue', lifecycleStatus: 'active', paymentMode: 'stripe', instrument: 'Piano', lessonLength: '35' },
     { mmsId: 'unpriced-cost', fullName: 'Unknown Duration', lifecycleStatus: 'active', paymentMode: 'stripe', registryTutor: 'Patrick', instrument: 'Guitar' },
-  ]);
+  ], {
+    expenseLogRows: [{ expense_id: 'e1', date: '2026-06-24', amount: '35', category: 'Equipment', description: 'Stool' }],
+    at: new Date('2026-06-24T12:00:00Z'),
+  });
   const row = buildFinanceSnapshotRow(overview, { periodType: 'weekly', at: new Date('2026-06-24T12:00:00Z') });
 
   assert.equal(row.period_type, 'weekly');
   assert.equal(row.active_unpriced_count, 2);
   assert.equal(row.unpriced_cost_slots, 1);
+  assert.equal(row.actual_spend_month_to_date, 35);
+  assert.equal(row.cash_view_margin_month_to_date, overview.totals.cashViewMarginMonthToDate);
   assert.equal(row.source, 'estimate');
 });
 

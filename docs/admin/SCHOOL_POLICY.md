@@ -158,8 +158,9 @@ The pause includes the weeks inside the pause window.
 
 Operationally:
 
-- paused behavior should remain in effect through the end of the recorded pause window
-- normal behavior should resume on the day the lessons outside that pause window begin again
+- pause windows should be interpreted against the student's usual lesson schedule
+- if the pause window covers one or more usual lesson dates, `payment_expectation` should align to `stripe_paused_expected`
+- normal behavior should resume on the day the next usual lesson outside that pause window becomes billable again
 
 So the system should not treat a pause as ended too early.
 
@@ -173,6 +174,11 @@ If a student is intentionally paused:
 If Stripe is still actively billing during a valid pause:
 
 - this should be flagged as a mismatch
+
+Exception:
+
+- if the Stripe pause window has ended but the next usual billable lesson has not arrived yet, Stripe may already appear active without needing a mismatch flag
+- this short bridge should be explained from Pause History and schedule context, not treated as a payment failure
 
 ### Extended lesson break policy
 

@@ -137,6 +137,8 @@ test('derivePauseCoverageContext maps pause windows onto the usual lesson slot',
     coverage.coveredLessonDates.map((lesson) => lesson.date),
     ['2026-07-07', '2026-07-14', '2026-07-21'],
   );
+  assert.equal(coverage.nextBillableLessonDate, '2026-07-28');
+  assert.match(coverage.nextBillableLessonLabel, /Tue 28 Jul/i);
   assert.match(coverage.summary, /3 usual lessons/i);
 });
 

@@ -107,6 +107,28 @@ test('buildLiveStripeIssues flags paused-expected students who are still activel
   assert.deepEqual(issues, ['SUBSCRIPTION_STATE_MISMATCH']);
 });
 
+test('buildLiveStripeIssues suppresses active Stripe during an allowed pause bridge before the next lesson', () => {
+  const issues = buildLiveStripeIssues({
+    student: {
+      paymentMode: 'stripe',
+      paymentExpectation: 'stripe_paused_expected',
+      pauseExpectationDecision: {
+        allowsActiveBillingBeforeNextLesson: true,
+      },
+    },
+    snapshot: {
+      subscriptionFound: true,
+      subscriptionStatus: 'active',
+      pauseState: 'active',
+      activelyBilling: true,
+      hasPaymentProblem: false,
+    },
+  });
+
+  assert.deepEqual(issues, []);
+});
+
+
 test('buildLiveStripeIssues flags active students with payment failures and missing subscriptions', () => {
   const issues = buildLiveStripeIssues({
     student: {

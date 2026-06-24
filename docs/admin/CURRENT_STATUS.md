@@ -26,14 +26,14 @@ The active surface is the private admin dashboard under `/admin`.
 
 ## Recent Completed Work
 
-- Financial layer: read-only revenue + cost/margin at `/finance` (auth-gated, deliberately low-profile — no nav link). Estimate from schedule × price table minus tutor pay (per-slot, active-only, £24/hr +£2 per 45-min group), salaries, and fixed overhead; pay/overhead live in new `Tutor_Pay` + `Expenses` sheets (salaries never in git). Weekly + monthly `Finance_Snapshot` time series via GitHub Action cron (needs `FINANCE_SNAPSHOT_SECRET`). B-ready `resolveStudentRevenue` seam still in place for later Stripe actuals.
+- Financial layer: read-only revenue + cost/margin at `/admin/finance` (auth-gated, deliberately low-profile — discrete Planning link only). Estimate from schedule × price table minus tutor pay (per-slot, active-only, £24/hr +£2 per 45-min group), salaries, and fixed overhead; pay/overhead live in `Tutor_Pay` + `Expenses` sheets (salaries never in git). The old recurring `General` overhead buffer is ignored if present; actual one-off/variable spend is added from the finance page into append-only `Expense_Log` for month-end bank checking. Weekly + monthly `Finance_Snapshot` rows include the current calendar month's actual-spend total and cash-view margin while keeping the main run-rate margin separate. B-ready `resolveStudentRevenue` seam still in place for later Stripe actuals.
 - Persistent `/admin/flags` issue loop using `Issue_Queue` and `Event_Log`
 - calmer flag cards with clearer primary actions and collapsed detail
 - system-cleared bulk resolve for stale no-longer-detected issues
 - active issue summary counts instead of historical noise
 - payment-mode and payment-expectation policy fields
 - live/manual Stripe checks, including payment failure visibility
-- pause-history expectation checks, including future pause windows treated as upcoming rather than current
+- pause-history expectation checks, including future pause windows treated as upcoming and high-confidence covered-lesson pauses auto-aligned through the next billable lesson
 - pause/payment action audit trail
 - waiting-list state and notes
 - waiting-list closeout through successful onboarding
@@ -174,6 +174,10 @@ The active V4 slice is context + ownership layering, not broad automation.
   - generic `Done` does not itself change payment state; `Mark pause completed` is the guarded pause-specific action that logs confirmation, aligns `payment_expectation`, and closes the task
 - Dashboard-owned state tabs and write patterns are now documented in `docs/admin/STATE_TABS_SCHEMA.md`. Treat that as the schema map before adding another Sheets tab.
 - `docs/admin/STATE_TABS_SCHEMA.md` is the canonical state lane map. Do not create another source-of-truth/state-map document.
+- Finance lanes are intentionally split:
+  - `Expenses` = recurring overhead assumptions used in the run-rate
+  - `Expense_Log` = actual bank/card spend memory to reconcile at month-end; this replaces the old recurring `General` buffer for miscellaneous spend
+  - `Finance_Snapshot` = dated estimate snapshots, not accounting records
 - Pause planning guardrail:
   - pause reminders should be linked to a student before billing actions
   - the admin must confirm the payment pause tool was run and the parent confirmation was sent/copied

@@ -19,6 +19,30 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-24 — Expense Log For Actual Bank/Card Spend
+
+**Feature/change:** Added a lightweight actual-spend capture to `/admin/finance`. New append-only `Expense_Log` tab stores dated spend rows such as paint, repairs, reupholstery, coffees/lunches, marketing, and one-off room improvements. The finance page shows current-month spend totals, category totals, and latest entries. The previous recurring `General` overhead buffer is ignored if it still exists in `Expenses`.
+
+**Why it exists:** The run-rate model answers "what should a normal month look like under current conditions?" It does not explain the real bank account at month-end. `Expense_Log` gives Finn/Tom a quick memory of variable and one-off spend so the bank account can be checked without turning the dashboard into full accounting software.
+
+**Source-of-truth impact:** `Expenses` remains recurring overhead assumptions and feeds estimated margin. `Expense_Log` is append-only actual spend memory for miscellaneous/one-off spend and replaces the old recurring `General` buffer. The bank account/accounting records remain the financial truth; the dashboard log is context for review. Weekly/monthly `Finance_Snapshot` rows include month-to-date actual spend and a separate cash-view margin, while the main run-rate margin stays separate.
+
+**Files/functions involved:** `app/admin/finance/page.js` (`Add actual spend` form and current-month summary), `lib/admin/sheets.js` (`Expense_Log` headers, reader, append writer), `lib/admin/cost-helpers.mjs` (`normaliseExpenseLogRow`, `buildExpenseLogSummary`), `tests/admin/cost-helpers.test.mjs`, `docs/admin/STATE_TABS_SCHEMA.md`, `docs/admin/CURRENT_STATUS.md`.
+
+**What to watch out for:** Keep recurring assumptions and actual spend separate. Do not use it as accounting, VAT, payroll, or reimbursement approval. At month-end, compare the log against the bank account and add missing rows; if reconciliation becomes painful, add a review marker later rather than overbuilding now. Do not re-add a recurring `General` buffer without intentionally deciding how to avoid double-counting miscellaneous spend.
+
+### 2026-06-24 — Pause Expectation From Covered Lesson Dates
+
+**Feature/change:** Pause expectation sync now derives a shared decision from Pause History + usual lesson coverage. `derivePauseCoverageContext()` exposes the covered lesson dates and the next usual billable lesson; `derivePauseExpectationDecision()` decides whether to auto-sync, show an issue, or allow a short bridge where Stripe is active before the next billable lesson.
+
+**Why it exists:** Some pause flags were not real operational problems; they were disconnects between the pause tool window, the dashboard expectation field, and when the next lesson actually becomes billable. The dashboard should close obvious high-confidence pause loops automatically and only surface uncertainty.
+
+**Source-of-truth impact:** `Pause History` remains the source of intentional pause windows. `Schedule_Context` supplies usual lesson timing. The Students sheet still owns `payment_expectation`; the dashboard writes it only through the existing auto-sync path and logs to `Event_Log`. Stripe remains actual billing state and is not mutated here.
+
+**Files/functions involved:** `derivePauseCoverageContext()` in `lib/admin/pause-helpers.mjs`, `derivePauseExpectationDecision()` and `buildPauseExpectationAutoSyncPlan()` in `lib/admin/pause-auto-sync-helpers.mjs`, `buildPauseIssues()` / `scanLiveStripeIssues()` in `lib/admin/issues.js`, and `buildLiveStripeIssues()` in `lib/admin/stripe-snapshot-helpers.mjs`.
+
+**What to watch out for:** Auto-sync remains high-confidence only: Stripe payer, subscription-ID Pause History match, and a pause window that covers at least one usual lesson. Missing schedule, low-confidence identity, invalid dates, or pause windows that miss the usual lesson stay human-review territory. Stripe can appear active during the bridge before the next billable lesson without creating a mismatch flag.
+
 ### 2026-06-24 — Financial layer slice C: cost/margin model + weekly/monthly snapshots
 
 **Feature/change:** Extended the finance layer from revenue-only to full margin, and added a logged time series — deliberately sequenced *ahead* of Stripe actuals (slice B) because (a) the seasonal series is time-sensitive (summer started today) and (b) margin is higher-value than validating one number.

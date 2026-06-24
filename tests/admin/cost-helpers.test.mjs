@@ -4,6 +4,8 @@ import assert from 'node:assert/strict';
 import {
   parseTutorPay,
   parseExpenses,
+  normaliseExpenseLogRow,
+  buildExpenseLogSummary,
   buildTutorCost,
   resolveWeeklyWeight,
   DEFAULT_HOURLY_RATE,
@@ -113,12 +115,46 @@ test('fortnightly student contributes half its slot cost to variable pay', () =>
 });
 
 test('parseExpenses sums monthly overhead and converts weekly lines', () => {
-  const { lines, monthlyTotal } = parseExpenses([
+  const { lines, monthlyTotal, skippedGeneralMonthly } = parseExpenses([
     { name: 'Rent', amount: '1100', period: 'monthly', category: 'Premises' },
     { name: 'SaaS', amount: '120', period: 'monthly' },
     { name: 'Insurance', amount: '12', period: 'monthly' },
     { name: 'General', amount: '120', period: 'monthly' },
   ]);
-  assert.equal(lines.length, 4);
-  assert.equal(monthlyTotal, 1352);
+  assert.equal(lines.length, 3);
+  assert.equal(monthlyTotal, 1232);
+  assert.equal(skippedGeneralMonthly, 120);
+});
+
+test('normaliseExpenseLogRow parses actual spend rows without treating them as recurring overhead', () => {
+  const row = normaliseExpenseLogRow({
+    expense_id: 'expense_1',
+    date: '2026-06-24',
+    amount: '£42.50',
+    category: 'Room improvement',
+    description: 'Paint',
+    paid_by: 'Finn',
+    reimbursable: 'yes',
+  });
+
+  assert.equal(row.expenseId, 'expense_1');
+  assert.equal(row.amount, 42.5);
+  assert.equal(row.category, 'Room improvement');
+  assert.equal(row.reimbursable, true);
+});
+
+test('buildExpenseLogSummary totals only the selected month and groups by category', () => {
+  const summary = buildExpenseLogSummary([
+    { expense_id: 'a', date: '2026-06-01', amount: '10', category: 'Staff / meetings', description: 'Coffee' },
+    { expense_id: 'b', date: '2026-06-02', amount: '25.50', category: 'Room improvement', description: 'Plants' },
+    { expense_id: 'c', date: '2026-05-31', amount: '99', category: 'Equipment', description: 'Old month' },
+  ], { at: new Date('2026-06-24T12:00:00Z') });
+
+  assert.equal(summary.currentMonth, '2026-06');
+  assert.equal(summary.monthTotal, 35.5);
+  assert.equal(summary.currentMonthEntries.length, 2);
+  assert.deepEqual(summary.byCategory.map((row) => [row.category, row.amount]), [
+    ['Room improvement', 25.5],
+    ['Staff / meetings', 10],
+  ]);
 });

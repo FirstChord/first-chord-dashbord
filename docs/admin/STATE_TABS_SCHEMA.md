@@ -1,6 +1,6 @@
 # State Tabs Schema
 
-Last updated: 2026-06-21
+Last updated: 2026-06-24
 
 This note is the canonical map for dashboard-owned state lanes. It documents the Google Sheets tabs that store workflow state, cache snapshots, append-only logs, or derived context. It is intentionally about dashboard state, not the main `Students` operational sheet.
 
@@ -33,6 +33,10 @@ Lane meanings:
 | `Practice_Notes_Log` | append-only-log + workflow-state | Practice Chat lesson-note memory, portal note read source, and Level 2 delivery audit/idempotency state | `note_id` for snapshots; `delivery_key` for Level 2 delivery records | snapshots append with duplicate guard; Level 2 delivery rows upsert by `delivery_key`; portal reads select latest sent/completed row first, then fall back to MMS | `appendPracticeNoteLogRow`, `upsertPracticeNoteLogRow`, `getPracticeNoteLogRows`, `POST /api/practice-notes`, `POST /api/practice-notes/mms-test`, `GET /api/notes/[studentId]`, `getStudentData` | Dashboard-owned learning/context memory. New Level 2 rows can include selected MMS attendance ID/event ID, target-selection reason, recipient, Gmail message/thread ID, send status, sent timestamp, email error, manual follow-up state, `operation_status`, and `completed_at`. Sent/completed rows are parent-visible in portals. Draft/in-progress/failed snapshots are not parent-visible. MMS remains fallback and attendance/payroll continuity source. |
 | `Communication_Log` | append-only-log | Passive record of parent messages copied to send from the dashboard | `message_id` | append-only (dedup by student+body within a short window) | `appendCommunicationLogRow`, `logCommunication`, `POST /api/admin/communications` | Record-only logbook, written as a fire-and-forget side-effect of existing "Copy message" buttons. Copied does not prove sent. No approval, no sending. Does not change any workflow. |
 | `Students_Archive` | append-only-log | Archive copy before dashboard-driven student removal from `Students` | inherited student row plus archive metadata | append-only | `archiveAndDeleteStudentSheetRow` | Safety record for destructive student removal. |
+| `Tutor_Pay` | workflow-state | Finance pay assumptions, including sensitive salary rows | `tutor` | keyed upsert/manual sheet edit | `upsertTutorPayRow`, Finance sheet edits | Private finance config. Salaries must stay in Sheets/Railway runtime surfaces, not committed to git. |
+| `Expenses` | workflow-state | Recurring fixed-overhead assumptions used by the finance run-rate | `name` | keyed upsert/manual sheet edit | `upsertExpenseRow`, Finance sheet edits | This is for recurring monthly/weekly/annual assumptions such as rent, software, insurance. It affects estimated margin. The old `General` buffer is ignored if present because miscellaneous spend now lives in `Expense_Log`. |
+| `Expense_Log` | append-only-log | Actual spend memory for one-off or variable card/bank spending | `expense_id` | append-only | `appendExpenseLogRow`, `/admin/finance` add-spend form | Use for paint, repairs, staff coffees/lunches, one-off room improvements, etc. Reconcile against the bank account at month-end and add missing lines. Month-to-date totals reset by calendar month and are included in finance snapshots as separate cash-view fields. |
+| `Finance_Snapshot` | append-only-log + derived-context | Dated finance run-rate snapshots | `snapshot_id` | append-only | `appendFinanceSnapshotRow`, `/api/cron/finance-snapshot` | Estimate series, not accounting. Includes run-rate fields plus current-month `Expense_Log` totals/cash-view margin for month-end context. Useful for trend visibility and seasonal changes. |
 
 ## Format Contracts
 

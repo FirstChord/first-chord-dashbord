@@ -3,6 +3,7 @@ import {
   getScheduleContextRows,
   getTutorPayRows,
   getExpenseRows,
+  getExpenseLogRows,
   appendFinanceSnapshotRow,
 } from '@/lib/admin/sheets';
 import { enrichScheduleContextsWithSharedSlots } from '@/lib/admin/schedule-context-helpers.mjs';
@@ -43,11 +44,12 @@ export async function POST(request) {
   const periodType = clean(url.searchParams.get('period')).toLowerCase() === 'monthly' ? 'monthly' : 'weekly';
 
   try {
-    const [students, scheduleRows, tutorPayRows, expenseRows] = await Promise.all([
+    const [students, scheduleRows, tutorPayRows, expenseRows, expenseLogRows] = await Promise.all([
       getOperationalAdminStudents(),
       getScheduleContextRows(),
       getTutorPayRows(),
       getExpenseRows(),
+      getExpenseLogRows(),
     ]);
     const scheduleByMmsId = enrichScheduleContextsWithSharedSlots(scheduleRows);
     const enriched = students.map((student) => ({
@@ -55,7 +57,7 @@ export async function POST(request) {
       scheduleContext: scheduleByMmsId.get(student.mmsId) || student.scheduleContext || null,
     }));
     const tutorPay = parseTutorPay(tutorPayRows);
-    const overview = buildFinanceOverview(enriched, { tutorPay, expenseRows });
+    const overview = buildFinanceOverview(enriched, { tutorPay, expenseRows, expenseLogRows });
     const row = buildFinanceSnapshotRow(overview, { periodType });
     await appendFinanceSnapshotRow(row);
 
