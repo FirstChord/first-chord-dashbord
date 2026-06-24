@@ -3,12 +3,13 @@ import { randomUUID } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
 import { getServerSession } from 'next-auth';
 import { getOperationalAdminStudents } from '@/lib/admin/students';
-import { appendExpenseLogRow, getScheduleContextRows, getTutorPayRows, getExpenseRows, getExpenseLogRows, getFinanceSnapshotRows } from '@/lib/admin/sheets';
+import { appendExpenseLogRow, deleteExpenseLogRow, getScheduleContextRows, getTutorPayRows, getExpenseRows, getExpenseLogRows, getFinanceSnapshotRows } from '@/lib/admin/sheets';
 import { enrichScheduleContextsWithSharedSlots } from '@/lib/admin/schedule-context-helpers.mjs';
 import { buildFinanceOverview, formatMoney } from '@/lib/admin/finance-helpers.mjs';
 import { buildExpenseLogSummary, EXPENSE_LOG_CATEGORIES, parseTutorPay } from '@/lib/admin/cost-helpers.mjs';
 import { buildFinanceCoverage, FLAG_LABELS as FINANCE_FLAG_LABELS } from '@/lib/admin/finance-coverage.mjs';
 import { buildFinanceTrend } from '@/lib/admin/finance-trend.mjs';
+import { buildFinanceScenario } from '@/lib/admin/finance-scenario.mjs';
 import { authOptions } from '@/lib/admin/auth';
 import SaveSpendButton from '@/components/admin/SaveSpendButton';
 
@@ -43,6 +44,23 @@ async function addExpenseLogAction(formData) {
     created_by: session.user.email || '',
   });
 
+  revalidatePath('/admin/finance');
+}
+
+async function deleteExpenseLogAction(formData) {
+  'use server';
+
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.isAdmin) {
+    throw new Error('Not authorised');
+  }
+
+  const expenseId = `${formData.get('expense_id') || ''}`.trim();
+  if (!expenseId) {
+    throw new Error('Missing expense id');
+  }
+
+  await deleteExpenseLogRow(expenseId);
   revalidatePath('/admin/finance');
 }
 
@@ -163,6 +181,15 @@ export default async function AdminFinancePage({ searchParams }) {
   const spend = o.actualSpend || buildExpenseLogSummary(expenseLogRows);
   const coverage = buildFinanceCoverage(enriched, { tutorPay });
 
+  const scenarioStudents = Number.parseInt(params.students, 10) || 0;
+  const scenarioPricePct = Number.parseFloat(params.pricePct) || 0; // percent, e.g. 5
+  const scenario = buildFinanceScenario(totals, revenue.active.count, {
+    studentsDelta: scenarioStudents,
+    pricePctDelta: scenarioPricePct / 100,
+  });
+  const activeNow = revenue.active.count;
+  const summerPreset = (pct) => -Math.round(activeNow * pct);
+
   const marginTone = totals.marginMonthly >= 0 ? 'border-emerald-200 bg-emerald-50' : 'border-rose-200 bg-rose-50';
   const today = new Date().toISOString().slice(0, 10);
 
@@ -195,6 +222,77 @@ export default async function AdminFinancePage({ searchParams }) {
         <StatCard label="Revenue (monthly)" value={formatMoney(totals.grossRevenueMonthly)} helper={`${formatMoney(totals.netRevenueMonthly)} after VAT · ${revenue.active.count} active`} />
         <StatCard label="Costs (monthly)" value={formatMoney(totals.totalCostMonthly)} helper="Tutor pay + salaries + overhead" tone="border-amber-100 bg-amber-50/60" />
         <StatCard label="Paused (not billing)" value={formatMoney(revenue.paused.weekly)} helper={`${revenue.paused.count} students · per week`} tone="border-violet-100 bg-violet-50/60" />
+      </section>
+
+      <section className="rounded-[1.6rem] border border-blue-100 bg-white/90 p-5 shadow-sm">
+        <h2 className="text-base font-semibold text-slate-900">What-if &amp; break-even</h2>
+        <p className="mt-1 max-w-2xl text-sm text-slate-600">
+          Break-even and what-if are about <strong>active (billing)</strong> students — paused students don&apos;t bill
+          (and don&apos;t cost tutor pay) until they return. A summer dip = more of your roster paused for a while.
+          Estimate (average students, blanket price change), not a forecast.
+        </p>
+
+        <div className="mt-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
+          {scenario.breakEvenActiveCount === null ? (
+            'Break-even not computable from current figures.'
+          ) : (
+            <>
+              Break-even needs <strong>{scenario.breakEvenActiveCount} actively billing</strong> students. You have{' '}
+              <strong>{activeNow} active</strong> now ({revenue.paused.count} paused, not billing). Buffer:{' '}
+              <strong className={scenario.bufferStudents > 0 ? 'text-emerald-700' : 'text-rose-700'}>
+                {scenario.bufferStudents} more student{scenario.bufferStudents === 1 ? '' : 's'} can pause
+              </strong>{' '}
+              ({Math.round(scenario.bufferPct)}% of active) before you hit break-even. Each active student contributes
+              ~{formatMoney(scenario.avgContributionPerStudent)}/mo toward fixed costs.
+            </>
+          )}
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+          <span className="font-semibold uppercase tracking-[0.14em] text-slate-500">Summer dip (active pause):</span>
+          {[['Light 10%', 0.1], ['Typical 20%', 0.2], ['Deep 30%', 0.3]].map(([label, pct]) => (
+            <Link
+              key={label}
+              href={`/admin/finance?students=${summerPreset(pct)}&trend=${trendPeriod}`}
+              className="rounded-full border border-slate-200 bg-white px-3 py-1 font-medium text-slate-700 hover:border-blue-200 hover:bg-blue-50"
+            >
+              {label} ({Math.abs(summerPreset(pct))} pause)
+            </Link>
+          ))}
+          {scenario.isChanged ? (
+            <Link href={`/admin/finance?trend=${trendPeriod}`} className="rounded-full px-3 py-1 font-medium text-slate-400 hover:text-slate-700">
+              Reset
+            </Link>
+          ) : null}
+        </div>
+
+        <form method="get" action="/admin/finance" className="mt-3 flex flex-wrap items-end gap-3">
+          <input type="hidden" name="trend" value={trendPeriod} />
+          <TextInput label="Change in students" name="students" type="number" defaultValue={scenarioStudents || ''} placeholder="e.g. -20" />
+          <TextInput label="Price change %" name="pricePct" type="number" defaultValue={scenarioPricePct || ''} placeholder="e.g. 5" />
+          <button type="submit" className="rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-700">
+            Model it
+          </button>
+        </form>
+
+        {scenario.isChanged ? (
+          <div className={`mt-4 rounded-2xl border p-4 ${scenario.scenario.aboveBreakEven ? 'border-emerald-200 bg-emerald-50' : 'border-rose-200 bg-rose-50'}`}>
+            <p className="text-sm text-slate-700">
+              {scenarioStudents < 0
+                ? `${Math.abs(scenarioStudents)} active students pause`
+                : scenarioStudents > 0
+                  ? `+${scenarioStudents} active students`
+                  : 'Same students'}
+              {scenarioPricePct ? `, ${scenarioPricePct > 0 ? '+' : ''}${scenarioPricePct}% price` : ''} →{' '}
+              <strong>{scenario.scenario.activeCount}</strong> active billing
+            </p>
+            <p className="mt-1 text-2xl font-bold text-slate-900">{formatMoney(scenario.scenario.marginMonthly)}/mo margin</p>
+            <p className="mt-1 text-sm text-slate-700">
+              {scenario.scenario.aboveBreakEven ? 'Above' : 'Below'} break-even · {formatMoney(scenario.scenario.netRevenueMonthly)} net revenue ·
+              {' '}change vs now {scenario.scenario.marginDelta >= 0 ? '+' : ''}{formatMoney(scenario.scenario.marginDelta)}/mo
+            </p>
+          </div>
+        ) : null}
       </section>
 
       <section className="rounded-[1.6rem] border border-blue-100 bg-white/90 p-5 shadow-sm">
@@ -372,7 +470,22 @@ export default async function AdminFinancePage({ searchParams }) {
                           <p className="font-medium text-slate-900">{entry.description}</p>
                           <p className="text-xs text-slate-500">{formatDate(entry.date)} · {entry.category}{entry.paidBy ? ` · ${entry.paidBy}` : ''}</p>
                         </div>
-                        <p className="font-semibold tabular-nums text-slate-900">{formatMoney(entry.amount)}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold tabular-nums text-slate-900">{formatMoney(entry.amount)}</p>
+                          {entry.expenseId ? (
+                            <form action={deleteExpenseLogAction}>
+                              <input type="hidden" name="expense_id" value={entry.expenseId} />
+                              <button
+                                type="submit"
+                                aria-label={`Delete ${entry.description}`}
+                                title="Delete this entry"
+                                className="rounded-full px-2 py-0.5 text-sm text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
+                              >
+                                ×
+                              </button>
+                            </form>
+                          ) : null}
+                        </div>
                       </div>
                     </div>
                   ))

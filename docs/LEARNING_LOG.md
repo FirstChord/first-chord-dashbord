@@ -19,6 +19,22 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-24 — What-if / break-even modelling + delete logged spend
+
+**Feature/change:** Two finance additions on `/admin/finance`:
+- **What-if & break-even** (`lib/admin/finance-scenario.mjs`, `buildFinanceScenario`, pure): a break-even *active-billing* student count + buffer, plus a dependency-free what-if (summer-dip preset links + a GET form for "change in active students" and "price %"). Models the lever correctly — when students pause, revenue **and** variable tutor pay both scale down (paused = no pay); salaries + overhead stay fixed; price % lifts net revenue only. 7 unit tests.
+- **Delete logged spend** (`deleteExpenseLogRow` in `sheets.js` + an auth-gated `deleteExpenseLogAction` server action): an × on each `Expense_Log` entry so a mistaken add can be removed.
+
+**Why:** per-tutor profitability was considered and dropped — with a mostly-uniform 30-min/£24-hr roster, tutor contribution ≈ hours, so it just restates headcount. The higher-leverage question on a thin margin (~9%) is fragility + levers: how many can pause before break-even, and what a price change does.
+
+**Key clarity fix (from Finn's review):** break-even is about **active/billing** students, not the whole roster. The school has ~200 on the books but only ~134 currently billing (the rest paused). Wording now says "X actively billing needed · Y active now (Z paused, not billing) · buffer = N more can pause." Confirmed insight: a typical 20% summer pause drops below break-even for the lean months, and it **evens out over the year** — exactly the cash-planning picture this was built to surface.
+
+**Files/functions:** `finance-scenario.mjs` (new) + tests; `app/admin/finance/page.js` (What-if section, delete control, active/billing wording); `sheets.js` (`deleteExpenseLogRow`).
+
+**Source-of-truth impact:** none — scenario is pure derived-context over the run-rate; delete removes an `Expense_Log` (append-only actual-spend) row by `expense_id`.
+
+**Watch:** scenario models *average* students and a *blanket* price % (V1 simplification — fine for the uniform roster; per-band price later). Break-even is computed at current prices.
+
 ### 2026-06-24 — VAT Flat Rate Scheme in the finance model
 
 **Feature/change:** Included the school's 11% VAT Flat Rate Scheme. VAT is modelled as a **deduction from revenue** (not an expense line): listed prices are VAT-inclusive, so `vatLiability = grossRevenue × 0.11`, `netRevenue = gross − vatLiability`, and **margin is now computed on net revenue**. Cost side is unchanged (under FRS you can't reclaim input VAT, so the figures already paid stand). `VAT_FLAT_RATE = 0.11` constant in `finance-helpers.mjs`.
