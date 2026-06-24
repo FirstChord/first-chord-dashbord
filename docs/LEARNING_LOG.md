@@ -19,6 +19,22 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-25 — Capacity = money (waiting list valued)
+
+**Feature/change:** `lib/admin/capacity-value.mjs` (`buildCapacityValue`, pure) + a "Waiting list value" panel on `/admin/waiting`. Attaches £ to the waiting list by reusing `getWaitingStudentsWithCapacity` (which already runs `buildWaitingCapacityMatches`): splits demand into **bookable now** (a free tutor slot exists), **blocked on tutor-hours** (taught but full = `no_free_slots`), and **needs a tutor** (`not_taught`), plus a ranked **recruiting-target** list by instrument. 6 unit tests; suite 312 pass, build clean.
+
+**Why:** Finn's constraint is tutor-hours, not rooms or salaried gaps — rooms + demand exist, tutors to fill them don't. So the valuable lens is "how much waiting demand can I book now vs what needs a hire, and in which instrument." Per-tutor profitability was dropped earlier as ≈ headcount; this is the actionable growth lever.
+
+**Freshness (the honest bit):** values only **recent** entries (≤90 days) for the headline £ so a list with stale leads isn't a vanity number; older entries are counted but flagged ("re-confirm or archive"). Each waiting student is valued as a standard 30-min 1:1 (modal lesson) — net after VAT minus an hourly tutor's pay = ~£44/mo contribution. Clearly labelled estimate.
+
+**Live findings at launch:** dashboard sees 30 waiting (MMS `getWaitingStudents` filters to the last 120 days — so a larger "raw" list is mostly stale/excluded). 23 fresh. **Bookable now: 19 → ~£844/mo contribution** (≈ current total margin — i.e. scheduling already-matchable waiting students could roughly double margin). Top capacity target: **Singing, 8 waiting, no free slot → ~£355/mo.**
+
+**Files/functions:** `capacity-value.mjs` (new) + tests; `app/admin/waiting/page.js` (server-rendered panel above the client). Reuses `buildWaitingCapacityMatches`, `VAT_FLAT_RATE`.
+
+**Source-of-truth impact:** none — pure derived-context over the waiting list + free-slot calendar; read-only.
+
+**Watch:** "bookable now" vs "recruiting target" overlap slightly (a student bookable for instrument A may want Singing as a second instrument); directional, not double-counted in the bucket totals. Value assumes a 30-min lesson; a waiting student who becomes a longer/lower-margin lesson will differ. Room-level utilisation (rooms × hours) is a future V2 needing a room data source.
+
 ### 2026-06-24 — What-if / break-even modelling + delete logged spend
 
 **Feature/change:** Two finance additions on `/admin/finance`:
