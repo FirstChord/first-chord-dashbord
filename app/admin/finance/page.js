@@ -8,6 +8,7 @@ import { buildFinanceOverview, formatMoney } from '@/lib/admin/finance-helpers.m
 import { buildExpenseLogSummary, EXPENSE_LOG_CATEGORIES, parseTutorPay } from '@/lib/admin/cost-helpers.mjs';
 import { buildFinanceCoverage, FLAG_LABELS as FINANCE_FLAG_LABELS } from '@/lib/admin/finance-coverage.mjs';
 import { authOptions } from '@/lib/admin/auth';
+import SaveSpendButton from '@/components/admin/SaveSpendButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,7 +33,7 @@ async function addExpenseLogAction(formData) {
     amount,
     category: `${formData.get('category') || 'Other'}`.trim(),
     description,
-    paid_by: `${formData.get('paid_by') || ''}`.trim(),
+    paid_by: 'First Chord',
     reimbursable: formData.get('reimbursable') === 'on' ? 'yes' : 'no',
     linked_area: `${formData.get('linked_area') || ''}`.trim(),
     notes: `${formData.get('notes') || ''}`.trim(),
@@ -211,7 +212,6 @@ export default async function AdminFinancePage() {
                 ))}
               </select>
             </label>
-            <TextInput label="Paid by" name="paid_by" placeholder="Finn / Tom / First Chord" />
             <TextInput label="Area" name="linked_area" placeholder="Room / Showcase / Marketing" />
             <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
               <input name="reimbursable" type="checkbox" className="h-4 w-4 rounded border-slate-300" />
@@ -227,12 +227,7 @@ export default async function AdminFinancePage() {
               />
             </label>
           </div>
-          <button
-            type="submit"
-            className="mt-4 rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-700"
-          >
-            Save spend
-          </button>
+          <SaveSpendButton />
         </form>
 
         <div className="rounded-[1.6rem] border border-slate-200 bg-white/90 p-5 shadow-sm">

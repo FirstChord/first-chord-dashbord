@@ -2487,6 +2487,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
   const [quickOptions, setQuickOptions] = useState({});
   const [quickExpanded, setQuickExpanded] = useState(false);
   const [schoolNoteForm, setSchoolNoteForm] = useState(EMPTY_SCHOOL_NOTE_FORM);
+  const [schoolNotesOpen, setSchoolNotesOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [editForm, setEditForm] = useState(EMPTY_FORM);
   const [saveState, setSaveState] = useState({ pending: false, error: '', savedAt: '' });
@@ -3138,28 +3139,46 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
       </section>
 
       <section className={cardClasses('border-violet-100 bg-violet-50/50')}>
-        <div className="flex flex-wrap items-start justify-between gap-4">
+        <button
+          type="button"
+          onClick={() => setSchoolNotesOpen((open) => !open)}
+          aria-expanded={schoolNotesOpen}
+          className="flex w-full items-center justify-between gap-4 text-left"
+        >
           <div>
-            <h3 className="text-lg font-semibold text-slate-900">Work on the school notes</h3>
+            <h3 className="text-lg font-semibold text-slate-900">Let&apos;s work on the school</h3>
             <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">
-              Use this for learning notes, transcript summaries, and strategic scratchpad thoughts. Keep the thinking here, then turn the useful bit into a linked action when it is ready.
+              Learning notes, transcript summaries, and strategic scratchpad thoughts.{' '}
+              {schoolNotesOpen ? 'Tap to hide.' : 'Tap to open — kept tucked away so planning stays quick.'}
             </p>
           </div>
-          <Link
-            href="/admin/planning?filter=school_notes"
-            className="rounded-full border border-violet-200 bg-white px-3 py-1 text-xs font-semibold text-violet-900 hover:bg-violet-50"
+          <span
+            aria-hidden="true"
+            className={`shrink-0 text-xl text-violet-700 transition-transform ${schoolNotesOpen ? 'rotate-90' : ''}`}
           >
-            View school notes
-          </Link>
-        </div>
-        <div className="mt-5 rounded-2xl border border-violet-100 bg-white/90 p-4">
-          <SchoolNoteCapture
-            form={schoolNoteForm}
-            onChange={setSchoolNoteForm}
-            onSubmit={handleSchoolNoteCapture}
-            pending={saveState.pending && !pendingId}
-          />
-        </div>
+            ›
+          </span>
+        </button>
+        {schoolNotesOpen ? (
+          <>
+            <div className="mt-4 flex justify-end">
+              <Link
+                href="/admin/planning?filter=school_notes"
+                className="rounded-full border border-violet-200 bg-white px-3 py-1 text-xs font-semibold text-violet-900 hover:bg-violet-50"
+              >
+                View school notes
+              </Link>
+            </div>
+            <div className="mt-3 rounded-2xl border border-violet-100 bg-white/90 p-4">
+              <SchoolNoteCapture
+                form={schoolNoteForm}
+                onChange={setSchoolNoteForm}
+                onSubmit={handleSchoolNoteCapture}
+                pending={saveState.pending && !pendingId}
+              />
+            </div>
+          </>
+        ) : null}
       </section>
 
       <section className={cardClasses()}>
