@@ -3331,6 +3331,15 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
                 Free slots, tutor availability, waiting-list placement hints, and schedule-cache health.
               </p>
             </Link>
+            <Link
+              href="/admin/finance"
+              className="mt-3 block rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-blue-200 hover:bg-white"
+            >
+              <p className="text-sm font-semibold text-slate-900">Finance</p>
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                Estimate-only run-rate, tutor costs, overhead, and margin context.
+              </p>
+            </Link>
             <div className="mt-3 rounded-2xl border border-orange-100 bg-orange-50/70 p-4">
               <p className="text-sm font-semibold text-slate-900">Tutor absence</p>
               <p className="mt-1 text-sm leading-6 text-slate-600">
