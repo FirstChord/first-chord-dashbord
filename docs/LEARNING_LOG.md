@@ -19,6 +19,25 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-24 — Finance trend view (V1, dependency-free)
+
+**Feature/change:** `lib/admin/finance-trend.mjs` (`buildFinanceTrend`, pure) + a "Trend" section on `/admin/finance` with a weekly/monthly toggle and dependency-free inline-SVG sparklines for revenue, margin, and active students, each with a week-over-week delta chip. 9 unit tests; suite now 298 pass, build clean.
+
+**Why:** the snapshots only pay off once you can see *direction* (and, after a cycle, the seasonal summer dip). This is the rung between "snapshot" and "forecasting".
+
+**Foundation decisions (built so it scales + serves future agents):**
+- Data separated from chart: the pure helper returns a typed series; the UI is a thin replaceable layer. A future agent/tool consumes the helper output, not the DOM.
+- Append-only history is never rewritten; **gaps are represented as holes, never zeros** (a zero would fake a crash). Each point carries a monotonic `periodIndex` for gap math.
+- **Period keys** (`2026-W26`, `2026-06`) on every point → like-for-like and future year-over-year comparison with no rework.
+- Dedupe per period (keeps latest snapshot if the cron double-fires); deltas + min/max/latest computed in the helper so every consumer gets the same numbers.
+- **Provenance carried forward** (`source` estimate/mixed) so the estimate→actuals transition (slice B) shows honestly. Data only — no interpretation baked in (keeps it agent-reusable).
+
+**UI:** server-component section; period toggle via `?trend=weekly|monthly` query param (no client JS). Sparkline is a pure inline `<svg><polyline>`. With <2 points it shows an honest "collecting data" note (currently 1 real snapshot).
+
+**Deliberately deferred (slot onto this foundation later):** a charting library, a read-only `/api/admin/finance/trend` agent endpoint, forecasting/scenarios, year-over-year seasonal comparison.
+
+**Files:** `lib/admin/finance-trend.mjs` (new), `tests/admin/finance-trend.test.mjs` (new), `app/admin/finance/page.js` (Trend section + Sparkline/TrendMetric/DeltaChip components, `searchParams`).
+
 ### 2026-06-24 — Finance estimate-coverage / data-health panel
 
 **Feature/change:** `lib/admin/finance-coverage.mjs` (`buildFinanceCoverage`, pure) + an "Estimate coverage" section on `/admin/finance`. Surfaces the input gaps that silently distort revenue/cost/margin/snapshots: per active student it flags `noRevenuePrice`, `noDuration`, `noSchedule`, `lowConfidence`, `noTutor`; plus a tutor-level list of tutors absent from `Tutor_Pay`. Headline = priced active ÷ active. Read-only. 7 unit tests; total suite 289 pass, build clean.

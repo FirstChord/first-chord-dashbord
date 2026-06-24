@@ -1,12 +1,14 @@
+import Link from 'next/link';
 import { randomUUID } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
 import { getServerSession } from 'next-auth';
 import { getOperationalAdminStudents } from '@/lib/admin/students';
-import { appendExpenseLogRow, getScheduleContextRows, getTutorPayRows, getExpenseRows, getExpenseLogRows } from '@/lib/admin/sheets';
+import { appendExpenseLogRow, getScheduleContextRows, getTutorPayRows, getExpenseRows, getExpenseLogRows, getFinanceSnapshotRows } from '@/lib/admin/sheets';
 import { enrichScheduleContextsWithSharedSlots } from '@/lib/admin/schedule-context-helpers.mjs';
 import { buildFinanceOverview, formatMoney } from '@/lib/admin/finance-helpers.mjs';
 import { buildExpenseLogSummary, EXPENSE_LOG_CATEGORIES, parseTutorPay } from '@/lib/admin/cost-helpers.mjs';
 import { buildFinanceCoverage, FLAG_LABELS as FINANCE_FLAG_LABELS } from '@/lib/admin/finance-coverage.mjs';
+import { buildFinanceTrend } from '@/lib/admin/finance-trend.mjs';
 import { authOptions } from '@/lib/admin/auth';
 import SaveSpendButton from '@/components/admin/SaveSpendButton';
 
@@ -63,6 +65,57 @@ function Row({ label, value, strong = false }) {
   );
 }
 
+// Dependency-free sparkline: scales the series to the box, draws a polyline + last dot.
+function Sparkline({ values = [], width = 240, height = 48, stroke = '#2563eb' }) {
+  const nums = values.filter((v) => Number.isFinite(v));
+  if (nums.length < 2) {
+    return <div className="flex h-12 items-center text-xs text-slate-400">Not enough data yet</div>;
+  }
+  const min = Math.min(...nums);
+  const max = Math.max(...nums);
+  const span = max - min || 1;
+  const stepX = width / (nums.length - 1);
+  const coords = nums.map((v, i) => {
+    const x = i * stepX;
+    const y = height - ((v - min) / span) * height;
+    return [x, y];
+  });
+  const polyline = coords.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+  const [lastX, lastY] = coords[coords.length - 1];
+  return (
+    <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="mt-2 block">
+      <polyline points={polyline} fill="none" stroke={stroke} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+      <circle cx={lastX} cy={lastY} r="3" fill={stroke} />
+    </svg>
+  );
+}
+
+function DeltaChip({ delta, money = false }) {
+  if (!delta || !Number.isFinite(delta.abs) || delta.abs === 0) {
+    return <span className="text-xs text-slate-400">no change vs last</span>;
+  }
+  const up = delta.abs > 0;
+  const mag = money ? formatMoney(Math.abs(delta.abs)) : Math.abs(delta.abs);
+  return (
+    <span className={`text-xs font-medium ${up ? 'text-emerald-700' : 'text-rose-700'}`}>
+      {up ? '▲' : '▼'} {mag}{delta.pct !== null ? ` (${Math.abs(delta.pct)}%)` : ''} vs last
+    </span>
+  );
+}
+
+function TrendMetric({ label, latest, delta, values, stroke, money = false }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white/90 p-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{label}</p>
+      <p className="mt-1 text-2xl font-semibold text-slate-900">
+        {latest === null || latest === undefined ? '—' : money ? formatMoney(latest) : latest}
+      </p>
+      <DeltaChip delta={delta} money={money} />
+      <Sparkline values={values} stroke={stroke} />
+    </div>
+  );
+}
+
 function formatDate(value) {
   if (!value) return '—';
   const date = new Date(value);
@@ -86,14 +139,19 @@ function TextInput({ label, name, type = 'text', required = false, placeholder =
   );
 }
 
-export default async function AdminFinancePage() {
-  const [students, scheduleRows, tutorPayRows, expenseRows, expenseLogRows] = await Promise.all([
+export default async function AdminFinancePage({ searchParams }) {
+  const params = (await searchParams) || {};
+  const trendPeriod = params.trend === 'monthly' ? 'monthly' : 'weekly';
+
+  const [students, scheduleRows, tutorPayRows, expenseRows, expenseLogRows, snapshotRows] = await Promise.all([
     getOperationalAdminStudents(),
     getScheduleContextRows(),
     getTutorPayRows(),
     getExpenseRows(),
     getExpenseLogRows(),
+    getFinanceSnapshotRows(),
   ]);
+  const trend = buildFinanceTrend(snapshotRows, { period: trendPeriod, limit: 12 });
   const scheduleByMmsId = enrichScheduleContextsWithSharedSlots(scheduleRows);
   const enriched = students.map((student) => ({
     ...student,
@@ -137,6 +195,48 @@ export default async function AdminFinancePage() {
         <StatCard label="Revenue (monthly)" value={formatMoney(totals.revenueMonthly)} helper={`${revenue.active.count} active · ${formatMoney(revenue.active.weekly)}/wk`} />
         <StatCard label="Costs (monthly)" value={formatMoney(totals.totalCostMonthly)} helper="Tutor pay + salaries + overhead" tone="border-amber-100 bg-amber-50/60" />
         <StatCard label="Paused (not billing)" value={formatMoney(revenue.paused.weekly)} helper={`${revenue.paused.count} students · per week`} tone="border-violet-100 bg-violet-50/60" />
+      </section>
+
+      <section className="rounded-[1.6rem] border border-blue-100 bg-white/90 p-5 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-base font-semibold text-slate-900">Trend</h2>
+            <p className="mt-1 max-w-2xl text-sm text-slate-600">
+              Direction over time from the {trendPeriod} snapshot series — {trend.summary.count} point{trend.summary.count === 1 ? '' : 's'}
+              {trend.summary.gapCount ? ` · ${trend.summary.gapCount} missing ${trendPeriod === 'monthly' ? 'month(s)' : 'week(s)'}` : ''}.
+            </p>
+          </div>
+          <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 p-0.5 text-xs font-semibold">
+            <Link
+              href="/admin/finance?trend=weekly"
+              className={`rounded-full px-3 py-1 ${trendPeriod === 'weekly' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
+            >
+              Weekly
+            </Link>
+            <Link
+              href="/admin/finance?trend=monthly"
+              className={`rounded-full px-3 py-1 ${trendPeriod === 'monthly' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
+            >
+              Monthly
+            </Link>
+          </div>
+        </div>
+
+        {trend.summary.count < 2 ? (
+          <p className="mt-4 rounded-2xl bg-blue-50 px-4 py-3 text-sm text-blue-900">
+            Collecting data — {trend.summary.count} snapshot{trend.summary.count === 1 ? '' : 's'} so far. The trend appears once a
+            few {trendPeriod === 'monthly' ? 'months' : 'weeks'} accrue (the weekly snapshot runs each Monday).
+          </p>
+        ) : (
+          <div className="mt-4 grid gap-4 md:grid-cols-3">
+            <TrendMetric label="Revenue (monthly)" latest={trend.summary.revenueMonthly.latest} delta={trend.deltas?.revenueMonthly} values={trend.points.map((p) => p.revenueMonthly)} stroke="#2563eb" money />
+            <TrendMetric label="Margin (monthly)" latest={trend.summary.marginMonthly.latest} delta={trend.deltas?.marginMonthly} values={trend.points.map((p) => p.marginMonthly)} stroke="#059669" money />
+            <TrendMetric label="Active students" latest={trend.summary.activeCount.latest} delta={trend.deltas?.activeCount} values={trend.points.map((p) => p.activeCount)} stroke="#7c3aed" />
+          </div>
+        )}
+        <p className="mt-3 text-xs text-slate-500">
+          Range {trend.summary.firstPeriod || '—'} → {trend.summary.lastPeriod || '—'}. Estimate series; missing periods are shown as gaps, not zeros.
+        </p>
       </section>
 
       <section className="grid gap-6 md:grid-cols-2">
