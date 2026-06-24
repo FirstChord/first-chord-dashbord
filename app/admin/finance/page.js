@@ -186,13 +186,13 @@ export default async function AdminFinancePage({ searchParams }) {
         <p className="text-sm text-slate-600">Estimated monthly margin</p>
         <p className="mt-1 text-4xl font-bold text-slate-900">{formatMoney(totals.marginMonthly)}</p>
         <p className="mt-2 text-sm text-slate-700">
-          {formatMoney(totals.revenueMonthly)} revenue - {formatMoney(totals.totalCostMonthly)} costs
-          {totals.marginPct !== null ? ` · ${totals.marginPct}% margin` : ''}
+          {formatMoney(totals.netRevenueMonthly)} after VAT - {formatMoney(totals.totalCostMonthly)} costs
+          {totals.marginPct !== null ? ` · ${totals.marginPct}% of net revenue` : ''}
         </p>
       </section>
 
       <section className="grid gap-4 md:grid-cols-3">
-        <StatCard label="Revenue (monthly)" value={formatMoney(totals.revenueMonthly)} helper={`${revenue.active.count} active · ${formatMoney(revenue.active.weekly)}/wk`} />
+        <StatCard label="Revenue (monthly)" value={formatMoney(totals.grossRevenueMonthly)} helper={`${formatMoney(totals.netRevenueMonthly)} after VAT · ${revenue.active.count} active`} />
         <StatCard label="Costs (monthly)" value={formatMoney(totals.totalCostMonthly)} helper="Tutor pay + salaries + overhead" tone="border-amber-100 bg-amber-50/60" />
         <StatCard label="Paused (not billing)" value={formatMoney(revenue.paused.weekly)} helper={`${revenue.paused.count} students · per week`} tone="border-violet-100 bg-violet-50/60" />
       </section>
@@ -246,7 +246,9 @@ export default async function AdminFinancePage({ searchParams }) {
             <Row label={`One-to-one · ${revenue.byLessonKind.one_to_one.count}`} value={`${formatMoney(revenue.byLessonKind.one_to_one.weekly)}/wk`} />
             <Row label={`Group · ${revenue.byLessonKind.group.count}`} value={`${formatMoney(revenue.byLessonKind.group.weekly)}/wk`} />
             <Row label={`Orchestra · ${revenue.byLessonKind.orchestra.count}`} value={`${formatMoney(revenue.byLessonKind.orchestra.weekly)}/wk`} />
-            <Row label="Total revenue" value={formatMoney(totals.revenueMonthly)} strong />
+            <Row label="Turnover (gross, monthly)" value={formatMoney(totals.grossRevenueMonthly)} />
+            <Row label={`VAT (Flat Rate ${Math.round(totals.vatRate * 100)}%)`} value={`−${formatMoney(totals.vatLiabilityMonthly)}`} />
+            <Row label="Revenue after VAT" value={formatMoney(totals.netRevenueMonthly)} strong />
           </div>
         </div>
 

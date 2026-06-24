@@ -19,6 +19,20 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-24 — VAT Flat Rate Scheme in the finance model
+
+**Feature/change:** Included the school's 11% VAT Flat Rate Scheme. VAT is modelled as a **deduction from revenue** (not an expense line): listed prices are VAT-inclusive, so `vatLiability = grossRevenue × 0.11`, `netRevenue = gross − vatLiability`, and **margin is now computed on net revenue**. Cost side is unchanged (under FRS you can't reclaim input VAT, so the figures already paid stand). `VAT_FLAT_RATE = 0.11` constant in `finance-helpers.mjs`.
+
+**Why:** the run-rate previously counted gross turnover as income, overstating margin by the full VAT liability (~£1.6k/mo). Material — the headline margin roughly halved once VAT was applied.
+
+**Files/functions:** `finance-helpers.mjs` (`VAT_FLAT_RATE`, `buildFinanceOverview` now returns `grossRevenueMonthly`/`vatRate`/`vatLiabilityMonthly`/`netRevenueMonthly`; margin% is on net revenue), `buildFinanceSnapshotRow` (+ `vat_rate`, `vat_liability_monthly`, `net_revenue_monthly`), `sheets.js` `FINANCE_SNAPSHOT_HEADERS` (+ same 3 columns) and a new `deleteFinanceSnapshotRow`, `app/admin/finance/page.js` (gross → −VAT → net → −costs → margin breakdown).
+
+**Day-0 snapshot re-taken:** the first `Finance_Snapshot` row predated VAT (overstated margin). Since it was day-0 (no real history lost) and the method changed materially, the stale row was deleted and a fresh VAT-correct row written — so the trend doesn't show a fake ~£1.6k "drop" at week 2. This is the documented exception to append-only: a same-day methodology correction, not rewriting genuine history.
+
+**Source-of-truth impact:** none new — VAT is derived from the (configurable) flat-rate constant. Assumptions: prices are VAT-inclusive; all lesson revenue is taxable turnover under FRS. If FRS rate or scope changes, update `VAT_FLAT_RATE` (upgrade path: a `Finance_Settings` sheet for no-deploy edits).
+
+**Watch:** margin % is now over net (after-VAT) revenue; `revenueMonthly` is kept as gross turnover for back-compat with `netRevenueMonthly` explicit.
+
 ### 2026-06-24 — Finance trend view (V1, dependency-free)
 
 **Feature/change:** `lib/admin/finance-trend.mjs` (`buildFinanceTrend`, pure) + a "Trend" section on `/admin/finance` with a weekly/monthly toggle and dependency-free inline-SVG sparklines for revenue, margin, and active students, each with a week-over-week delta chip. 9 unit tests; suite now 298 pass, build clean.

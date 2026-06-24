@@ -149,16 +149,35 @@ test('buildFinanceOverview composes revenue minus variable, salaries and fixed i
   const o = buildFinanceOverview(students, { tutorPay, expenseRows, expenseLogRows, at: new Date('2026-06-24T12:00:00Z') });
 
   const weeksPerMonth = 52 / 12;
-  assert.equal(o.totals.revenueMonthly, Math.round(41.5 * weeksPerMonth * 100) / 100);
-  assert.equal(o.totals.variableMonthly, Math.round(24 * weeksPerMonth * 100) / 100);
+  const round = (n) => Math.round(n * 100) / 100;
+  const gross = round(41.5 * weeksPerMonth);
+  const vat = round(gross * 0.11);
+  const net = round(gross - vat);
+  assert.equal(o.totals.revenueMonthly, gross); // gross turnover (back-compat key)
+  assert.equal(o.totals.grossRevenueMonthly, gross);
+  assert.equal(o.totals.vatRate, 0.11);
+  assert.equal(o.totals.vatLiabilityMonthly, vat);
+  assert.equal(o.totals.netRevenueMonthly, net);
+  assert.equal(o.totals.variableMonthly, round(24 * weeksPerMonth));
   assert.equal(o.totals.salariedMonthly, 1000);
   assert.equal(o.totals.fixedMonthly, 1100);
   assert.equal(o.totals.actualSpendMonthToDate, 50);
-  assert.equal(
-    o.totals.marginMonthly,
-    Math.round((o.totals.revenueMonthly - o.totals.variableMonthly - 1000 - 1100) * 100) / 100,
-  );
-  assert.equal(o.totals.cashViewMarginMonthToDate, o.totals.marginMonthly - 50);
+  // margin is on NET (after-VAT) revenue
+  assert.equal(o.totals.marginMonthly, round(net - o.totals.variableMonthly - 1000 - 1100));
+  assert.equal(o.totals.cashViewMarginMonthToDate, round(o.totals.marginMonthly - 50));
+});
+
+test('buildFinanceOverview deducts Flat Rate VAT from revenue before margin', () => {
+  const students = [oneToOne30({ mmsId: 'a' })]; // 30-min 1:1 → £25/wk gross
+  const o = buildFinanceOverview(students, {});
+  const weeksPerMonth = 52 / 12;
+  const round = (n) => Math.round(n * 100) / 100;
+  const gross = round(25 * weeksPerMonth);
+  assert.equal(o.totals.grossRevenueMonthly, gross);
+  assert.equal(o.totals.vatLiabilityMonthly, round(gross * 0.11));
+  assert.equal(o.totals.netRevenueMonthly, round(gross - gross * 0.11));
+  // margin is net revenue minus costs (this student carries default hourly tutor cost)
+  assert.equal(o.totals.marginMonthly, round(o.totals.netRevenueMonthly - o.totals.totalCostMonthly));
 });
 
 test('buildFinanceSnapshotRow keeps estimate quality counters flat and visible', () => {
