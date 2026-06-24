@@ -6,6 +6,7 @@ import { appendExpenseLogRow, getScheduleContextRows, getTutorPayRows, getExpens
 import { enrichScheduleContextsWithSharedSlots } from '@/lib/admin/schedule-context-helpers.mjs';
 import { buildFinanceOverview, formatMoney } from '@/lib/admin/finance-helpers.mjs';
 import { buildExpenseLogSummary, EXPENSE_LOG_CATEGORIES, parseTutorPay } from '@/lib/admin/cost-helpers.mjs';
+import { buildFinanceCoverage, FLAG_LABELS as FINANCE_FLAG_LABELS } from '@/lib/admin/finance-coverage.mjs';
 import { authOptions } from '@/lib/admin/auth';
 
 export const dynamic = 'force-dynamic';
@@ -101,6 +102,7 @@ export default async function AdminFinancePage() {
   const o = buildFinanceOverview(enriched, { tutorPay, expenseRows, expenseLogRows });
   const { revenue, cost, expenses, totals } = o;
   const spend = o.actualSpend || buildExpenseLogSummary(expenseLogRows);
+  const coverage = buildFinanceCoverage(enriched, { tutorPay });
 
   const marginTone = totals.marginMonthly >= 0 ? 'border-emerald-200 bg-emerald-50' : 'border-rose-200 bg-rose-50';
   const today = new Date().toISOString().slice(0, 10);
@@ -282,6 +284,84 @@ export default async function AdminFinancePage() {
             </div>
           </div>
         </div>
+      </section>
+
+      <section className="rounded-[1.6rem] border border-slate-200 bg-white/90 p-5 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-base font-semibold text-slate-900">Estimate coverage</h2>
+            <p className="mt-1 max-w-2xl text-sm text-slate-600">
+              How much of the active roster the estimate can actually price. Gaps here quietly distort revenue, cost,
+              margin, and every logged snapshot — fix the source data to tighten the numbers.
+            </p>
+          </div>
+          <div className={`rounded-2xl px-4 py-2 text-right ${coverage.isClean ? 'bg-emerald-50' : 'bg-amber-50'}`}>
+            <p className="text-xs text-slate-500">priced / active</p>
+            <p className="text-2xl font-semibold text-slate-900">
+              {coverage.coveragePct === null ? '—' : `${coverage.coveragePct}%`}
+            </p>
+            <p className="text-xs text-slate-500">{coverage.pricedCount}/{coverage.activeCount}</p>
+          </div>
+        </div>
+
+        {coverage.isClean ? (
+          <p className="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+            All active students are priced with a resolved tutor — no data gaps detected.
+          </p>
+        ) : (
+          <>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {Object.entries(coverage.flagCounts)
+                .filter(([, count]) => count > 0)
+                .map(([flag, count]) => (
+                  <span key={flag} className="rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-800">
+                    {FINANCE_FLAG_LABELS[flag] || flag}: {count}
+                  </span>
+                ))}
+            </div>
+
+            {coverage.tutorsNotInPayTable.length ? (
+              <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                <h3 className="text-sm font-semibold text-slate-900">Tutors on the default £24/hr rate</h3>
+                <p className="mt-1 text-xs text-slate-600">
+                  These tutors aren&apos;t listed in Tutor_Pay, so cost assumes £24/hr. Fine for hourly tutors — but if any
+                  should be salaried or on a different rate (or this is a name variant of a salaried tutor), add a row/alias.
+                </p>
+                <div className="mt-2 divide-y divide-amber-100">
+                  {coverage.tutorsNotInPayTable.map((t) => (
+                    <Row key={t.tutor} label={t.tutor} value={`${t.studentCount} active`} />
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            <details className="mt-4 group">
+              <summary className="cursor-pointer text-sm font-semibold text-slate-700 hover:text-slate-900">
+                {coverage.flagged.length} student(s) with data gaps
+              </summary>
+              <div className="mt-3 overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="text-xs uppercase tracking-[0.16em] text-slate-400">
+                      <th className="px-3 py-2">Student</th>
+                      <th className="px-3 py-2">Tutor</th>
+                      <th className="px-3 py-2">Issues</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {coverage.flagged.map((row) => (
+                      <tr key={row.mmsId || row.name}>
+                        <td className="px-3 py-2 text-slate-800">{row.name}</td>
+                        <td className="px-3 py-2 text-slate-600">{row.tutor || '—'}</td>
+                        <td className="px-3 py-2 text-slate-600">{row.flagLabels.join(', ')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </details>
+          </>
+        )}
       </section>
 
       <p className="text-xs text-slate-500">

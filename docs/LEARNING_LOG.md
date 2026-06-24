@@ -19,6 +19,37 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-24 — Finance estimate-coverage / data-health panel
+
+**Feature/change:** `lib/admin/finance-coverage.mjs` (`buildFinanceCoverage`, pure) + an "Estimate coverage" section on `/admin/finance`. Surfaces the input gaps that silently distort revenue/cost/margin/snapshots: per active student it flags `noRevenuePrice`, `noDuration`, `noSchedule`, `lowConfidence`, `noTutor`; plus a tutor-level list of tutors absent from `Tutor_Pay`. Headline = priced active ÷ active. Read-only. 7 unit tests; total suite 289 pass, build clean.
+
+**Why:** every figure inherits its inputs; the weekly snapshot series is only as trustworthy as coverage. We'd already hit real gaps (orchestra, Finn alias, Hayleigh/Kenny), so a standing surface catches the next ones.
+
+**Design refinement from live data:** first run flagged 81 students for "tutor not in pay table" — a false-positive flood, because the 12 hourly tutors *correctly* default to £24 and only the 3 salaried + Finn alias are listed. Reclassified tutor-not-in-pay-table from a per-student gap flag to a tutor-level *informational* list ("confirm none should be salaried / on a different rate"). Result: the per-student gap list now shows only genuine issues.
+
+**Live findings at launch:** revenue coverage 100% (134/134 active priced — orchestra/group fixes held); 3 `noSchedule` students (Anji, Kenny, Nathan — all Finn's, fortnightly/no-slot); 12 hourly tutors on the default rate (expected).
+
+**Files:** `lib/admin/finance-coverage.mjs` (new), `tests/admin/finance-coverage.test.mjs` (new), `app/admin/finance/page.js` (section), `lib/admin/cost-helpers.mjs` (exported `resolveTutor` for reuse).
+
+**Watch:** `noSchedule` is low-severity (estimate falls back to the sheet lessonLength). Coverage is over active students only. The tutor list is a confirm-prompt, not an error.
+
+### 2026-06-24 — Finance layer audit (post-Codex batch)
+
+**What:** Reviewed the finance layer after Codex's follow-up (Expense_Log, cash-view margin, pause-expectation auto-sync) shipped and deployed (`b6897af`). 282 tests pass, build clean.
+
+**Verified correct:**
+- Tutor cost: per-slot dedup now also collapses by `billingGroupId` (covers Hayleigh/Kenny, who share a billing group but have no shared MMS schedule slot), takes the max cadence weight on duplicate slots, excludes salaried tutors, +£2 once per 45-min group, paused excluded, fortnightly = 0.5 on both revenue and cost, unknown durations flagged not priced.
+- `FINANCE_SNAPSHOT_HEADERS` matches `buildFinanceSnapshotRow` keys (incl. new cash-view fields); both the cron and `/admin/finance` feed `expenseLogRows` into `buildFinanceOverview`.
+- Expense-log add-spend server action is independently auth-gated (`session.user.isAdmin`) + validated + records `created_by`; defence-in-depth beyond middleware.
+- No secrets in git (salaries live only in `Tutor_Pay` sheet/Railway); removed a leftover empty `app/api/debug-finance/` dir (untracked, not built, not deployed); no tracked debug/seed routes.
+
+**Findings / minor risks (none blocking):**
+1. **Write-on-read:** `autoSyncPauseExpectations` (in issue-building) writes `payment_expectation` to the Students sheet during a dashboard view. Bounded to real transitions (usually a no-op), audited to Event_Log, not a Stripe column → within the dashboard's workflow-state remit and consistent with the bounded auto-record decision. Watch: possible duplicate write/log under concurrent loads; consider an explicit trigger/cron if write volume grows.
+2. **Cash-view margin** = full-month recurring cost + month-to-date actual spend → directional ("month-end context"), not a true closed-month margin. Labelled as such.
+3. The seeded **"General £120" Expenses row is now inert** — `parseExpenses` skips name/category "general" (miscellaneous now lives in Expense_Log). Recommend deleting that row from the Expenses sheet to avoid confusion.
+4. Expense amount parsing strips sign/non-numeric (negatives become positive; non-numeric dropped by the `amount > 0` filter). Acceptable; could add form validation.
+5. Standing estimate caveats unchanged: scheduled (not attendance) hours; hardcoded price table; revenue still estimate, not Stripe actuals.
+
 ### 2026-06-24 — Expense Log For Actual Bank/Card Spend
 
 **Feature/change:** Added a lightweight actual-spend capture to `/admin/finance`. New append-only `Expense_Log` tab stores dated spend rows such as paint, repairs, reupholstery, coffees/lunches, marketing, and one-off room improvements. The finance page shows current-month spend totals, category totals, and latest entries. The previous recurring `General` overhead buffer is ignored if it still exists in `Expenses`.
