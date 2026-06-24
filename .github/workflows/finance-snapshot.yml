@@ -1,0 +1,48 @@
+name: Finance Snapshot
+
+# Appends a read-only revenue/cost/margin snapshot to the Finance_Snapshot tab so we
+# build a seasonal time series (e.g. how many students go off over the summer). Weekly
+# every Monday; monthly on the 1st. Calls the secret-protected endpoint on Railway.
+
+on:
+  workflow_dispatch:
+    inputs:
+      period:
+        description: "Snapshot period"
+        required: true
+        default: weekly
+        type: choice
+        options: [weekly, monthly]
+  schedule:
+    - cron: "0 6 * * 1"   # weekly: Mondays 06:00 UTC
+    - cron: "30 6 1 * *"  # monthly: 1st of the month 06:30 UTC
+
+concurrency:
+  group: finance-snapshot
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Append finance snapshot
+        env:
+          ENDPOINT: https://first-chord-dashbord-production.up.railway.app/api/cron/finance-snapshot
+          SECRET: ${{ secrets.FINANCE_SNAPSHOT_SECRET }}
+          # Monthly schedule sets period=monthly; weekly schedule and manual default to weekly.
+          PERIOD: ${{ github.event.inputs.period || (github.event.schedule == '30 6 1 * *' && 'monthly' || 'weekly') }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SECRET}" ]; then
+            echo "FINANCE_SNAPSHOT_SECRET is not set in repo secrets"; exit 1
+          fi
+          resp=$(curl -sS -X POST "${ENDPOINT}?period=${PERIOD}" \
+            -H "x-firstchord-finance-secret: ${SECRET}" \
+            -H "content-type: application/json" \
+            --max-time 120)
+          echo "Response: ${resp}"
+          ok=$(echo "${resp}" | jq -r '.success // false')
+          if [ "${ok}" != "true" ]; then
+            echo "Endpoint returned an error"; exit 1
+          fi

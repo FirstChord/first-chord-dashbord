@@ -19,6 +19,23 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-24 — Financial layer slice C: cost/margin model + weekly/monthly snapshots
+
+**Feature/change:** Extended the finance layer from revenue-only to full margin, and added a logged time series — deliberately sequenced *ahead* of Stripe actuals (slice B) because (a) the seasonal series is time-sensitive (summer started today) and (b) margin is higher-value than validating one number.
+- `lib/admin/cost-helpers.mjs`: variable tutor pay modelled from the *scheduled active roster*. £24/hr (30=£12, 45=£18, 60=£24), **+£2 once per 45-min group slot**. Pay is **per teaching slot, not per student** — shared group/orchestra lessons collapse to one slot (explicit `billingGroupId` first, then MMS shared-slot names as fallback) so a 6-person orchestra is paid once, not 6×. **Paused students = no pay.** Salaried tutors add **no** variable cost; their salary is a fixed monthly line.
+- `lib/admin/finance-helpers.mjs`: `buildFinanceOverview(students, { tutorPay, expenseRows, stripeAmounts })` composes revenue − variable − salaries − fixed = monthly margin; `buildFinanceSnapshotRow` flattens it for the log.
+- `Finance_Snapshot` append-only tab + `/api/cron/finance-snapshot` (secret-authed, mirrors `refresh-schedules`) + `.github/workflows/finance-snapshot.yml` (weekly Mondays + monthly 1st). First row captured 2026-06-24.
+
+**Source of truth (important):** the finance numbers are assembled from several lanes, **not** the registry alone — registry (tutor assignment, instrument fallback), Students sheet (duration, payment mode), `Schedule_Context` cache, a hardcoded price table, and now two new manually-curated config tabs: **`Tutor_Pay`** (pay_model/hourly_rate/monthly_salary) and **`Expenses`** (name/amount/period/category). New canonical pay/cost data lives in those sheets, editable without a deploy.
+
+**Security:** the `/finance` page now shows salaries and margin, so it must stay behind admin auth. It was moved out of `/admin` to a deliberately low-profile `/finance` URL (no nav link, removed from the Planning aside) — and `/finance` was added to the `middleware.js` auth matcher so the move did **not** make it public. **Salaries are never committed to git** — they were seeded straight into the `Tutor_Pay` sheet (via a throwaway route, values passed in the request body, never in code).
+
+**Tutor-name canonicalisation gotcha:** two of Finn's students (Hayleigh, Kenny) have no registry entry, so `resolveTutor` falls back to the Students-sheet value "Finn Le Marinel", which did not match the canonical `Finn` salary row → they were initially treated as hourly. Fixed durably with a `Tutor_Pay` **alias row** ("Finn Le Marinel", salary £0, real salary stays on `Finn`) rather than fuzzy name-matching in code. ("Chloe Mak" vs "Chloe" exists too but is cost-neutral since both are hourly.) Lesson: tutor identity is not fully canonical across sheet vs registry; the pay table absorbs variants explicitly.
+
+**Indicative numbers at launch (estimate):** captured in the first private `Finance_Snapshot` row. Do **not** put exact payroll/margin figures in git; use the `/finance` page or Finance tabs for current private values.
+
+**What to watch:** still an estimate (schedule × price table), not Stripe/accounting. Variable cost is from *scheduled* slots, not attendance. The snapshot cron needs `FINANCE_SNAPSHOT_SECRET` set in Railway env **and** as a GitHub Actions repo secret. New unregistered students of a salaried tutor will surface under a sheet-name variant — add an alias row if it's a salaried tutor. Exact private salary/margin values should stay in the Finance tabs and `/finance`, not in git fixtures or docs.
+
 ### 2026-06-23 — Financial layer slice A: read-only revenue run-rate (estimate, B-ready seam)
 
 **Feature/change:** First financial surface — a read-only recurring-revenue run-rate at `/admin/finance`, linked from the Planning → Planning context aside (the documented home for future finance/capacity layers, not top nav while it's still an estimate). New pure helper `lib/admin/finance-helpers.mjs`: `buildRevenueRunRate(students, { stripeAmounts })` aggregates active-only weekly/monthly/annual, reports paused separately as "not billing", and breaks down by lesson kind (1:1/group/orchestra) and payment mode (stripe/manual). The page reuses `derivePaymentValueContext` via the resolver.

@@ -26,7 +26,7 @@ The active surface is the private admin dashboard under `/admin`.
 
 ## Recent Completed Work
 
-- Financial layer slice A: read-only revenue run-rate at `/admin/finance` (estimate from schedule × price table, B-ready `resolveStudentRevenue` seam for cached Stripe actuals), linked from Planning context; orchestra instruments corrected upstream in the registry
+- Financial layer: read-only revenue + cost/margin at `/finance` (auth-gated, deliberately low-profile — no nav link). Estimate from schedule × price table minus tutor pay (per-slot, active-only, £24/hr +£2 per 45-min group), salaries, and fixed overhead; pay/overhead live in new `Tutor_Pay` + `Expenses` sheets (salaries never in git). Weekly + monthly `Finance_Snapshot` time series via GitHub Action cron (needs `FINANCE_SNAPSHOT_SECRET`). B-ready `resolveStudentRevenue` seam still in place for later Stripe actuals.
 - Persistent `/admin/flags` issue loop using `Issue_Queue` and `Event_Log`
 - calmer flag cards with clearer primary actions and collapsed detail
 - system-cleared bulk resolve for stale no-longer-detected issues

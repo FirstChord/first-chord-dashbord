@@ -4,8 +4,11 @@ import assert from 'node:assert/strict';
 import {
   resolveStudentRevenue,
   buildRevenueRunRate,
+  buildFinanceOverview,
+  buildFinanceSnapshotRow,
   formatMoney,
 } from '../../lib/admin/finance-helpers.mjs';
+import { parseTutorPay } from '../../lib/admin/cost-helpers.mjs';
 
 const oneToOne30 = (overrides = {}) => ({
   mmsId: 'm1',
@@ -125,6 +128,48 @@ test('buildRevenueRunRate reports estimate-only until a Stripe actual lands', ()
   });
   assert.equal(withActual.isEstimateOnly, false);
   assert.equal(withActual.bySource.stripe_actual.weekly, 30);
+});
+
+test('buildRevenueRunRate scales a fortnightly student to half its weekly value', () => {
+  const weekly = buildRevenueRunRate([oneToOne30({ mmsId: 'a' })]);
+  const fortnightly = buildRevenueRunRate([oneToOne30({ mmsId: 'a', lessonFrequency: 'fortnightly' })]);
+  assert.equal(weekly.active.weekly, 25);
+  assert.equal(fortnightly.active.weekly, 12.5);
+  assert.equal(fortnightly.active.count, 1); // still one student
+});
+
+test('buildFinanceOverview composes revenue minus variable, salaries and fixed into margin', () => {
+  const students = [
+    // hourly tutor (Patrick), 60-min 1:1 => £24/wk revenue, £24/wk cost
+    { mmsId: 'a', fullName: 'A', lifecycleStatus: 'active', paymentMode: 'stripe', registryTutor: 'Patrick', instrument: 'Guitar', scheduleContext: { status: 'found', durationMinutes: '60' } },
+  ];
+  const tutorPay = parseTutorPay([{ tutor: 'Salaried Tutor', pay_model: 'salary', monthly_salary: '1000' }]);
+  const expenseRows = [{ name: 'Rent', amount: '1100', period: 'monthly' }];
+  const o = buildFinanceOverview(students, { tutorPay, expenseRows });
+
+  const weeksPerMonth = 52 / 12;
+  assert.equal(o.totals.revenueMonthly, Math.round(41.5 * weeksPerMonth * 100) / 100);
+  assert.equal(o.totals.variableMonthly, Math.round(24 * weeksPerMonth * 100) / 100);
+  assert.equal(o.totals.salariedMonthly, 1000);
+  assert.equal(o.totals.fixedMonthly, 1100);
+  assert.equal(
+    o.totals.marginMonthly,
+    Math.round((o.totals.revenueMonthly - o.totals.variableMonthly - 1000 - 1100) * 100) / 100,
+  );
+});
+
+test('buildFinanceSnapshotRow keeps estimate quality counters flat and visible', () => {
+  const overview = buildFinanceOverview([
+    oneToOne30({ mmsId: 'priced' }),
+    { mmsId: 'unpriced-revenue', lifecycleStatus: 'active', paymentMode: 'stripe', instrument: 'Piano', lessonLength: '35' },
+    { mmsId: 'unpriced-cost', fullName: 'Unknown Duration', lifecycleStatus: 'active', paymentMode: 'stripe', registryTutor: 'Patrick', instrument: 'Guitar' },
+  ]);
+  const row = buildFinanceSnapshotRow(overview, { periodType: 'weekly', at: new Date('2026-06-24T12:00:00Z') });
+
+  assert.equal(row.period_type, 'weekly');
+  assert.equal(row.active_unpriced_count, 2);
+  assert.equal(row.unpriced_cost_slots, 1);
+  assert.equal(row.source, 'estimate');
 });
 
 test('formatMoney trims trailing pence-zeros and handles non-numbers', () => {
