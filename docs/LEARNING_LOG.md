@@ -19,6 +19,30 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-25 — Tutor absence cancellations feed structured pause planning
+
+**Feature/change:** Cancelled tutor absences now auto-create idempotent structured pause `Planning_Items` for affected students. The bridge uses `buildTutorAbsencePausePlanningBundle` / `buildTutorAbsencePausePlanningItems` in `lib/admin/tutor-absence-helpers.mjs` and is called from `saveTutorAbsenceWorkflow`. Single missed lessons use the existing `Lesson date: YYYY-MM-DD` format. Repeated cancelled dates for the same student are grouped into one finance-readable away-period plan with `First lesson to pause date: YYYY-MM-DD` and `Returning from date: YYYY-MM-DD`. Students already marked `stripe_paused_expected` or explicitly marked "not needed" are skipped; students whose payment expectation was aligned in the absence workflow are created as `done`.
+
+**Why it exists:** Tutor absence cancellation already forces payment handling, but the finance pause forecast only reads structured pause Planning records. This bridge removes duplicate manual entry while preserving the lane model: `Tutor_Absence_State` owns the absence decision, `Planning_Items` stores the structured pause, and finance remains read-only derived context.
+
+**Source-of-truth impact:** no external truth changes. The dashboard writes workflow state only. MMS/Stripe remain external systems for lesson/payment actions; the auto-created Planning items are structured context for follow-through and forecasting.
+
+**Files/functions involved:** `lib/admin/tutor-absence.js` (`createStructuredPausePlanningFromCancellation`), `lib/admin/tutor-absence-helpers.mjs` (`buildTutorAbsencePausePlanningBundle`, `buildTutorAbsencePausePlanningItems`, `buildTutorAbsencePausePlanningId`, `buildTutorAbsencePausePeriodPlanningId`), `tests/admin/tutor-absence-helpers.test.mjs`.
+
+**What to watch:** if a tutor absence is first saved as cancelled and later changed to cover, any already-created pause Planning item is not auto-deleted; remove/park it manually if the cancellation is no longer real. Grouping parks superseded single-lesson plans rather than deleting them, so the audit trail remains visible.
+
+### 2026-06-25 — Tutor absence period capture stays per-day underneath
+
+**Feature/change:** Planning can now preview a tutor's away period by checking MMS across a date range, keeping only dates where the tutor actually has lessons, and then creating one ordinary tutor-absence Planning card per teaching date. This is for cases like "Tom is away for three clean weeks" where manually entering nine lesson days is error-prone.
+
+**Why it exists:** the human input is naturally a period away, but the workflow, parent messaging, pause handling, and finance forecast all work best when each real teaching date has its own explicit record.
+
+**Source-of-truth impact:** MMS remains the source for the tutor's actual lesson dates. The dashboard writes Planning workflow state only; it does not change MMS, Stripe, or payment expectation during period preview.
+
+**Files/functions involved:** `POST /api/admin/planning/tutor-absence` (`mode: "preview_period"`), `buildDateInputRange` in `lib/admin/planning-helpers.mjs`, and the tutor-absence builder in `components/admin/AdminPlanningPageClient.js`.
+
+**What to watch:** the preview is capped and intentionally sequential to avoid hammering MMS. If MMS calendar data is wrong, the generated date list will be wrong too; remove individual date chips before capture if needed.
+
 ### 2026-06-25 — Pause forecast ("what's coming")
 
 **Feature/change:** `lib/admin/pause-forecast.mjs` (`parsePauseWindowsFromPlanning` + `buildPauseForecast`, pure) + a "What's coming — planned pauses" section on `/admin/finance`. Reads pause planning items, extracts each pause window, walks forward 12 weeks removing students during their window (returning them after), and runs the existing break-even/margin math per week (reuses `buildFinanceScenario`). Surfaces the trough week, weeks below break-even, and the recovery week. 5 unit tests; suite 317 pass, build clean.

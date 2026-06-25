@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   attachPlanningProgress,
+  buildDateInputRange,
   buildFirstLessonCheckinPlanningId,
   buildFirstLessonCheckinPlanningItem,
   buildSchoolForwardReflections,
@@ -38,6 +39,18 @@ import {
 } from '../../lib/admin/planning-helpers.mjs';
 
 const NOW = new Date('2026-06-03T12:00:00.000Z');
+
+test('buildDateInputRange expands an inclusive date range with a cap', () => {
+  assert.deepEqual(
+    buildDateInputRange('2026-07-01', '2026-07-04', { maxDays: 10 }),
+    { dates: ['2026-07-01', '2026-07-02', '2026-07-03', '2026-07-04'], tooLong: false },
+  );
+  assert.deepEqual(buildDateInputRange('2026-07-04', '2026-07-01'), { dates: [], tooLong: false });
+
+  const capped = buildDateInputRange('2026-07-01', '2026-07-10', { maxDays: 3 });
+  assert.deepEqual(capped.dates, ['2026-07-01', '2026-07-02', '2026-07-03']);
+  assert.equal(capped.tooLong, true);
+});
 
 test('normalises planning defaults conservatively', () => {
   assert.equal(normalisePlanningItemType('Initiative'), 'initiative');

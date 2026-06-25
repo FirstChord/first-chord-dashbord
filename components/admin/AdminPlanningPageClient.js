@@ -1221,6 +1221,7 @@ function QuickBrainCapture({
   // precedence over the cached scheduleContext (which can be stale or missing).
   const [refreshedSchedules, setRefreshedSchedules] = useState({});
   const [scheduleRefreshState, setScheduleRefreshState] = useState({ pendingId: '', error: '' });
+  const [absencePreview, setAbsencePreview] = useState({ pending: false, error: '', days: [], teachingDates: [] });
   const inferred = inferQuickCapture(rawNote);
   const inferredTargetDate = inferPlanningTargetDateFromText(rawNote);
   // Both an explicit pick ('manual') and an explicit clear ('cleared') suppress
@@ -1251,7 +1252,7 @@ function QuickBrainCapture({
   const effectiveTutorDates = Array.isArray(effectiveOptions.tutorAbsenceDates) && effectiveOptions.tutorAbsenceDates.length
     ? effectiveOptions.tutorAbsenceDates
     : tutorAbsenceDetection.inferredDates;
-  const cleanTutorDates = effectiveTutorDates.filter(Boolean);
+  const cleanTutorDates = [...new Set(effectiveTutorDates.filter(Boolean))];
   const tutorAbsenceFullName = CLIENT_TUTOR_OPTIONS.find((tutor) => tutor.shortName === effectiveTutorShortName)?.fullName
     || effectiveTutorShortName;
   // A tutor-absence capture takes precedence over the single-student pause builder
@@ -1280,6 +1281,11 @@ function QuickBrainCapture({
   });
 
   function setOption(key, value) {
+    setOptions((current) => ({ ...current, [key]: value }));
+  }
+
+  function setTutorAbsenceOption(key, value) {
+    setAbsencePreview({ pending: false, error: '', days: [], teachingDates: [] });
     setOptions((current) => ({ ...current, [key]: value }));
   }
 
@@ -1323,6 +1329,7 @@ function QuickBrainCapture({
   }
 
   function setTutorDate(index, value) {
+    setAbsencePreview({ pending: false, error: '', days: [], teachingDates: [] });
     setOptions((current) => {
       const base = Array.isArray(current.tutorAbsenceDates)
         ? [...current.tutorAbsenceDates]
@@ -1330,6 +1337,53 @@ function QuickBrainCapture({
       base[index] = value;
       return { ...current, tutorAbsenceDates: base };
     });
+  }
+
+  function removeTutorDate(date) {
+    setOptions((current) => {
+      const base = Array.isArray(current.tutorAbsenceDates)
+        ? current.tutorAbsenceDates
+        : effectiveTutorDates;
+      return {
+        ...current,
+        tutorAbsenceDates: base.filter((value) => value !== date),
+      };
+    });
+  }
+
+  async function previewTutorAbsencePeriod() {
+    if (!effectiveTutorShortName || !effectiveOptions.tutorAbsencePeriodStart || !effectiveOptions.tutorAbsencePeriodEnd) {
+      return;
+    }
+    setAbsencePreview({ pending: true, error: '', days: [], teachingDates: [] });
+    try {
+      const response = await fetch('/api/admin/planning/tutor-absence', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'preview_period',
+          tutorShortName: effectiveTutorShortName,
+          startDate: effectiveOptions.tutorAbsencePeriodStart,
+          endDate: effectiveOptions.tutorAbsencePeriodEnd,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Tutor absence preview failed');
+      }
+      setAbsencePreview({
+        pending: false,
+        error: '',
+        days: data.preview || [],
+        teachingDates: data.teachingDates || [],
+      });
+      setOptions((current) => ({
+        ...current,
+        tutorAbsenceDates: data.teachingDates || [],
+      }));
+    } catch (error) {
+      setAbsencePreview({ pending: false, error: error.message || 'Tutor absence preview failed', days: [], teachingDates: [] });
+    }
   }
 
   async function handleTutorAbsenceCapture() {
@@ -1597,7 +1651,7 @@ function QuickBrainCapture({
             <SelectField
               label="Tutor"
               value={effectiveTutorShortName}
-              onChange={(value) => setOption('tutorAbsenceShortName', value)}
+              onChange={(value) => setTutorAbsenceOption('tutorAbsenceShortName', value)}
               options={[
                 { value: '', label: 'Select tutor…' },
                 ...CLIENT_TUTOR_OPTIONS.map((tutor) => ({ value: tutor.shortName, label: tutor.fullName })),
@@ -1622,11 +1676,74 @@ function QuickBrainCapture({
             </div>
           </div>
 
+          <div className="mt-4 rounded-xl border border-orange-100 bg-white p-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-orange-700">Away period</p>
+            <p className="mt-1 text-sm text-slate-600">
+              For a clean block away, choose the first and last date away. The dashboard checks MMS and keeps only days with lessons.
+            </p>
+            <div className="mt-3 grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
+              <DateField
+                label="First date away"
+                value={effectiveOptions.tutorAbsencePeriodStart || ''}
+                onChange={(value) => setTutorAbsenceOption('tutorAbsencePeriodStart', value)}
+              />
+              <DateField
+                label="Last date away"
+                value={effectiveOptions.tutorAbsencePeriodEnd || ''}
+                onChange={(value) => setTutorAbsenceOption('tutorAbsencePeriodEnd', value)}
+              />
+              <button
+                type="button"
+                onClick={previewTutorAbsencePeriod}
+                disabled={pending || absencePreview.pending || !effectiveTutorShortName || !effectiveOptions.tutorAbsencePeriodStart || !effectiveOptions.tutorAbsencePeriodEnd}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-4 py-2 text-sm font-semibold text-orange-900 hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {absencePreview.pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                Find teaching dates
+              </button>
+            </div>
+            {absencePreview.error ? <p className="mt-2 text-sm font-semibold text-red-700">{absencePreview.error}</p> : null}
+            {absencePreview.days.length ? (
+              <div className="mt-3 space-y-2">
+                <p className="text-sm font-semibold text-slate-900">
+                  Found {absencePreview.teachingDates.length} teaching date{absencePreview.teachingDates.length === 1 ? '' : 's'} in this period.
+                </p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {absencePreview.days.filter((day) => day.hasLessons).map((day) => (
+                    <div key={day.date} className="rounded-lg border border-orange-100 bg-orange-50/70 px-3 py-2 text-sm text-slate-700">
+                      <span className="font-semibold text-slate-900">{formatTargetDate(day.date)}</span>
+                      <span className="ml-2 text-slate-500">{day.lessonCount} lesson{day.lessonCount === 1 ? '' : 's'}</span>
+                    </div>
+                  ))}
+                </div>
+                {!absencePreview.teachingDates.length ? (
+                  <p className="text-sm text-amber-800">No MMS lessons found for this tutor in that range.</p>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+
           <div className="mt-4 rounded-xl border border-orange-100 bg-white p-3 text-sm text-slate-700">
             {effectiveTutorShortName && cleanTutorDates.length ? (
-              <p className="font-semibold text-slate-900">
-                Will create {cleanTutorDates.length} planning card{cleanTutorDates.length === 1 ? '' : 's'} for {tutorAbsenceFullName} ({cleanTutorDates.join(', ')}). Affected students load from MMS.
-              </p>
+              <div className="space-y-3">
+                <p className="font-semibold text-slate-900">
+                  Will create {cleanTutorDates.length} planning card{cleanTutorDates.length === 1 ? '' : 's'} for {tutorAbsenceFullName}. Affected students load from MMS.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {cleanTutorDates.map((date) => (
+                    <button
+                      key={date}
+                      type="button"
+                      onClick={() => removeTutorDate(date)}
+                      className="inline-flex items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-900 hover:bg-orange-100"
+                      title="Remove this date"
+                    >
+                      {formatTargetDate(date)}
+                      <X className="h-3 w-3" />
+                    </button>
+                  ))}
+                </div>
+              </div>
             ) : (
               <p>Select a tutor and at least one absence date.</p>
             )}
