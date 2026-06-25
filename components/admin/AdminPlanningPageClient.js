@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Check, Loader2, Pencil, Plus, Search, SlidersHorizontal, X } from 'lucide-react';
+import { Check, Loader2, Pencil, Plus, Search, SlidersHorizontal, Trash2, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   PLANNING_AREAS,
@@ -1855,7 +1855,7 @@ function QuickBrainCapture({
   );
 }
 
-function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides = {}, onStatus, onEdit, onProgress, onPauseCompleted, onRepairPauseDetails, onOpenPauseTool, onCreateLinkedAction, pendingId, compact = false }) {
+function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides = {}, onStatus, onArchive, onEdit, onProgress, onPauseCompleted, onRepairPauseDetails, onOpenPauseTool, onCreateLinkedAction, pendingId, compact = false }) {
   const [progressNote, setProgressNote] = useState('');
   const [nextAction, setNextAction] = useState(item.nextAction || '');
   const [pauseToolRan, setPauseToolRan] = useState(false);
@@ -1877,6 +1877,7 @@ function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides =
   const isPauseReminder = isPausePlanningItem(item);
   const isSchoolNote = isSchoolNotePlanningItem(item);
   const isSchoolForwardReview = item.planningId === SCHOOL_FORWARD_PLANNING_ID;
+  const isSystemPlanningItem = item.planningId === SCHOOL_FORWARD_PLANNING_ID || item.planningId === MONDAY_SCHEDULE_PLANNING_ID;
   const pausePaymentConfirmed = hasPausePaymentConfirmation(item);
   const isTutorAbsenceCard = item.linkedWorkflowId === 'tutor-absence' && Boolean(item.linkedTutorId);
   const linkedWorkflowHref = isTutorAbsenceCard
@@ -1974,14 +1975,27 @@ function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides =
             )}
             <h3 className="mt-3 text-base font-semibold text-slate-900">{item.title}</h3>
           </div>
-          <button
-            type="button"
-            onClick={() => onEdit(item)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-            Edit
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {!isSystemPlanningItem && item.status !== 'parked' ? (
+              <button
+                type="button"
+                onClick={() => onArchive?.(item)}
+                disabled={isPending}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-red-100 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Remove
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => onEdit(item)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              Edit
+            </button>
+          </div>
         </div>
       )}
 
@@ -2446,6 +2460,7 @@ function DueTodayCard({
   studentOptions = [],
   paymentExpectationOverrides = {},
   onStatus,
+  onArchive,
   onEdit,
   onProgress,
   onPauseCompleted,
@@ -2474,14 +2489,25 @@ function DueTodayCard({
             {item.owner && item.owner !== 'Unassigned' ? item.owner : 'Unassigned'}
           </span>
         </div>
-        <button
-          type="button"
-          onClick={() => onEdit(item)}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-        >
-          <Pencil className="h-3.5 w-3.5" />
-          Edit
-        </button>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => onArchive?.(item)}
+            disabled={isPending}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-red-100 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Remove
+          </button>
+          <button
+            type="button"
+            onClick={() => onEdit(item)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            Edit
+          </button>
+        </div>
       </div>
 
       <h3 className="mt-2 text-base font-semibold text-slate-900">{story}</h3>
@@ -2527,6 +2553,7 @@ function DueTodayCard({
             studentOptions={studentOptions}
             paymentExpectationOverrides={paymentExpectationOverrides}
             onStatus={onStatus}
+            onArchive={onArchive}
             onEdit={onEdit}
             onProgress={onProgress}
             onPauseCompleted={onPauseCompleted}
@@ -2939,6 +2966,23 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
         mode: 'status',
         planningId: item.planningId,
         status,
+      }, item.planningId);
+    } catch (error) {
+      setSaveState({ pending: false, error: error.message, savedAt: '' });
+      setPendingId('');
+    }
+  }
+
+  async function handleArchiveItem(item) {
+    const confirmed = window.confirm('Remove this planning card from active planning? It will be parked, not deleted, so the history stays available.');
+    if (!confirmed) return;
+
+    try {
+      await postPlanning({
+        mode: 'status',
+        planningId: item.planningId,
+        status: 'parked',
+        progressNote: 'Removed from active Planning board by admin.',
       }, item.planningId);
     } catch (error) {
       setSaveState({ pending: false, error: error.message, savedAt: '' });
@@ -3397,6 +3441,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
                       studentOptions={studentOptions}
                       paymentExpectationOverrides={paymentExpectationOverrides}
                       onStatus={handleStatus}
+                      onArchive={handleArchiveItem}
                       onEdit={startEdit}
                       onProgress={handleProgress}
                       onPauseCompleted={handlePauseCompleted}
@@ -3433,6 +3478,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
                         studentOptions={studentOptions}
                         paymentExpectationOverrides={paymentExpectationOverrides}
                         onStatus={handleStatus}
+                        onArchive={handleArchiveItem}
                         onEdit={startEdit}
                         onProgress={handleProgress}
                         onPauseCompleted={handlePauseCompleted}

@@ -19,6 +19,18 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-25 — Planning remove is soft-delete via parked state
+
+**Feature/change:** Planning cards can now be removed from active work by parking them from the UI. Parked cards remain in `Planning_Items` and keep their `Planning_Progress_Log` history, but they are no longer active meeting work. The finance pause forecast now ignores parked pause-planning cards while still counting `done` pause cards.
+
+**Why it exists:** Sometimes a card is obsolete, duplicated, or captured in the wrong shape. Hard-deleting planning rows would lose context and make sheet recovery harder; parking gives Finn/Tom a safe way to clear the board without damaging the audit trail.
+
+**Source-of-truth impact:** no external truth changes. `Planning_Items.status = parked` is dashboard workflow state. Finance remains derived-context and treats parked pause cards as intentionally withdrawn.
+
+**Files/functions involved:** `components/admin/AdminPlanningPageClient.js` (`handleArchiveItem`, Remove buttons), `lib/admin/pause-forecast.mjs` (`parsePauseWindowsFromPlanning`), `tests/admin/pause-forecast.test.mjs`.
+
+**What to watch:** use `done` for a real pause/action that has been completed, and `parked` for a card that should no longer drive work or finance forecasting. If a grouped tutor absence card replaces older single-week cards, park the obsolete cards rather than deleting sheet rows.
+
 ### 2026-06-25 — Tutor absence parent messages group by cancellation period
 
 **Feature/change:** Repeated cancelled tutor-absence dates for the same student now surface a single period parent message in `/admin/workflows/tutor-absence`. Copying/sending remains manual; clicking "Mark period messaged" updates the per-date `Tutor_Absence_State.messageState[eventId].messaged` flags for all included lessons. Individual lesson messages remain available as fallback controls.

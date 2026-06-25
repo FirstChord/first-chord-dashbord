@@ -124,6 +124,7 @@ The active surface is the private admin dashboard under `/admin`.
   - `/admin/planning` now has a focused `Work on the school notes` capture block for `Learning note` and `Strategic note` item types.
   - The note shape is intentionally "structured wrapper, open body": title, type, area, owner/status, main note or transcript summary, key ideas, possible First Chord applications, and optional next action.
   - Notes are stored in existing `Planning_Items`; progress remains in `Planning_Progress_Log`. No new tab or knowledge-management system was added.
+  - Planning cards can be removed from active work by parking them. This preserves history, removes them from due/active work, and parked pause-planning cards are ignored by the finance pause forecast.
   - Notes with a next action can create a linked `Action` card, preserving the original thinking while turning the usable part into executable work.
   - Overview "Let's Work On The School" cards now route into the relevant Planning note views (`learning_note` or `strategic_note`) instead of the whole board.
 

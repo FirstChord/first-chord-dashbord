@@ -36,6 +36,15 @@ test('parses away-period and single pause windows, flags unparseable ones', () =
   assert.equal(away.end.toISOString().slice(0, 10), '2026-08-17');
 });
 
+test('parked pause planning items are ignored but done items still forecast', () => {
+  const { windows } = parsePauseWindowsFromPlanning([
+    { ...awayItem('a', '2026-07-06', '2026-08-17'), status: 'parked' },
+    { ...awayItem('b', '2026-07-06', '2026-08-17'), status: 'done' },
+  ]);
+
+  assert.deepEqual(windows.map((window) => window.mmsId), ['b']);
+});
+
 test('counts overlapping pauses per week and reduces margin', () => {
   const forecast = buildPauseForecast({
     totals,
