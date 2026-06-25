@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  buildTutorAbsenceCancellationMessageGroups,
   buildCoverTutorOptions,
   buildTutorAbsenceMessage,
   buildTutorAbsencePausePlanningBundle,
@@ -139,6 +140,7 @@ test('summariseTutorAbsenceState requires payment handling for cancelled lessons
 
   assert.equal(isTutorAbsencePaymentHandled(lessons[0], { pauseToolRan: true }), false);
   assert.equal(isTutorAbsencePaymentHandled(lessons[0], { pauseSkipped: true }), true);
+  assert.equal(isTutorAbsencePaymentHandled({ paymentExpectation: 'stripe_paused_expected' }, {}), true);
 
   const incomplete = summariseTutorAbsenceState({
     lessons,
@@ -399,4 +401,51 @@ test('buildTutorAbsencePausePlanningBundle does not turn fortnightly-looking gap
     'single lesson',
     'single lesson',
   ]);
+});
+
+test('buildTutorAbsenceCancellationMessageGroups creates one parent message for repeated cancelled dates', () => {
+  const groups = buildTutorAbsenceCancellationMessageGroups({
+    tutorShortName: 'Tom',
+    rows: [
+      {
+        absenceId: 'tutor_absence:Tom:2026-07-03',
+        tutorShortName: 'Tom',
+        tutorName: 'Tom Walters',
+        absenceDate: '2026-07-03',
+        decision: 'cancel_day',
+        affectedLessons: [{
+          eventId: 'evt_1',
+          studentMmsId: 'sdt_ada',
+          studentName: 'Ada Neocleous',
+          parentName: 'Rachel Neocleous',
+          lessonDate: '2026-07-03',
+        }],
+        messageState: {},
+      },
+      {
+        absenceId: 'tutor_absence:Tom:2026-07-10',
+        tutorShortName: 'Tom',
+        tutorName: 'Tom Walters',
+        absenceDate: '2026-07-10',
+        decision: 'cancel_day',
+        affectedLessons: [{
+          eventId: 'evt_2',
+          studentMmsId: 'sdt_ada',
+          studentName: 'Ada Neocleous',
+          parentName: 'Rachel Neocleous',
+          lessonDate: '2026-07-10',
+        }],
+        messageState: { evt_2: { messaged: true } },
+      },
+    ],
+  });
+
+  assert.equal(groups.length, 1);
+  assert.equal(groups[0].groupKey, 'tutor_absence_cancel_message_tom_sdt_ada_2026_07_03_2026_07_10');
+  assert.deepEqual(groups[0].missedDates, ['2026-07-03', '2026-07-10']);
+  assert.equal(groups[0].messagedCount, 1);
+  assert.equal(groups[0].allMessaged, false);
+  assert.match(groups[0].message, /Heya Rachel/u);
+  assert.match(groups[0].message, /Tom is away/u);
+  assert.match(groups[0].message, /Friday 3rd July and Friday 10th July/u);
 });

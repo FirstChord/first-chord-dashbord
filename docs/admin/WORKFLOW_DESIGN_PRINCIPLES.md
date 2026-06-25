@@ -180,6 +180,12 @@ State:
 
 - `Tutor_Absence_State`
 
+Important distinction:
+
+- the system stores one dated absence record per tutor/day because cover, payment pauses, finance forecasting, and audit trails need exact lesson dates
+- for repeated cancellations affecting the same student, the parent message should be grouped into one period message where possible, then mark all included dated records messaged
+- do not replace per-date absence state with a single broad absence record unless the downstream payment and finance assumptions are redesigned
+
 ### Planning / Brain Inbox
 
 `/admin/planning` captures human-created work: ideas, initiatives, and actions.

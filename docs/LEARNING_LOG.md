@@ -19,6 +19,18 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-25 — Tutor absence parent messages group by cancellation period
+
+**Feature/change:** Repeated cancelled tutor-absence dates for the same student now surface a single period parent message in `/admin/workflows/tutor-absence`. Copying/sending remains manual; clicking "Mark period messaged" updates the per-date `Tutor_Absence_State.messageState[eventId].messaged` flags for all included lessons. Individual lesson messages remain available as fallback controls.
+
+**Why it exists:** Long summer absences may create many dated tutor absence records for operational accuracy, but parents should not receive one repetitive message per week. This keeps the data precise while reducing communication noise and admin cognitive load.
+
+**Source-of-truth impact:** no external truth changes. MMS remains lesson/schedule truth. `Tutor_Absence_State` remains workflow state. Grouped messages are a derived UI/action layer over per-date state, not a new source of truth.
+
+**Files/functions involved:** `lib/admin/tutor-absence-helpers.mjs` (`buildTutorAbsenceCancellationMessageGroups`, `isTutorAbsencePaymentHandled`), `lib/admin/tutor-absence.js` (`markTutorAbsenceCancellationGroupMessaged`, `getTutorAbsenceWorkflow`), `app/api/admin/tutor-absence/route.js`, `components/admin/AdminTutorAbsencePageClient.js`, `tests/admin/tutor-absence-helpers.test.mjs`.
+
+**What to watch:** grouping only appears after relevant absence dates are saved as `cancel_day`; if later changed to cover, check any auto-created pause Planning item and communication state manually. The grouping assumes weekly-looking repeated dates; wider gaps stay separate to avoid turning separate absences into one broad period.
+
 ### 2026-06-25 — Tutor absence cancellations feed structured pause planning
 
 **Feature/change:** Cancelled tutor absences now auto-create idempotent structured pause `Planning_Items` for affected students. The bridge uses `buildTutorAbsencePausePlanningBundle` / `buildTutorAbsencePausePlanningItems` in `lib/admin/tutor-absence-helpers.mjs` and is called from `saveTutorAbsenceWorkflow`. Single missed lessons use the existing `Lesson date: YYYY-MM-DD` format. Repeated cancelled dates for the same student are grouped into one finance-readable away-period plan with `First lesson to pause date: YYYY-MM-DD` and `Returning from date: YYYY-MM-DD`. Students already marked `stripe_paused_expected` or explicitly marked "not needed" are skipped; students whose payment expectation was aligned in the absence workflow are created as `done`.

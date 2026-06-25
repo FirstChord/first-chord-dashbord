@@ -85,6 +85,7 @@ The active surface is the private admin dashboard under `/admin`.
   - pause expectation now auto-reverts `stripe_paused_expected` → `stripe_active_expected` when a high-confidence subscription-ID-matched pause window ends, so `PAUSE EXPECTATION STALE` no longer needs per-student manual flipping
   - tutor absences can be captured from Planning quick-capture ("pause tutor <name>" / "<name> off friday"): one card per day, affected students snapshotted, deep-linked to the tutor-absence workflow; for longer blocks away, Planning can preview an MMS date range and keep only actual teaching dates before creating the per-day cards
   - cancelled tutor absences auto-create idempotent structured pause Planning items for each affected student who is not already `stripe_paused_expected` / marked not-needed; repeated cancelled dates for the same student are grouped into one away-period pause plan where possible, so finance can see a clean pause window instead of several separate one-week items
+  - parent communication for repeated cancelled tutor absences is grouped by student/period: the system still stores one dated absence record per lesson day, but the workflow surfaces one WhatsApp message for the affected block and marks all included date records messaged
   - the tutor-absence workflow page now lists all logged absences, not just the first open one
 - Issue-queue clarity (2026-06-15):
   - `/admin/flags` shows a read-only banner for any MMS ID shared by 2+ Students-sheet rows (silent profile-misroute protection)

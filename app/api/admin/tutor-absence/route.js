@@ -1,6 +1,10 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
-import { deleteTutorAbsenceWorkflow, saveTutorAbsenceWorkflow } from '@/lib/admin/tutor-absence';
+import {
+  deleteTutorAbsenceWorkflow,
+  markTutorAbsenceCancellationGroupMessaged,
+  saveTutorAbsenceWorkflow,
+} from '@/lib/admin/tutor-absence';
 
 export async function POST(request) {
   const session = await getServerSession(authOptions);
@@ -10,6 +14,19 @@ export async function POST(request) {
   }
 
   const body = await request.json();
+  const action = `${body?.action || ''}`.trim();
+  if (action === 'mark_group_messaged') {
+    try {
+      const result = await markTutorAbsenceCancellationGroupMessaged({
+        groupKey: body?.groupKey || '',
+        updatedBy: session.user.email || '',
+      });
+      return Response.json({ success: true, ...result });
+    } catch (error) {
+      return Response.json({ error: error.message || 'Grouped message update failed' }, { status: 500 });
+    }
+  }
+
   const absenceId = `${body?.absenceId || ''}`.trim();
 
   if (!absenceId) {

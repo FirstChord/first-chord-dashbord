@@ -2,7 +2,12 @@
 
 import { useMemo, useState } from 'react';
 import { Check, Copy, Loader2, Search, Trash2 } from 'lucide-react';
-import { buildTutorAbsenceMessage, formatTutorAbsenceDate, summariseTutorAbsenceState } from '@/lib/admin/tutor-absence-helpers.mjs';
+import {
+  buildTutorAbsenceMessage,
+  formatTutorAbsenceDate,
+  isTutorAbsencePaymentHandled,
+  summariseTutorAbsenceState,
+} from '@/lib/admin/tutor-absence-helpers.mjs';
 import { logCommunicationCopy } from '@/lib/admin/log-communication-copy.js';
 
 const PAYMENT_PAUSE_PWA_URL = process.env.NEXT_PUBLIC_PAYMENT_PAUSE_PWA_URL || 'https://payment-pause-pwa.web.app/';
@@ -83,7 +88,7 @@ function resolveHint({ decision = '', summary = {}, selectedCoverTutor = null } 
   return '';
 }
 
-function MessageButton({ body, copiedId, copyId, onCopy, context = null }) {
+function MessageButton({ body, copiedId, copyId, onCopy, context = null, label = 'Copy message' }) {
   return (
     <button
       type="button"
@@ -91,7 +96,7 @@ function MessageButton({ body, copiedId, copyId, onCopy, context = null }) {
       className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-blue-50"
     >
       {copiedId === copyId ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5 text-slate-500" />}
-      Copy message
+      {label}
     </button>
   );
 }
@@ -104,10 +109,17 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
   const [saveState, setSaveState] = useState({ pending: false, error: '', savedAt: '' });
   const [copiedId, setCopiedId] = useState('');
   const [paymentUpdateState, setPaymentUpdateState] = useState({ pendingId: '', error: '' });
+  const [groupMessageState, setGroupMessageState] = useState({ pendingKey: '', error: '', markedKey: '' });
   const hasSavedAbsence = Boolean(workflow.state.createdAt || workflow.state.updatedAt || workflow.state.resolvedAt);
 
   const selectedCoverTutor = workflow.coverOptions.find((tutor) => tutor.shortName === coverTutorShortName) || null;
   const workflowChecklist = messageState.__workflow || {};
+  const cancellationMessageGroups = workflow.cancellationMessageGroups || [];
+  const groupedMessageEventIds = useMemo(() => new Set(
+    cancellationMessageGroups.flatMap((group) => (
+      group.occurrences || []
+    ).map((occurrence) => occurrence.eventId).filter(Boolean)),
+  ), [cancellationMessageGroups]);
   const summary = useMemo(() => summariseTutorAbsenceState({
     lessons: workflow.lessons,
     messageState,
@@ -170,6 +182,29 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
         body,
         source: 'tutor_absence',
       });
+    }
+  }
+
+  async function markGroupMessaged(groupKey) {
+    if (!groupKey) return;
+    setGroupMessageState({ pendingKey: groupKey, error: '', markedKey: '' });
+    try {
+      const response = await fetch('/api/admin/tutor-absence', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'mark_group_messaged',
+          groupKey,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error || 'Could not mark grouped message sent');
+      }
+      setGroupMessageState({ pendingKey: '', error: '', markedKey: groupKey });
+      window.location.reload();
+    } catch (error) {
+      setGroupMessageState({ pendingKey: '', error: error.message || 'Could not mark grouped message sent', markedKey: '' });
     }
   }
 
@@ -413,13 +448,72 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
         </section>
       ) : null}
 
+      {decision === 'cancel_day' && cancellationMessageGroups.length ? (
+        <section className={cardClasses('border-indigo-100 bg-indigo-50/50')}>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900">Period parent messages</h3>
+              <p className="mt-1 text-sm text-slate-600">
+                Use these first when the same student is affected across several cancelled dates. The dated records stay separate underneath, but the parent gets one clear message for the block.
+              </p>
+            </div>
+            <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-indigo-800">
+              {cancellationMessageGroups.length} grouped message{cancellationMessageGroups.length === 1 ? '' : 's'}
+            </span>
+          </div>
+
+          <div className="mt-4 space-y-3">
+            {cancellationMessageGroups.map((group) => (
+              <div key={group.groupKey} className="rounded-2xl border border-indigo-100 bg-white p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-slate-900">{group.studentName}</p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      {group.missedDates.map(formatTutorAbsenceDate).join(' · ')}
+                    </p>
+                    <p className="mt-1 text-xs font-medium text-indigo-800">
+                      {group.messagedCount} / {group.occurrenceCount} dates marked messaged
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <MessageButton
+                      body={group.message}
+                      copiedId={copiedId}
+                      copyId={group.groupKey}
+                      onCopy={copyMessage}
+                      context={{ mmsId: group.studentMmsId, studentName: group.studentName }}
+                      label="Copy period message"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => markGroupMessaged(group.groupKey)}
+                      disabled={group.allMessaged || groupMessageState.pendingKey === group.groupKey}
+                      className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-900 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {groupMessageState.pendingKey === group.groupKey ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                      {group.allMessaged ? 'Period messaged' : 'Mark period messaged'}
+                    </button>
+                  </div>
+                </div>
+                <pre className="mt-3 whitespace-pre-wrap rounded-xl bg-slate-50 p-3 text-xs leading-5 text-slate-700">{group.message}</pre>
+              </div>
+            ))}
+          </div>
+          {groupMessageState.error ? (
+            <p className="mt-3 text-sm font-semibold text-red-700">{groupMessageState.error}</p>
+          ) : null}
+        </section>
+      ) : null}
+
       {workflow.selectedTutor ? (
         <section className={cardClasses()}>
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <h3 className="text-lg font-semibold text-slate-900">Affected Lessons</h3>
               <p className="mt-1 text-sm text-slate-600">
-                Parent messages stay manual: copy, send in WhatsApp, then mark messaged.
+                {decision === 'cancel_day' && cancellationMessageGroups.length
+                  ? 'Use the period messages above for repeated absences. Individual messages here are fallback controls for one-off edits or special cases.'
+                  : 'Parent messages stay manual: copy, send in WhatsApp, then mark messaged.'}
               </p>
             </div>
             {workflow.lessons.length ? (
@@ -440,19 +534,33 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
               });
               const state = messageState[lesson.eventId] || {};
               const pauseUrl = buildTutorAbsencePaymentPauseUrl({ lesson, workflow });
-              const paymentHandled = Boolean(state.pauseSkipped || (state.pauseToolRan && state.paymentExpectationAligned));
+              const alreadyPausedExpected = lesson.paymentExpectation === 'stripe_paused_expected';
+              const paymentHandled = isTutorAbsencePaymentHandled(lesson, state);
+              const hasPeriodMessage = groupedMessageEventIds.has(lesson.eventId);
 
               return (
-                <div key={lesson.eventId} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div key={lesson.eventId} className={`rounded-2xl border p-4 ${hasPeriodMessage ? 'border-indigo-100 bg-indigo-50/30' : 'border-slate-200 bg-slate-50'}`}>
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>
                       <p className="font-semibold text-slate-900">{lesson.lessonTime} · {lesson.studentName}</p>
                       <p className="mt-1 text-sm text-slate-600">
                         {lesson.instrument || 'Instrument unknown'} · {lesson.durationMinutes || '—'} mins · Parent: {lesson.parentName || 'not visible'}
                       </p>
+                      {hasPeriodMessage ? (
+                        <p className="mt-2 inline-flex rounded-full bg-indigo-100 px-2.5 py-1 text-xs font-semibold text-indigo-900">
+                          Covered by a period message above
+                        </p>
+                      ) : null}
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <MessageButton body={message} copiedId={copiedId} copyId={lesson.eventId} onCopy={copyMessage} context={{ mmsId: lesson.studentMmsId, studentName: lesson.studentName }} />
+                      <MessageButton
+                        body={message}
+                        copiedId={copiedId}
+                        copyId={lesson.eventId}
+                        onCopy={copyMessage}
+                        context={{ mmsId: lesson.studentMmsId, studentName: lesson.studentName }}
+                        label={hasPeriodMessage ? 'Copy individual fallback' : 'Copy message'}
+                      />
                       <label className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700">
                         <input
                           type="checkbox"
@@ -474,13 +582,18 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
                           {paymentHandled ? 'Handled' : 'Needs payment check'}
                         </span>
                       </div>
+                      {alreadyPausedExpected ? (
+                        <p className="mt-3 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-900">
+                          Already paused expected, so no extra payment action is needed for this lesson.
+                        </p>
+                      ) : null}
                       <div className="mt-3 flex flex-wrap items-center gap-2">
                         {pauseUrl ? (
                           <a
                             href={pauseUrl}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex rounded-lg border border-violet-300 bg-white px-3 py-1.5 text-xs font-semibold text-violet-950 hover:bg-violet-50"
+                            className={`inline-flex rounded-lg border border-violet-300 bg-white px-3 py-1.5 text-xs font-semibold text-violet-950 hover:bg-violet-50 ${alreadyPausedExpected ? 'pointer-events-none opacity-50' : ''}`}
                           >
                             Open payment pause tool
                           </a>
@@ -489,7 +602,7 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
                           <input
                             type="checkbox"
                             checked={Boolean(state.pauseToolRan)}
-                            disabled={Boolean(state.pauseSkipped)}
+                            disabled={alreadyPausedExpected || Boolean(state.pauseSkipped)}
                             onChange={(event) => updateMessageState(lesson.eventId, { pauseToolRan: event.target.checked })}
                           />
                           Pause tool run
@@ -497,16 +610,17 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
                         <button
                           type="button"
                           onClick={() => setPausedExpected(lesson)}
-                          disabled={Boolean(state.pauseSkipped) || paymentUpdateState.pendingId === lesson.eventId || Boolean(state.paymentExpectationAligned)}
+                          disabled={alreadyPausedExpected || Boolean(state.pauseSkipped) || paymentUpdateState.pendingId === lesson.eventId || Boolean(state.paymentExpectationAligned)}
                           className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-950 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {paymentUpdateState.pendingId === lesson.eventId ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-                          {state.paymentExpectationAligned ? 'Paused expected set' : 'Set paused expected'}
+                          {alreadyPausedExpected || state.paymentExpectationAligned ? 'Paused expected set' : 'Set paused expected'}
                         </button>
                         <label className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700">
                           <input
                             type="checkbox"
                             checked={Boolean(state.pauseSkipped)}
+                            disabled={alreadyPausedExpected}
                             onChange={(event) => updateMessageState(lesson.eventId, {
                               pauseSkipped: event.target.checked,
                               pauseToolRan: event.target.checked ? false : state.pauseToolRan,
