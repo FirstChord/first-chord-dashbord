@@ -1860,7 +1860,7 @@ function QuickBrainCapture({
   );
 }
 
-function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides = {}, onStatus, onArchive, onEdit, onProgress, onPauseCompleted, onRepairPauseDetails, onOpenPauseTool, onCreateLinkedAction, pendingId, compact = false }) {
+function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides = {}, onStatus, onArchive, onEdit, onProgress, onPauseCompleted, onRepairPauseDetails, onOpenPauseTool, onOpenWorkflowPanel, onCreateLinkedAction, pendingId, compact = false }) {
   const [progressNote, setProgressNote] = useState('');
   const [nextAction, setNextAction] = useState(item.nextAction || '');
   const [pauseToolRan, setPauseToolRan] = useState(false);
@@ -2046,12 +2046,26 @@ function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides =
       )}
 
       {linkedWorkflowHref && !isPauseReminder ? (
-        <Link
-          href={linkedWorkflowHref}
-          className="mt-3 inline-flex rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-white"
-        >
-          {isTutorAbsenceCard ? 'Open tutor absence workflow →' : 'Open linked workflow'}
-        </Link>
+        isTutorAbsenceCard ? (
+          <button
+            type="button"
+            onClick={() => onOpenWorkflowPanel?.({
+              url: linkedWorkflowHref,
+              title: item.title || 'Tutor absence',
+              eyebrow: 'Tutor absence workflow',
+            })}
+            className="mt-3 inline-flex rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-white"
+          >
+            Open tutor absence workflow →
+          </button>
+        ) : (
+          <Link
+            href={linkedWorkflowHref}
+            className="mt-3 inline-flex rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-white"
+          >
+            Open linked workflow
+          </Link>
+        )
       ) : null}
 
       {item.latestProgress && !isPauseReminder && (
@@ -2471,6 +2485,7 @@ function DueTodayCard({
   onPauseCompleted,
   onRepairPauseDetails,
   onOpenPauseTool,
+  onOpenWorkflowPanel,
   onCreateLinkedAction,
   onDefer,
   pendingId,
@@ -2564,6 +2579,7 @@ function DueTodayCard({
             onPauseCompleted={onPauseCompleted}
             onRepairPauseDetails={onRepairPauseDetails}
             onOpenPauseTool={onOpenPauseTool}
+            onOpenWorkflowPanel={onOpenWorkflowPanel}
             onCreateLinkedAction={onCreateLinkedAction}
             pendingId={pendingId}
             compact
@@ -2648,15 +2664,19 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
   const [showDone, setShowDone] = useState(false);
   // { url, name } when the pause-tool side window is open; null when closed.
   const [pauseToolPanel, setPauseToolPanel] = useState(null);
+  const [workflowPanel, setWorkflowPanel] = useState(null);
 
   useEffect(() => {
-    if (!pauseToolPanel) return undefined;
+    if (!pauseToolPanel && !workflowPanel) return undefined;
     function onKey(event) {
-      if (event.key === 'Escape') setPauseToolPanel(null);
+      if (event.key === 'Escape') {
+        setPauseToolPanel(null);
+        setWorkflowPanel(null);
+      }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [pauseToolPanel]);
+  }, [pauseToolPanel, workflowPanel]);
   const editPanelRef = useRef(null);
 
   useEffect(() => {
@@ -3464,6 +3484,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
                       onPauseCompleted={handlePauseCompleted}
                       onRepairPauseDetails={handleRepairPauseDetails}
                       onOpenPauseTool={(url, name) => setPauseToolPanel({ url, name })}
+                      onOpenWorkflowPanel={setWorkflowPanel}
                       onCreateLinkedAction={handleCreateLinkedAction}
                       onDefer={handleDefer}
                       pendingId={pendingId}
@@ -3501,6 +3522,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
                         onPauseCompleted={handlePauseCompleted}
                         onRepairPauseDetails={handleRepairPauseDetails}
                         onOpenPauseTool={(url, name) => setPauseToolPanel({ url, name })}
+                        onOpenWorkflowPanel={setWorkflowPanel}
                         onCreateLinkedAction={handleCreateLinkedAction}
                         pendingId={pendingId}
                       />
@@ -3544,12 +3566,17 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
               <p className="mt-1 text-sm leading-6 text-slate-600">
                 Start the cancel-or-cover workflow for a tutor being off.
               </p>
-              <Link
-                href="/admin/workflows/tutor-absence"
+              <button
+                type="button"
+                onClick={() => setWorkflowPanel({
+                  url: '/admin/workflows/tutor-absence',
+                  title: 'Tutor absence',
+                  eyebrow: 'Tutor absence workflow',
+                })}
                 className="mt-3 inline-flex rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-700"
               >
                 Open workflow
-              </Link>
+              </button>
             </div>
             <Link
               href="/admin/workflows"
@@ -3630,6 +3657,45 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
               key={pauseToolPanel.url}
               src={pauseToolPanel.url}
               title={`Payment pause tool: ${pauseToolPanel.name}`}
+              className="h-full w-full flex-1 border-0"
+            />
+          </aside>
+        </div>
+      ) : null}
+
+      {workflowPanel ? (
+        <div className="fixed inset-0 z-50 flex">
+          <div
+            className="flex-1 bg-slate-900/30 backdrop-blur-[1px]"
+            onClick={() => setWorkflowPanel(null)}
+            aria-hidden
+          />
+          <aside className="flex h-full w-full max-w-5xl flex-col border-l border-slate-200 bg-white shadow-2xl">
+            <header className="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-3">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-slate-500">{workflowPanel.eyebrow || 'Workflow'}</p>
+                <p className="text-sm font-semibold text-slate-900">{workflowPanel.title || 'Workflow'}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Link
+                  href={workflowPanel.url}
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
+                >
+                  Open full page
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setWorkflowPanel(null)}
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
+                >
+                  Close ✕
+                </button>
+              </div>
+            </header>
+            <iframe
+              key={workflowPanel.url}
+              src={workflowPanel.url}
+              title={`${workflowPanel.eyebrow || 'Workflow'}: ${workflowPanel.title || 'Workflow'}`}
               className="h-full w-full flex-1 border-0"
             />
           </aside>
