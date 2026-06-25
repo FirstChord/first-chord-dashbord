@@ -234,7 +234,7 @@ export default async function AdminFinancePage({ searchParams }) {
       </section>
 
       <section className="grid gap-4 md:grid-cols-3">
-        <StatCard label="Revenue (monthly)" value={formatMoney(totals.grossRevenueMonthly)} helper={`${formatMoney(totals.netRevenueMonthly)} after VAT · ${revenue.active.count} active`} />
+        <StatCard label="Gross revenue (monthly)" value={formatMoney(totals.grossRevenueMonthly)} helper={`${formatMoney(totals.netRevenueMonthly)} after VAT · ${revenue.active.count} active`} />
         <StatCard label="Costs (monthly)" value={formatMoney(totals.totalCostMonthly)} helper="Tutor pay + salaries + overhead" tone="border-amber-100 bg-amber-50/60" />
         <StatCard label="Paused (not billing)" value={formatMoney(revenue.paused.weekly)} helper={`${revenue.paused.count} students · per week`} tone="border-violet-100 bg-violet-50/60" />
       </section>
@@ -342,7 +342,7 @@ export default async function AdminFinancePage({ searchParams }) {
           </p>
         ) : (
           <div className="mt-4 grid gap-4 md:grid-cols-3">
-            <TrendMetric label="Revenue (monthly)" latest={trend.summary.revenueMonthly.latest} delta={trend.deltas?.revenueMonthly} values={trend.points.map((p) => p.revenueMonthly)} stroke="#2563eb" money />
+            <TrendMetric label="Gross revenue (monthly)" latest={trend.summary.revenueMonthly.latest} delta={trend.deltas?.revenueMonthly} values={trend.points.map((p) => p.revenueMonthly)} stroke="#2563eb" money />
             <TrendMetric label="Margin (monthly)" latest={trend.summary.marginMonthly.latest} delta={trend.deltas?.marginMonthly} values={trend.points.map((p) => p.marginMonthly)} stroke="#059669" money />
             <TrendMetric label="Active students" latest={trend.summary.activeCount.latest} delta={trend.deltas?.activeCount} values={trend.points.map((p) => p.activeCount)} stroke="#7c3aed" />
           </div>

@@ -5,7 +5,7 @@ import { buildFinanceCoverage } from '../../lib/admin/finance-coverage.mjs';
 import { parseTutorPay } from '../../lib/admin/cost-helpers.mjs';
 
 const tutorPay = parseTutorPay([
-  { tutor: 'Finn', pay_model: 'salary', monthly_salary: '2600' },
+  { tutor: 'Salaried Tutor', pay_model: 'salary', monthly_salary: '1000' },
   { tutor: 'Patrick', pay_model: 'hourly', hourly_rate: '24' },
 ]);
 
