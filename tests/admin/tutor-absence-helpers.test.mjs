@@ -356,3 +356,47 @@ test('buildTutorAbsencePausePlanningBundle keeps separate absence blocks apart',
     'single lesson',
   ]);
 });
+
+test('buildTutorAbsencePausePlanningBundle does not turn fortnightly-looking gaps into a continuous away period', () => {
+  const bundle = buildTutorAbsencePausePlanningBundle({
+    rows: [
+      {
+        absenceId: 'tutor_absence:Tom:2026-07-03',
+        tutorShortName: 'Tom',
+        tutorName: 'Tom Walters',
+        absenceDate: '2026-07-03',
+        decision: 'cancel_day',
+        affectedLessons: [{
+          eventId: 'evt_first',
+          studentMmsId: 'sdt_ada',
+          studentName: 'Ada Neocleous',
+          lessonDate: '2026-07-03',
+          paymentExpectation: 'stripe_active_expected',
+        }],
+        messageState: {},
+      },
+      {
+        absenceId: 'tutor_absence:Tom:2026-07-17',
+        tutorShortName: 'Tom',
+        tutorName: 'Tom Walters',
+        absenceDate: '2026-07-17',
+        decision: 'cancel_day',
+        affectedLessons: [{
+          eventId: 'evt_second',
+          studentMmsId: 'sdt_ada',
+          studentName: 'Ada Neocleous',
+          lessonDate: '2026-07-17',
+          paymentExpectation: 'stripe_active_expected',
+        }],
+        messageState: {},
+      },
+    ],
+    now: new Date('2026-06-25T10:00:00.000Z'),
+  });
+
+  assert.equal(bundle.plans.length, 2);
+  assert.deepEqual(bundle.plans.map((plan) => plan.item.notes.match(/Pause type: ([^.]+)/u)?.[1]), [
+    'single lesson',
+    'single lesson',
+  ]);
+});
