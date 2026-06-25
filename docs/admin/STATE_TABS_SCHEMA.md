@@ -45,6 +45,7 @@ Some source formats are fragile because they come from human-edited external sys
 - MMS sign-up form labels `Preferred days` and `Preferred times` feed waiting-list availability matching. If the MMS form wording changes, update the waiting-list parser/tests before relying on capacity hints.
 - The Google Sheets `Students` header row is a contract for dashboard reads, FC regeneration, backups, and archive/delete flows. Protect the header row in Google Sheets with an edit-warning. If a column is renamed or moved, update the readers/tests intentionally.
 - GitHub scheduled workflows can be disabled after long inactivity. The schedule-refresh cron is useful, but it should still be checked from the health/operations rhythm rather than assumed permanent.
+- **Pause planning notes → pause forecast.** `buildPauseForecast` (`lib/admin/pause-forecast.mjs`) parses pause-window dates from the `Planning_Items` notes written by `buildStructuredPausePlanningDraft`: `First lesson to pause date: YYYY-MM-DD` + `Returning from date: YYYY-MM-DD` (away period), and `Lesson date: YYYY-MM-DD` (single lesson). If that helper's note wording changes, update the regexes/tests in `pause-forecast.mjs` — otherwise the forecast silently stops seeing those pauses (it does surface an `unparsedCount`, but only for items it recognises as pauses by title/notes).
 
 ## Setup And Backup Checks
 

@@ -10,6 +10,8 @@ import { buildExpenseLogSummary, EXPENSE_LOG_CATEGORIES, parseTutorPay } from '@
 import { buildFinanceCoverage, FLAG_LABELS as FINANCE_FLAG_LABELS } from '@/lib/admin/finance-coverage.mjs';
 import { buildFinanceTrend } from '@/lib/admin/finance-trend.mjs';
 import { buildFinanceScenario } from '@/lib/admin/finance-scenario.mjs';
+import { buildPauseForecast } from '@/lib/admin/pause-forecast.mjs';
+import { getPlanningItemRows } from '@/lib/admin/sheets';
 import { authOptions } from '@/lib/admin/auth';
 import SaveSpendButton from '@/components/admin/SaveSpendButton';
 
@@ -161,13 +163,14 @@ export default async function AdminFinancePage({ searchParams }) {
   const params = (await searchParams) || {};
   const trendPeriod = params.trend === 'monthly' ? 'monthly' : 'weekly';
 
-  const [students, scheduleRows, tutorPayRows, expenseRows, expenseLogRows, snapshotRows] = await Promise.all([
+  const [students, scheduleRows, tutorPayRows, expenseRows, expenseLogRows, snapshotRows, planningRows] = await Promise.all([
     getOperationalAdminStudents(),
     getScheduleContextRows(),
     getTutorPayRows(),
     getExpenseRows(),
     getExpenseLogRows(),
     getFinanceSnapshotRows(),
+    getPlanningItemRows(),
   ]);
   const trend = buildFinanceTrend(snapshotRows, { period: trendPeriod, limit: 12 });
   const scheduleByMmsId = enrichScheduleContextsWithSharedSlots(scheduleRows);
@@ -189,6 +192,18 @@ export default async function AdminFinancePage({ searchParams }) {
   });
   const activeNow = revenue.active.count;
   const summerPreset = (pct) => -Math.round(activeNow * pct);
+
+  const activeMmsIds = enriched
+    .filter((s) => `${s.lifecycleStatus || ''}`.trim() === 'active')
+    .map((s) => s.mmsId)
+    .filter(Boolean);
+  const pauseForecast = buildPauseForecast({
+    totals,
+    activeCount: activeNow,
+    activeMmsIds,
+    pauseItems: planningRows,
+    weeks: 12,
+  });
 
   const marginTone = totals.marginMonthly >= 0 ? 'border-emerald-200 bg-emerald-50' : 'border-rose-200 bg-rose-50';
   const today = new Date().toISOString().slice(0, 10);
@@ -334,6 +349,60 @@ export default async function AdminFinancePage({ searchParams }) {
         )}
         <p className="mt-3 text-xs text-slate-500">
           Range {trend.summary.firstPeriod || '—'} → {trend.summary.lastPeriod || '—'}. Estimate series; missing periods are shown as gaps, not zeros.
+        </p>
+      </section>
+
+      <section className="rounded-[1.6rem] border border-blue-100 bg-white/90 p-5 shadow-sm">
+        <h2 className="text-base font-semibold text-slate-900">What&apos;s coming — planned pauses</h2>
+        <p className="mt-1 max-w-2xl text-sm text-slate-600">
+          Projected margin over the next {pauseForecast.summary.horizonWeeks} weeks from pauses already in Planning
+          ({pauseForecast.summary.windowCount} window{pauseForecast.summary.windowCount === 1 ? '' : 's'}). Grounded forecast, not a guess.
+        </p>
+
+        {pauseForecast.summary.windowCount === 0 ? (
+          <p className="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+            No planned pauses for active students in the next {pauseForecast.summary.horizonWeeks} weeks — projection is flat at the current{' '}
+            {formatMoney(pauseForecast.summary.baseMarginMonthly)}/mo margin.
+          </p>
+        ) : (
+          <>
+            <div className="mt-3 grid gap-4 md:grid-cols-3">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Lowest week</p>
+                <p className="mt-1 text-lg font-semibold text-slate-900">
+                  {pauseForecast.summary.trough ? formatMoney(pauseForecast.summary.trough.marginMonthly) : '—'}/mo
+                </p>
+                <p className="mt-1 text-xs text-slate-600">
+                  {pauseForecast.summary.trough
+                    ? `${formatDate(pauseForecast.summary.trough.weekStart)} · ${pauseForecast.summary.trough.activeProjected} active (${pauseForecast.summary.maxPausedInAWeek} paused)`
+                    : ''}
+                </p>
+              </div>
+              <div className={`rounded-2xl border p-4 ${pauseForecast.summary.belowBreakEvenWeeks ? 'border-rose-200 bg-rose-50' : 'border-emerald-200 bg-emerald-50'}`}>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Below break-even</p>
+                <p className="mt-1 text-lg font-semibold text-slate-900">
+                  {pauseForecast.summary.belowBreakEvenWeeks} week{pauseForecast.summary.belowBreakEvenWeeks === 1 ? '' : 's'}
+                </p>
+                <p className="mt-1 text-xs text-slate-600">
+                  {pauseForecast.summary.firstBelowWeek ? `from ${formatDate(pauseForecast.summary.firstBelowWeek)}` : 'stays above break-even'}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Recovers</p>
+                <p className="mt-1 text-lg font-semibold text-slate-900">
+                  {pauseForecast.summary.recoveryWeek ? formatDate(pauseForecast.summary.recoveryWeek) : '—'}
+                </p>
+                <p className="mt-1 text-xs text-slate-600">first week back above break-even</p>
+              </div>
+            </div>
+            <Sparkline values={pauseForecast.weeks.map((w) => w.marginMonthly)} stroke={pauseForecast.summary.belowBreakEvenWeeks ? '#e11d48' : '#059669'} />
+          </>
+        )}
+        <p className="mt-3 text-xs text-slate-500">
+          From structured pause plans (start + return dates). {pauseForecast.summary.unparsedCount
+            ? `${pauseForecast.summary.unparsedCount} pause item(s) couldn't be read (freehand) and aren't included. `
+            : ''}
+          Students who pause without a planning entry won&apos;t appear.
         </p>
       </section>
 

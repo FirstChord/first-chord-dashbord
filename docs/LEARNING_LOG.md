@@ -19,6 +19,20 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-25 — Pause forecast ("what's coming")
+
+**Feature/change:** `lib/admin/pause-forecast.mjs` (`parsePauseWindowsFromPlanning` + `buildPauseForecast`, pure) + a "What's coming — planned pauses" section on `/admin/finance`. Reads pause planning items, extracts each pause window, walks forward 12 weeks removing students during their window (returning them after), and runs the existing break-even/margin math per week (reuses `buildFinanceScenario`). Surfaces the trough week, weeks below break-even, and the recovery week. 5 unit tests; suite 317 pass, build clean.
+
+**Why:** completes the forecasting trio — trend (past) · what-if (hypothetical) · **this (grounded, from real planned pauses)**. For a seasonal school it answers "how deep does summer dip, when, and when does it recover" from data already captured, not a slider guess.
+
+**Format contract (important):** pause-window dates are parsed from the planning item *notes* written by `buildStructuredPausePlanningDraft` — `First lesson to pause date: YYYY-MM-DD` + `Returning from date: YYYY-MM-DD` (away period) and `Lesson date: YYYY-MM-DD` (single). The return date is the exclusive end (first day back). Dates are parsed at UTC midnight so half-open `[start, end)` week overlap is clean. Pause items that don't match (freehand) are surfaced as `unparsedCount`, not silently dropped. Recorded in `docs/admin/STATE_TABS_SCHEMA.md` → Format Contracts.
+
+**Files/functions:** `pause-forecast.mjs` (new) + tests; `app/admin/finance/page.js` (loads `getPlanningItemRows`, builds forecast over active mmsIds, renders section + sparkline). Reuses `buildFinanceScenario`.
+
+**Source-of-truth impact:** none — pure derived-context over planning items; read-only.
+
+**Watch:** only counts pauses for currently-active students (so it's a drop from today's base); students who pause without a planning entry don't appear; single-lesson pauses are one-week blips. The forecast is only as complete as how fully pauses are logged ahead (Finn: generally ≥1 week ahead, guided, precise).
+
 ### 2026-06-25 — Capacity = money (waiting list valued)
 
 **Feature/change:** `lib/admin/capacity-value.mjs` (`buildCapacityValue`, pure) + a "Waiting list value" panel on `/admin/waiting`. Attaches £ to the waiting list by reusing `getWaitingStudentsWithCapacity` (which already runs `buildWaitingCapacityMatches`): splits demand into **bookable now** (a free tutor slot exists), **blocked on tutor-hours** (taught but full = `no_free_slots`), and **needs a tutor** (`not_taught`), plus a ranked **recruiting-target** list by instrument. 6 unit tests; suite 312 pass, build clean.
