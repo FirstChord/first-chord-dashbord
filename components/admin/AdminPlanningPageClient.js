@@ -45,15 +45,19 @@ const STATUS_GROUPS = [
   { key: 'done', title: 'Done', hint: 'Completed or absorbed into normal workflow.' },
 ];
 
-const MOMENTUM_FILTERS = [
+const PRIMARY_REVIEW_FILTERS = [
+  { value: 'due_now', label: 'Due today' },
   { value: 'all', label: 'All' },
+];
+
+const ADVANCED_REVIEW_FILTERS = [
+  { value: '', label: 'More filters' },
   { value: 'meeting', label: 'Meeting' },
-  { value: 'school_notes', label: 'School Notes' },
-  { value: 'learning_note', label: 'Learning Notes' },
-  { value: 'strategic_note', label: 'Strategic Notes' },
-  { value: 'due_now', label: 'Due Now' },
+  { value: 'school_notes', label: 'School notes' },
+  { value: 'learning_note', label: 'Learning notes' },
+  { value: 'strategic_note', label: 'Strategic notes' },
   { value: 'unassigned', label: 'Unassigned' },
-  { value: 'no_next_action', label: 'No Next Action' },
+  { value: 'no_next_action', label: 'No next action' },
   { value: 'waiting_status', label: 'Waiting' },
   { value: 'linked', label: 'Linked' },
   { value: 'stalled', label: 'Stalled' },
@@ -62,6 +66,7 @@ const MOMENTUM_FILTERS = [
   { value: 'idea', label: 'Ideas' },
   { value: 'action', label: 'Actions' },
   { value: 'done', label: 'Done' },
+  { value: 'parked', label: 'Parked' },
 ];
 
 const EMPTY_FORM = {
@@ -2663,7 +2668,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
   const filteredItems = useMemo(() => {
     const search = query.trim().toLowerCase();
     return (planning.items || []).filter((item) => {
-      if (!showDone && filter !== 'done' && item.status === 'done') {
+      if (!showDone && !['done', 'parked'].includes(filter) && ['done', 'parked'].includes(item.status)) {
         return false;
       }
       if (search && !buildSearchText(item).includes(search)) {
@@ -2692,6 +2697,9 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
       }
       if (filter === 'done') {
         return item.status === 'done';
+      }
+      if (filter === 'parked') {
+        return item.status === 'parked';
       }
       if (PLANNING_ITEM_TYPES.includes(filter)) {
         return item.itemType === filter;
@@ -3382,26 +3390,15 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="text-lg font-semibold text-slate-900">Review</h3>
-              <p className="mt-1 text-sm text-slate-600">Grouped by current state, with initiatives and next actions kept visible.</p>
+              <p className="mt-1 text-sm text-slate-600">Start with what is due today, or scan the open board.</p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => setShowDone((current) => !current)}
-                className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${
-                  showDone
-                    ? 'border-emerald-700 bg-emerald-700 text-white'
-                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                {showDone ? 'Showing done' : 'Hide done'}
-              </button>
-              {MOMENTUM_FILTERS.map((option) => (
+            <div className="flex flex-wrap items-center gap-2">
+              {PRIMARY_REVIEW_FILTERS.map((option) => (
                 <button
                   key={option.value}
                   type="button"
                   onClick={() => setFilter(option.value)}
-                  className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${
+                  className={`rounded-full border px-4 py-2 text-sm font-semibold ${
                     filter === option.value
                       ? 'border-slate-900 bg-slate-900 text-white'
                       : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
@@ -3410,6 +3407,26 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
                   {option.label}
                 </button>
               ))}
+              <select
+                value={PRIMARY_REVIEW_FILTERS.some((option) => option.value === filter) ? '' : filter}
+                onChange={(event) => {
+                  if (event.target.value) setFilter(event.target.value);
+                }}
+                className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                {ADVANCED_REVIEW_FILTERS.map((option) => (
+                  <option key={option.value || 'more'} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+              <label className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={showDone}
+                  onChange={(event) => setShowDone(event.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-slate-900"
+                />
+                Show done/parked
+              </label>
             </div>
           </div>
 

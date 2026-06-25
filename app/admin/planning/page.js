@@ -5,6 +5,7 @@ import { enrichScheduleContextsWithSharedSlots } from '@/lib/admin/schedule-cont
 import { getAdminStudents } from '@/lib/admin/students';
 
 const ALLOWED_INITIAL_FILTERS = new Set([
+  'all',
   'due_now',
   'meeting',
   'school_notes',
@@ -14,6 +15,13 @@ const ALLOWED_INITIAL_FILTERS = new Set([
   'no_next_action',
   'waiting_status',
   'linked',
+  'stalled',
+  'moving',
+  'initiative',
+  'idea',
+  'action',
+  'done',
+  'parked',
 ]);
 
 export default async function AdminPlanningPage({ searchParams }) {
