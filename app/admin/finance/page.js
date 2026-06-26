@@ -11,7 +11,8 @@ import { buildFinanceCoverage, FLAG_LABELS as FINANCE_FLAG_LABELS } from '@/lib/
 import { buildFinanceTrend } from '@/lib/admin/finance-trend.mjs';
 import { buildFinanceScenario } from '@/lib/admin/finance-scenario.mjs';
 import { buildPauseForecast } from '@/lib/admin/pause-forecast.mjs';
-import { getPlanningItemRows } from '@/lib/admin/sheets';
+import { getPlanningItemRows, getWaitingListStateRows, getStudentsArchiveRows } from '@/lib/admin/sheets';
+import { buildRosterMovement, onboardedDatesFromWaitingState, leftDatesFromArchive } from '@/lib/admin/roster-movement.mjs';
 import { authOptions } from '@/lib/admin/auth';
 import SaveSpendButton from '@/components/admin/SaveSpendButton';
 
@@ -172,6 +173,12 @@ export default async function AdminFinancePage({ searchParams }) {
     getFinanceSnapshotRows(),
     getPlanningItemRows(),
   ]);
+  const [waitingStateRows, archiveRows] = await Promise.all([getWaitingListStateRows(), getStudentsArchiveRows()]);
+  const roster = buildRosterMovement({
+    onboardedDates: onboardedDatesFromWaitingState(waitingStateRows),
+    leftDates: leftDatesFromArchive(archiveRows),
+    months: 6,
+  });
   const trend = buildFinanceTrend(snapshotRows, { period: trendPeriod, limit: 12 });
   const scheduleByMmsId = enrichScheduleContextsWithSharedSlots(scheduleRows);
   const enriched = students.map((student) => ({
@@ -421,6 +428,47 @@ export default async function AdminFinancePage({ searchParams }) {
             Absence reconciliation →
           </Link>
         </p>
+      </section>
+
+      <section className="rounded-[1.6rem] border border-blue-100 bg-white/90 p-5 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-base font-semibold text-slate-900">Roster movement</h2>
+            <p className="mt-1 max-w-2xl text-sm text-slate-600">
+              Students onboarded vs left, last 6 months. Counts movements made through the dashboard (onboarding flow /
+              archive) — students added or removed outside those won&apos;t show.
+            </p>
+          </div>
+          <div className="rounded-2xl bg-slate-100 px-4 py-2 text-right">
+            <p className="text-xs text-slate-500">net, 6 mo</p>
+            <p className={`text-2xl font-semibold ${roster.totals.net >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+              {roster.totals.net >= 0 ? '+' : ''}{roster.totals.net}
+            </p>
+            <p className="text-xs text-slate-500">+{roster.totals.onboarded} on · −{roster.totals.left} off</p>
+          </div>
+        </div>
+        <div className="mt-3 overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="text-xs uppercase tracking-[0.16em] text-slate-400">
+                <th className="px-3 py-2">Month</th>
+                <th className="px-3 py-2 text-right">Onboarded</th>
+                <th className="px-3 py-2 text-right">Left</th>
+                <th className="px-3 py-2 text-right">Net</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {roster.months.map((m) => (
+                <tr key={m.month}>
+                  <td className="px-3 py-2 text-slate-700">{m.month}</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-emerald-700">{m.onboarded || '—'}</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-rose-700">{m.left || '—'}</td>
+                  <td className={`px-3 py-2 text-right tabular-nums font-medium ${m.net > 0 ? 'text-emerald-700' : m.net < 0 ? 'text-rose-700' : 'text-slate-500'}`}>{m.net > 0 ? `+${m.net}` : m.net}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section className="grid gap-6 md:grid-cols-2">

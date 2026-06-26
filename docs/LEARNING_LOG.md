@@ -19,6 +19,18 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-27 — Roster movement (onboarded vs left)
+
+**Feature/change:** `lib/admin/roster-movement.mjs` (pure `buildRosterMovement` + `onboardedDatesFromWaitingState` / `leftDatesFromArchive`) + a read-only "Roster movement" panel on `/admin/finance`: onboarded vs left vs net, by month, last 6 months, computed retroactively from dated source records. New `getStudentsArchiveRows` reader. 5 tests; suite 357 pass, build clean.
+
+**Why:** simple growth/churn logging Finn asked for. The aggregate active count is already snapshotted weekly (Finance_Snapshot) so net trend was free; this adds the gross flows (joined / left).
+
+**Sources + honest caveat:** onboarded = `Waiting_List_State` rows with `status = 'onboarded'` (dated by `updatedAt`, fallback `dateStarted`); left = `Students_Archive.archived_at`. **It only counts movements made through the dashboard flows** — a student added straight to the sheet/registry, or who quietly goes inactive without being archived, won't be counted. So sparse months mean "the flow wasn't used," not "nobody moved." Documented in the UI copy.
+
+**Files:** `lib/admin/roster-movement.mjs` (new) + tests; `lib/admin/sheets.js` (`getStudentsArchiveRows`); `app/admin/finance/page.js` (panel). Read-only, no new tab.
+
+**Possible next:** fold `onboarded_count` / `left_count` into the weekly `Finance_Snapshot` so gross flows accrue in the same forward series; tighten sources if the dashboard flows aren't used consistently.
+
 ### 2026-06-26 — Reconciliation preview (absence ↔ pause) + live-state fix
 
 **Feature/change:** Wired L1 into a read-only **absence reconciliation preview** at `/admin/finance/reconciliation` (linked discreetly from the finance page). New pure adapter `lib/admin/reconciliation-adapter.mjs` maps `Tutor_Absence_State` facts + `Pause History` into `reconcileEpisode` inputs (priced via existing value/cost helpers); the page renders, per tutor, the net-new finance effect and three groups: **net-new (need pause + message)**, **already covered by their own pause**, and **confirm these (conflicts)**. Read-only — nothing written, sent, or fed into finance. 6 adapter tests; suite 352 pass.
