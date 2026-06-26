@@ -16,7 +16,9 @@ Read in this order:
 6. `docs/admin/OWNERSHIP_MATRIX.md`
 7. `docs/admin/SCHOOL_POLICY.md`
 8. `docs/admin/PAYMENTS_RULES.md` when touching payments, pauses, Stripe, or setup-pending logic
-9. `docs/admin/PRACTICE_CHAT_DELIVERY_AUDIT.md` when touching Practice Chat Level 2 delivery or rollout
+9. `docs/admin/TUTOR_ABSENCE_PAUSE_BRIDGE.md` when touching tutor absence, pause planning, or finance pause forecasts
+10. `docs/admin/STATE_TABS_SCHEMA.md` + `docs/admin/CURRENT_STATUS.md` finance section when touching `/admin/finance`, payroll, `Tutor_Pay`, `Finance_Snapshot`, or `Payroll_Runs`
+11. `docs/admin/PRACTICE_CHAT_DELIVERY_AUDIT.md` when touching Practice Chat Level 2 delivery or rollout
 
 `docs/admin/AUDIT_2026-06-10.md` is critique input, not a live plan. Use judgement before implementing its recommendations.
 

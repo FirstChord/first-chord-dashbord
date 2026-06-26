@@ -19,6 +19,36 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-25 — Payroll review V1
+
+**Feature/change:** Added a first payroll review surface at `/admin/finance/payroll`. It previews Wednesday tutor pay from MMS attendance, applies `Tutor_Pay` rate/cadence assumptions, flags unrecorded/review lessons, and lets an admin mark each tutor/pay-period row `reviewed` or `paid`.
+
+**Why it exists:** Tom currently checks payroll in MMS. Payroll V1 lets the dashboard start building trust against MMS without taking over payment execution. It reduces the weekly calculation/reconciliation load while keeping a human in charge.
+
+**Source-of-truth impact:** no external truth changes. MMS remains the V1 attendance/payroll comparison source. `Tutor_Pay` is dashboard finance config. `Payroll_Runs` is dashboard workflow state/audit for review and payment decisions, not proof that money left the bank.
+
+**Files/functions involved:** `lib/admin/payroll-helpers.mjs` (`buildPayrollPreview`, `buildPayrollPeriod`, `buildPayrollRunId`), `lib/admin/cost-helpers.mjs` (`calculateTutorSlotPay`, `parseTutorPay` cadence fields), `lib/admin/mms.js` (`searchAttendanceForPayroll`), `lib/admin/sheets.js` (`Payroll_Runs`, expanded `Tutor_Pay` headers), `app/admin/finance/payroll/page.js`, `tests/admin/payroll-helpers.test.mjs`.
+
+**Data read/written:** reads MMS attendance for the relevant weekly/biweekly payroll window, `Tutor_Pay`, and existing `Payroll_Runs`; writes `Payroll_Runs` keyed by tutor + pay period with review/paid state, adjustments, invoice status, notes, timestamps, and acting admin. The local Sheets backup now includes the finance/payroll tabs.
+
+**What to watch:** unrecorded MMS lessons are intentionally flagged for review and not paid automatically. Group lessons are paid once per teaching slot. Salaried tutors add no variable pay. Biweekly tutors require `invoice_cadence` in `Tutor_Pay`; blank means weekly. Adjustments should be explained in notes. This does not create bank payments, payslips, or invoice chasing yet.
+
+**Manual checks:** Tom should compare the first few Wednesday runs against MMS payroll before trusting the dashboard. Check a known group lesson, a covering/absence lesson, a salaried tutor, a weekly hourly tutor, and a biweekly tutor. Mark one tutor reviewed, then paid, and confirm the state persists after refresh.
+
+### 2026-06-25 — Tutor absence pause cards supersede safely
+
+**Feature/change:** Tutor-absence cancellation pause plans now supersede safely as more dates are added. A first cancelled lesson may create a single-date pause card; when the next weekly cancelled date is saved, the dashboard creates a grouped away-period card and parks the single; when a third date is saved, it creates/updates the longer period and parks the shorter period.
+
+**Why it exists:** Summer/tour absences are naturally entered over several dates, but parents, payment handling, and finance need one clear period per student. The dashboard has to reduce repeated work without losing evidence of what was captured along the way.
+
+**Source-of-truth impact:** no external truth changes. MMS remains lesson/schedule truth. `Tutor_Absence_State` remains per-date workflow state. `Planning_Items` holds the active grouped pause card plus parked superseded cards. `Planning_Progress_Log` records the superseding. Finance ignores `parked` pause cards.
+
+**Files/functions involved:** `createStructuredPausePlanningFromCancellation()` in `lib/admin/tutor-absence.js`; `buildTutorAbsencePausePlanningBundle()`, `splitCandidatesIntoBlocks()`, `buildTutorAbsencePausePlanningId()`, and `buildTutorAbsencePausePeriodPlanningId()` in `lib/admin/tutor-absence-helpers.mjs`; `parsePauseWindowsFromPlanning()` in `lib/admin/pause-forecast.mjs`; `tests/admin/tutor-absence-helpers.test.mjs`; `tests/admin/pause-forecast.test.mjs`.
+
+**Verified example:** On 2026-06-25, Tom's July Monday cancellations produced per-date `Tutor_Absence_State` rows. Rosie Ward's `Pause Rosie Ward lesson on Mon, 6 Jul 2026` card was parked after the 6+13 July grouped card appeared; that shorter period was then parked when the active 6+13+20 July card appeared: `Pause Rosie Ward from Mon, 6 Jul 2026; returning Mon, 27 Jul 2026`.
+
+**What to watch:** complete the grouped period card rather than the early single-date card when a multi-week absence is still being entered. If a cancellation later becomes cover, park/remove the corresponding pause Planning card manually unless a future reconciliation tool is added.
+
 ### 2026-06-25 — Planning remove is soft-delete via parked state
 
 **Feature/change:** Planning cards can now be removed from active work by parking them from the UI. Parked cards remain in `Planning_Items` and keep their `Planning_Progress_Log` history, but they are no longer active meeting work. The finance pause forecast now ignores parked pause-planning cards while still counting `done` pause cards.

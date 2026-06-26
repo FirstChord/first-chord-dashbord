@@ -239,6 +239,20 @@ export default async function AdminFinancePage({ searchParams }) {
         <StatCard label="Paused (not billing)" value={formatMoney(revenue.paused.weekly)} helper={`${revenue.paused.count} students · per week`} tone="border-violet-100 bg-violet-50/60" />
       </section>
 
+      <section className="rounded-[1.6rem] border border-slate-200 bg-white/90 p-5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-base font-semibold text-slate-900">Payroll review</h2>
+            <p className="mt-1 text-sm text-slate-600">
+              Wednesday tutor-pay preview from MMS attendance. Compare against MMS while trust builds, then mark tutors reviewed or paid.
+            </p>
+          </div>
+          <Link href="/admin/finance/payroll" className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm">
+            Open payroll
+          </Link>
+        </div>
+      </section>
+
       <section className="rounded-[1.6rem] border border-blue-100 bg-white/90 p-5 shadow-sm">
         <h2 className="text-base font-semibold text-slate-900">What-if &amp; break-even</h2>
         <p className="mt-1 max-w-2xl text-sm text-slate-600">

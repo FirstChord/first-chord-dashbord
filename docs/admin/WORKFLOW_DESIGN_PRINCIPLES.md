@@ -186,6 +186,16 @@ Important distinction:
 - for repeated cancellations affecting the same student, the parent message should be grouped into one period message where possible, then mark all included dated records messaged
 - do not replace per-date absence state with a single broad absence record unless the downstream payment and finance assumptions are redesigned
 
+The same "detail underneath, simple action on top" rule applies to payment-pause planning created from tutor absences:
+
+- each saved absence day remains a separate `Tutor_Absence_State` row
+- each affected student gets structured pause Planning only when the decision is cancellation, not cover
+- one missed lesson starts as a single-date pause card
+- repeated weekly missed lessons collapse into one away-period pause card
+- older single-date or shorter-period cards are parked automatically when a better grouped card exists
+
+This is intentionally not a destructive cleanup. Parking keeps the audit trail while preventing duplicate active work and duplicate finance forecasting.
+
 ### Planning / Brain Inbox
 
 `/admin/planning` captures human-created work: ideas, initiatives, and actions.

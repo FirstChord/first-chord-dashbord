@@ -20,6 +20,8 @@ This admin index is the map of durable admin documentation. Older V1/V2 drafts a
   Dashboard-owned Sheets state tabs, keys, write patterns, concurrency notes, and limits.
 - [WORKFLOW_DESIGN_PRINCIPLES.md](./WORKFLOW_DESIGN_PRINCIPLES.md)
   Shared workflow design rulebook: reduce admin cognitive load, keep source-of-truth boundaries clear, and make risky actions explicit and logged.
+- [TUTOR_ABSENCE_PAUSE_BRIDGE.md](./TUTOR_ABSENCE_PAUSE_BRIDGE.md)
+  Focused map of the tutor absence -> cancellation -> structured pause planning bridge, including grouping, superseding, parked cards, and finance behaviour.
 - [COPY_AND_TONE.md](./COPY_AND_TONE.md)
   Lightweight voice guide for calm, human, action-led dashboard copy.
 - [HYGIENE_AND_SECRETS.md](./HYGIENE_AND_SECRETS.md)
@@ -100,6 +102,8 @@ This admin index is the map of durable admin documentation. Older V1/V2 drafts a
   - it does not edit MMS contact details
   - it does not automatically notify tutors
 - Consequential parent-understanding saves append to `Event_Log` when a record is completed, marked needs-follow-up, or escalated.
+- Tutor absence cancellation can auto-create structured pause planning. Read [TUTOR_ABSENCE_PAUSE_BRIDGE.md](./TUTOR_ABSENCE_PAUSE_BRIDGE.md) before changing tutor-absence, pause-planning, or finance-forecast logic.
+- `/admin/finance/payroll` is the first payroll review surface. It reads MMS attendance and `Tutor_Pay`, then writes reviewed/paid state to `Payroll_Runs`; it does not execute payments.
 
 ## Suggested Handoff Order
 

@@ -7,6 +7,7 @@ import {
   normaliseExpenseLogRow,
   buildExpenseLogSummary,
   buildTutorCost,
+  calculateTutorSlotPay,
   resolveWeeklyWeight,
   DEFAULT_HOURLY_RATE,
 } from '../../lib/admin/cost-helpers.mjs';
@@ -30,7 +31,19 @@ const oneToOne = (overrides = {}) => ({
 test('parseTutorPay marks salaried tutors and defaults the rest to hourly', () => {
   assert.equal(tutorPay.get('salaried a').payModel, 'salary');
   assert.equal(tutorPay.get('salaried a').monthlySalary, 1000);
+  assert.equal(tutorPay.get('salaried a').invoiceCadence, 'weekly');
   assert.equal(tutorPay.has('patrick'), false); // unlisted => hourly default downstream
+});
+
+test('parseTutorPay reads payroll cadence and active flag', () => {
+  const parsed = parseTutorPay([
+    { tutor: 'Tutor A', pay_model: 'hourly', invoice_cadence: 'fortnightly', active_for_payroll: 'yes' },
+    { tutor: 'Tutor B', pay_model: 'hourly', invoice_cadence: 'monthly', active_for_payroll: 'no' },
+  ]);
+  assert.equal(parsed.get('tutor a').invoiceCadence, 'biweekly');
+  assert.equal(parsed.get('tutor a').activeForPayroll, true);
+  assert.equal(parsed.get('tutor b').invoiceCadence, 'weekly');
+  assert.equal(parsed.get('tutor b').activeForPayroll, false);
 });
 
 test('hourly tutor priced per hour of lessons: 30=£12, 45=£18, 60=£24', () => {
@@ -41,6 +54,13 @@ test('hourly tutor priced per hour of lessons: 30=£12, 45=£18, 60=£24', () =>
   assert.equal(c45.variableWeekly, 18);
   assert.equal(c60.variableWeekly, 24);
   assert.equal(c60.byTutor[0].weekly, 24);
+});
+
+test('calculateTutorSlotPay applies 45-minute group uplift once per slot', () => {
+  assert.equal(calculateTutorSlotPay(30, 'one_to_one', 24), 12);
+  assert.equal(calculateTutorSlotPay(45, 'one_to_one', 24), 18);
+  assert.equal(calculateTutorSlotPay(45, 'group', 24), 20);
+  assert.equal(calculateTutorSlotPay(45, 'one_to_one', 24, { studentCount: 2 }), 20);
 });
 
 test('45-min group slot adds £2 once (per slot, not per student)', () => {

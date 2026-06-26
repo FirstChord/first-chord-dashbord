@@ -22,7 +22,11 @@ const BACKUP_TABS = [
   'Planning_Items',
   'Planning_Progress_Log',
   'Practice_Notes_Log',
+  'Tutor_Pay',
+  'Expenses',
   'Expense_Log',
+  'Finance_Snapshot',
+  'Payroll_Runs',
   'Students_Archive',
 ];
 const OPTIONAL_MISSING_TABS = new Set(['Students_Archive']);
