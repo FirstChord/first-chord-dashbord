@@ -416,7 +416,10 @@ export default async function AdminFinancePage({ searchParams }) {
           From structured pause plans (start + return dates). {pauseForecast.summary.unparsedCount
             ? `${pauseForecast.summary.unparsedCount} pause item(s) couldn't be read (freehand) and aren't included. `
             : ''}
-          Students who pause without a planning entry won&apos;t appear.
+          Students who pause without a planning entry won&apos;t appear.{' '}
+          <Link href="/admin/finance/reconciliation" className="font-medium text-blue-700 underline-offset-2 hover:underline">
+            Absence reconciliation →
+          </Link>
         </p>
       </section>
 

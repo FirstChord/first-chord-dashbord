@@ -19,6 +19,18 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-26 — Reconciliation preview (absence ↔ pause) + live-state fix
+
+**Feature/change:** Wired L1 into a read-only **absence reconciliation preview** at `/admin/finance/reconciliation` (linked discreetly from the finance page). New pure adapter `lib/admin/reconciliation-adapter.mjs` maps `Tutor_Absence_State` facts + `Pause History` into `reconcileEpisode` inputs (priced via existing value/cost helpers); the page renders, per tutor, the net-new finance effect and three groups: **net-new (need pause + message)**, **already covered by their own pause**, and **confirm these (conflicts)**. Read-only — nothing written, sent, or fed into finance. 6 adapter tests; suite 352 pass.
+
+**Validated on Tom's real four-week July absence:** of 20 affected families, 13 net-new, 6 already-paused (suppressed), 1 genuine conflict. The salaried wrinkle is correct — Tom's tutor-pay effect is £0.
+
+**Key bug found + fixed (the lesson):** the adapter first read each student's `payment_expectation` from the **snapshot frozen into the absence row** when the card was made — which goes stale. A student paused *after* the card was made (e.g. Duke) showed `stripe_active_expected` in the snapshot while live state was `stripe_paused_expected`, producing **false conflicts** (4 → 1 once fixed). Fix: live student record (`getOperationalAdminStudents`) overrides the snapshot for `payment_expectation`/email/sub. **Lesson: a reconciliation is only as current as its least-current input — prefer live records over embedded snapshots for cross-lane checks.** The read-only "confirm, don't auto-apply" design is what surfaced this safely before it caused a wrong action.
+
+**Cross-lane confidence rule** lives in the adapter (`resolvePauseMatchConfidence`), not the engine: a dated pause that *agrees* with the live paused flag → high confidence → suppress; a pause that *disagrees* (flag says active) → low confidence → engine routes to `needs_clarification`. Keeps the engine lane-pure.
+
+**Files:** `lib/admin/reconciliation-adapter.mjs` (new) + tests; `app/admin/finance/reconciliation/page.js` (new); `app/admin/finance/page.js` (link). Still no persistence/auto-action — loop-closing (acting from the page) is a deliberate later slice.
+
 ### 2026-06-26 — Temporal reconciliation core L1 (pure, read-only)
 
 **Feature/change:** `lib/admin/reconciliation-helpers.mjs` (`reconcileEpisode`, pure) — the foundation slice of a temporal reconciliation layer. Reconciles one episode's lesson instances against overlapping facts, per lesson, then aggregates to finance / family-episode / unresolved. **V1 scope: tutor_absence ↔ student_pause only.** 11 fixture + invariant tests; suite 346 pass, build clean. **Not wired into finance, UI, or persistence** — read-only foundation.
