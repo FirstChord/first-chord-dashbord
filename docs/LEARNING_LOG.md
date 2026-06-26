@@ -19,6 +19,26 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-26 — Temporal reconciliation core L1 (pure, read-only)
+
+**Feature/change:** `lib/admin/reconciliation-helpers.mjs` (`reconcileEpisode`, pure) — the foundation slice of a temporal reconciliation layer. Reconciles one episode's lesson instances against overlapping facts, per lesson, then aggregates to finance / family-episode / unresolved. **V1 scope: tutor_absence ↔ student_pause only.** 11 fixture + invariant tests; suite 346 pass, build clean. **Not wired into finance, UI, or persistence** — read-only foundation.
+
+**Why:** today "count an overlapping pause/absence once" is enforced by a *convention* (parking superseded planning cards) that needs manual cleanup. This replaces the convention with a deterministic, explainable, recompute-safe mechanism — the architectural pattern (facts → derived reconciliation → projections) that makes the dashboard safe to extend and delegate.
+
+**Key design decisions:**
+- **Per-consequence resolution, not one priority.** Revenue dedups to *net-new* (a pre-existing pause → 0 new effect; partial overlap nets by date). Tutor cost resolves by cover/cancel and dedups per slot (group paid once). Planning/comms resolve by "is there net-new work/dates."
+- **`netNewLost` vs `grossLost`:** finance sums net-new (avoids double-counting an already-paused lesson); gross retained as evidence.
+- **`cover` + `student_pause` = conflict → `needs_clarification`** (mutually exclusive in reality; never auto-resolved — Finn confirmed a covered lesson means the student isn't paused and vice-versa).
+- **Low-confidence pause match** (email-only) → resolve conservatively as the absence, flag `clarify`; never silently suppress on a shaky link.
+- **Lesson identity = MMS `eventId`** (student+date was insufficient — group lessons share one event, same-day collisions). Slot key = eventId for tutor-cost dedup.
+- Pure: every effect carries `evidence` + `reasonCode`; idempotent (same inputs → deep-equal).
+
+**Source-of-truth note:** L1's student-pause fact is `Pause History` (dated windows) only; `payment_expectation` and live Stripe are deliberately NOT inputs (distinct lanes — billing reconciliation is a later concern).
+
+**Files:** `lib/admin/reconciliation-helpers.mjs` (new) + `tests/admin/reconciliation-helpers.test.mjs` (new). Concept note: `docs/obsidian/03 Architecture/Temporal Reconciliation Layer`.
+
+**Watch / next:** still unwired. Later slices (separate PRs): finance reads net-new effects (shadow-compared against the parked-card forecast before switching), an episode UI card, persisted human decisions only if existing workflow state can't represent them, and a comms-coverage model (parent-knowledge) deferred to V2. Pause coverage is treated inclusive of both window ends to match `derivePauseCoverageContext`.
+
 ### 2026-06-25 — Payroll review V1
 
 **Feature/change:** Added a first payroll review surface at `/admin/finance/payroll`. It previews Wednesday tutor pay from MMS attendance, applies `Tutor_Pay` rate/cadence assumptions, flags unrecorded/review lessons, and lets an admin mark each tutor/pay-period row `reviewed` or `paid`.
