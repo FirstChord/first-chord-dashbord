@@ -74,25 +74,48 @@ function statusClass(status) {
   return 'border-slate-200 bg-slate-50 text-slate-700';
 }
 
-function SlotList({ title, slots = [], empty = 'None' }) {
+function SlotLine({ slot }) {
+  return (
+    <li className="rounded-xl bg-slate-50 px-3 py-2">
+      <span className="font-medium text-slate-800">{formatPayrollDate(slot.startAt, { withTime: true })}</span>
+      {' · '}
+      {slot.durationMinutes || '?'} mins
+      {slot.studentCount > 1 ? ` · group of ${slot.studentCount}` : ''}
+      {slot.isCover ? ' · cover' : ''}
+      {slot.state !== 'payable' && slot.statusLabel ? ` · ${slot.statusLabel}` : ''}
+      {' · '}
+      {slot.students.map((student) => student.studentName).filter(Boolean).join(', ') || 'Student unknown'}
+      {slot.amount !== null ? ` · ${formatMoney(slot.amount)}` : ' · unpriced'}
+    </li>
+  );
+}
+
+function SlotList({ title, slots = [], empty = 'None', note = '' }) {
+  const first = slots.slice(0, 6);
+  const rest = slots.slice(6);
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{title}</p>
+      {note ? <p className="mt-1 text-[0.7rem] leading-4 text-slate-400">{note}</p> : null}
       {slots.length ? (
         <ul className="mt-2 space-y-1.5 text-xs text-slate-600">
-          {slots.slice(0, 6).map((slot) => (
-            <li key={`${slot.eventId || slot.startAt}-${slot.state}`} className="rounded-xl bg-slate-50 px-3 py-2">
-              <span className="font-medium text-slate-800">{formatPayrollDate(slot.startAt, { withTime: true })}</span>
-              {' · '}
-              {slot.durationMinutes || '?'} mins
-              {slot.studentCount > 1 ? ` · group of ${slot.studentCount}` : ''}
-              {slot.isCover ? ' · cover' : ''}
-              {' · '}
-              {slot.students.map((student) => student.studentName).filter(Boolean).join(', ') || 'Student unknown'}
-              {slot.amount !== null ? ` · ${formatMoney(slot.amount)}` : ' · unpriced'}
-            </li>
+          {first.map((slot) => (
+            <SlotLine key={`${slot.eventId || slot.startAt}-${slot.studentCount}-${slot.state}`} slot={slot} />
           ))}
-          {slots.length > 6 ? <li className="text-slate-400">+ {slots.length - 6} more</li> : null}
+          {rest.length ? (
+            <li>
+              <details className="group">
+                <summary className="cursor-pointer list-none rounded-xl bg-slate-100 px-3 py-2 text-slate-500 hover:bg-slate-200">
+                  + {rest.length} more <span className="group-open:hidden">(show)</span><span className="hidden group-open:inline">(hide)</span>
+                </summary>
+                <ul className="mt-1.5 space-y-1.5">
+                  {rest.map((slot) => (
+                    <SlotLine key={`${slot.eventId || slot.startAt}-${slot.studentCount}-${slot.state}`} slot={slot} />
+                  ))}
+                </ul>
+              </details>
+            </li>
+          ) : null}
         </ul>
       ) : (
         <p className="mt-2 text-xs text-slate-400">{empty}</p>
@@ -169,6 +192,16 @@ function PayrollTutorCard({ row, payDate }) {
         <SlotList title="Payable from MMS attendance" slots={row.payableSlots} empty="No payable lessons found for this period." />
         <SlotList title="Needs review" slots={row.reviewSlots} empty="No unrecorded/unclear lessons." />
       </div>
+      {row.excludedSlots?.length ? (
+        <div className="mt-4">
+          <SlotList
+            title={`Not counted — absent / cancelled (${row.excludedSlots.length})`}
+            slots={row.excludedSlots}
+            note="Marked absent or cancelled in MMS, so currently £0. Practice-video / paid-absence lessons sit here — the £ shown is what they would pay if payable."
+            empty="None."
+          />
+        </div>
+      ) : null}
 
       <form action={savePayrollRunAction} className="mt-5 grid gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4 md:grid-cols-[1fr_1fr_auto]">
         {[
