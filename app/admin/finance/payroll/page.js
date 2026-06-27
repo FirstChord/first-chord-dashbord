@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
-import { getPayrollRunRows, getTutorPayRows, upsertPayrollRunRow } from '@/lib/admin/sheets';
+import { getPayrollRunRows, getTutorPayRows, getTutorWiseRows, upsertPayrollRunRow } from '@/lib/admin/sheets';
 import { searchAttendanceForPayroll } from '@/lib/admin/mms';
 import { parseTutorPay } from '@/lib/admin/cost-helpers.mjs';
 import {
@@ -13,6 +13,7 @@ import {
 } from '@/lib/admin/payroll-helpers.mjs';
 import { ADMIN_TUTORS } from '@/lib/admin/tutors-data';
 import { formatMoney } from '@/lib/admin/finance-helpers.mjs';
+import { parseTutorWise, buildWiseBatch } from '@/lib/admin/wise-helpers.mjs';
 import AdjustWindowForm from './adjust-window-form';
 
 export const dynamic = 'force-dynamic';
@@ -292,9 +293,10 @@ export default async function AdminPayrollPage({ searchParams }) {
     ? { [`${params.tutor}`]: { start: `${params.start || ''}`.slice(0, 10), end: `${params.end || ''}`.slice(0, 10) } }
     : {};
 
-  const [tutorPayRows, savedRuns] = await Promise.all([
+  const [tutorPayRows, savedRuns, tutorWiseRows] = await Promise.all([
     getTutorPayRows(),
     getPayrollRunRows(),
+    getTutorWiseRows(),
   ]);
 
   let attendanceRows = [];
@@ -318,6 +320,7 @@ export default async function AdminPayrollPage({ searchParams }) {
     payDate,
   });
   const activeRows = preview.rows.filter((row) => row.payModel !== 'salary' || row.lessonCount || row.reviewLessonCount || row.status !== 'draft');
+  const wiseBatch = buildWiseBatch({ rows: preview.rows, wiseByKey: parseTutorWise(tutorWiseRows) });
 
   return (
     <div className="space-y-8">
@@ -369,6 +372,39 @@ export default async function AdminPayrollPage({ searchParams }) {
           <p className="text-sm text-slate-500">Reviewed / paid</p>
           <p className="mt-1 text-2xl font-semibold text-slate-900">{preview.totals.reviewedCount} / {preview.totals.paidCount}</p>
         </div>
+      </section>
+
+      <section className="rounded-[1.6rem] border border-slate-200 bg-white/90 p-5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Pay out via Wise</p>
+            <p className="mt-1 text-sm text-slate-600">
+              {wiseBatch.includedCount
+                ? <>Generate a Wise batch CSV for <strong>{wiseBatch.includedCount}</strong> reviewed tutor{wiseBatch.includedCount === 1 ? '' : 's'} · {formatMoney(wiseBatch.totalAmount)}.</>
+                : 'Mark tutor rows reviewed to include them in a Wise batch CSV.'}
+            </p>
+            <p className="mt-1 text-[0.7rem] leading-4 text-slate-400">
+              Only reviewed rows are included. Upload the file to Wise and approve it there — the dashboard never sends money.
+            </p>
+          </div>
+          {wiseBatch.includedCount ? (
+            <a
+              href={`/admin/finance/payroll/wise-csv?payDate=${payDate}`}
+              className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
+            >
+              Download Wise CSV
+            </a>
+          ) : (
+            <span className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-400">
+              Download Wise CSV
+            </span>
+          )}
+        </div>
+        {wiseBatch.missing.length ? (
+          <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            No Wise recipient on file for {wiseBatch.missing.map((entry) => entry.tutor).filter(Boolean).join(', ')} — add them to the `Tutor_Wise` sheet to include them.
+          </div>
+        ) : null}
       </section>
 
       <section className="space-y-4">
