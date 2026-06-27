@@ -4,10 +4,13 @@ import {
   getTutorPayRows,
   getExpenseRows,
   getExpenseLogRows,
+  getWaitingListStateRows,
+  getStudentsArchiveRows,
   appendFinanceSnapshotRow,
 } from '@/lib/admin/sheets';
 import { enrichScheduleContextsWithSharedSlots } from '@/lib/admin/schedule-context-helpers.mjs';
 import { parseTutorPay } from '@/lib/admin/cost-helpers.mjs';
+import { countDatesInRange, onboardedDatesFromWaitingState, leftDatesFromArchive } from '@/lib/admin/roster-movement.mjs';
 import { buildFinanceOverview, buildFinanceSnapshotRow } from '@/lib/admin/finance-helpers.mjs';
 
 // Append-only finance run-rate snapshot, called by a GitHub Action cron (weekly +
@@ -44,12 +47,14 @@ export async function POST(request) {
   const periodType = clean(url.searchParams.get('period')).toLowerCase() === 'monthly' ? 'monthly' : 'weekly';
 
   try {
-    const [students, scheduleRows, tutorPayRows, expenseRows, expenseLogRows] = await Promise.all([
+    const [students, scheduleRows, tutorPayRows, expenseRows, expenseLogRows, waitingStateRows, archiveRows] = await Promise.all([
       getOperationalAdminStudents(),
       getScheduleContextRows(),
       getTutorPayRows(),
       getExpenseRows(),
       getExpenseLogRows(),
+      getWaitingListStateRows(),
+      getStudentsArchiveRows(),
     ]);
     const scheduleByMmsId = enrichScheduleContextsWithSharedSlots(scheduleRows);
     const enriched = students.map((student) => ({
@@ -58,7 +63,15 @@ export async function POST(request) {
     }));
     const tutorPay = parseTutorPay(tutorPayRows);
     const overview = buildFinanceOverview(enriched, { tutorPay, expenseRows, expenseLogRows });
-    const row = buildFinanceSnapshotRow(overview, { periodType });
+
+    // Gross roster flows during this period (weekly = trailing 7 days, monthly = trailing month).
+    const now = new Date();
+    const fromISO = new Date(now.getTime() - (periodType === 'monthly' ? 31 : 7) * 24 * 60 * 60 * 1000).toISOString();
+    const roster = {
+      onboarded: countDatesInRange(onboardedDatesFromWaitingState(waitingStateRows), { fromISO, toISO: now.toISOString() }),
+      left: countDatesInRange(leftDatesFromArchive(archiveRows), { fromISO, toISO: now.toISOString() }),
+    };
+    const row = buildFinanceSnapshotRow(overview, { periodType, roster });
     await appendFinanceSnapshotRow(row);
 
     return Response.json({

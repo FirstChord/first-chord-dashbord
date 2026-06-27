@@ -41,6 +41,27 @@ test('buildPayrollPeriod uses Wednesday pay date with weekly and biweekly window
   assert.equal(buildPayrollPeriod({ payDate: '2026-07-01', cadence: 'biweekly' }).periodStart, '2026-06-17');
 });
 
+test('buildPayrollPeriod supports a three-week window per tutor', () => {
+  const p = buildPayrollPeriod({ payDate: '2026-07-01', cadence: 'three-weekly' });
+  assert.equal(p.days, 21);
+  assert.equal(p.periodStart, '2026-06-10');
+  assert.equal(p.cadence, 'three-weekly');
+});
+
+test('a paid run shows £0 owed but keeps finalAmount as the record', () => {
+  const preview = buildPayrollPreview({
+    payDate: '2026-07-01',
+    tutorPay: parseTutorPay([{ tutor: 'Calum', hourly_rate: '24', pay_model: 'hourly' }]),
+    attendanceRows: [attendance({ EventID: 'evt_1', EventStartDate: '2026-06-24T16:00:00', EventDuration: 30 })],
+    savedRuns: [{ payroll_id: 'payroll_calum_2026-06-24_2026-06-30', status: 'paid', final_amount: '50', expected_amount: '12' }],
+  });
+  const calum = preview.rows.find((row) => row.tutorShortName === 'Calum');
+  assert.equal(calum.status, 'paid');
+  assert.equal(calum.owedAmount, 0);
+  assert.equal(calum.finalAmount, 50);
+  assert.equal(preview.totals.outstandingAmount, 0);
+});
+
 test('buildPayrollRunId is stable by tutor and period', () => {
   assert.equal(
     buildPayrollRunId({ tutorKey: 'Calum Steel', periodStart: '2026-06-24', periodEnd: '2026-06-30' }),

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildRosterMovement, onboardedDatesFromWaitingState, leftDatesFromArchive } from '../../lib/admin/roster-movement.mjs';
+import { buildRosterMovement, onboardedDatesFromWaitingState, leftDatesFromArchive, countDatesInRange } from '../../lib/admin/roster-movement.mjs';
 
 const NOW = new Date('2026-06-15T12:00:00Z');
 
@@ -46,6 +46,12 @@ test('onboardedDatesFromWaitingState picks onboarded rows, prefers updatedAt', (
     { status: 'onboarded', updatedAt: '', dateStarted: '2026-04-09' },
   ]);
   assert.deepEqual(dates, ['2026-06-02T10:00:00Z', '2026-04-09']);
+});
+
+test('countDatesInRange counts only dates within the window', () => {
+  const dates = ['2026-06-20T10:00:00Z', '2026-06-26T10:00:00Z', '2026-06-10T10:00:00Z'];
+  const count = countDatesInRange(dates, { fromISO: '2026-06-19T00:00:00Z', toISO: '2026-06-27T00:00:00Z' });
+  assert.equal(count, 2); // 20th + 26th; 10th excluded
 });
 
 test('leftDatesFromArchive reads archived_at', () => {

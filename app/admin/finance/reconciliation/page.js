@@ -1,13 +1,45 @@
 import Link from 'next/link';
-import { getTutorAbsenceStateRows, getPauseHistoryRows, getTutorPayRows } from '@/lib/admin/sheets';
+import { revalidatePath } from 'next/cache';
+import { getServerSession } from 'next-auth';
+import { getTutorAbsenceStateRows, getPauseHistoryRows, getTutorPayRows, updateStudentSheetRow, appendEventLogRow } from '@/lib/admin/sheets';
 import { getOperationalAdminStudents } from '@/lib/admin/students';
 import { parseTutorAbsenceStateRow } from '@/lib/admin/tutor-absence-helpers.mjs';
 import { parseTutorPay } from '@/lib/admin/cost-helpers.mjs';
 import { buildReconciliationInputs } from '@/lib/admin/reconciliation-adapter.mjs';
 import { reconcileEpisode } from '@/lib/admin/reconciliation-helpers.mjs';
 import { formatMoney } from '@/lib/admin/finance-helpers.mjs';
+import { authOptions } from '@/lib/admin/auth';
 
 export const dynamic = 'force-dynamic';
+
+// Loop-closing: resolve a conflict by correcting the live flag to paused (the common
+// case — the pause is real, the flag was stale). Reuses the existing payment_expectation
+// write + Event_Log audit; next recompute then agrees and the conflict clears. The
+// opposite case (pause record is stale, student really active) is a Pause History data
+// issue owned by Payment Pause — surfaced as guidance, not auto-written here.
+async function confirmPausedAction(formData) {
+  'use server';
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.isAdmin) throw new Error('Not authorised');
+  const mmsId = `${formData.get('mms_id') || ''}`.trim();
+  if (!mmsId) throw new Error('Missing student');
+  const name = `${formData.get('student_name') || ''}`.trim();
+
+  await updateStudentSheetRow(mmsId, { payment_expectation: 'stripe_paused_expected' });
+  await appendEventLogRow({
+    event_id: `recon_${Date.now()}_${mmsId}`,
+    occurred_at: new Date().toISOString(),
+    actor_email: session.user.email || '',
+    entity_type: 'student',
+    entity_id: mmsId,
+    event_type: 'reconciliation_confirmed_paused',
+    mms_id: mmsId,
+    student_name: name,
+    issue_id: '',
+    payload_json: JSON.stringify({ source: 'absence_reconciliation', set: 'stripe_paused_expected', reason: 'pause record confirmed over absence dates' }),
+  });
+  revalidatePath('/admin/finance/reconciliation');
+}
 
 function fmtDate(d) {
   if (!d) return '—';
@@ -15,15 +47,18 @@ function fmtDate(d) {
   return Number.isNaN(date.getTime()) ? d : date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 
-function FamilyRow({ ep, name }) {
+function FamilyRow({ ep, name, action = null }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
       <span className="text-slate-800">{name || ep.studentMmsId}</span>
-      <span className="text-xs text-slate-500">
-        {fmtDate(ep.window.start)}–{fmtDate(ep.window.end)} · {ep.affectedDates.length} lesson(s)
-        {ep.netNewDates.length ? ` · ${ep.netNewDates.length} net-new` : ''}
-        {ep.remainingActions.length ? ` · ${ep.remainingActions.join(', ')}` : ''}
-      </span>
+      <div className="flex items-center gap-3">
+        <span className="text-xs text-slate-500">
+          {fmtDate(ep.window.start)}–{fmtDate(ep.window.end)} · {ep.affectedDates.length} lesson(s)
+          {ep.netNewDates.length ? ` · ${ep.netNewDates.length} net-new` : ''}
+          {ep.remainingActions.length ? ` · ${ep.remainingActions.join(', ')}` : ''}
+        </span>
+        {action}
+      </div>
     </div>
   );
 }
@@ -113,8 +148,27 @@ export default async function ReconciliationPreviewPage({ searchParams }) {
                 the flag is right and the pause record is stale. Check before relying on the numbers.
               </p>
               <div className="mt-2 divide-y divide-rose-100">
-                {conflicts.map((ep) => <FamilyRow key={ep.studentMmsId} ep={ep} name={nameByMmsId.get(ep.studentMmsId)} />)}
+                {conflicts.map((ep) => (
+                  <FamilyRow
+                    key={ep.studentMmsId}
+                    ep={ep}
+                    name={nameByMmsId.get(ep.studentMmsId)}
+                    action={(
+                      <form action={confirmPausedAction}>
+                        <input type="hidden" name="mms_id" value={ep.studentMmsId} />
+                        <input type="hidden" name="student_name" value={nameByMmsId.get(ep.studentMmsId) || ''} />
+                        <button type="submit" className="rounded-full border border-rose-300 bg-white px-3 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-100">
+                          Confirm paused (fix flag)
+                        </button>
+                      </form>
+                    )}
+                  />
+                ))}
               </div>
+              <p className="mt-2 text-xs text-rose-900">
+                If instead the student is genuinely active (the pause record is stale), leave the flag and clean up that
+                pause in Payment Pause — don&apos;t confirm here.
+              </p>
             </section>
           ) : null}
 

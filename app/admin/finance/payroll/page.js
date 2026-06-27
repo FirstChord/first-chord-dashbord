@@ -103,6 +103,7 @@ function SlotList({ title, slots = [], empty = 'None' }) {
 
 function PayrollTutorCard({ row }) {
   const calculatedFinal = Math.round((row.expectedAmount + row.adjustmentAmount) * 100) / 100;
+  const owed = row.owedAmount ?? (row.status === 'paid' ? 0 : (row.finalAmount || calculatedFinal));
   return (
     <article className="rounded-[1.4rem] border border-slate-200 bg-white/90 p-5 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -124,8 +125,12 @@ function PayrollTutorCard({ row }) {
           </p>
         </div>
         <div className="text-right">
-          <p className="text-2xl font-semibold text-slate-900">{formatMoney(row.finalAmount || calculatedFinal)}</p>
-          <p className="text-xs text-slate-500">{row.lessonCount} payable · {minutesLabel(row.teachingMinutes)}</p>
+          <p className="text-2xl font-semibold text-slate-900">{formatMoney(owed)}</p>
+          {row.status === 'paid' ? (
+            <p className="text-xs text-emerald-700">paid {formatMoney(row.finalAmount)}{row.paidAt ? ` · ${formatPayrollDate(row.paidAt)}` : ''}</p>
+          ) : (
+            <p className="text-xs text-slate-500">{row.lessonCount} payable · {minutesLabel(row.teachingMinutes)}</p>
+          )}
         </div>
       </div>
 
@@ -197,7 +202,8 @@ export default async function AdminPayrollPage({ searchParams }) {
   const params = (await searchParams) || {};
   const payDate = `${params.payDate || nextWednesday()}`.slice(0, 10);
   const teacherIds = Object.values(ADMIN_TUTORS).map((tutor) => tutor.teacherId).filter(Boolean);
-  const fetchStart = buildPayrollPeriod({ payDate, cadence: 'biweekly' }).periodStart;
+  // Fetch the widest supported window (3 weeks) so three-weekly tutors are covered.
+  const fetchStart = buildPayrollPeriod({ payDate, cadence: 'three-weekly' }).periodStart;
   const fetchEnd = buildPayrollPeriod({ payDate, cadence: 'weekly' }).periodEnd;
 
   const [tutorPayRows, savedRuns] = await Promise.all([
@@ -247,7 +253,7 @@ export default async function AdminPayrollPage({ searchParams }) {
           <button className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Load payroll</button>
           <p className="text-sm text-slate-500">
             Weekly tutors: {formatPayrollDate(buildPayrollPeriod({ payDate, cadence: 'weekly' }).periodStart)} - {formatPayrollDate(buildPayrollPeriod({ payDate, cadence: 'weekly' }).periodEnd)}.
-            {' '}Bi-weekly tutors: {formatPayrollDate(fetchStart)} - {formatPayrollDate(fetchEnd)}.
+            {' '}Each tutor&apos;s window comes from their `Tutor_Pay` cadence (weekly / biweekly / three-weekly, up to 21 days back: {formatPayrollDate(fetchStart)}).
           </p>
         </form>
       </section>
@@ -260,8 +266,9 @@ export default async function AdminPayrollPage({ searchParams }) {
 
       <section className="grid gap-4 md:grid-cols-4">
         <div className="rounded-2xl border border-slate-200 bg-white/90 p-4">
-          <p className="text-sm text-slate-500">Expected hourly pay</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">{formatMoney(preview.totals.expectedAmount)}</p>
+          <p className="text-sm text-slate-500">Outstanding to pay</p>
+          <p className="mt-1 text-2xl font-semibold text-slate-900">{formatMoney(preview.totals.outstandingAmount)}</p>
+          <p className="mt-1 text-xs text-slate-500">{formatMoney(preview.totals.expectedAmount)} expected before paid</p>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white/90 p-4">
           <p className="text-sm text-slate-500">Payable lessons</p>
