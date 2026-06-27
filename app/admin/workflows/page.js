@@ -38,6 +38,12 @@ const workflowSections = [
     status: 'Action flow',
   },
   {
+    href: '/admin/finance/payroll',
+    title: 'Payroll',
+    description: 'Wednesday tutor-pay review from MMS attendance: per-tutor pay window (since last paid), mark reviewed/paid. Reconciliation support, not payment execution.',
+    status: 'Recurring',
+  },
+  {
     href: '/admin/communications',
     title: 'Messages Sent',
     description: 'Read-only record of parent messages copied to send from the dashboard. A logbook, not a sender.',
