@@ -146,6 +146,69 @@ test('buildPayrollPreview flags unrecorded lessons for review instead of paying 
   assert.equal(calum.expectedAmount, 12);
 });
 
+test('AbsentNoMakeup is payable (invoiced); AbsentNotice is excluded (£0); only Unrecorded needs review', () => {
+  const preview = buildPayrollPreview({
+    payDate: '2026-07-01',
+    tutorPay: parseTutorPay([{ tutor: 'Calum', hourly_rate: '24', pay_model: 'hourly' }]),
+    attendanceRows: [
+      attendance({ EventID: 'evt_makeup', AttendanceStatus: 'AbsentNoMakeup', EventStartDate: '2026-06-24T16:00:00' }),
+      attendance({ EventID: 'evt_notice', AttendanceStatus: 'AbsentNotice', EventStartDate: '2026-06-25T16:00:00' }),
+      attendance({ EventID: 'evt_unrec', AttendanceStatus: 'Unrecorded', EventStartDate: '2026-06-26T16:00:00' }),
+    ],
+  });
+  const calum = preview.rows.find((row) => row.tutorShortName === 'Calum');
+  // AbsentNoMakeup → payable, paid
+  assert.equal(calum.lessonCount, 1);
+  assert.equal(calum.expectedAmount, 12);
+  // AbsentNotice → excluded, not in review
+  assert.equal(calum.excludedLessonCount, 1);
+  // only the genuinely unrecorded lesson needs review
+  assert.equal(calum.reviewLessonCount, 1);
+  // the payable absence is flagged as a paid-absence slot
+  assert.equal(calum.payableSlots[0].isPaidAbsence, true);
+});
+
+test('a mixed group with AbsentNotice + Unrecorded still needs review', () => {
+  const preview = buildPayrollPreview({
+    payDate: '2026-07-01',
+    tutorPay: parseTutorPay([{ tutor: 'Calum', hourly_rate: '24', pay_model: 'hourly' }]),
+    attendanceRows: [
+      attendance({ EventID: 'evt_grp', StudentID: 'a', StudentName: 'A', AttendanceStatus: 'AbsentNotice' }),
+      attendance({ EventID: 'evt_grp', StudentID: 'b', StudentName: 'B', AttendanceStatus: 'Unrecorded' }),
+    ],
+  });
+  const calum = preview.rows.find((row) => row.tutorShortName === 'Calum');
+  assert.equal(calum.reviewLessonCount, 1);
+  assert.equal(calum.lessonCount, 0);
+});
+
+test('resolveTutorPayrollWindow lets an overrideEnd pull the window end earlier, never later', () => {
+  // invoice closed Sunday: end pulled back from Tue 30 Jun to Sun 28 Jun
+  const earlier = resolveTutorPayrollWindow({ payDate: '2026-07-01', lastPaidThrough: '2026-06-23', overrideEnd: '2026-06-28' });
+  assert.equal(earlier.periodEnd, '2026-06-28');
+  assert.equal(earlier.endCustom, true);
+  // an end later than the default is ignored (those lessons belong to the next run)
+  const later = resolveTutorPayrollWindow({ payDate: '2026-07-01', lastPaidThrough: '2026-06-23', overrideEnd: '2026-07-05' });
+  assert.equal(later.periodEnd, '2026-06-30');
+  assert.equal(later.endCustom, false);
+});
+
+test('buildPayrollPreview applies a per-tutor window end override and excludes later lessons', () => {
+  const preview = buildPayrollPreview({
+    payDate: '2026-07-01',
+    tutorPay: parseTutorPay([{ tutor: 'Calum', hourly_rate: '24', pay_model: 'hourly' }]),
+    attendanceRows: [
+      attendance({ EventID: 'evt_in', EventStartDate: '2026-06-26T16:00:00' }),
+      attendance({ EventID: 'evt_out', EventStartDate: '2026-06-30T16:00:00' }),
+    ],
+    overrides: { Calum: { end: '2026-06-28' } },
+  });
+  const calum = preview.rows.find((row) => row.tutorShortName === 'Calum');
+  assert.equal(calum.periodEnd, '2026-06-28');
+  assert.equal(calum.windowEndCustom, true);
+  assert.equal(calum.lessonCount, 1); // the 30 Jun lesson falls outside the window
+});
+
 test('buildPayrollPreview uses biweekly cadence per tutor', () => {
   const tutorPay = parseTutorPay([{ tutor: 'Calum', hourly_rate: '24', pay_model: 'hourly', invoice_cadence: 'biweekly' }]);
   const preview = buildPayrollPreview({

@@ -82,7 +82,7 @@ function SlotLine({ slot }) {
       {slot.durationMinutes || '?'} mins
       {slot.studentCount > 1 ? ` · group of ${slot.studentCount}` : ''}
       {slot.isCover ? ' · cover' : ''}
-      {slot.state !== 'payable' && slot.statusLabel ? ` · ${slot.statusLabel}` : ''}
+      {(slot.state !== 'payable' || slot.isPaidAbsence) && slot.statusLabel ? ` · ${slot.statusLabel}` : ''}
       {' · '}
       {slot.students.map((student) => student.studentName).filter(Boolean).join(', ') || 'Student unknown'}
       {slot.amount !== null ? ` · ${formatMoney(slot.amount)}` : ' · unpriced'}
@@ -145,7 +145,7 @@ function PayrollTutorCard({ row, payDate }) {
             ) : null}
           </div>
           <p className="mt-1 text-sm text-slate-500">
-            {formatPayrollDate(row.periodStart)} - {formatPayrollDate(row.periodEnd)} · {row.windowDays} days{basisLabel ? ` · ${basisLabel}` : ''}
+            {formatPayrollDate(row.periodStart)} - {formatPayrollDate(row.periodEnd)} · {row.windowDays} days{basisLabel ? ` · ${basisLabel}` : ''}{row.windowEndCustom ? ' · custom end' : ''}
           </p>
           <form className="mt-2 flex flex-wrap items-center gap-2">
             <input type="hidden" name="payDate" value={payDate} />
@@ -153,6 +153,10 @@ function PayrollTutorCard({ row, payDate }) {
             <label className="text-xs text-slate-500">
               Window start
               <input type="date" name="start" defaultValue={row.periodStart} className="ml-1 rounded-lg border border-slate-200 px-2 py-1 text-xs" />
+            </label>
+            <label className="text-xs text-slate-500">
+              end
+              <input type="date" name="end" defaultValue={row.periodEnd} className="ml-1 rounded-lg border border-slate-200 px-2 py-1 text-xs" />
             </label>
             <button className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50">Adjust window</button>
           </form>
@@ -263,8 +267,11 @@ export default async function AdminPayrollPage({ searchParams }) {
   // Fetch the full max look-back (since-last-paid catch-up can reach back up to 5 weeks).
   const fetchStart = new Date(new Date(`${payDate}T00:00:00Z`).getTime() - 35 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const fetchEnd = buildPayrollPeriod({ payDate, cadence: 'weekly' }).periodEnd;
-  // Per-tutor window override: ?tutor=<shortName>&start=<YYYY-MM-DD> (one tutor at a time).
-  const overrides = params.tutor && params.start ? { [`${params.tutor}`]: `${params.start}`.slice(0, 10) } : {};
+  // Per-tutor window override: ?tutor=<shortName>&start=<YYYY-MM-DD>&end=<YYYY-MM-DD>
+  // (one tutor at a time). end lets an invoice that closes earlier in the week stop short.
+  const overrides = params.tutor && (params.start || params.end)
+    ? { [`${params.tutor}`]: { start: `${params.start || ''}`.slice(0, 10), end: `${params.end || ''}`.slice(0, 10) } }
+    : {};
 
   const [tutorPayRows, savedRuns] = await Promise.all([
     getTutorPayRows(),
