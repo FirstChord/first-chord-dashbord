@@ -90,37 +90,62 @@ function SlotLine({ slot }) {
   );
 }
 
-function SlotList({ title, slots = [], empty = 'None', note = '' }) {
+function SlotListBody({ slots = [], empty = 'None' }) {
   const first = slots.slice(0, 6);
   const rest = slots.slice(6);
+  if (!slots.length) {
+    return <p className="mt-2 text-xs text-slate-400">{empty}</p>;
+  }
+  return (
+    <ul className="mt-2 space-y-1.5 text-xs text-slate-600">
+      {first.map((slot) => (
+        <SlotLine key={`${slot.eventId || slot.startAt}-${slot.studentCount}-${slot.state}`} slot={slot} />
+      ))}
+      {rest.length ? (
+        <li>
+          <details className="group">
+            <summary className="cursor-pointer list-none rounded-xl bg-slate-100 px-3 py-2 text-slate-500 hover:bg-slate-200">
+              + {rest.length} more <span className="group-open:hidden">(show)</span><span className="hidden group-open:inline">(hide)</span>
+            </summary>
+            <ul className="mt-1.5 space-y-1.5">
+              {rest.map((slot) => (
+                <SlotLine key={`${slot.eventId || slot.startAt}-${slot.studentCount}-${slot.state}`} slot={slot} />
+              ))}
+            </ul>
+          </details>
+        </li>
+      ) : null}
+    </ul>
+  );
+}
+
+function SlotList({ title, slots = [], empty = 'None', note = '' }) {
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{title}</p>
       {note ? <p className="mt-1 text-[0.7rem] leading-4 text-slate-400">{note}</p> : null}
-      {slots.length ? (
-        <ul className="mt-2 space-y-1.5 text-xs text-slate-600">
-          {first.map((slot) => (
-            <SlotLine key={`${slot.eventId || slot.startAt}-${slot.studentCount}-${slot.state}`} slot={slot} />
-          ))}
-          {rest.length ? (
-            <li>
-              <details className="group">
-                <summary className="cursor-pointer list-none rounded-xl bg-slate-100 px-3 py-2 text-slate-500 hover:bg-slate-200">
-                  + {rest.length} more <span className="group-open:hidden">(show)</span><span className="hidden group-open:inline">(hide)</span>
-                </summary>
-                <ul className="mt-1.5 space-y-1.5">
-                  {rest.map((slot) => (
-                    <SlotLine key={`${slot.eventId || slot.startAt}-${slot.studentCount}-${slot.state}`} slot={slot} />
-                  ))}
-                </ul>
-              </details>
-            </li>
-          ) : null}
-        </ul>
-      ) : (
-        <p className="mt-2 text-xs text-slate-400">{empty}</p>
-      )}
+      <SlotListBody slots={slots} empty={empty} />
     </div>
+  );
+}
+
+// Quiet, collapsed-by-default version for lists the dashboard is confident about
+// (payable from MMS, absent/cancelled) — the card should lead with what needs review.
+function CollapsibleSlotList({ title, slots = [], empty = 'None', note = '' }) {
+  return (
+    <details className="group rounded-2xl border border-slate-100 bg-slate-50/60 px-4 py-3">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
+        <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+          {title}{slots.length ? ` (${slots.length})` : ''}
+        </span>
+        <span className="text-[0.7rem] uppercase tracking-wide text-slate-400">
+          <span className="group-open:hidden">show</span>
+          <span className="hidden group-open:inline">hide</span>
+        </span>
+      </summary>
+      {note ? <p className="mt-2 text-[0.7rem] leading-4 text-slate-400">{note}</p> : null}
+      <SlotListBody slots={slots} empty={empty} />
+    </details>
   );
 }
 
@@ -192,20 +217,25 @@ function PayrollTutorCard({ row, payDate }) {
         </div>
       ) : null}
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <SlotList title="Payable from MMS attendance" slots={row.payableSlots} empty="No payable lessons found for this period." />
-        <SlotList title="Needs review" slots={row.reviewSlots} empty="No unrecorded/unclear lessons." />
-      </div>
-      {row.excludedSlots?.length ? (
-        <div className="mt-4">
-          <SlotList
-            title={`Not counted — absent / cancelled (${row.excludedSlots.length})`}
+      <div className="mt-4 space-y-3">
+        {/* Lead with the open loop — the only thing that needs a human. */}
+        <SlotList title="Needs review" slots={row.reviewSlots} empty="Nothing to review — every lesson in this window is recorded." />
+
+        {/* Confident lists collapsed by default to keep the card calm. */}
+        <CollapsibleSlotList
+          title="Payable from MMS attendance"
+          slots={row.payableSlots}
+          empty="No payable lessons found for this period."
+        />
+        {row.excludedSlots?.length ? (
+          <CollapsibleSlotList
+            title="Not counted — absent / cancelled"
             slots={row.excludedSlots}
             note="Marked absent or cancelled in MMS, so currently £0. Practice-video / paid-absence lessons sit here — the £ shown is what they would pay if payable."
             empty="None."
           />
-        </div>
-      ) : null}
+        ) : null}
+      </div>
 
       <form action={savePayrollRunAction} className="mt-5 grid gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4 md:grid-cols-[1fr_1fr_auto]">
         {[
