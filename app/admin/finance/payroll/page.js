@@ -101,9 +101,10 @@ function SlotList({ title, slots = [], empty = 'None' }) {
   );
 }
 
-function PayrollTutorCard({ row }) {
+function PayrollTutorCard({ row, payDate }) {
   const calculatedFinal = Math.round((row.expectedAmount + row.adjustmentAmount) * 100) / 100;
   const owed = row.owedAmount ?? (row.status === 'paid' ? 0 : (row.finalAmount || calculatedFinal));
+  const basisLabel = { since_paid: 'since last paid', first_run: 'default window', override: 'custom window' }[row.windowBasis] || row.windowBasis || '';
   return (
     <article className="rounded-[1.4rem] border border-slate-200 bg-white/90 p-5 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -121,8 +122,17 @@ function PayrollTutorCard({ row }) {
             ) : null}
           </div>
           <p className="mt-1 text-sm text-slate-500">
-            {formatPayrollDate(row.periodStart)} - {formatPayrollDate(row.periodEnd)}
+            {formatPayrollDate(row.periodStart)} - {formatPayrollDate(row.periodEnd)} · {row.windowDays} days{basisLabel ? ` · ${basisLabel}` : ''}
           </p>
+          <form className="mt-2 flex flex-wrap items-center gap-2">
+            <input type="hidden" name="payDate" value={payDate} />
+            <input type="hidden" name="tutor" value={row.tutorShortName} />
+            <label className="text-xs text-slate-500">
+              Window start
+              <input type="date" name="start" defaultValue={row.periodStart} className="ml-1 rounded-lg border border-slate-200 px-2 py-1 text-xs" />
+            </label>
+            <button className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50">Adjust window</button>
+          </form>
         </div>
         <div className="text-right">
           <p className="text-2xl font-semibold text-slate-900">{formatMoney(owed)}</p>
@@ -134,6 +144,21 @@ function PayrollTutorCard({ row }) {
         </div>
       </div>
 
+      {row.overlapsPaid ? (
+        <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+          ⚠ This window overlaps an already-paid period ({formatPayrollDate(row.overlapsPaid.periodStart)} - {formatPayrollDate(row.overlapsPaid.periodEnd)}). Risk of double-paying — move the window start forward.
+        </div>
+      ) : null}
+      {row.windowEmpty ? (
+        <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+          Already paid through {formatPayrollDate(row.lastPaidThrough)} — nothing outstanding for this pay date.
+        </div>
+      ) : null}
+      {row.windowCapped ? (
+        <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          Window capped at 35 days back. If this invoice covers more, set a custom window start.
+        </div>
+      ) : null}
       {row.reviewLessonCount ? (
         <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           {row.reviewLessonCount} lesson{row.reviewLessonCount === 1 ? '' : 's'} need attendance review before this figure should be trusted.
@@ -202,9 +227,11 @@ export default async function AdminPayrollPage({ searchParams }) {
   const params = (await searchParams) || {};
   const payDate = `${params.payDate || nextWednesday()}`.slice(0, 10);
   const teacherIds = Object.values(ADMIN_TUTORS).map((tutor) => tutor.teacherId).filter(Boolean);
-  // Fetch the widest supported window (3 weeks) so three-weekly tutors are covered.
-  const fetchStart = buildPayrollPeriod({ payDate, cadence: 'three-weekly' }).periodStart;
+  // Fetch the full max look-back (since-last-paid catch-up can reach back up to 5 weeks).
+  const fetchStart = new Date(new Date(`${payDate}T00:00:00Z`).getTime() - 35 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const fetchEnd = buildPayrollPeriod({ payDate, cadence: 'weekly' }).periodEnd;
+  // Per-tutor window override: ?tutor=<shortName>&start=<YYYY-MM-DD> (one tutor at a time).
+  const overrides = params.tutor && params.start ? { [`${params.tutor}`]: `${params.start}`.slice(0, 10) } : {};
 
   const [tutorPayRows, savedRuns] = await Promise.all([
     getTutorPayRows(),
@@ -228,6 +255,7 @@ export default async function AdminPayrollPage({ searchParams }) {
     attendanceRows,
     tutorPay: parseTutorPay(tutorPayRows),
     savedRuns,
+    overrides,
     payDate,
   });
   const activeRows = preview.rows.filter((row) => row.payModel !== 'salary' || row.lessonCount || row.reviewLessonCount || row.status !== 'draft');
@@ -286,7 +314,7 @@ export default async function AdminPayrollPage({ searchParams }) {
 
       <section className="space-y-4">
         {activeRows.length ? activeRows.map((row) => (
-          <PayrollTutorCard key={row.payrollId} row={row} />
+          <PayrollTutorCard key={row.payrollId} row={row} payDate={payDate} />
         )) : (
           <div className="rounded-[1.6rem] border border-slate-200 bg-white/90 p-6 text-sm text-slate-500">
             No payroll rows found for this period.

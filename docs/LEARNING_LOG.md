@@ -19,6 +19,20 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-27 — Payroll hardening: since-last-paid window + override + double-pay guard
+
+**Feature/change:** Reworked the payroll pay-window from a fixed per-tutor cadence to **"since they were last paid → this Wednesday."** Pay date is the constant (every Wednesday); the *period* each invoice covers is variable, so anchoring to the last paid run is the right primitive. `resolveTutorPayrollWindow` (pure) + `overlapsPaidRun` (pure) + `cadenceLengthDays`. `buildPayrollPreview` now derives each tutor's window from their paid runs in `Payroll_Runs`, with a per-tutor override and a max-look-back cap. UI: window basis + day count on each card, a "Window start" adjust control (one tutor at a time, `?tutor=&start=`), and warnings for overlap / already-paid-through / capped. Page fetches 35 days of attendance to cover catch-up windows. 3 new tests; suite 363, build clean.
+
+**Why it's the right design:** it solves three edge cases at once — variable length (auto), catch-up if an invoice was missed (window stretches back to last paid), and **double-pay is structurally impossible** (the window starts *after* the last paid period). Self-perpetuating: marking a run paid sets the next run's anchor; no new storage (reuses `Payroll_Runs` period + status). The override + existing Adjustment field cover irregular invoices and £ deltas.
+
+**Lesson:** when a recurring process has a fixed anchor (the Wednesday) but a variable span, model the span as "since the last completed one," not as a fixed cadence — it removes manual tuning and the double-count class of bug by construction.
+
+**Watch:** the overlap guard is period-level, not lesson-level (good enough with the since-last-paid default; lesson-level cross-run dedup is a future slice if needed). Cover-lesson attribution still deferred to V2.
+
+### 2026-06-27 — Payroll flexibility, reconciliation loop-closing, roster snapshot, read-quota fix (deployed d2c4a00)
+
+**What:** Batch shipped before the hardening. (1) **Reconciliation loop-closing** — a "Confirm paused (fix flag)" action on `/admin/finance/reconciliation` conflicts: sets live `payment_expectation=stripe_paused_expected` + `Event_Log` audit, resolving the lane conflict at source (first write action from the reconciliation layer; auth-gated, reuses the auto-sync write). (2) **Roster into snapshot** — weekly `Finance_Snapshot` now captures `onboarded_count`/`left_count` (`countDatesInRange`). (3) **Payroll** — `three-weekly` cadence option; mark-paid → owed shows £0 (`owedAmount`), headline "Outstanding to pay". (4) **Read-quota fix** — `getSpreadsheetMetadata` is 60s-cached + `withSheetsRetry` + trimmed `fields`, so managed-tab-heavy pages share one metadata read and 429s back off instead of crashing (was crashing the live payroll page).
+
 ### 2026-06-27 — Roster movement (onboarded vs left)
 
 **Feature/change:** `lib/admin/roster-movement.mjs` (pure `buildRosterMovement` + `onboardedDatesFromWaitingState` / `leftDatesFromArchive`) + a read-only "Roster movement" panel on `/admin/finance`: onboarded vs left vs net, by month, last 6 months, computed retroactively from dated source records. New `getStudentsArchiveRows` reader. 5 tests; suite 357 pass, build clean.

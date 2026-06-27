@@ -8,6 +8,8 @@ import {
   buildPayrollRunId,
   nextWednesday,
   normalisePayrollRunRow,
+  resolveTutorPayrollWindow,
+  overlapsPaidRun,
 } from '../../lib/admin/payroll-helpers.mjs';
 
 function attendance(overrides = {}) {
@@ -60,6 +62,52 @@ test('a paid run shows £0 owed but keeps finalAmount as the record', () => {
   assert.equal(calum.owedAmount, 0);
   assert.equal(calum.finalAmount, 50);
   assert.equal(preview.totals.outstandingAmount, 0);
+});
+
+test('resolveTutorPayrollWindow anchors to since-last-paid, falls back, caps, and detects empty', () => {
+  // since last paid: window starts the day after the last paid period end
+  const sincePaid = resolveTutorPayrollWindow({ payDate: '2026-07-01', lastPaidThrough: '2026-06-23' });
+  assert.equal(sincePaid.periodStart, '2026-06-24');
+  assert.equal(sincePaid.periodEnd, '2026-06-30');
+  assert.equal(sincePaid.basis, 'since_paid');
+
+  // first run: cadence length back from the pay date
+  const firstRun = resolveTutorPayrollWindow({ payDate: '2026-07-01', cadence: 'weekly' });
+  assert.equal(firstRun.periodStart, '2026-06-24');
+  assert.equal(firstRun.basis, 'first_run');
+
+  // override beats everything
+  const override = resolveTutorPayrollWindow({ payDate: '2026-07-01', lastPaidThrough: '2026-06-23', overrideStart: '2026-06-17' });
+  assert.equal(override.periodStart, '2026-06-17');
+  assert.equal(override.basis, 'override');
+
+  // very old anchor → capped at maxLookbackDays
+  const capped = resolveTutorPayrollWindow({ payDate: '2026-07-01', lastPaidThrough: '2026-01-01', maxLookbackDays: 35 });
+  assert.equal(capped.periodStart, '2026-05-27');
+  assert.equal(capped.capped, true);
+
+  // already paid through the window end → empty (nothing to pay)
+  const empty = resolveTutorPayrollWindow({ payDate: '2026-07-01', lastPaidThrough: '2026-06-30' });
+  assert.equal(empty.empty, true);
+});
+
+test('overlapsPaidRun flags windows that re-include an already-paid period', () => {
+  const paid = [{ periodStart: '2026-06-17', periodEnd: '2026-06-23' }];
+  assert.ok(overlapsPaidRun({ periodStart: '2026-06-17', periodEnd: '2026-06-30' }, paid));
+  assert.equal(overlapsPaidRun({ periodStart: '2026-06-24', periodEnd: '2026-06-30' }, paid), null);
+});
+
+test('buildPayrollPreview anchors a tutor to since-last-paid from their paid runs', () => {
+  const preview = buildPayrollPreview({
+    payDate: '2026-07-01',
+    tutorPay: parseTutorPay([{ tutor: 'Calum', hourly_rate: '24', pay_model: 'hourly' }]),
+    attendanceRows: [attendance({ EventID: 'evt_1', EventStartDate: '2026-06-24T16:00:00', EventDuration: 30 })],
+    savedRuns: [{ payroll_id: 'payroll_calum_2026-06-10_2026-06-16', tutor_short_name: 'Calum', status: 'paid', period_start: '2026-06-10', period_end: '2026-06-16', final_amount: '24' }],
+  });
+  const calum = preview.rows.find((row) => row.tutorShortName === 'Calum');
+  assert.equal(calum.periodStart, '2026-06-17'); // day after last paid
+  assert.equal(calum.windowBasis, 'since_paid');
+  assert.equal(calum.lessonCount, 1);
 });
 
 test('buildPayrollRunId is stable by tutor and period', () => {
