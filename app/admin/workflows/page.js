@@ -8,12 +8,6 @@ const workflowSections = [
     status: 'Active workflow',
   },
   {
-    href: '/admin/onboard',
-    title: 'Onboarding',
-    description: 'Create the operational records, registry entry, MMS setup, and first lesson for a new student.',
-    status: 'Action flow',
-  },
-  {
     href: '/admin/showcase',
     title: 'Showcase',
     description: 'Recurring showcase checklist, message copy, assets, and planning state.',
@@ -42,12 +36,6 @@ const workflowSections = [
     title: 'Payroll',
     description: 'Wednesday tutor-pay review from MMS attendance: per-tutor pay window (since last paid), mark reviewed/paid. Reconciliation support, not payment execution.',
     status: 'Recurring',
-  },
-  {
-    href: '/admin/communications',
-    title: 'Messages Sent',
-    description: 'Read-only record of parent messages copied to send from the dashboard. A logbook, not a sender.',
-    status: 'Record',
   },
 ];
 
