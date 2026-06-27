@@ -76,7 +76,34 @@ function statusClass(status) {
   return 'border-slate-200 bg-slate-50 text-slate-700';
 }
 
-function SlotLine({ slot }) {
+function mmsStudentUrl(studentId) {
+  return `https://app.mymusicstaff.com/Teacher/v2/en/students/details?id=${encodeURIComponent(studentId)}`;
+}
+
+// Deep links into MMS so an unrecorded lesson can be fixed at source (MMS owns
+// attendance) without the dashboard ever writing it.
+function FixInMms({ slot }) {
+  const students = (slot.students || []).filter((student) => student.studentId);
+  if (!students.length) return null;
+  const labelEach = students.length > 1;
+  return (
+    <span className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
+      {students.map((student) => (
+        <a
+          key={student.studentId}
+          href={mmsStudentUrl(student.studentId)}
+          target="_blank"
+          rel="noreferrer"
+          className="text-blue-700 underline decoration-dotted underline-offset-2 hover:text-blue-900"
+        >
+          Fix {labelEach ? `${student.studentName || 'student'} ` : ''}in MMS ↗
+        </a>
+      ))}
+    </span>
+  );
+}
+
+function SlotLine({ slot, withFix = false }) {
   return (
     <li className="rounded-xl bg-slate-50 px-3 py-2">
       <span className="font-medium text-slate-800">{formatPayrollDate(slot.startAt, { withTime: true })}</span>
@@ -88,11 +115,12 @@ function SlotLine({ slot }) {
       {' · '}
       {slot.students.map((student) => student.studentName).filter(Boolean).join(', ') || 'Student unknown'}
       {slot.amount !== null ? ` · ${formatMoney(slot.amount)}` : ' · unpriced'}
+      {withFix ? <FixInMms slot={slot} /> : null}
     </li>
   );
 }
 
-function SlotListBody({ slots = [], empty = 'None' }) {
+function SlotListBody({ slots = [], empty = 'None', withFix = false }) {
   const first = slots.slice(0, 6);
   const rest = slots.slice(6);
   if (!slots.length) {
@@ -101,7 +129,7 @@ function SlotListBody({ slots = [], empty = 'None' }) {
   return (
     <ul className="mt-2 space-y-1.5 text-xs text-slate-600">
       {first.map((slot) => (
-        <SlotLine key={`${slot.eventId || slot.startAt}-${slot.studentCount}-${slot.state}`} slot={slot} />
+        <SlotLine key={`${slot.eventId || slot.startAt}-${slot.studentCount}-${slot.state}`} slot={slot} withFix={withFix} />
       ))}
       {rest.length ? (
         <li>
@@ -111,7 +139,7 @@ function SlotListBody({ slots = [], empty = 'None' }) {
             </summary>
             <ul className="mt-1.5 space-y-1.5">
               {rest.map((slot) => (
-                <SlotLine key={`${slot.eventId || slot.startAt}-${slot.studentCount}-${slot.state}`} slot={slot} />
+                <SlotLine key={`${slot.eventId || slot.startAt}-${slot.studentCount}-${slot.state}`} slot={slot} withFix={withFix} />
               ))}
             </ul>
           </details>
@@ -121,12 +149,12 @@ function SlotListBody({ slots = [], empty = 'None' }) {
   );
 }
 
-function SlotList({ title, slots = [], empty = 'None', note = '' }) {
+function SlotList({ title, slots = [], empty = 'None', note = '', withFix = false }) {
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{title}</p>
       {note ? <p className="mt-1 text-[0.7rem] leading-4 text-slate-400">{note}</p> : null}
-      <SlotListBody slots={slots} empty={empty} />
+      <SlotListBody slots={slots} empty={empty} withFix={withFix} />
     </div>
   );
 }
@@ -155,6 +183,8 @@ function PayrollTutorCard({ row, payDate }) {
   const calculatedFinal = Math.round((row.expectedAmount + row.adjustmentAmount) * 100) / 100;
   const owed = row.owedAmount ?? (row.status === 'paid' ? 0 : (row.finalAmount || calculatedFinal));
   const basisLabel = { since_paid: 'since last paid', first_run: 'default window', override: 'custom window' }[row.windowBasis] || row.windowBasis || '';
+  const reviewPast = (row.reviewSlots || []).filter((slot) => slot.timing === 'past');
+  const reviewUpcoming = (row.reviewSlots || []).filter((slot) => slot.timing === 'upcoming');
   return (
     <article className="rounded-[1.4rem] border border-slate-200 bg-white/90 p-5 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -201,15 +231,30 @@ function PayrollTutorCard({ row, payDate }) {
           Window capped at 35 days back. If this invoice covers more, set a custom window start.
         </div>
       ) : null}
-      {row.reviewLessonCount ? (
+      {reviewPast.length ? (
         <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          {row.reviewLessonCount} lesson{row.reviewLessonCount === 1 ? '' : 's'} need attendance review before this figure should be trusted.
+          {reviewPast.length} taught lesson{reviewPast.length === 1 ? '' : 's'} not yet marked in MMS — record {reviewPast.length === 1 ? 'it' : 'them'} before trusting this figure.
+          {reviewUpcoming.length ? ` (${reviewUpcoming.length} more upcoming — those resolve themselves.)` : ''}
         </div>
       ) : null}
 
       <div className="mt-4 space-y-3">
-        {/* Lead with the open loop — the only thing that needs a human. */}
-        <SlotList title="Needs review" slots={row.reviewSlots} empty="Nothing to review — every lesson in this window is recorded." />
+        {/* Lead with the genuine open loop: taught but not yet recorded in MMS. */}
+        <SlotList
+          title="Needs recording — taught, not marked in MMS"
+          slots={reviewPast}
+          empty="Nothing to record — every past lesson in this window is marked in MMS."
+          withFix
+        />
+
+        {/* Upcoming review lessons self-resolve once taught — kept quiet. */}
+        {reviewUpcoming.length ? (
+          <CollapsibleSlotList
+            title="Upcoming — not yet taught"
+            slots={reviewUpcoming}
+            note="These lessons haven't happened yet, so they're unrecorded for now. They drop out of review automatically once they're taught and marked in MMS — no action needed."
+          />
+        ) : null}
 
         {/* Confident lists collapsed by default to keep the card calm. */}
         <CollapsibleSlotList

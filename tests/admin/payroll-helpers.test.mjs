@@ -64,6 +64,24 @@ test('a paid run shows £0 owed but keeps finalAmount as the record', () => {
   assert.equal(preview.totals.outstandingAmount, 0);
 });
 
+test('review lessons split into past (needs recording) vs upcoming (self-resolving)', () => {
+  const preview = buildPayrollPreview({
+    payDate: '2026-07-01', // weekly window 2026-06-24 .. 2026-06-30
+    now: new Date('2026-06-29T12:00:00Z'),
+    tutorPay: parseTutorPay([{ tutor: 'Calum', hourly_rate: '24', pay_model: 'hourly' }]),
+    attendanceRows: [
+      attendance({ EventID: 'evt_past', AttendanceStatus: 'Unrecorded', EventStartDate: '2026-06-24T16:00:00' }),
+      attendance({ EventID: 'evt_future', AttendanceStatus: 'Unrecorded', EventStartDate: '2026-06-30T16:00:00' }),
+    ],
+  });
+  const calum = preview.rows.find((row) => row.tutorShortName === 'Calum');
+  assert.equal(calum.reviewLessonCount, 2);
+  assert.equal(calum.reviewPastCount, 1);
+  assert.equal(calum.reviewUpcomingCount, 1);
+  assert.equal(calum.reviewSlots.find((s) => s.eventId === 'evt_past').timing, 'past');
+  assert.equal(calum.reviewSlots.find((s) => s.eventId === 'evt_future').timing, 'upcoming');
+});
+
 test('resolveTutorPayrollWindow anchors to since-last-paid, falls back, caps, and detects empty', () => {
   // since last paid: window starts the day after the last paid period end
   const sincePaid = resolveTutorPayrollWindow({ payDate: '2026-07-01', lastPaidThrough: '2026-06-23' });
