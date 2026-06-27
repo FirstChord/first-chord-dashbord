@@ -13,6 +13,7 @@ import {
 } from '@/lib/admin/payroll-helpers.mjs';
 import { ADMIN_TUTORS } from '@/lib/admin/tutors-data';
 import { formatMoney } from '@/lib/admin/finance-helpers.mjs';
+import AdjustWindowForm from './adjust-window-form';
 
 export const dynamic = 'force-dynamic';
 
@@ -172,19 +173,7 @@ function PayrollTutorCard({ row, payDate }) {
           <p className="mt-1 text-sm text-slate-500">
             {formatPayrollDate(row.periodStart)} - {formatPayrollDate(row.periodEnd)} · {row.windowDays} days{basisLabel ? ` · ${basisLabel}` : ''}{row.windowEndCustom ? ' · custom end' : ''}
           </p>
-          <form className="mt-2 flex flex-wrap items-center gap-2">
-            <input type="hidden" name="payDate" value={payDate} />
-            <input type="hidden" name="tutor" value={row.tutorShortName} />
-            <label className="text-xs text-slate-500">
-              Window start
-              <input type="date" name="start" defaultValue={row.periodStart} className="ml-1 rounded-lg border border-slate-200 px-2 py-1 text-xs" />
-            </label>
-            <label className="text-xs text-slate-500">
-              end
-              <input type="date" name="end" defaultValue={row.periodEnd} className="ml-1 rounded-lg border border-slate-200 px-2 py-1 text-xs" />
-            </label>
-            <button className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50">Adjust window</button>
-          </form>
+          <AdjustWindowForm payDate={payDate} tutor={row.tutorShortName} start={row.periodStart} end={row.periodEnd} />
         </div>
         <div className="text-right">
           <p className="text-2xl font-semibold text-slate-900">{formatMoney(owed)}</p>
