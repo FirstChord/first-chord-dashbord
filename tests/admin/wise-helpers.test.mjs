@@ -26,6 +26,7 @@ function wiseRow(overrides = {}) {
 
 function payrollRow(overrides = {}) {
   return {
+    payrollId: 'payroll_kenny_2026-06-24_2026-06-30',
     tutor: 'Kenny Bates',
     tutorShortName: 'Kenny',
     status: 'reviewed',
@@ -60,6 +61,18 @@ test('buildWiseBatch includes only reviewed rows with positive owed amount', () 
   assert.equal(result.csvRows[0].paymentReference, 'FC pay 2026-07-01');
   assert.equal(result.csvRows[0].recipientId, '12345');
   assert.equal(result.missing.length, 0);
+  assert.deepEqual(result.includedPayrollIds, ['payroll_kenny_2026-06-24_2026-06-30']);
+});
+
+test('buildWiseBatch excludes missing-recipient rows from includedPayrollIds', () => {
+  const wiseByKey = parseTutorWise([wiseRow({ tutor: 'Kenny' })]);
+  const rows = [
+    payrollRow(),
+    payrollRow({ payrollId: 'payroll_lucy', tutor: 'Lucy Smith', tutorShortName: 'Lucy', owedAmount: 120 }),
+  ];
+  const result = buildWiseBatch({ rows, wiseByKey });
+  assert.deepEqual(result.includedPayrollIds, ['payroll_kenny_2026-06-24_2026-06-30']);
+  assert.equal(result.missing.length, 1);
 });
 
 test('buildWiseBatch surfaces reviewed rows with no Wise recipient instead of dropping them', () => {
