@@ -114,6 +114,29 @@ function statusClass(status) {
   return 'border-slate-200 bg-slate-50 text-slate-700';
 }
 
+// Sticky chip bar to jump straight to a tutor's card without scrolling.
+// Pure anchor links (#t-<shortName>) — no client JS. Chips are alphabetical for
+// fast scanning; the status colour keeps a half-done board legible.
+function TutorJumpIndex({ rows = [] }) {
+  if (rows.length < 2) return null;
+  const chips = [...rows].sort((a, b) => `${a.tutor}`.localeCompare(`${b.tutor}`));
+  return (
+    <nav className="sticky top-0 z-10 -mx-1 rounded-2xl border border-slate-200 bg-white/85 px-3 py-2 shadow-sm backdrop-blur">
+      <div className="flex flex-wrap gap-1.5">
+        {chips.map((row) => (
+          <a
+            key={row.payrollId}
+            href={`#t-${row.tutorShortName}`}
+            className={`rounded-full border px-2.5 py-1 text-xs font-medium transition hover:brightness-95 ${statusClass(row.status)}`}
+          >
+            {row.tutorShortName || row.tutor}
+          </a>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
 function mmsStudentUrl(studentId) {
   // #AttendanceNotes opens the student's attendance log directly — where the
   // unrecorded lesson gets marked.
@@ -226,7 +249,7 @@ function PayrollTutorCard({ row, payDate }) {
   const reviewPast = (row.reviewSlots || []).filter((slot) => slot.timing === 'past');
   const reviewUpcoming = (row.reviewSlots || []).filter((slot) => slot.timing === 'upcoming');
   return (
-    <article className="rounded-[1.4rem] border border-slate-200 bg-white/90 p-5 shadow-sm">
+    <article id={`t-${row.tutorShortName}`} className="scroll-mt-28 rounded-[1.4rem] border border-slate-200 bg-white/90 p-5 shadow-sm transition target:ring-2 target:ring-blue-400">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">
@@ -470,6 +493,7 @@ export default async function AdminPayrollPage({ searchParams }) {
       />
 
       <section className="space-y-4">
+        <TutorJumpIndex rows={activeRows} />
         {activeRows.length ? activeRows.map((row) => (
           <PayrollTutorCard key={row.payrollId} row={row} payDate={payDate} />
         )) : (
