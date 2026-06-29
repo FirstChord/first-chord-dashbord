@@ -26,7 +26,7 @@ components/admin/
     PlanningCard.js            ☐ the per-item card (~620 lines) — the big one
     DueTodayCard.js            ☐ wraps PlanningCard in compact mode
     QuickBrainCapture.js       ☐ quick-capture box (+ the capture trio helpers that stay component-side)
-    SchoolNoteCapture.js       ☐ learning/strategic note form
+    SchoolNoteCapture.js       ✓ learning/strategic note form
     ItemForm.js                ☐ the edit form
     MondayIntentionRow.js      ✓ the Friday→Monday intention row
 lib/admin/
