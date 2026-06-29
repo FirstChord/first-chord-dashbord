@@ -7,8 +7,6 @@ import {
   ISSUE_TYPE_OPTIONS,
   ISSUE_VIEW_OPTIONS,
   freshnessClasses,
-  isSetupIssue,
-  isRecordIssue,
   buildPaymentQuickActionAuditNote,
   paymentQuickActionResolvesIssue,
   isPaymentIssue,
