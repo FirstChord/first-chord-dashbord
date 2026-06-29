@@ -9,10 +9,30 @@ This is a **snapshot** — update the row when you extract more (and keep it hon
 | Component | Lines | Extracted to (tested) | Still inline (by design / pending) | Phase |
 |---|---|---|---|---|
 | `components/admin/AdminIssuesPageClient.js` | ~1,300 | `lib/admin/issues-client-helpers.mjs` — issue classification, view filtering, story/what-to-do copy, hints, labels, Stripe-snapshot summary | the component + the `Select` field + the default render | 1 ✓ |
-| `components/admin/AdminPlanningPageClient.js` | ~3,195 | `lib/admin/planning-client-helpers.mjs` — date/format, pause-date parsing, pause prefill-URL + confirmation message, planning classification (`getPlanningStory`/`dueChipLabel`/`isPausePlanningItem`…), student search/inference, deep-link builders, school-note classifiers/builder | **quick-capture trio** (`inferQuickCapture`/`isTutorAbsenceCaptureText`/`buildQuickCaptureItem`) — coupled to form-state consts (`EMPTY_FORM`, `QUICK_CAPTURE_DEFAULTS`, `CLIENT_TUTOR_OPTIONS`). Field components + feature components (`PlanningCard`, `QuickBrainCapture`, `DueTodayCard`, `ItemForm`…) — **Phase 2/3 pending** | 1b ✓ helpers |
+| `components/admin/AdminPlanningPageClient.js` | ~2,990 | `lib/admin/planning-client-helpers.mjs` — date/format, pause-date parsing, pause prefill-URL + confirmation message, planning classification (`getPlanningStory`/`dueChipLabel`/`isPausePlanningItem`…), student search/inference, deep-link builders, school-note classifiers/builder · `components/admin/planning/fields.js` — the 7 shared form fields | **quick-capture trio** (`inferQuickCapture`/`isTutorAbsenceCaptureText`/`buildQuickCaptureItem`) — coupled to form-state consts. Feature components (`PlanningCard`, `QuickBrainCapture`, `DueTodayCard`, `ItemForm`, `SchoolNoteCapture`, `MondayIntentionRow`) — **Phase 3 pending** | 1b ✓ helpers · 2 ✓ fields |
 | `components/admin/AdminStudentDetailClient.js` | ~1,200 | `lib/admin/student-detail-helpers.mjs` — date/lifecycle/note-status formatters, payment-expectation label + option list | the component + field components (`Field`/`Input`/`Select`/`ReadOnlyField`) | 1 ✓ helpers |
 | `components/admin/AdminParentUnderstandingPageClient.js` | ~950 | `lib/admin/parent-understanding-client-helpers.mjs` — record scoring, workflow-activity/assessment detection, risk signals, status patches, queue search, next-action derivation | `hasCompleteUnderstandingAssessment`/`effectiveWorkflowStatus`/`workflowStatusLabel` (need `UNDERSTANDING_AREAS`) + `buildTemplates` (message-content consts); field/feature components | 1 ✓ helpers |
 | `lib/admin/sheets.js` | ~2,470 | *(untouched)* | one low-level client + ~50 domain accessors | **Phase 4 pending** — split into `lib/admin/sheets/{students,finance,planning,issues,…}.mjs` behind a barrel re-export so all ~29 call sites stay unchanged |
+
+## Planning client — target structure (the guided path)
+
+The planning client is the deepest split. Target layout under `components/admin/planning/`:
+
+```
+components/admin/
+  AdminPlanningPageClient.js   ← thin orchestrator: state, server-action handlers, layout, composition
+  planning/
+    fields.js                  ✓ SelectField, TextField, DateField, StudentSearchField, TextAreaField, ExpandableText, LinkPill
+    PlanningCard.js            ☐ the per-item card (~620 lines) — the big one
+    DueTodayCard.js            ☐ wraps PlanningCard in compact mode
+    QuickBrainCapture.js       ☐ quick-capture box (+ the capture trio helpers that stay component-side)
+    SchoolNoteCapture.js       ☐ learning/strategic note form
+    ItemForm.js                ☐ the edit form
+    MondayIntentionRow.js      ☐ the Friday→Monday intention row
+lib/admin/
+    planning-client-helpers.mjs  ✓ pure helpers (date/pause/classification/search/links/notes)
+```
+Feature components receive props (data + handlers) from the orchestrator — no behaviour change. Extract one at a time, build green between each. `☐` = pending.
 
 ## The extraction pattern (apply per file)
 
