@@ -28,7 +28,7 @@ components/admin/
     QuickBrainCapture.js       ☐ quick-capture box (+ the capture trio helpers that stay component-side)
     SchoolNoteCapture.js       ☐ learning/strategic note form
     ItemForm.js                ☐ the edit form
-    MondayIntentionRow.js      ☐ the Friday→Monday intention row
+    MondayIntentionRow.js      ✓ the Friday→Monday intention row
 lib/admin/
     planning-client-helpers.mjs  ✓ pure helpers (date/pause/classification/search/links/notes)
 ```
