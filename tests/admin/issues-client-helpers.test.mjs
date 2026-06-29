@@ -1,0 +1,100 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+
+import {
+  isSetupIssue,
+  isRecordIssue,
+  isPaymentIssue,
+  isPauseIssue,
+  needsLiveStripeReview,
+  shouldRefreshStripeFirst,
+  issueMatchesView,
+  paymentQuickActionResolvesIssue,
+  getPrimaryPaymentQuickAction,
+  getIssueCategoryLabel,
+  getStudentLabel,
+  getIssueStory,
+  getIssueWhatToDo,
+  summariseStripeSnapshot,
+} from '../../lib/admin/issues-client-helpers.mjs';
+
+test('issue classification predicates bucket types correctly', () => {
+  assert.equal(isSetupIssue({ type: 'STRIPE CUSTOMER MISSING' }), true);
+  assert.equal(isSetupIssue({ type: 'PAYMENT_FAILED' }), false);
+  assert.equal(isRecordIssue({ type: 'TUTOR CONFLICT' }), true);
+  assert.equal(isPaymentIssue({ type: 'PAYMENT_FAILED' }), true);
+  assert.equal(isPaymentIssue({ type: 'SHEETS ONLY' }), false);
+  assert.equal(isPauseIssue({ type: 'PAUSE EXPECTATION STALE' }), true);
+  assert.equal(needsLiveStripeReview({ type: 'INACTIVE_STILL_BILLING' }), true);
+  assert.equal(needsLiveStripeReview({ type: 'PAYMENT SETUP PENDING' }), false);
+  assert.equal(shouldRefreshStripeFirst({ type: 'PAUSE EXPECTATION STALE' }), false); // pause-only, not a live-Stripe-first case
+  assert.equal(shouldRefreshStripeFirst({ type: 'PAYMENT_FAILED' }), true);
+});
+
+test('issueMatchesView routes issues to the right filter', () => {
+  assert.equal(issueMatchesView({ type: 'PAYMENT_FAILED' }, 'payment_risk'), true);
+  assert.equal(issueMatchesView({ type: 'PAUSE EXPECTATION STALE' }, 'pause'), true);
+  assert.equal(issueMatchesView({ type: 'STRIPE CUSTOMER MISSING' }, 'setup'), true);
+  assert.equal(issueMatchesView({ type: 'TUTOR CONFLICT' }, 'records'), true);
+  assert.equal(issueMatchesView({ type: 'PAYMENT_FAILED' }, 'all'), true);
+  // "cleared" = open/acknowledged but no longer detected at source
+  assert.equal(issueMatchesView({ type: 'PAYMENT_FAILED', status: 'open', sourcePresent: false }, 'cleared'), true);
+  assert.equal(issueMatchesView({ type: 'PAYMENT_FAILED', status: 'open', sourcePresent: true }, 'cleared'), false);
+});
+
+test('paymentQuickActionResolvesIssue only resolves matching expectation transitions', () => {
+  const setPaused = { payload: { paymentExpectation: 'stripe_paused_expected' } };
+  const setActive = { payload: { paymentExpectation: 'stripe_active_expected' } };
+  assert.equal(paymentQuickActionResolvesIssue({ type: 'PAUSE EXPECTATION MISMATCH' }, setPaused), true);
+  assert.equal(paymentQuickActionResolvesIssue({ type: 'PAUSE EXPECTATION MISMATCH' }, setActive), false);
+  assert.equal(paymentQuickActionResolvesIssue({ type: 'PAUSE EXPECTATION STALE' }, setActive), true);
+  assert.equal(
+    paymentQuickActionResolvesIssue({ type: 'SUBSCRIPTION_STATE_MISMATCH', paymentExpectation: 'stripe_paused_expected' }, setActive),
+    true,
+  );
+  assert.equal(paymentQuickActionResolvesIssue({ type: 'PAYMENT_FAILED' }, setActive), false);
+  assert.equal(paymentQuickActionResolvesIssue({ type: 'PAUSE EXPECTATION MISMATCH' }, { payload: {} }), false);
+});
+
+test('getPrimaryPaymentQuickAction finds the right action by label', () => {
+  const actions = [
+    { label: 'Set Stripe active expected' },
+    { label: 'Confirm pause and set paused expected' },
+  ];
+  assert.equal(getPrimaryPaymentQuickAction({ type: 'PAUSE EXPECTATION MISMATCH' }, actions).label, 'Confirm pause and set paused expected');
+  assert.equal(getPrimaryPaymentQuickAction({ type: 'PAUSE EXPECTATION STALE' }, actions).label, 'Set Stripe active expected');
+  assert.equal(getPrimaryPaymentQuickAction({ type: 'PAYMENT_FAILED' }, actions), null);
+});
+
+test('getIssueCategoryLabel reflects the predicate buckets', () => {
+  assert.equal(getIssueCategoryLabel({ type: 'PAUSE EXPECTATION STALE' }), 'Pause');
+  assert.equal(getIssueCategoryLabel({ type: 'PAYMENT_FAILED' }), 'Payment');
+  // Quirk surfaced by extraction: setup types are also payment issues, and the payment
+  // check runs first, so setup types label as 'Payment' — the 'Setup' branch is currently
+  // unreachable. Documented here; left as-is (behaviour-preserving refactor).
+  assert.equal(getIssueCategoryLabel({ type: 'STRIPE CUSTOMER MISSING' }), 'Payment');
+  assert.equal(getIssueCategoryLabel({ type: 'TUTOR CONFLICT' }), 'Records');
+  assert.equal(getIssueCategoryLabel({ type: 'SOMETHING ELSE' }), 'Issue');
+});
+
+test('story/what-to-do copy and student label handle source-gone + fallbacks', () => {
+  assert.equal(getStudentLabel({ mmsId: 'sdt_x' }), 'sdt_x');
+  assert.equal(getStudentLabel({ studentName: 'Ada' }), 'Ada');
+  assert.match(getIssueStory({ studentName: 'Ada', type: 'PAYMENT_FAILED', sourcePresent: true }), /failed in Stripe/);
+  assert.match(getIssueStory({ studentName: 'Ada', sourcePresent: false }), /no longer sees it/);
+  assert.match(getIssueWhatToDo({ sourcePresent: false }), /mark it resolved/);
+  assert.match(getIssueWhatToDo({ type: 'TUTOR CONFLICT', sourcePresent: true }), /which tutor is correct/);
+});
+
+test('summariseStripeSnapshot composes a readable line', () => {
+  assert.equal(summariseStripeSnapshot(null), '');
+  const line = summariseStripeSnapshot(
+    { subscriptionFound: true, subscriptionStatus: 'active', pauseState: 'paused', activelyBilling: false, latestInvoiceStatus: 'paid' },
+    ['PAUSE EXPECTATION STALE'],
+  );
+  assert.match(line, /Subscription active/);
+  assert.match(line, /Pause state: paused/);
+  assert.match(line, /Not actively billing/);
+  assert.match(line, /Invoice: paid/);
+  assert.match(line, /Issues: PAUSE EXPECTATION STALE/);
+});
