@@ -20,6 +20,7 @@ import {
   buildPauseLessonDateSuggestions,
   buildStructuredPausePlanningDraft,
   detectTutorAbsenceCapture,
+  flagNearbyPauses,
   inferPlanningTargetDateFromText,
   isMeetingPlanningItem,
   labelPlanningArea,
@@ -1860,7 +1861,7 @@ function QuickBrainCapture({
   );
 }
 
-function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides = {}, onStatus, onArchive, onEdit, onProgress, onPauseCompleted, onRepairPauseDetails, onOpenPauseTool, onOpenWorkflowPanel, onCreateLinkedAction, pendingId, compact = false }) {
+function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides = {}, onStatus, onArchive, onEdit, onProgress, onPauseCompleted, onRepairPauseDetails, onOpenPauseTool, onOpenWorkflowPanel, onCreateLinkedAction, pendingId, compact = false, nearbyPause = null }) {
   const [progressNote, setProgressNote] = useState('');
   const [nextAction, setNextAction] = useState(item.nextAction || '');
   const [pauseToolRan, setPauseToolRan] = useState(false);
@@ -1958,6 +1959,13 @@ function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides =
 
   return (
     <article className={compact ? '' : 'rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_22px_rgba(15,23,42,0.04)]'}>
+      {nearbyPause ? (
+        <p className="mb-3 rounded-xl bg-blue-50/70 px-3 py-2 text-xs leading-5 text-slate-600">
+          This student also has a pause around {formatTargetDate(nearbyPause.otherStart)}
+          {nearbyPause.otherEnd && nearbyPause.otherEnd !== nearbyPause.otherStart ? `–${formatTargetDate(nearbyPause.otherEnd)}` : ''}.
+          {' '}If they join up, you might be doing one longer break — worth a glance before you pause.
+        </p>
+      ) : null}
       {!compact && (
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -2143,14 +2151,16 @@ function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides =
                   Add structured pause dates to prefill the pause tool
                 </span>
               )}
-              {!paymentPausePrefillUrl ? (
-                <div className="rounded-lg border border-amber-100 bg-white p-3">
+              {isPauseReminder ? (
+                <div className="rounded-lg border border-slate-200 bg-white p-3">
                   <button
                     type="button"
                     onClick={() => setRepairOpen((current) => !current)}
                     className="rounded-lg border border-violet-200 bg-white px-3 py-1.5 text-xs font-semibold text-violet-800 hover:bg-violet-50"
                   >
-                    {repairOpen ? 'Hide date repair' : 'Add dates to this plan'}
+                    {repairOpen
+                      ? 'Hide dates'
+                      : (paymentPausePrefillUrl ? 'Edit dates' : 'Add dates to this plan')}
                   </button>
 
                   {repairOpen ? (
@@ -2489,6 +2499,7 @@ function DueTodayCard({
   onCreateLinkedAction,
   onDefer,
   pendingId,
+  nearbyPause = null,
 }) {
   const isPause = isPausePlanningItem(item);
   const [expanded, setExpanded] = useState(false);
@@ -2582,6 +2593,7 @@ function DueTodayCard({
             onOpenWorkflowPanel={onOpenWorkflowPanel}
             onCreateLinkedAction={onCreateLinkedAction}
             pendingId={pendingId}
+            nearbyPause={nearbyPause}
             compact
           />
         </div>
@@ -2684,6 +2696,18 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
       editPanelRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }, [editingItem]);
+
+  // Passive "noticing" aid: which open pause cards sit next to another pause for the
+  // same student (so they might be one longer break). Read-only — no merging.
+  const nearbyPauseFlags = useMemo(() => {
+    const entries = (planning.items || [])
+      .filter((item) => isOpenPlanningItem(item) && isPausePlanningItem(item))
+      .map((item) => {
+        const { startDate, endDate } = extractPauseDatesFromPlanningItem(item);
+        return { planningId: item.planningId, studentId: item.linkedStudentId, start: startDate, end: endDate };
+      });
+    return flagNearbyPauses(entries);
+  }, [planning.items]);
 
   const filteredItems = useMemo(() => {
     const search = query.trim().toLowerCase();
@@ -3488,6 +3512,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
                       onCreateLinkedAction={handleCreateLinkedAction}
                       onDefer={handleDefer}
                       pendingId={pendingId}
+                      nearbyPause={nearbyPauseFlags.get(item.planningId)}
                     />
                   ))}
               </div>
@@ -3525,6 +3550,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
                         onOpenWorkflowPanel={setWorkflowPanel}
                         onCreateLinkedAction={handleCreateLinkedAction}
                         pendingId={pendingId}
+                        nearbyPause={nearbyPauseFlags.get(item.planningId)}
                       />
                     ))}
                   </div>

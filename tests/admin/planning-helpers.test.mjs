@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   attachPlanningProgress,
   buildDateInputRange,
+  flagNearbyPauses,
   buildFirstLessonCheckinPlanningId,
   buildFirstLessonCheckinPlanningItem,
   buildSchoolForwardReflections,
@@ -621,4 +622,25 @@ test('buildTutorAbsencePlanningItem notes a missing MMS lesson list', () => {
   assert.match(item.notes, /No MMS lessons found/);
   assert.equal(item.targetDate, '2026-06-12'); // previous Friday
   assert.match(item.nextAction, /message 0 parents/);
+});
+
+test('flagNearbyPauses flags same-student pauses that sit next to each other', () => {
+  // Emeline: a tutor-absence date (4 Jul) running into her own pause (11 Jul–1 Aug).
+  const flags = flagNearbyPauses([
+    { planningId: 'p_absence', studentId: 'sdt_em', start: '2026-07-04', end: '2026-07-04' },
+    { planningId: 'p_own', studentId: 'sdt_em', start: '2026-07-11', end: '2026-08-01' },
+    // A different student's lone pause — no neighbour, no flag.
+    { planningId: 'p_solo', studentId: 'sdt_other', start: '2026-07-04', end: '2026-07-04' },
+  ]);
+  assert.deepEqual(flags.get('p_absence'), { otherStart: '2026-07-11', otherEnd: '2026-08-01' });
+  assert.deepEqual(flags.get('p_own'), { otherStart: '2026-07-04', otherEnd: '2026-07-04' });
+  assert.equal(flags.has('p_solo'), false);
+});
+
+test('flagNearbyPauses does not flag pauses that are far apart', () => {
+  const flags = flagNearbyPauses([
+    { planningId: 'a', studentId: 'sdt_em', start: '2026-07-04', end: '2026-07-04' },
+    { planningId: 'b', studentId: 'sdt_em', start: '2026-09-01', end: '2026-09-15' },
+  ]);
+  assert.equal(flags.size, 0);
 });
