@@ -9,6 +9,7 @@ import {
   formatTutorAbsenceDate,
   isTutorAbsencePaymentHandled,
   normaliseTutorAbsenceEvent,
+  selectRedundantTutorAbsencePauseCards,
   summariseTutorAbsenceState,
 } from '../../lib/admin/tutor-absence-helpers.mjs';
 
@@ -448,4 +449,29 @@ test('buildTutorAbsenceCancellationMessageGroups creates one parent message for 
   assert.match(groups[0].message, /Heya Rachel/u);
   assert.match(groups[0].message, /Tom is away/u);
   assert.match(groups[0].message, /Friday 3rd July and Friday 10th July/u);
+});
+
+test('selectRedundantTutorAbsencePauseCards parks only open absence-pause cards for covered students of the tutor', () => {
+  const planningItems = [
+    // covered student's open absence-pause card for this tutor → redundant
+    { planningId: 'planning_tutor_absence_pause_period_Stef_sdt_alice_2026-07-06_2026-07-20', linkedWorkflowId: 'tutor-absence', linkedTutorId: 'Stef', linkedStudentId: 'sdt_alice', status: 'active' },
+    // same student, but already parked → ignore
+    { planningId: 'planning_tutor_absence_pause_old', linkedWorkflowId: 'tutor-absence', linkedTutorId: 'Stef', linkedStudentId: 'sdt_alice', status: 'parked' },
+    // a different (net-new, not covered) student → ignore
+    { planningId: 'planning_tutor_absence_pause_b', linkedWorkflowId: 'tutor-absence', linkedTutorId: 'Stef', linkedStudentId: 'sdt_bob', status: 'active' },
+    // different tutor → ignore
+    { planningId: 'planning_tutor_absence_pause_c', linkedWorkflowId: 'tutor-absence', linkedTutorId: 'Calum', linkedStudentId: 'sdt_alice', status: 'active' },
+    // not a tutor-absence pause card → ignore
+    { planningId: 'planning_pause_manual_x', linkedWorkflowId: 'pause', linkedStudentId: 'sdt_alice', status: 'active' },
+  ];
+
+  const result = selectRedundantTutorAbsencePauseCards({
+    planningItems,
+    coveredStudentMmsIds: ['sdt_alice'],
+    tutorShortName: 'Stef',
+  });
+
+  assert.deepEqual(result, [
+    { studentMmsId: 'sdt_alice', planningIds: ['planning_tutor_absence_pause_period_Stef_sdt_alice_2026-07-06_2026-07-20'] },
+  ]);
 });

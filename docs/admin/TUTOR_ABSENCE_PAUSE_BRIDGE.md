@@ -163,6 +163,12 @@ For a multi-week tutor absence:
 
 If a cancellation later changes to cover, manually park/remove the related pause card until a reconciliation tool exists.
 
+### Reverse-order overlap (student's own pause arrives after the absence)
+
+If a tutor absence is recorded first and the student *then* says they're away for that period (and maybe longer), the bridge already created a "pause them for the absence dates" card for that student (the at-entry `payment_expectation` snapshot said active). The bridge does **not** auto-retire that card when the student later pauses on their own — it only fires on the tutor-absence save, and only drops/aligns students already paused *at entry time*.
+
+The reconciliation maths is unaffected (it recomputes from live state, order-independent — the student shows as "covered", net-new £0). To tidy the now-redundant card: open `/admin/finance/reconciliation`, filter to the tutor, and use **Close redundant card** on the covered student (`selectRedundantTutorAbsencePauseCards` + the page's guarded server action). It only appears for covered students, so the date-coverage is already guaranteed. Fully-automatic retirement (a sweep wired into the pause auto-sync) was considered and deferred — this one-click on the verification surface was preferred.
+
 ## What Not To Change Casually
 
 - Do not replace per-date `Tutor_Absence_State` with one broad range row.

@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
 import { getServerSession } from 'next-auth';
-import { getTutorAbsenceStateRows, getPauseHistoryRows, getTutorPayRows, updateStudentSheetRow, appendEventLogRow } from '@/lib/admin/sheets';
+import { getTutorAbsenceStateRows, getPauseHistoryRows, getTutorPayRows, updateStudentSheetRow, appendEventLogRow, getPlanningItemRows } from '@/lib/admin/sheets';
 import { getOperationalAdminStudents } from '@/lib/admin/students';
-import { parseTutorAbsenceStateRow } from '@/lib/admin/tutor-absence-helpers.mjs';
+import { savePlanningItem } from '@/lib/admin/planning.js';
+import { parseTutorAbsenceStateRow, selectRedundantTutorAbsencePauseCards } from '@/lib/admin/tutor-absence-helpers.mjs';
 import { parseTutorPay } from '@/lib/admin/cost-helpers.mjs';
 import { buildReconciliationInputs } from '@/lib/admin/reconciliation-adapter.mjs';
 import { reconcileEpisode } from '@/lib/admin/reconciliation-helpers.mjs';
@@ -41,6 +42,33 @@ async function confirmPausedAction(formData) {
   revalidatePath('/admin/finance/reconciliation');
 }
 
+// Cross-lane card retirement: park the now-redundant tutor-absence pause card(s) for a
+// student whose own pause covers those dates. Guarded server-side — only ever parks an
+// OPEN card whose id is a tutor-absence pause card (never trusts the form blindly).
+async function closeRedundantAbsenceCardAction(formData) {
+  'use server';
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.isAdmin) throw new Error('Not authorised');
+  const ids = `${formData.get('planning_ids') || ''}`.split(',').map((s) => s.trim()).filter(Boolean);
+  if (!ids.length) return;
+
+  const rows = await getPlanningItemRows();
+  const byId = new Map(rows.map((r) => [r.planningId, r]));
+  for (const id of ids) {
+    const existing = byId.get(id);
+    if (!existing) continue;
+    if (!`${existing.planningId}`.startsWith('planning_tutor_absence_pause')) continue;
+    if (['parked', 'done', 'resolved'].includes(`${existing.status || ''}`.trim().toLowerCase())) continue;
+    await savePlanningItem({
+      planningId: id,
+      item: { ...existing, status: 'parked', nextAction: "Superseded — the student's own pause covers these absence dates." },
+      actorEmail: session.user.email || '',
+      progressNote: 'Parked from absence reconciliation: the student’s own pause now covers these tutor-absence dates.',
+    });
+  }
+  revalidatePath('/admin/finance/reconciliation');
+}
+
 function fmtDate(d) {
   if (!d) return '—';
   const date = new Date(`${d}T00:00:00Z`);
@@ -67,11 +95,12 @@ export default async function ReconciliationPreviewPage({ searchParams }) {
   const params = (await searchParams) || {};
   const tutorFilter = `${params.tutor || ''}`.trim();
 
-  const [absenceRaw, pauseRows, tutorPayRows, students] = await Promise.all([
+  const [absenceRaw, pauseRows, tutorPayRows, students, planningRows] = await Promise.all([
     getTutorAbsenceStateRows(),
     getPauseHistoryRows(),
     getTutorPayRows(),
     getOperationalAdminStudents(),
+    getPlanningItemRows(),
   ]);
   const absenceRows = absenceRaw.map(parseTutorAbsenceStateRow);
   const tutorPay = parseTutorPay(tutorPayRows);
@@ -92,6 +121,16 @@ export default async function ReconciliationPreviewPage({ searchParams }) {
   const conflicts = result ? result.familyEpisodes.filter((e) => e.needsClarification) : [];
   const suppressed = result ? result.familyEpisodes.filter((e) => !e.needsClarification && e.netNewDates.length === 0 && e.affectedDates.length > 0) : [];
   const netNew = result ? result.familyEpisodes.filter((e) => !e.needsClarification && e.netNewDates.length > 0) : [];
+
+  // Covered students may have a lingering "pause them for the absence" card the absence
+  // workflow created before they paused themselves — offer to close it (it's subsumed).
+  const redundantByStudent = new Map(
+    selectRedundantTutorAbsencePauseCards({
+      planningItems: planningRows,
+      coveredStudentMmsIds: suppressed.map((e) => e.studentMmsId),
+      tutorShortName: tutorFilter,
+    }).map((entry) => [entry.studentMmsId, entry.planningIds]),
+  );
 
   return (
     <div className="space-y-6">
@@ -184,8 +223,24 @@ export default async function ReconciliationPreviewPage({ searchParams }) {
               <h3 className="text-base font-semibold text-slate-900">Already covered by their own pause ({suppressed.length})</h3>
               <p className="mt-1 text-xs text-slate-600">No new finance effect, no message needed.</p>
               <div className="mt-2 divide-y divide-emerald-100">
-                {suppressed.length ? suppressed.map((ep) => <FamilyRow key={ep.studentMmsId} ep={ep} name={nameByMmsId.get(ep.studentMmsId)} />)
-                  : <p className="px-3 py-2 text-sm text-slate-500">None.</p>}
+                {suppressed.length ? suppressed.map((ep) => {
+                  const cardIds = redundantByStudent.get(ep.studentMmsId) || [];
+                  return (
+                    <FamilyRow
+                      key={ep.studentMmsId}
+                      ep={ep}
+                      name={nameByMmsId.get(ep.studentMmsId)}
+                      action={cardIds.length ? (
+                        <form action={closeRedundantAbsenceCardAction}>
+                          <input type="hidden" name="planning_ids" value={cardIds.join(',')} />
+                          <button type="submit" className="rounded-full border border-emerald-300 bg-white px-3 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100">
+                            Close redundant card{cardIds.length > 1 ? ` (${cardIds.length})` : ''}
+                          </button>
+                        </form>
+                      ) : null}
+                    />
+                  );
+                }) : <p className="px-3 py-2 text-sm text-slate-500">None.</p>}
               </div>
             </div>
           </section>
