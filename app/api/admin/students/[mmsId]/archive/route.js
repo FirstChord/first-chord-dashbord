@@ -5,6 +5,9 @@ import { deleteRegistryEntry } from '@/lib/admin/registry';
 import {
   buildStudentArchiveEvent,
   buildStudentExitStepEvent,
+  buildStudentLeftEvent,
+  formatLeftMonthLabel,
+  normaliseLeftMonth,
   normaliseStudentArchiveNote,
 } from '@/lib/admin/student-archive-helpers.mjs';
 import { getAdminStudentByMmsId, updateAdminStudent } from '@/lib/admin/students';
@@ -12,6 +15,7 @@ import { markStudentInactive } from '@/lib/admin/mms';
 import { appendEventLogRows, archiveAndDeleteStudentSheetRow } from '@/lib/admin/sheets';
 
 const VALID_ACTIONS = new Set([
+  'mark_left',
   'mark_inactive_expectation',
   'delete_registry_entry',
   'mark_mms_inactive',
@@ -40,7 +44,9 @@ export async function POST(request, { params }) {
     return Response.json({ error: 'Unsupported archive action.' }, { status: 400 });
   }
 
-  if (!note) {
+  // The combined "mark left" action uses the chosen month/year as its record, so it
+  // doesn't require a free-text note; the individual steps still do.
+  if (!note && action !== 'mark_left') {
     return Response.json({ error: 'A short note is required for student exit actions.' }, { status: 400 });
   }
 
@@ -48,6 +54,57 @@ export async function POST(request, { params }) {
     const previousStudent = await getAdminStudentByMmsId(mmsId);
     if (!previousStudent) {
       return Response.json({ error: 'Student not found in Sheets' }, { status: 404 });
+    }
+
+    if (action === 'mark_left') {
+      const leftMonth = normaliseLeftMonth(payload.leftMonth);
+      if (!leftMonth) {
+        return Response.json({ error: 'Pick the month and year the student left.' }, { status: 400 });
+      }
+      const now = new Date().toISOString();
+      const actorEmail = session.user.email || '';
+      const exitNote = note || `Left ${formatLeftMonthLabel(leftMonth)}`;
+      const steps = {};
+
+      // Run in order; each part is idempotent so a retry after a mid-failure resumes.
+      // The archive (which removes the active row) is last and only runs if the prior
+      // steps succeeded — so a failure leaves the page loadable for a clean retry.
+      if (previousStudent.paymentExpectation !== 'inactive_or_stopped') {
+        await updateAdminStudent({ mmsId, sheetsUpdates: { payment_expectation: 'inactive_or_stopped' } });
+        steps.inactiveMarked = true;
+      }
+      if (previousStudent.registry) {
+        await deleteRegistryEntry(mmsId);
+        steps.registryDeleted = true;
+      }
+      const mmsResult = await markStudentInactive({ studentId: mmsId });
+      steps.mmsInactive = !mmsResult?.skipped;
+      steps.mmsAlreadyInactive = Boolean(mmsResult?.alreadyInactive);
+
+      const archiveResult = await archiveAndDeleteStudentSheetRow({
+        mmsId,
+        archivedAt: now,
+        archivedBy: actorEmail,
+        archiveNote: exitNote,
+        dateLeft: leftMonth,
+      });
+      steps.sheetArchived = true;
+
+      await appendEventLogRows([
+        buildStudentLeftEvent({ student: previousStudent, actorEmail, occurredAt: now, leftMonth, note: exitNote, steps }),
+      ]);
+
+      return Response.json({
+        success: true,
+        student: null,
+        audit: {
+          left: true,
+          leftMonth,
+          leftMonthLabel: formatLeftMonthLabel(leftMonth),
+          sourceRow: archiveResult.rowNumber,
+          ...steps,
+        },
+      });
     }
 
     if (action === 'delete_registry_entry') {

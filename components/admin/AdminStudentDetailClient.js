@@ -159,6 +159,7 @@ export default function AdminStudentDetailClient({
     mmsInactive: false,
     sheetArchived: false,
   });
+  const [leftMonth, setLeftMonth] = useState(() => new Date().toISOString().slice(0, 7));
   const [isPending, startTransition] = useTransition();
   const pauseWorkflow = buildPauseWorkflowSummary({
     pauseSummary: student.pauseSummary,
@@ -402,6 +403,40 @@ export default function AdminStudentDetailClient({
       }
 
       onSuccess?.(data);
+    });
+  }
+
+  function handleMarkStudentLeft() {
+    if (!leftMonth) {
+      setServerState({ error: 'Pick the month and year the student left.', success: '' });
+      return;
+    }
+    const name = student.fullName || student.mmsId;
+    const confirmed = window.confirm(
+      `Mark ${name} as left in ${leftMonth}?\n\n`
+        + 'This does it all in one go: sets payment expectation to inactive/stopped, removes registry access, '
+        + 'marks them inactive in MMS, and archives the row (it leaves the active sheet — this page won’t reload after). '
+        + 'Stripe is still separate.',
+    );
+    if (!confirmed) return;
+
+    setServerState({ error: '', success: '' });
+    startTransition(async () => {
+      const response = await fetch(`/api/admin/students/${student.mmsId}/archive`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'mark_left', leftMonth }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setServerState({ error: data.error || 'Mark as left failed', success: '' });
+        return;
+      }
+      setExitState((current) => ({ ...current, registryPresent: false, mmsInactive: true, sheetArchived: true }));
+      setServerState({
+        error: '',
+        success: `${name} marked as left (${data.audit?.leftMonthLabel || leftMonth}). Inactive, registry removed, MMS inactive, and row archived. This page won’t reload after refresh.`,
+      });
     });
   }
 
@@ -705,7 +740,8 @@ export default function AdminStudentDetailClient({
           <div>
             <h3 className="text-sm font-semibold text-slate-900">Student exit / archive</h3>
             <p className="mt-1 text-sm text-slate-600">
-              Work through this when a student has left. Each step is explicit, logged, and can be done separately.
+              When a student leaves, pick the month they left and mark them as left — it does the whole exit in one go.
+              The individual steps are still there below if you ever need to stage them.
             </p>
           </div>
         </div>
@@ -715,7 +751,44 @@ export default function AdminStudentDetailClient({
           <ReadOnlyField label="Stripe linkage" value={hasStripeLinkage ? 'IDs present' : 'No Stripe IDs'} />
           <ReadOnlyField label="Usual lesson" value={archiveScheduleLabel} />
         </div>
-        <div className="mt-4 grid gap-3 lg:grid-cols-4">
+
+        {/* One-click full exit — the common case. Pick the leave month, confirm once. */}
+        <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50/60 p-4">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-slate-900">Mark student as left</p>
+              <p className="mt-1 text-xs text-slate-600">
+                Sets inactive/stopped, removes registry, marks MMS inactive, and archives the row — in one go, logged once.
+              </p>
+            </div>
+            <div className="flex items-end gap-2">
+              <label className="text-xs text-slate-600">
+                Month left
+                <input
+                  type="month"
+                  value={leftMonth}
+                  onChange={(event) => setLeftMonth(event.target.value)}
+                  disabled={isPending || exitState.sheetArchived}
+                  className="mt-1 block rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={handleMarkStudentLeft}
+                disabled={isPending || exitState.sheetArchived || !leftMonth}
+                className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isPending ? 'Working…' : exitState.sheetArchived ? 'Left' : 'Mark as left'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <details className="mt-4">
+          <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-slate-500 hover:text-slate-700">
+            Or do the steps individually
+          </summary>
+        <div className="mt-3 grid gap-3 lg:grid-cols-4">
           <div className={`rounded-xl border p-4 ${archiveAlreadyMarked ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-slate-50'}`}>
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Step 1</p>
             <p className="mt-2 text-sm font-medium text-slate-900">Mark inactive/stopped</p>
@@ -769,6 +842,7 @@ export default function AdminStudentDetailClient({
             </button>
           </div>
         </div>
+        </details>
         <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
           <p className="font-medium">Stripe is still separate.</p>
           <p className="mt-1">
