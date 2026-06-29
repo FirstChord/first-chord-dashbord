@@ -26,8 +26,8 @@ export default async function AdminLayout({ children }) {
   const session = await getServerSession(authOptions);
 
   return (
-    <div className="min-h-screen overflow-hidden bg-gradient-to-t from-green-100 to-blue-100 text-slate-900">
-      <div className="pointer-events-none absolute inset-0">
+    <div className="min-h-screen bg-gradient-to-t from-green-100 to-blue-100 text-slate-900">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <Image
           src="/cloud.png"
           alt=""

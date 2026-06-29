@@ -121,7 +121,7 @@ function TutorJumpIndex({ rows = [] }) {
   if (rows.length < 2) return null;
   const chips = [...rows].sort((a, b) => `${a.tutor}`.localeCompare(`${b.tutor}`));
   return (
-    <nav className="sticky top-0 z-10 -mx-1 rounded-2xl border border-slate-200 bg-white/85 px-3 py-2 shadow-sm backdrop-blur">
+    <nav className="sticky top-[148px] z-10 -mx-1 rounded-2xl border border-slate-200 bg-white/85 px-3 py-2 shadow-sm backdrop-blur">
       <div className="flex flex-wrap gap-1.5">
         {chips.map((row) => (
           <a
@@ -249,7 +249,7 @@ function PayrollTutorCard({ row, payDate }) {
   const reviewPast = (row.reviewSlots || []).filter((slot) => slot.timing === 'past');
   const reviewUpcoming = (row.reviewSlots || []).filter((slot) => slot.timing === 'upcoming');
   return (
-    <article id={`t-${row.tutorShortName}`} className="scroll-mt-28 rounded-[1.4rem] border border-slate-200 bg-white/90 p-5 shadow-sm transition target:ring-2 target:ring-blue-400">
+    <article id={`t-${row.tutorShortName}`} className="scroll-mt-[200px] rounded-[1.4rem] border border-slate-200 bg-white/90 p-5 shadow-sm transition target:ring-2 target:ring-blue-400">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">
