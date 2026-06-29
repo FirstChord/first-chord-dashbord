@@ -76,7 +76,11 @@ export default async function AdminLayout({ children }) {
           </form>
         </nav>
       </header>
-      <main className="relative z-10 mx-auto max-w-7xl px-6 py-8">{children}</main>
+      {/* No z-index here: a positive z-index makes <main> a stacking context that
+          traps full-screen modal overlays (z-50) below the sticky header (z-20).
+          `relative` (z-auto) keeps content above the decorative cloud via DOM order
+          while letting overlays rise above the header. */}
+      <main className="relative mx-auto max-w-7xl px-6 py-8">{children}</main>
     </div>
   );
 }
