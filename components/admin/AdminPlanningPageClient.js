@@ -47,7 +47,6 @@ import {
   hasPlanningLink,
   findStudentById,
   inferStudentFromText,
-  truncateTitle,
   momentumClasses,
   buildSearchText,
   workflowHref,
@@ -58,6 +57,11 @@ import {
   buildSchoolNoteItem,
   SCHOOL_NOTE_TYPES,
   PAUSE_PAYMENT_CONFIRMATION_NOTE,
+  EMPTY_FORM,
+  CLIENT_TUTOR_OPTIONS,
+  isPauseCaptureText,
+  inferQuickCapture,
+  buildQuickCaptureItem,
 } from '@/lib/admin/planning-client-helpers.mjs';
 import {
   SelectField,
@@ -70,13 +74,7 @@ import {
 import MondayIntentionRow from './planning/MondayIntentionRow';
 import SchoolNoteCapture from './planning/SchoolNoteCapture';
 import ItemForm from './planning/ItemForm';
-import { ADMIN_TUTORS } from '@/lib/admin/tutors-data.js';
 import { logCommunicationCopy } from '@/lib/admin/log-communication-copy.js';
-
-const CLIENT_TUTOR_OPTIONS = Object.entries(ADMIN_TUTORS).map(([shortName, tutor]) => ({
-  shortName,
-  fullName: tutor.fullName,
-}));
 
 const STATUS_GROUPS = [
   { key: 'inbox', title: 'Inbox', hint: 'Fresh thoughts to review later.' },
@@ -110,32 +108,6 @@ const ADVANCED_REVIEW_FILTERS = [
   { value: 'parked', label: 'Parked' },
 ];
 
-const EMPTY_FORM = {
-  title: '',
-  notes: '',
-  itemType: 'idea',
-  owner: 'Unassigned',
-  status: 'inbox',
-  area: 'other',
-  linkedWorkflowId: '',
-  linkedStudentId: '',
-  linkedStudentIds: [],
-  linkedTutorId: '',
-  parentPlanningId: '',
-  outcome: '',
-  nextAction: '',
-  targetDate: '',
-  progressNote: '',
-};
-
-const QUICK_CAPTURE_DEFAULTS = {
-  owner: 'Unassigned',
-  area: 'other',
-  itemType: 'action',
-  status: 'inbox',
-  linkedWorkflowId: '',
-};
-
 const EMPTY_SCHOOL_NOTE_FORM = {
   noteKind: 'learning_note',
   title: '',
@@ -150,96 +122,6 @@ const EMPTY_SCHOOL_NOTE_FORM = {
 
 const PAUSE_EXPECTATION_SET_NOTE = 'Set Stripe paused expected from linked pause planning item.';
 const PAUSE_COMPLETED_NOTE = 'Pause completed from Planning: pause tool run, parent confirmation sent, and payment expectation aligned.';
-
-function inferQuickCapture(raw = '') {
-  const text = `${raw || ''}`.toLowerCase();
-  const defaults = { ...QUICK_CAPTURE_DEFAULTS };
-
-  if (/\b(pause|holiday|away|off|cancel lesson|no lesson)\b/u.test(text)) {
-    defaults.area = 'admin';
-    defaults.itemType = 'action';
-  }
-  if (isTutorAbsenceCaptureText(raw)) {
-    defaults.area = 'tutor';
-    defaults.linkedWorkflowId = 'tutor-absence';
-  }
-  if (/\b(onboard|new student|starting|sign.?up)\b/u.test(text)) {
-    defaults.area = 'admin';
-    defaults.linkedWorkflowId = 'onboarding';
-  }
-  if (/\b(stripe|payment|billing|refund|charge|subscription|vat|payroll)\b/u.test(text)) {
-    defaults.area = 'finance';
-  }
-  if (/\b(show|showcase|poster|venue|perform)\b/u.test(text)) {
-    defaults.area = 'showcase';
-    defaults.linkedWorkflowId = 'showcase';
-  }
-  if (/\b(dashboard|tool|website|mms|soundslice|link|bug)\b/u.test(text)) {
-    defaults.area = 'tech';
-  }
-  if (/\b(maybe|idea|revisit|could|should|future|plan)\b/u.test(text)) {
-    defaults.itemType = 'idea';
-  }
-
-  return defaults;
-}
-
-function isPauseCaptureText(raw = '') {
-  return /\bpaus(?:e|ed|ing)\b/iu.test(`${raw || ''}`);
-}
-
-function isTutorAbsenceCaptureText(raw = '') {
-  return detectTutorAbsenceCapture(raw, CLIENT_TUTOR_OPTIONS).isTutorAbsence;
-}
-
-function buildQuickCaptureItem(rawNote = '', overrides = {}, studentOptions = []) {
-  const inferred = inferQuickCapture(rawNote);
-  const {
-    structuredCapture,
-    pauseType,
-    pauseLessonDate,
-    pauseFirstPauseDate,
-    pauseReturnDate,
-    pauseExtraNote,
-    showPauseBuilder,
-    hidePauseBuilder,
-    studentSelectionSource,
-    linkedStudentId: overrideStudentId,
-    linkedStudentIds: overrideStudentIds,
-    tutorAbsenceShortName,
-    tutorAbsenceDates,
-    showTutorAbsenceBuilder,
-    hideTutorAbsenceBuilder,
-    ...safeOverrides
-  } = overrides;
-  // A student list is explicit when the user touched it (manual/cleared) or when
-  // a caller passed ids directly (e.g. a pause capture). Otherwise we infer one.
-  const hasStudentOverride = studentSelectionSource === 'manual'
-    || studentSelectionSource === 'cleared'
-    || overrideStudentIds !== undefined
-    || overrideStudentId !== undefined;
-  const inferredStudent = hasStudentOverride ? null : inferStudentFromText(studentOptions, rawNote);
-  const linkedStudentIds = hasStudentOverride
-    ? parseLinkedStudentIds(overrideStudentIds ?? overrideStudentId)
-    : (inferredStudent ? [inferredStudent.mmsId] : []);
-  const item = {
-    ...EMPTY_FORM,
-    ...inferred,
-    ...safeOverrides,
-    title: safeOverrides.title || truncateTitle(rawNote),
-    notes: safeOverrides.notes || rawNote.trim(),
-    linkedStudentId: linkedStudentIds[0] || '',
-    linkedStudentIds,
-    targetDate: safeOverrides.targetDate || inferPlanningTargetDateFromText(rawNote),
-    progressNote: safeOverrides.progressNote || 'Captured from quick brain capture.',
-  };
-
-  if (item.itemType === 'action') {
-    item.nextAction = item.nextAction || item.title;
-  }
-
-  return item;
-}
 
 function QuickBrainCapture({
   rawNote,

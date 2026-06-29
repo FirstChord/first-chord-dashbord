@@ -30,6 +30,11 @@ import {
   isSchoolNotePlanningItem,
   hasPausePaymentConfirmation,
   buildSchoolNoteItem,
+  isPauseCaptureText,
+  isTutorAbsenceCaptureText,
+  inferQuickCapture,
+  buildQuickCaptureItem,
+  EMPTY_FORM,
 } from '../../lib/admin/planning-client-helpers.mjs';
 
 test('shortPreview truncates with an ellipsis past the max', () => {
@@ -215,4 +220,43 @@ test('buildSearchText flattens item fields to a lowercase haystack', () => {
   assert.match(text, /pause ada/);
   assert.match(text, /holiday/);
   assert.match(text, /tom/);
+});
+
+test('isPauseCaptureText detects pause wording', () => {
+  assert.equal(isPauseCaptureText('pause Ada next week'), true);
+  assert.equal(isPauseCaptureText('paused for holiday'), true);
+  assert.equal(isPauseCaptureText('email the parent'), false);
+});
+
+test('inferQuickCapture maps keywords to area/type defaults', () => {
+  assert.equal(inferQuickCapture('pause Ada for holiday').area, 'admin');
+  assert.equal(inferQuickCapture('stripe refund needed').area, 'finance');
+  assert.equal(inferQuickCapture('showcase poster').area, 'showcase');
+  assert.equal(inferQuickCapture('maybe revisit this idea').itemType, 'idea');
+  assert.equal(inferQuickCapture('plain note').itemType, 'action'); // default
+});
+
+test('isTutorAbsenceCaptureText recognises a tutor-off phrasing', () => {
+  assert.equal(isTutorAbsenceCaptureText('Kenny off Friday'), true);
+  assert.equal(isTutorAbsenceCaptureText('order new chairs'), false);
+});
+
+test('buildQuickCaptureItem builds an item from a raw note (title truncated, action gets nextAction)', () => {
+  const item = buildQuickCaptureItem('stripe refund for a parent', {}, []);
+  assert.equal(item.area, 'finance');
+  assert.equal(item.notes, 'stripe refund for a parent');
+  assert.match(item.title, /stripe refund/);
+  // an inferred action gets its nextAction defaulted to the title
+  assert.equal(item.itemType, 'action');
+  assert.equal(item.nextAction, item.title);
+  // overrides win and control fields (e.g. studentSelectionSource) are stripped
+  const withOverride = buildQuickCaptureItem('note', { title: 'Custom', studentSelectionSource: 'manual' }, []);
+  assert.equal(withOverride.title, 'Custom');
+  assert.equal('studentSelectionSource' in withOverride, false);
+});
+
+test('EMPTY_FORM is a complete blank planning form', () => {
+  assert.equal(EMPTY_FORM.itemType, 'idea');
+  assert.equal(EMPTY_FORM.status, 'inbox');
+  assert.deepEqual(EMPTY_FORM.linkedStudentIds, []);
 });
