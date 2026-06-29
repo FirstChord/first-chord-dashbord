@@ -1,10 +1,10 @@
 # Admin Current Status
 
-Last updated: 2026-06-27
+Last updated: 2026-06-29
 
-This is the tracked current-status entrypoint for agents working from the `music-school-dashboard` repository.
+Tracked current-status entrypoint for agents working from the `music-school-dashboard` repo.
 
-The local workspace file `../CURRENT_HANDOVER.md` may contain extra machine/session context, but this file is the durable repo-tracked source for current admin-dashboard direction.
+> **This file is a SNAPSHOT, not a changelog.** It holds what's true *now*, what's next, and the durable rules. **History lives elsewhere: `git log` (what changed, in order — commit messages are detailed) and the Obsidian `06 Learning Log` (why).** Keep **Recently shipped** to the last session or two and prune the oldest when you add. Don't restate code behaviour here — the code is the truth; record only decisions, contracts, and direction. The workspace `../CURRENT_HANDOVER.md` holds only machine/in-flight context, not a duplicate of this.
 
 ## Active Direction
 
@@ -16,316 +16,67 @@ V3 established the dashboard's loop-closing pattern:
 4. store the outcome
 5. log consequential actions
 
-V4 is now adding lightweight context layers on top of those loops. The goal is to make each student, issue, payment, and workflow easier to understand and delegate without adding a large state machine or new database.
+V4 adds lightweight context layers on top of those loops — making each student, issue, payment, and workflow easier to understand and delegate without a large state machine or new database. Guiding principle: **reduce admin cognitive load** — turn recurring memory-heavy admin into clear context, safe next actions, and logged outcomes.
 
-A guiding workflow principle is now explicit: reduce admin cognitive load. Workflows should turn recurring memory-heavy admin into clear context, safe next actions, and logged outcomes.
+The admin overview is a strict meeting-start surface, not a complete status board: cards earn their place by showing what needs doing today, what needs attention soon, or where to spend leadership energy. The active surface is the private admin dashboard under `/admin`.
 
-The admin overview is now treated as a strict meeting-start surface, not a complete status board. Cards must earn their place by helping Finn/Tom see what needs doing today, what needs attention soon, or where to spend leadership energy once the admin loop is clear.
+## Recently shipped
 
-The active surface is the private admin dashboard under `/admin`.
+*Last working arc only — older work is in `git log --oneline` + the Learning Log.*
 
-## Recent Completed Work
+- **Payroll → Wise pay-out (2026-06-27→29):** classifies by MMS attendance status (`AbsentNoMakeup` payable / `AbsentNotice` £0 / `Unrecorded`→review), adjustable window end, calmer cards, review split (past "needs recording" + "Fix in MMS" link vs upcoming), Wise batch CSV from `Tutor_Wise` + download-gated **batch mark-paid**, sticky tutor jump index.
+- **Reconciliation + lifecycle (2026-06-29):** reconciliation **Close redundant card** (retire a tutor-absence pause card once the student's own pause covers it); one-click **Mark student as left** (leave month → new `Students_Archive.date_left`); **editable pause-card dates**; passive **pause-contiguity flag** (merge deliberately deferred — see Learning Log + [[Summer edge-case season]]).
+- Finance layer (revenue/cost/margin/snapshots/trend/scenario/capacity/forecast), payroll V1, temporal reconciliation L1, roster movement → `git log` + Learning Log.
 
-- One-click "Mark student as left" + planning pause-card polish (2026-06-29):
-  - **Student exit** — the exit/archive panel now leads with a single **Mark student as left** action: pick the leave **month/year** (`<input type="month">`), confirm once, and it runs the whole deterministic exit (inactive/stopped → remove registry → MMS inactive → archive the row), logged once as a `student_left` event. No more per-step "why?" prompts. The leave month is stored on the archive row in a new `Students_Archive.date_left` column. Idempotent (skips done steps; archive runs last so a mid-failure leaves the page loadable for retry). The 4 individual steps are preserved under "Or do the steps individually"; Stripe stays separate. Route action `mark_left` in `app/api/admin/students/[mmsId]/archive/route.js`; helpers `normaliseLeftMonth`/`formatLeftMonthLabel`/`buildStudentLeftEvent`.
-  - **Passive pause contiguity flag** — pause cards now show a calm note when the same student has another pause nearby (overlapping/adjacent within ~a week): "This student also has a pause around … — you might be doing one longer break." Read-only noticing aid (`flagNearbyPauses`), no merging. The full detect-and-suggest *merge* was deliberately deferred (low year-round frequency, billing-treatment nuance) — revisit if summer load justifies it.
-  - **Edit dates on pause cards** — the structured date picker (previously only shown for cards *missing* dates) is now also available as **Edit dates** on cards that already have them, pre-filled and editable. Reuses the existing `handleRepairPauseDetails` save (was purely a UI gate). Makes shifting/adjusting a pause clean instead of hand-editing note text.
-- Reconciliation cross-lane card retirement (2026-06-29): on `/admin/finance/reconciliation`, a student in the "Already covered by their own pause" bucket who still has a lingering open tutor-absence pause card gets a **Close redundant card** button → parks it. Closes the reverse-order gap (tutor absence recorded first, student's own longer pause recorded later, leaving an orphaned "pause them" card). Pure tested helper `selectRedundantTutorAbsencePauseCards`; server action re-validates (only parks open `planning_tutor_absence_pause…` cards for that tutor, idempotent, auth-gated). Only offered for covered students, so the engine's date-coverage already guarantees the card is genuinely subsumed. The reconciliation maths was already order-independent; this just tidies the stale card.
-- Payroll batch mark-paid + download gate (2026-06-28): the "Pay out via Wise" panel now has a **Mark batch paid (N)** action alongside the download. It flips exactly the rows that were in the CSV (reviewed **and** with a `Tutor_Wise` recipient — tracked via `buildWiseBatch().includedPayrollIds`) to paid in one click; missing-recipient reviewed tutors stay unpaid. The button is **disabled until the CSV is downloaded** this session (client component `wise-payout-panel.js`), then confirms before firing. Server action `markBatchPaidAction` only flips `reviewed → paid` (can't catch up a draft/already-paid row) and is auth-gated. Review stays per-tutor (the deliberate check); pay-out + paid-flip are both batch. Late/edge cases need no special route: leave a tutor unreviewed → they're not in the batch → since-last-paid window catches them up next run, overlap guard prevents double-pay; per-tutor Mark paid still exists for one-offs.
-- Payroll review split + "Fix in MMS" loop-closer (2026-06-27): the payroll "Needs review" list now splits by lesson date — **past & unrecorded** (taught but not marked in MMS, the genuine open loop, leads the card with a per-student "Fix in MMS ↗" deep link to `app.mymusicstaff.com/.../students/details`) vs **upcoming/not-yet-taught** (collapsed, self-resolving, no action). The amber warning now counts only the actionable past lessons. `buildPayrollPreview` tags each review slot `timing: 'past'|'upcoming'` and exposes `reviewPastCount`/`reviewUpcomingCount`. The dashboard never writes attendance — it points at the fix, MMS still owns it (avoids the parent-email-on-completion side effect). Deep link is student-level (the reliable URL), not lesson-level.
-- Payroll Wise CSV export (2026-06-27): a "Pay out via Wise" panel on `/admin/finance/payroll` generates a Wise batch-payment CSV for **reviewed** tutor rows at their owed amount (`buildWiseBatch`/`toWiseCsv` in `lib/admin/wise-helpers.mjs`; auth-gated download route `/admin/finance/payroll/wise-csv`). Recipient details come from a new sensitive `Tutor_Wise` sheet tab (read-only from the dashboard, keyed by `tutor` short name, never in git); `amount` + `paymentReference` are generated. Reviewed rows with no Wise recipient are surfaced (by name) rather than dropped. Strictly file generation — a human uploads and approves in Wise, so payroll stays reconciliation, not execution. Gated behind the trust window (only pay from it once figures reliably match invoices). Future direction: see Obsidian `04 Workflows/Future Tutor Self-Billing and Pay`. Also made the per-tutor "Adjust window" a soft client navigation + loading skeleton so the page no longer blanks, and calmed the payroll cards (lead with Needs review; Payable / Not-counted collapsed).
-- Payroll attendance-status classification (2026-06-27): `resolveSlotState` reads MMS `AttendanceStatus` directly instead of dumping every absence into review — `AbsentNoMakeup` → payable (absent-but-invoiced practice-video/no-makeup policy), `AbsentNotice` → excluded £0 (absent with notice, not invoiced), `Unrecorded`/blank → needs review (the only remaining pile, usually not-yet-happened lessons). Makes the dashboard pay figure directly comparable to a tutor invoice (closed Kenny's £244-vs-£280 gap). The pay-window **end** is now adjustable too (invoices close earlier in the week), pulling earlier only. Payroll slot lists are expandable and a "Not counted — absent / cancelled" list surfaces excluded slots. Format contract on the MMS status strings recorded in STATE_TABS_SCHEMA; unknown statuses fall safely to review. Also removed the contextual "Onboarding" and passive "Messages Sent" cards from the Workflows hub (routes intact).
-- Financial layer: read-only revenue + cost/margin at `/admin/finance` (auth-gated, deliberately low-profile — discrete Planning link only). Estimate from schedule × price table minus tutor pay (per-slot, active-only, £24/hr +£2 per 45-min group), salaries, and fixed overhead; pay/overhead live in `Tutor_Pay` + `Expenses` sheets (salaries never in git). The old recurring `General` overhead buffer is ignored if present; actual one-off/variable spend is added from the finance page into `Expense_Log` for month-end bank checking; entries are append-by-default, with admin delete only for mistaken entries. Weekly + monthly `Finance_Snapshot` rows include the current calendar month's actual-spend total and cash-view margin while keeping the main run-rate margin separate. An "Estimate coverage" panel (`buildFinanceCoverage`) surfaces input gaps (unpriced/no-duration/no-schedule students, tutors defaulting to the hourly rate) so the snapshot series stays trustworthy. A dependency-free "Trend" view (`buildFinanceTrend`) charts gross revenue/margin/active students over the weekly/monthly snapshot series with week-over-week deltas; gaps shown as holes not zeros, period keys for future year-over-year comparison. The 11% VAT Flat Rate Scheme is modelled as a revenue deduction (prices VAT-inclusive: gross → −VAT → net → −costs → margin; `VAT_FLAT_RATE`), so margin is after-VAT. A what-if/break-even view (`buildFinanceScenario`) shows the break-even *active-billing* student count + buffer and models summer dips / price changes (paused students drop revenue and variable pay together). Logged actual spend can be deleted (`deleteExpenseLogRow`). A "Waiting list value" panel on `/admin/waiting` (`buildCapacityValue`) attaches £ to the waiting list — bookable-now vs blocked-on-tutor-hours vs needs-a-tutor, with ranked recruiting targets and a freshness lens (recent entries only drive the headline £). A "What's coming" pause forecast (`buildPauseForecast`) projects margin forward 12 weeks from planned pauses in Planning (trough week, weeks below break-even, recovery) — completing trend (past) / what-if (hypothetical) / forecast (planned). Payroll at `/admin/finance/payroll` previews Wednesday tutor pay from MMS attendance, applies `Tutor_Pay` rate assumptions, flags unrecorded/review lessons, and lets an admin mark each tutor run reviewed or paid into `Payroll_Runs`; reconciliation support, not payment execution. Each tutor's pay window anchors to **since-last-paid → this Wednesday** (`resolveTutorPayrollWindow`) — auto catch-up, can't re-include already-paid lessons — with a per-tutor window-start override, a double-pay overlap guard, and mark-paid → £0 owed. B-ready `resolveStudentRevenue` seam still in place for later Stripe actuals.
-- Temporal reconciliation core L1 (`lib/admin/reconciliation-helpers.mjs`, `reconcileEpisode`): pure, read-only foundation that reconciles tutor_absence ↔ student_pause per lesson instance into net-new finance / family-episode / unresolved outputs. Per-consequence resolution (revenue net-new, tutor cost per-slot, planning/comms by net-new dates), cover+pause→needs_clarification, evidence + idempotent. **Not yet wired into finance/UI/persistence** — replaces the parked-card "count once" convention with a deterministic mechanism; later slices shadow-compare before finance consumes it. Concept: `docs/obsidian/03 Architecture/Temporal Reconciliation Layer`.
-- Reconciliation preview at `/admin/finance/reconciliation` (read-only): for a tutor absence, shows net-new finance + families split into net-new / already-covered-by-own-pause / confirm-these (conflicts). Adapter (`reconciliation-adapter.mjs`) uses LIVE student state (not the stale absence snapshot) for the cross-lane conflict check. Nothing written/sent/auto-applied — loop-closing is a deliberate later slice. Validated on Tom's real July absence.
-- Roster movement panel on `/admin/finance` (`buildRosterMovement`): onboarded vs left vs net by month (6 months), from `Waiting_List_State` (onboarded) + `Students_Archive` (left). Read-only; only counts movements made through the dashboard flows.
-- Persistent `/admin/flags` issue loop using `Issue_Queue` and `Event_Log`
-- calmer flag cards with clearer primary actions and collapsed detail
-- system-cleared bulk resolve for stale no-longer-detected issues
-- active issue summary counts instead of historical noise
-- payment-mode and payment-expectation policy fields
-- live/manual Stripe checks, including payment failure visibility
-- pause-history expectation checks, including future pause windows treated as upcoming and high-confidence covered-lesson pauses auto-aligned through the next billable lesson
-- pause/payment action audit trail
-- waiting-list state and notes
-- waiting-list closeout through successful onboarding
-- recurring workflow surfaces for showcase and holiday operations
-- V4 derived lifecycle context on student detail and relevant flags
-- V4 MMS schedule context cached into `Schedule_Context`
-- V4 baseline payment value context using schedule duration and current pricing
-- first read-only capacity view at `/admin/capacity`
-- waiting-list capacity hints on `/admin/waiting`
-- V4.1 first performance/navigation pass: shared MMS free-slot cache plus grouped admin nav
-- V4.1 scalable navigation model: top nav is now Overview, Issues, Workflows, and Planning, with student lookup as a header utility
-- waiting cards now show MMS sign-up context, parsed note facts, parent/contact phone when available, and the full MMS note behind a detail toggle
-- `/admin/waiting` has a manual `Refresh free slots` button to force-refresh MMS `Free` calendar slots without polling on every page load
-- `/admin/workflows/parent-understanding` is a first testable parent check-in workflow for Fenella:
-  - search/select existing students
-  - see parent contact, tutor, schedule, instrument, lifecycle, and dashboard URL context
-  - record call status, understanding checks, feedback, WhatsApp/community-group context, risk signals, next actions, and a summary
-  - copy parent-facing WhatsApp templates
-  - save one row per student to `Parent_Understanding_State`
-  - append `Event_Log` entries when records are completed, need follow-up, or are escalated
-- `/admin/planning` now has a lightweight Brain/planning inbox with:
-  - quick capture for ideas/actions/initiatives
-  - owner, status, area, next action, due/review date, and progress history
-  - meeting-friendly filters such as Due Now, Unassigned, Waiting, Linked, and No Next Action
-  - a Meeting filter that groups work worth discussing together, beyond only items due today
-  - a recurring Friday prompt: `Friday: what moved the school forward?`
-  - Friday reflections saved as dated `Planning_Progress_Log` entries, with recent reflections shown in the Meeting view for later monthly/quarterly summaries
-  - student search/linking so planning items can attach to a real student record
-  - linked planning items shown on student detail pages
-  - streamlined pause-planning completion path: open the prefilled payment-pause PWA, copy the dashboard-generated parent confirmation message, confirm the pause tool/message checks, then mark the pause completed
-- State/documentation hygiene pass:
-  - `lib/admin/sheets.js` has a shared `upsertManagedSheetRow()` helper for one-row dashboard state upserts
-  - `docs/admin/STATE_TABS_SCHEMA.md` documents dashboard-owned Sheets tabs, keys, write patterns, and concurrency limits
-  - `docs/admin/HYGIENE_AND_SECRETS.md` documents the home-directory git risk, Theta credential migration concern, and test-student cleanup path
-  - `docs/admin/DOCUMENTATION_MAP.md` defines canonical repo docs versus higher-level Obsidian notes
-- Practice Chat bridge:
-  - dashboard student quick links pass student/tutor context into Practice Chat
-  - production quick links now send Practice Chat writebacks to the canonical admin/API Railway app, `https://first-chord-dashbord-production.up.railway.app`, instead of relying on whichever dashboard domain the tutor opened
-  - Practice Chat Level 1 now appends an editable lesson-note snapshot to `Practice_Notes_Log` when the tutor clicks `Copy Notes`, then the tutor continues the manual MMS attendance/email flow
-  - `Practice_Notes_Log` now has optional delivery/audit fields for selected MMS attendance, recipient, Gmail message IDs, send status, send timestamp, manual follow-up state, and a stable delivery key
-  - student/parent portal note reads now check safe sent/completed `Practice_Notes_Log` rows first, then fall back to MMS when no owned note is available
-  - student detail pages show a read-only `Recent practice notes` panel with latest note date, tutor, lesson date, send status, recipient, MMS attendance context, and a short preview
-  - the narrow Level 2 test path can preview a target MMS attendance record, show why that lesson was selected, write the note, mark attendance `Present`, and send the note through First Chord Gmail
-  - the Level 2 pilot path is idempotency-aware: a duplicate request for the same student, MMS attendance, and note text returns the existing delivery instead of sending another parent email; if MMS was saved but Gmail failed, retry only attempts the email step
-  - Practice Chat API routes now reject no-Origin requests unless a valid shared secret header is supplied; wider rollout should set matching `PRACTICE_CHAT_API_SECRET` and `NEXT_PUBLIC_PRACTICE_CHAT_API_SECRET`
-  - Level 2 is currently limited to dashboard-verified students whose tutor is Finn, Tom, or Fennella; other tutors remain on the Level 1/current copy-to-MMS workflow
-- Loop-closing additions (2026-06-15):
-  - onboarding now auto-creates a first-lesson check-in Planning card (Finn & Tom, dated to the first Mon/Wed/Fri after the first lesson), linked to the student, logged to `Event_Log`, and idempotent
-  - pause expectation now auto-reverts `stripe_paused_expected` → `stripe_active_expected` when a high-confidence subscription-ID-matched pause window ends, so `PAUSE EXPECTATION STALE` no longer needs per-student manual flipping
-  - tutor absences can be captured from Planning quick-capture ("pause tutor <name>" / "<name> off friday"): one card per day, affected students snapshotted, deep-linked to the tutor-absence workflow; for longer blocks away, Planning can preview an MMS date range and keep only actual teaching dates before creating the per-day cards
-  - cancelled tutor absences auto-create idempotent structured pause Planning items for each affected student who is not already `stripe_paused_expected` / marked not-needed; repeated cancelled dates for the same student are grouped into one away-period pause plan where possible, so finance can see a clean pause window instead of several separate one-week items
-  - when a later cancelled date expands a student's tutor-absence pause period, the dashboard does **not** edit the old card in place. It creates/updates the best grouped away-period card and parks any superseded single-date or shorter-period cards. Parked cards stay in `Planning_Items`/`Planning_Progress_Log` for audit history, but are hidden by default and ignored by the finance pause forecast.
-  - verified live example (2026-06-25): Tom's July Monday cancellations created `Tutor_Absence_State` rows for 2026-07-06, 2026-07-13, and 2026-07-20. Rosie Ward first had a single `Pause Rosie Ward lesson on Mon, 6 Jul 2026` card, then a 6+13 July grouped card, then the active final card `Pause Rosie Ward from Mon, 6 Jul 2026; returning Mon, 27 Jul 2026`. The earlier single and shorter-period cards were parked automatically.
-  - detailed map: `docs/admin/TUTOR_ABSENCE_PAUSE_BRIDGE.md`
-  - parent communication for repeated cancelled tutor absences is grouped by student/period: the system still stores one dated absence record per lesson day, but the workflow surfaces one WhatsApp message for the affected block and marks all included date records messaged
-  - the tutor-absence workflow page now lists all logged absences, not just the first open one
-- Issue-queue clarity (2026-06-15):
-  - `/admin/flags` shows a read-only banner for any MMS ID shared by 2+ Students-sheet rows (silent profile-misroute protection)
-  - issue cards have a `View customer in Stripe` deep link and a copy-email button, so confirming an issue no longer requires opening the profile
-  - payment quick-action results show inline next to the card, and a pause action that resolves a flag clears the card optimistically
-  - the student PATCH route tolerates capitalised Theta usernames (lowercased on save) instead of rejecting them
-- Planning surface + pause UX focus (2026-06-18 → 2026-06-20):
-  - tutor dashboard roster fix: `getStudentsForTeacher()` keeps a student if EITHER MMS `StudentGroups` OR `BillingProfiles` link to the teacher (the old early-return dropped ~7 of Finn's active students)
-  - calmer issue cards continued: plain-language story + what-to-do, `View customer in Stripe`, student record in a slide-over (stay on the page), Stripe-refresh auto-resolve, clearer dashboard-vs-Stripe wording
-  - pause capture/UX: single-lesson pause date window, the payment-pause tool opens in a side panel, one-button structured pause capture, and an inline `Refresh from MMS` in the pause builder (explicit vendor refresh that writes back to `Schedule_Context`)
-  - pause confirmation message now addresses adult learners directly ("you / your payment") instead of the parent-facing third person
-  - planning quick-capture fixes: clearing a linked student now sticks; a stop-word guard stops common words ("the" → Theodore) auto-attaching names; a plan can link **multiple students** (group lessons), stored comma-separated in the existing `linked_student_id` column — pause/schedule stay bound to the primary (first) student
-  - reflections/progress notes now preserve line breaks and expand (Show more), so a full Friday meeting summary reads cleanly
-  - **Monday scheduling loop**: a recurring Monday prompt surfaces last Friday's "next improvement" intentions with one-tap `Schedule this` → dated, owned action items linked back to the reflection (reuses the Friday seeded-item pattern via a shared `ensureRecurringSystemItem`; no new workflow engine)
-  - **calm "due today" view**: `/admin/planning?filter=due_now` renders focused `DueTodayCard`s (plain headline, what-to-do, due chip, one obvious action: Mark done / Defer until next meeting) instead of the full status-grouped board; pause cards show their steps inline via a new `compact` PlanningCard mode; all other filters are unchanged
-- Data + tooling hygiene (2026-06-19 → 2026-06-20):
-  - Students sheet: surnames were sitting in a stray `san` column with the real `Student Surname` column empty; fixed in the **canonical sheet** (now resolves for ~198 students). Recommend protecting the Students header row in Google Sheets with an edit-warning.
-  - FC regeneration (`first-chord-brain`) made resilient: `fetch_sheets_students()` now reads raw values and tolerates blank/duplicate headers instead of `get_all_records()`. The 2026-06-19 sheet edit had left duplicate blank headers and broke the hourly GitHub Action; the tolerant read mirrors how the dashboard reads the same sheet.
-  - **Schedule-context hardening**: `/admin/capacity` now lists the specific students with a stale/missing/behind-MMS cache (`buildScheduleHealthList`, including a new "past lesson" signal for `found` rows whose `nextLessonAt` is already past), with per-row refresh + a bounded `Refresh all stale` (`POST /api/admin/schedule/refresh-stale`, capped/sequential, admin-triggered only). Closes the Lloyd-class gap where a behind-MMS cache silently fed suspect pause dates.
-  - **Scheduled schedule-cache refresh**: a bi-weekly GitHub Action (`refresh-schedules.yml`) calls a secret-protected `POST /api/cron/refresh-schedules`, which refreshes operational students whose cache is missing/older-than-10-days/unresolved (`buildScheduledRefreshTargets`), batched (80/run) and looped until current. Needs `SCHEDULE_REFRESH_SECRET` in **both** Railway env and the dashboard repo's GitHub secrets. Keeps the cohort fresh so the manual panel is an exception-handler.
-- Communication record (2026-06-21):
-  - **Communication Log** (record-only): the existing "Copy message" buttons now also fire-and-forget a write to a new append-only `Communication_Log` tab, with a read-only `/admin/communications` ("Messages Sent") page to look back. No approval, no sending, no workflow change; "copied to send" is the proxy for "sent". This is the deliberately-lean first step of the communication layer gate — the trail a future WhatsApp-send feature would build on. Hooked buttons: pause card, parent-understanding, **waiting welcome**, and **tutor-absence** (broadcast showcase/holiday templates intentionally excluded — not per-parent). Student detail pages show a **"Messages logged"** panel per student.
-  - **Waiting-list capacity matching refinement**: `/admin/waiting` "Possible slots" now shows multi-instrument coverage (covered vs uncovered, tagged not-taught vs no-free-slot), ranks tutors by how many requested instruments they cover, matches instrument synonyms on both tutor and student sides (via `normaliseInstrument`), and gives a clearer "why" for partial/no matches. Hints only — no auto-assign.
-  - **Waiting-list day/time availability matching** (the previously-deferred sub-slice, now done): MMS sign-up form added `Preferred days` (Mon–Sat) + `Preferred times` (Earlier/Evenings) checkbox questions; the dashboard parses them onto each waiting student and **ranks** matching slots by an availability score (day weighted over time: full=3, day=2, time=1, neither=0). `/admin/waiting` shows "Prefers: …", rings preferred days, badges fitting tutors. Ranked not filtered. Verified against a real test sign-up note.
-  - **Navigation performance** (V4.1 first pass): shared `app/admin/loading.js` skeleton; Sheets read TTL 15s → 60s; Overview health cached (60s) + streamed via `<Suspense>`. Pause-complete button no longer flickers (`postPlanning` `silent` option).
-  - **Transient-error resilience**: both repos retry transient Google Sheets errors (429/5xx) with backoff — dashboard `withSheetsRetry()` in `lib/admin/sheets.js`, brain `gspread_retry()` in `generate_fc_ids.py`. This (not batching) was the fix for recurring "job failed" alerts caused by Google 503 blips. `batchGet` remains a future scaling lever, not a fix for these.
-- Pause message + adult-detection polish (2026-06-22):
-  - away-period pause message now reads "[Tutor] will next see [Student] on [return date] and payment will continue as normal from then" (adult: "…will next see you on…"); pause-tool prefill for away periods starts on the action day and resumes two days before the return.
-  - **adult detection fix**: adults are recorded as their own contact (parent fields echo the student's own name), which mis-routed them to parent wording. New `isStudentOwnContact()` treats "no parent" OR "parent name == student name" as adult, so they get "your lesson" not "[name]'s lesson".
-- Overview + copy/tone focus (2026-06-23):
-  - `/admin` is now calmer and more selective: `Things To Do Today`, `Things That Need Attention`, and `Let's Work On The School` are the main bands; the old open-queues/status-board feel was removed.
-  - The front page keeps `Review Issues`, `Tutor Absences`, `Waiting List`, and `Payment setup pending` because they create or unblock real work. Parent understanding and broader context are intentionally not front-page cards unless they need action.
-  - Card copy now favours label-first language and softer count pills instead of large stressful numbers. Background school/payment context is available lower down or in specific pages, but does not compete with today's work.
-  - `docs/admin/COPY_AND_TONE.md` records the current language layer: calm, human, action-led, and specific to First Chord's operating rhythm.
-- Work-on-the-school notes (2026-06-23):
-  - `/admin/planning` now has a focused `Work on the school notes` capture block for `Learning note` and `Strategic note` item types.
-  - The note shape is intentionally "structured wrapper, open body": title, type, area, owner/status, main note or transcript summary, key ideas, possible First Chord applications, and optional next action.
-  - Notes are stored in existing `Planning_Items`; progress remains in `Planning_Progress_Log`. No new tab or knowledge-management system was added.
-  - Planning cards can be removed from active work by parking them. This preserves history, removes them from due/active work, and parked pause-planning cards are ignored by the finance pause forecast.
-  - Notes with a next action can create a linked `Action` card, preserving the original thinking while turning the usable part into executable work.
-  - Overview "Let's Work On The School" cards now route into the relevant Planning note views (`learning_note` or `strategic_note`) instead of the whole board.
+## Standing context & policy
 
-## Current Slice
+Durable rules (don't grow per session). The state-tab map is `docs/admin/STATE_TABS_SCHEMA.md` — treat it as canonical before adding any Sheets tab.
 
-The active V4 slice is context + ownership layering, not broad automation.
+- **V4 context is read-only:** `deriveStudentLifecycleStatus()`, `Schedule_Context` (cached MMS calendar, refreshed per-student / bulk / cron — not per page load), and payment value context are baseline operational context only — they don't change issue generation, onboarding, Stripe, or stored state.
+- **Shared MMS slots = group lessons** when multiple students share teacher + next-lesson start + duration; price as group, not 1:1.
+- **Capacity:** `/admin/capacity` reads MMS `Free` calendar slots (don't duplicate into a Sheets tab); `/admin/capacity` + `/admin/waiting` share a short-lived `Free`-slot cache; capacity page also shows schedule-cache health. `/admin/waiting` shows possible slots only where the tutor teaches the parsed instrument — hints only, no auto-assign/onboard.
+- **Navigation is action-led:** Overview = today's operating summary; Issues = detected problems + loop actions; Workflows = waiting/onboarding/showcase/holidays/comms; Planning = capacity, schedule health, seasonal + finance/capacity layers. Student records are reached via search/links, not a top-nav mode.
+- **Overview placement:** top cards = work to do today / needs attention / deliberate school-improvement prompts; background health belongs lower down unless something's wrong; prefer human labels over big counts; don't add a panel just because data exists. (`docs/admin/COPY_AND_TONE.md` records the language layer.)
+- **Planning state is dashboard-owned work state** (`Planning_Items` + append-only `Planning_Progress_Log`), not external truth. Linked student IDs point at `Students` rows. The Friday school-forward + Monday scheduling prompts are seeded planning items, not a workflow engine. Learning/strategic notes are planning items, not finance forecasts.
+- **Pause guardrail:** pause reminders link to a student before billing actions; generic `Done` never changes payment state — **`Mark pause completed`** is the guarded action that logs confirmation, sets `stripe_paused_expected` via the student PATCH route, appends `Event_Log`, and closes the task. The dashboard generates the parent message but does **not** send WhatsApp. Parked pause cards are ignored by the finance forecast.
+- **Parent understanding** (`Parent_Understanding_State`) is a manual, approval-first campaign workflow — not a CRM or message automation. Contact-detail fixes are flag/note only; don't edit MMS from it yet.
+- **Practice Chat** note ownership bridges admin↔learning via `Practice_Notes_Log`. Level 2 (Gmail-delivered parent notes) is a **controlled pilot** limited to Finn/Tom/Fennella (+ test student), idempotent via `delivery_key = student + MMS attendance + note hash`; transactional lesson-note email is the one automated-email exception — payment/pause/onboarding/WhatsApp/marketing stay approval-first. Before widening, update `docs/admin/PRACTICE_CHAT_DELIVERY_AUDIT.md` (caller identity, authorisation, config-driven rollout, duplicate-send concurrency are the blockers).
+- **Finance lanes** (see [[Financial Layer]]): `Expenses` = recurring overhead; `Expense_Log` = actual spend to reconcile at month-end (replaces the old `General` buffer); `Finance_Snapshot` = dated estimates, not accounting; `Payroll_Runs` = payroll review/paid ledger; `Tutor_Pay`/`Tutor_Wise` = pay config + Wise recipients (salaries/banking never in git).
 
-- `deriveStudentLifecycleStatus()` is read-only context. It does not change issue generation, onboarding, Stripe actions, or stored state.
-- `Schedule_Context` is a cached Sheets tab populated from MMS calendar events. It is refreshed manually per student or by the bulk schedule refresh route, not on every page load.
-- Payment value context is baseline operational context only. It uses the cached schedule duration and school price table.
-- Shared MMS lesson slots are treated as group lessons when multiple students have the same teacher, next lesson start, and duration in `Schedule_Context`.
-- For example, Emily Grifa and Nina Gavlin share a 45 minute slot, so each should show group pricing: `£20/week`, not one-to-one 45 minute pricing.
-- `/admin/capacity` reads current free capacity from MMS calendar events with category `Free`. This is the right starting source for real available slots; do not duplicate those into a new Sheets tab unless a manual overlay becomes necessary.
-- `/admin/capacity` and `/admin/waiting` share a short-lived server cache for MMS `Free` calendar slots via `getMmsFreeCalendarSlotContext()`, so navigating between those pages should not trigger repeated MMS calendar searches inside the cache window.
-- The same capacity page also shows schedule-cache health so student schedule hardening remains visible.
-- `/admin/waiting` now parses instruments from the MMS sign-up note and shows possible free slots only when the tutor teaches the parsed instrument. These are hints only; they do not reserve slots, assign tutors, send messages, or start onboarding.
-- `/admin/waiting` is the placement/contact decision surface: it shows parent contact details, MMS note context, and possible capacity matches before handing off to `/admin/onboard` for execution.
-- The waiting free-slot refresh is explicit and admin-triggered. It bypasses the short server cache for MMS `Free` slots, then recalculates waiting-list capacity hints in place.
-- `/admin/workflows/parent-understanding` is a campaign workflow, not a CRM and not message automation. It should stay manual/approval-first until the communication draft layer is intentionally designed.
-- Parent understanding records are workflow state:
-  - Sheets tab: `Parent_Understanding_State`
-  - state owner: dashboard
-  - student/contact truth: existing Sheets/MMS/registry data
-  - message sending: human copy/send only
-  - contact-detail fixes: flag and note for Fenella/admin follow-up; do not edit MMS from this workflow yet
-- The current parent check-in policy assumptions are:
-  - practice notes historically went to the parent email in MMS; the Practice Chat Level 2 pilot is testing First Chord-owned Gmail delivery instead
-  - all active students should generally have a small tutor/parent/Finn/Tom WhatsApp group except Adult Ukulele Orchestra-style exceptions
-  - not being in the wider First Chord community group should remain a follow-up unless intentionally declined/not relevant
-  - cancellation/holiday recap should use the school handbook plus the short plain-English policy summary in the template
-- Admin navigation is intentionally action-led:
-  - `Overview` = today's operating summary
-  - `Issues` = detected problems and issue-loop actions
-  - `Workflows` = waiting list, onboarding, showcase, holidays, and future task/communication flows
-  - `Planning` = capacity, schedule health, seasonal planning, and future finance/capacity layers
-- Overview placement rule:
-  - top-page cards should represent work to do today, work needing attention, or deliberate school-improvement prompts
-  - background health/context belongs lower down unless something is wrong
-  - big counts should be used sparingly; prefer human labels and small pills where the number is supporting detail
-  - do not add a front-page panel just because the data exists
-- Student records remain important context, but they are accessed through header search, issue links, workflow links, or `/admin/students`; they are not a primary top-nav mode.
-- Planning state is dashboard-owned work state, not external truth:
-  - Sheets tabs: `Planning_Items` and `Planning_Progress_Log`
-  - linked student IDs point at existing `Students` rows
-  - progress notes are append-only planning memory
-  - the Friday school-forward prompt is a seeded planning item, not a separate workflow engine
-  - learning/strategic school notes are planning items, not external truth or finance forecasts
-  - school notes preserve the original thinking/transcript summary; linked actions carry the executable work
-  - student-linked pause planning can update `payment_expectation` only through an explicit human completion action
-  - generic `Done` does not itself change payment state; `Mark pause completed` is the guarded pause-specific action that logs confirmation, aligns `payment_expectation`, and closes the task
-- Dashboard-owned state tabs and write patterns are now documented in `docs/admin/STATE_TABS_SCHEMA.md`. Treat that as the schema map before adding another Sheets tab.
-- `docs/admin/STATE_TABS_SCHEMA.md` is the canonical state lane map. Do not create another source-of-truth/state-map document.
-- Finance lanes are intentionally split:
-  - `Expenses` = recurring overhead assumptions used in the run-rate
-  - `Expense_Log` = actual bank/card spend memory to reconcile at month-end; this replaces the old recurring `General` buffer for miscellaneous spend
-  - `Finance_Snapshot` = dated estimate snapshots, not accounting records
-  - `Payroll_Runs` = payroll review/paid ledger per tutor/pay period; MMS attendance remains the V1 attendance source
-- Pause planning guardrail:
-  - pause reminders should be linked to a student before billing actions
-  - the admin must confirm the payment pause tool was run and the parent confirmation was sent/copied
-  - the dashboard-generated parent message reduces copy/paste and wording load but does not send WhatsApp
-  - `Mark pause completed` logs the confirmation, sets `stripe_paused_expected` through the existing student PATCH route if needed, appends to `Event_Log`, and marks the planning task done
-- Practice Chat note ownership is becoming a bridge between admin and learning:
-  - `Practice_Notes_Log` stores generated notes and student/tutor context
-  - in the legacy handoff flow, failed snapshot saves must not block the tutor from opening MMS
-  - in the Level 2 test flow, MMS remains the backup/canonical attendance and lesson-note store, while Gmail is being tested as the First Chord-owned parent delivery channel
-  - the current `Practice_Notes_Log` schema stores final send/audit fields when the Level 2 route has them, but older rows may only contain a snapshot
-  - do not treat old rows as proof of delivery unless `email_send_status`, `mms_attendance_saved`, and recipient fields are present
-  - Level 2 delivery records use `delivery_key = student + MMS attendance + note hash` so duplicate clicks/retries do not send the same parent email twice
-- Practice Chat Level 2 is in controlled pilot:
-  - route: `POST /api/practice-notes/mms-test`
-  - allowed students: dashboard-verified students for Finn, Tom, or Fennella, plus Test Studenty for local testing
-  - dry-run previews the MMS attendance target, candidate lesson list, selected-date reason, preserved price, and email recipients
-  - execute mode requires `confirmLevel2Pilot: true` and should not be broadened to all tutors until the pilot has been reviewed
-  - local testing confirms the server token can save notes and mark attendance in MMS
-  - MMS `emailnotes` can fail with `Principal must be a teacher to email lesson notes`
-  - test execution now sends the parent note via the First Chord Gmail account instead of MMS `emailnotes`, using `GMAIL_*` send-only OAuth env vars
-  - duplicate execution returns the existing sent delivery when `gmail_message_id`/`email_send_status` says the note was already sent
-  - partial retry skips the MMS write when the existing delivery record says `mms_attendance_saved = TRUE` and only retries Gmail
-  - lesson selection must stay explicit/visible before real tutor rollout
-  - final tutor rollout still needs a real-student pilot, broader auth, and a retry design that does not duplicate MMS writes or parent emails
-  - transactional lesson-note email is now documented as the narrow automated-email exception; payment, pause, onboarding, WhatsApp, and marketing messages remain approval-first
-  - before widening beyond Finn/Tom/Fenella, update `docs/admin/PRACTICE_CHAT_DELIVERY_AUDIT.md`; caller identity, caller/student authorisation, config-driven rollout, and duplicate-send concurrency are blockers
-
-Before deployment, verify with:
+Before deploying, verify with:
 
 ```bash
 npm run test:admin
 npm run build
 ```
 
-## Best Next Slices
+## Next / Not now
 
-Progress note (2026-06-21): recent work advanced **pause loop maturity** (inline MMS refresh, clearer pause steps, adult/parent message), **planning link refinement** (multi-student links, stop-word guard, clear fix), added a calm due-today view + the Monday scheduling loop, delivered **schedule-context hardening** (slice #2 — `/admin/capacity` surfaces + refreshes stale caches, plus a bi-weekly cron), and took the **first step of the communication layer** (slice #8) as a deliberately-lean **record-only Communication Log** (no approval/sending). Natural fast-follows: extend the copy-logging to other message buttons, and a per-student "messages logged" panel. The full draft→approve→send gate remains available to revisit only if/when actual automated sending is wanted.
+Open candidates (the Obsidian `08 Operations/Active Roadmap` is the fuller list):
 
-Progress note (2026-06-23): the Overview page moved closer to a daily operating room than a metrics board. Front-page cards now need an action reason: today's dated tasks, issue decisions, tutor absence work, waiting-list placement, or setup-pending payment work. Removed open-queue clutter and softened card typography so the page invites a meeting flow instead of creating number stress. Future overview changes should ask: "would Finn/Tom click this during a meeting and do something meaningful?"
+- Pause-loop maturity — make pause issue cards clearer about whether a mismatch is from `Pause History`, sheet expectation, or live Stripe (Stripe mutation stays out of scope).
+- Contact-role model before any message automation.
+- Communication draft→approve layer before any WhatsApp Cloud API (no auto-send).
+- Practice Chat Level 2 delivery audit (read-only first) before widening beyond Finn/Tom/Fennella.
+- Future capacity overlay (tentative/hire availability) — only after the MMS `Free` view proves useful; keep separate from real calendar data.
+- **Monoliths to split** (deferred, deliberate): `AdminPlanningPageClient.js` (~3.7k lines), `AdminIssuesPageClient.js`, `sheets.js` — the real "repo is getting big" ceiling.
 
-Progress note (2026-06-23, Planning): added a lightweight school-notes layer inside Planning for learning notes and strategic scratchpad entries. This is deliberately not finance forecasting, CRM, or project management. It exists to log conversations, transcript summaries, book/podcast learning, and bigger thoughts so they can be resumed later and converted into linked actions when ready.
+**Do not do next:** heavy assignment/owner systems; WhatsApp auto-send; Stripe mutations from `/admin/flags`; a new database to replace Sheets; editing generated config files directly.
 
-1. **V4.1 performance hardening** — DONE (2026-06-21): shared `app/admin/loading.js` skeleton; Sheets read TTL 15s → 60s; Overview health cached (60s) AND streamed via `<Suspense>` (page no longer blocks on MMS/GitHub health calls). Remaining only if still slow:
-   - Sheets `batchGet` to collapse per-tab reads into one round-trip (also eases the read quota).
-   - Review which admin pages should be daily top-level navigation versus planning/background tools.
-   - Interaction-speed (vs navigation): the very large planning client bundle could be code-split.
+## Source of truth & fragile contracts
 
-2. **Schedule context hardening**
-   - Confirm the bulk MMS schedule refresh is cheap enough operationally.
-   - Review edge cases: group lessons, substitute teachers, one-off lessons, missing future calendar events.
-   - Use `/admin/capacity` to monitor stale, missing, low-confidence, and shared schedule cache records.
+Canonical/derived ownership and full forbidden-actions list live in the workspace `CLAUDE.md`. In short: Google Sheets `Students` = operational school truth; `lib/config/students-registry.js` = portal/registry truth (regenerate the rest); MMS = lesson/billing truth (calendar `Free` = free-slot truth); Stripe = payment truth; dashboard-owned state tabs are mapped in `STATE_TABS_SCHEMA.md`.
 
-3. **Payment value refinement**
-   - Keep values baseline, not accounting.
-   - Add only small explanations where value affects payment flags or prioritisation.
+Fragile format contracts (don't change without updating the parser + tests — recorded in `STATE_TABS_SCHEMA.md` → Format Contracts):
 
-4. **Waiting-list capacity matching refinement** — DONE (2026-06-21): multi-instrument coverage, ranking, synonyms, clearer "why", and the day/time availability sub-slice (MMS sign-up `Preferred days`/`Preferred times` → parsed → score-based ranking, day weighted over time). Keep matches as suggestions until a placement workflow is intentionally designed.
+- MMS sign-up labels `Preferred days` / `Preferred times` → waiting-list availability matching.
+- The Google Sheets `Students` header row is a system contract (protect with an edit-warning; update dashboard + FC-regeneration readers deliberately).
+- MMS `AttendanceStatus` strings → payroll classification; Wise CSV columns; pause-notes date format → pause forecast.
+- GitHub scheduled workflows can silently stop after long inactivity — keep in the operations/health rhythm.
 
-5. **Pause loop maturity**
-   - Make pause issue cards clearer about whether the mismatch comes from `Pause History`, sheet expectation, or live Stripe.
-   - Keep Stripe pause/resume mutation commands out of scope.
+## Read order for a new agent
 
-6. **Contact role model**
-   - Clarify billing/admin contact roles before any message automation.
-
-7. **Future capacity overlay**
-   - Add future-hire or tentative availability only after the MMS `Free` slot view is useful.
-   - Keep this separate from real MMS calendar availability.
-
-8. **Communication draft layer**
-   - Add draft and approval records before any WhatsApp Cloud API integration.
-   - Do not auto-send.
-
-9. **Practice Chat Level 2 delivery audit**
-   - Read-only audit first; do not change code until the current delivery path has been rechecked.
-   - Caller identity, caller/student authorisation, config-driven rollout, and duplicate-send concurrency are widening blockers.
-   - Keep the real-student pilot limited to Finn/Tom/Fenella until those are resolved.
-
-10. **Parent understanding hardening**
-   - Manually test 2-3 real students before handing to Fenella.
-   - Confirm the labels match how Fenella naturally asks the questions.
-   - Keep improving next-action wording before adding more fields.
-   - Do not auto-update MMS contact details from this page; keep this as flag/note only for now.
-
-11. **Planning link refinement**
-   - Improve student matching only if real captures show ambiguity.
-   - Consider linking planning items to issue IDs after the student-link loop is calm.
-   - Keep ownership simple: Finn, Tom, or Unassigned unless a real delegation need appears.
-
-## Do Not Do Next
-
-- Do not add heavy assignment/owner systems yet.
-- Do not wire WhatsApp auto-send.
-- Do not add Stripe mutation commands from `/admin/flags`.
-- Do not create a new database just to replace Sheets.
-- Do not make flags more complex than necessary.
-- Do not edit generated dashboard config files directly.
-
-## Source Of Truth
-
-- Google Sheets `Students` = operational school truth
-- `lib/config/students-registry.js` = portal/dashboard registry truth
-- MMS = lesson and billing-profile operational truth
-- MMS calendar category `Free` = current real free-slot truth
-- Stripe = payment-provider truth
-- `Schedule_Context` = dashboard cache of selected MMS lesson context
-- `Parent_Understanding_State` = dashboard workflow state for parent check-in campaign records
-- `Planning_Items` = dashboard-owned human planning/task/initiative state
-- `Planning_Progress_Log` = append-only progress history for planning items
-- `Communication_Log` = append-only record of parent messages copied to send (record-only; not a sender)
-- `Pause History` = intentional pause-window truth
-- generated FC tabs and generated dashboard config files = derived outputs
-
-Use `docs/admin/STATE_TABS_SCHEMA.md` as the canonical state lane map for dashboard-owned Sheets tabs.
-
-Known fragile format contracts:
-
-- MMS sign-up labels `Preferred days` and `Preferred times` feed waiting-list availability matching. If the MMS form wording changes, update the parser/tests.
-- The Google Sheets `Students` header row is a system contract. Protect it in Google Sheets with an edit warning; if headers change, update dashboard and FC-regeneration readers deliberately.
-- GitHub scheduled workflows, including schedule refresh, can silently stop after long inactivity. Keep this in the operations/health rhythm.
-
-## Read Order
-
-1. `docs/admin/CURRENT_STATUS.md`
-2. `docs/admin/V3_LOOP_ARCHITECTURE.md`
-3. `docs/admin/INDEX.md`
-4. `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`
-5. `docs/admin/OWNERSHIP_MATRIX.md`
-6. `docs/admin/SCHOOL_POLICY.md`
-7. `docs/admin/PAYMENTS_RULES.md` if working on Stripe or pauses
-
-Treat V1/V2 drafts and session handoff files as historical unless this file points to them.
+1. workspace `CURRENT_HANDOVER.md` (in-flight + machine context) → `CLAUDE.md` (rules) → this file (current + policy)
+2. `git log --oneline -20` (recent change history) + Obsidian `06 Learning Log` (why)
+3. `docs/admin/STATE_TABS_SCHEMA.md` (state lanes) and the relevant Obsidian `03 Architecture` note for the area you're touching
+4. the code itself for behaviour — don't trust prose descriptions of code over the code
