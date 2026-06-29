@@ -6,9 +6,22 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   buildParentUnderstandingSummary,
   calculateUnderstandingScore,
-  deriveParentUnderstandingRiskSignals,
   PARENT_UNDERSTANDING_STATUS_OPTIONS,
 } from '@/lib/admin/parent-understanding-helpers.mjs';
+import {
+  cardClasses,
+  firstName,
+  labelFor,
+  statusAfterEdit,
+  buildStatusPatch,
+  buildEmptyDetails,
+  getRecordScore,
+  hasUnderstandingAssessment,
+  hasWorkflowActivity,
+  getRecordRiskSignals,
+  matchesQueueSearch,
+  deriveNextActions,
+} from '@/lib/admin/parent-understanding-client-helpers.mjs';
 import { logCommunicationCopy } from '@/lib/admin/log-communication-copy.js';
 
 const UNDERSTANDING_AREAS = [
@@ -69,130 +82,9 @@ const GOOGLE_REVIEW_URL = 'https://www.google.com/search?hl=en-GB&gl=uk&q=First+
 
 const CANCELLATION_POLICY_RECAP = 'If you cannot attend in person, you can have a Zoom lesson at the normal time or your tutor can send a 5-10 minute practice video with notes. Same-day cancellations/no-shows are not eligible for a practice video. If you need to cancel a lesson, please give one week of notice so the lesson is not charged. Extended breaks can be paused for up to 3 weeks; weeks 4 and 5 are charged as normal, and 6+ weeks usually means discussing stepping back temporarily. Summer holidays are handled separately.';
 
-function cardClasses(extra = '') {
-  return `rounded-[1.2rem] border border-blue-100 bg-white/90 p-5 shadow-[0_12px_36px_rgba(15,23,42,0.06)] ${extra}`;
-}
-
-function firstName(name = '') {
-  return `${name || ''}`.trim().split(/\s+/)[0] || 'there';
-}
-
-function labelFor(options, value) {
-  return options.find((option) => option.value === value)?.label || value || 'Not set';
-}
-
-function statusAfterEdit(status = '') {
-  if (['completed', 'needs_follow_up', 'escalate_to_admin'].includes(status)) {
-    return status;
-  }
-  return 'in_progress';
-}
-
-function buildStatusPatch(nextStatus = 'in_progress') {
-  if (nextStatus === 'completed') {
-    return {
-      workflowStatus: 'completed',
-      loopStatus: 'closed',
-    };
-  }
-
-  if (nextStatus === 'needs_follow_up') {
-    return {
-      workflowStatus: 'needs_follow_up',
-      loopStatus: 'open_admin_follow_up_needed',
-    };
-  }
-
-  return {
-    workflowStatus: 'in_progress',
-    loopStatus: 'partially_closed',
-  };
-}
-
-function buildEmptyDetails(details = {}) {
-  return {
-    understanding: {
-      cancellations: { understands: '' },
-      dashboardSoundslice: { understands: '' },
-      practiceNotes: { understands: '' },
-      showcases: { understands: '' },
-      ...(details.understanding || {}),
-    },
-    feedback: {
-      lessonFeedback: '',
-      tutorFit: '',
-      studentEnjoyment: '',
-      practiceAtHome: 'unknown',
-      practiceBarriers: '',
-      equipmentIssues: '',
-      motivationIssues: '',
-      parentSuggestions: '',
-      generalNotes: '',
-      tutorRelevance: 'none',
-      ...(details.feedback || {}),
-    },
-    communication: {
-      whatsappUnderstanding: '',
-      bestContactTime: '',
-      communityGroupStatus: 'unknown',
-      ...(details.communication || {}),
-    },
-    actions: {
-      ...(details.actions || {}),
-    },
-    adminFollowUpNote: details.adminFollowUpNote || '',
-  };
-}
-
-function getRecordScore(record) {
-  return calculateUnderstandingScore({ ...record.state.details, adminFollowUpNote: record.state.details.adminFollowUpNote });
-}
-
-function hasSavedWorkflowState(record) {
-  return Boolean(record?.state?.updatedAt || record?.state?.recordId);
-}
-
-function hasUnderstandingAssessment(record) {
-  const understanding = record?.state?.details?.understanding || {};
-  return Object.values(understanding).some((area) => `${area?.understands || ''}`.trim());
-}
-
 function hasCompleteUnderstandingAssessment(record) {
   const understanding = record?.state?.details?.understanding || {};
   return UNDERSTANDING_AREAS.every((area) => `${understanding[area.key]?.understands || ''}`.trim());
-}
-
-function hasWorkflowActivity(record) {
-  const details = record?.state?.details || {};
-  const feedback = details.feedback || {};
-  const communication = details.communication || {};
-  const hasFeedback = Object.values(feedback).some((value) => {
-    const text = Array.isArray(value) ? value.join(' ') : `${value || ''}`;
-    return text.trim() && text !== 'unknown' && text !== 'none';
-  });
-  const hasCommunication = Object.values(communication).some((value) => {
-    const text = `${value || ''}`.trim();
-    return text && text !== 'unknown';
-  });
-
-  return Boolean(
-    hasSavedWorkflowState(record)
-    || record?.state?.workflowStatus !== 'not_started'
-    || hasUnderstandingAssessment(record)
-    || hasFeedback
-    || hasCommunication
-    || `${details.adminFollowUpNote || ''}`.trim(),
-  );
-}
-
-function getRecordRiskSignals(record) {
-  if (!hasUnderstandingAssessment(record)) {
-    return hasWorkflowActivity(record) ? ['Understanding checklist not assessed'] : [];
-  }
-  if (!hasWorkflowActivity(record)) {
-    return [];
-  }
-  return deriveParentUnderstandingRiskSignals({ ...record.state.details, adminFollowUpNote: record.state.details.adminFollowUpNote });
 }
 
 function effectiveWorkflowStatus(record) {
@@ -209,22 +101,6 @@ function workflowStatusLabel(record) {
   return labelFor(PARENT_UNDERSTANDING_STATUS_OPTIONS, record?.state?.workflowStatus);
 }
 
-function matchesQueueSearch(record, query) {
-  const trimmedQuery = query.trim().toLowerCase();
-  if (!trimmedQuery) {
-    return true;
-  }
-
-  const searchableText = [
-    record.student.studentName,
-    record.student.parentName,
-    record.student.tutor,
-    record.student.mmsId,
-  ].join(' ').toLowerCase();
-
-  return searchableText.includes(trimmedQuery);
-}
-
 function buildTemplates(record) {
   const parent = firstName(record.student.parentName);
   const student = firstName(record.student.studentName);
@@ -239,42 +115,6 @@ function buildTemplates(record) {
     noAnswer: `Hi ${parent}, it's Fenella from First Chord. I was just trying to catch you for a quick check-in about ${student}'s lessons and to make sure you have all the useful lesson information. Let me know if there's a better time to call.`,
     reviewRequest: `Hi ${parent}, thanks again for taking the time to chat today. It was really helpful to check in about ${student}'s lessons.\n\nIf you have a minute, we'd really appreciate a quick Google review. You can click here: ${GOOGLE_REVIEW_URL}`,
   };
-}
-
-function deriveNextActions(record) {
-  const details = record.state.details || {};
-  const understanding = details.understanding || {};
-  const communication = details.communication || {};
-  const actions = details.actions || {};
-  const nextActions = [];
-
-  if (understanding.cancellations?.understands && understanding.cancellations.understands !== 'yes' && !actions.policyInfoSent) {
-    nextActions.push('Send the cancellation/holiday policy recap.');
-  }
-  if (understanding.dashboardSoundslice?.understands && understanding.dashboardSoundslice.understands !== 'yes' && !actions.dashboardLinkSent) {
-    nextActions.push('Send the student dashboard link and check whether access help is needed.');
-  }
-  if (understanding.practiceNotes?.understands && understanding.practiceNotes.understands !== 'yes' && !actions.practiceNotesIssueFlagged) {
-    nextActions.push('Confirm the parent email used in MMS and flag any practice-note delivery issue for Fenella to fix.');
-  }
-  if (understanding.showcases?.understands && understanding.showcases.understands !== 'yes' && !actions.showcaseInfoSent) {
-    nextActions.push('Send the showcase recap.');
-  }
-  if (communication.whatsappUnderstanding && communication.whatsappUnderstanding !== 'yes') {
-    nextActions.push('Explain the small tutor WhatsApp group and the wider community announcement group.');
-  }
-  if (communication.communityGroupStatus === 'not_in_group') {
-    nextActions.push('Send the First Chord community group invite and mark follow-up needed until joined or declined.');
-  }
-  if (`${details.adminFollowUpNote || ''}`.trim()) {
-    nextActions.push('Resolve the admin follow-up note before closing this loop.');
-  }
-
-  if (!nextActions.length) {
-    nextActions.push('No obvious follow-up from the current answers.');
-  }
-
-  return nextActions;
 }
 
 function QueueItem({ record, selected, unsaved, onSelect }) {
