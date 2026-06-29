@@ -12,6 +12,17 @@ import {
   extractPauseDatesFromPlanningItem,
   buildPaymentPausePrefillUrl,
   buildPauseConfirmationMessage,
+  isPausePlanningItem,
+  isDueNowPlanningItem,
+  isOpenPlanningItem,
+  getPlanningStory,
+  getPlanningWhatToDo,
+  dueChipLabel,
+  hasPlanningLink,
+  findStudentSuggestions,
+  inferStudentFromText,
+  truncateTitle,
+  applySmartDefaults,
 } from '../../lib/admin/planning-client-helpers.mjs';
 
 test('shortPreview truncates with an ellipsis past the max', () => {
@@ -87,4 +98,72 @@ test('buildPauseConfirmationMessage addresses adults directly and parents in thi
   const parent = buildPauseConfirmationMessage({ item, student: { fullName: 'Ada Smith', parentFirstName: 'Rachel', parentLastName: 'Smith', tutor: 'Kenny Bates' } });
   assert.match(parent, /Hi Rachel/);
   assert.match(parent, /paused payment for Ada/);
+});
+
+test('isPausePlanningItem / isOpenPlanningItem / isDueNowPlanningItem classify items', () => {
+  assert.equal(isPausePlanningItem({ title: 'Pause Ada' }), true);
+  assert.equal(isPausePlanningItem({ title: 'Email parent' }), false);
+  assert.equal(isOpenPlanningItem({ status: 'active' }), true);
+  assert.equal(isOpenPlanningItem({ status: 'done' }), false);
+  const now = new Date('2026-07-10T12:00:00Z');
+  assert.equal(isDueNowPlanningItem({ status: 'active', targetDate: '2026-07-10' }, now), true);
+  assert.equal(isDueNowPlanningItem({ status: 'active', targetDate: '2026-07-20' }, now), false); // future
+  assert.equal(isDueNowPlanningItem({ status: 'done', targetDate: '2026-07-01' }, now), false); // done
+});
+
+test('getPlanningStory frames pause cards and falls back to the title', () => {
+  const opts = [{ mmsId: 'sdt_1', fullName: 'Ada Smith' }];
+  const range = getPlanningStory({ linkedStudentId: 'sdt_1', notes: 'Pause — First lesson to pause date: 2026-07-06\nReturning from date: 2026-07-20' }, opts);
+  assert.match(range, /Pause Ada Smith from/);
+  assert.equal(getPlanningStory({ title: 'Order new chairs' }), 'Order new chairs');
+  assert.equal(getPlanningStory({ title: '' }), 'This needs a look today.');
+});
+
+test('getPlanningWhatToDo prefers nextAction, then pause/tutor-absence framing', () => {
+  assert.equal(getPlanningWhatToDo({ nextAction: 'Call the parent' }), 'Call the parent');
+  assert.match(getPlanningWhatToDo({ title: 'Pause Ada' }), /pause the payment/);
+  assert.match(getPlanningWhatToDo({ linkedWorkflowId: 'tutor-absence' }), /tutor-absence workflow/);
+});
+
+test('dueChipLabel: today, overdue, future, and no-date', () => {
+  const now = new Date('2026-07-10T12:00:00Z');
+  assert.equal(dueChipLabel('2026-07-10', now), 'Today');
+  assert.equal(dueChipLabel('2026-07-09', now), 'Overdue 1 day');
+  assert.equal(dueChipLabel('2026-07-07', now), 'Overdue 3 days');
+  assert.equal(dueChipLabel('', now), 'No date');
+  assert.match(dueChipLabel('2026-07-20', now), /Jul/); // future → formatted date
+});
+
+test('hasPlanningLink is true when any link field is set', () => {
+  assert.equal(hasPlanningLink({ linkedStudentId: 'sdt_1' }), true);
+  assert.equal(hasPlanningLink({ linkedWorkflowId: 'tutor-absence' }), true);
+  assert.equal(hasPlanningLink({}), false);
+});
+
+test('truncateTitle takes the first line, strips bullets, and caps length', () => {
+  assert.equal(truncateTitle('- First line\nSecond line'), 'First line');
+  assert.equal(truncateTitle('x'.repeat(100), 10), 'xxxxxxxxx...');
+});
+
+test('applySmartDefaults promotes inbox actions/initiatives to active', () => {
+  assert.equal(applySmartDefaults({ itemType: 'action', status: 'inbox' }).status, 'active');
+  assert.equal(applySmartDefaults({ itemType: 'idea', status: 'inbox' }).status, 'inbox'); // ideas stay
+});
+
+const STUDENTS = [
+  { mmsId: 'sdt_theo', fullName: 'Theodore Brown', tutor: 'Kenny', instrument: 'Guitar' },
+  { mmsId: 'sdt_ada', fullName: 'Ada Lovelace', tutor: 'Calum', instrument: 'Piano' },
+];
+
+test('findStudentSuggestions ranks prefix/substring matches', () => {
+  const out = findStudentSuggestions(STUDENTS, 'theo');
+  assert.equal(out[0].mmsId, 'sdt_theo');
+  assert.deepEqual(findStudentSuggestions(STUDENTS, ''), []);
+});
+
+test('inferStudentFromText avoids the stop-word trap and resolves real names', () => {
+  // "the" must NOT latch onto Theodore (the stop-word guard)
+  assert.equal(inferStudentFromText(STUDENTS, 'pause the lesson next week'), null);
+  // a real first name resolves
+  assert.equal(inferStudentFromText(STUDENTS, 'Ada is away on holiday')?.mmsId, 'sdt_ada');
 });

@@ -39,6 +39,20 @@ import {
   extractPauseDatesFromPlanningItem,
   buildPaymentPausePrefillUrl,
   buildPauseConfirmationMessage,
+  isPausePlanningItem,
+  isDueNowPlanningItem,
+  isOpenPlanningItem,
+  getPlanningStory,
+  getPlanningWhatToDo,
+  dueChipLabel,
+  hasPlanningLink,
+  studentLabel,
+  findStudentById,
+  findStudentSuggestions,
+  inferStudentFromText,
+  truncateTitle,
+  momentumClasses,
+  applySmartDefaults,
 } from '@/lib/admin/planning-client-helpers.mjs';
 import { ADMIN_TUTORS } from '@/lib/admin/tutors-data.js';
 import { logCommunicationCopy } from '@/lib/admin/log-communication-copy.js';
@@ -123,204 +137,6 @@ const SCHOOL_NOTE_TYPES = new Set(['learning_note', 'strategic_note']);
 const PAUSE_PAYMENT_CONFIRMATION_NOTE = 'Payment pause confirmation message sent.';
 const PAUSE_EXPECTATION_SET_NOTE = 'Set Stripe paused expected from linked pause planning item.';
 const PAUSE_COMPLETED_NOTE = 'Pause completed from Planning: pause tool run, parent confirmation sent, and payment expectation aligned.';
-
-function normaliseSearchText(value = '') {
-  return `${value || ''}`.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-}
-
-// Everyday words that should never auto-attach a student to a captured note.
-// Without this, "the" prefix-matched "Theodore" and "and" matched "Andrew".
-const STUDENT_MATCH_STOP_WORDS = new Set([
-  'the', 'and', 'for', 'are', 'was', 'were', 'this', 'that', 'with', 'has', 'have',
-  'will', 'but', 'not', 'all', 'any', 'who', 'why', 'how', 'when', 'what', 'where',
-  'you', 'your', 'our', 'her', 'his', 'him', 'she', 'they', 'them', 'their',
-  'from', 'into', 'onto', 'out', 'over', 'about', 'after', 'before', 'then',
-  'today', 'tomorrow', 'week', 'next', 'now', 'soon', 'add', 'new', 'get', 'got',
-]);
-
-// A token only counts toward auto-inferring a student if it's substantial enough
-// to be a name and isn't a common word. Manual search (StudentSearchField) is
-// unaffected — this guards only the automatic note→student detection.
-function isMeaningfulNameTerm(term = '') {
-  return term.length >= 3 && !STUDENT_MATCH_STOP_WORDS.has(term);
-}
-
-function isDueNowPlanningItem(item = {}, now = new Date()) {
-  const targetDate = `${item.targetDate || ''}`.trim();
-  return !['done', 'parked'].includes(item.status)
-    && /^\d{4}-\d{2}-\d{2}$/.test(targetDate)
-    && targetDate <= formatDateInput(now);
-}
-
-function isOpenPlanningItem(item = {}) {
-  return !['done', 'parked'].includes(item.status);
-}
-
-// Plain-language headline for the calm "due today" cards. Auto-generated pause
-// cards get a calmer framing; user-written items already read as human, so we
-// use their title. (Mirrors getIssueStory in AdminIssuesPageClient.)
-function getPlanningStory(item = {}, studentOptions = []) {
-  if (isPausePlanningItem(item)) {
-    const name = findStudentById(studentOptions, item.linkedStudentId)?.fullName || 'a student';
-    const { startDate, endDate } = extractPauseDatesFromPlanningItem(item);
-    if (startDate && endDate && startDate !== endDate) {
-      return `Pause ${name} from ${formatTargetDate(startDate)} until ${formatTargetDate(endDate)}.`;
-    }
-    if (startDate) {
-      return `Pause ${name}'s lesson on ${formatTargetDate(startDate)}.`;
-    }
-    return `Sort out ${name}'s pause.`;
-  }
-  return `${item.title || ''}`.trim() || 'This needs a look today.';
-}
-
-// The calm "what to do" line beneath the headline.
-function getPlanningWhatToDo(item = {}) {
-  const next = `${item.nextAction || ''}`.trim();
-  if (next) {
-    return next;
-  }
-  if (isPausePlanningItem(item)) {
-    return 'Open the pause steps: pause the payment, then send the confirmation message.';
-  }
-  if (item.linkedWorkflowId === 'tutor-absence') {
-    return 'Open the tutor-absence workflow to arrange cover.';
-  }
-  return 'Take the next step, then mark it done.';
-}
-
-// A small due chip: "Today" or "Overdue N days".
-function dueChipLabel(targetDate = '', now = new Date()) {
-  const date = `${targetDate || ''}`.trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    return 'No date';
-  }
-  const today = formatDateInput(now);
-  if (date === today) {
-    return 'Today';
-  }
-  if (date < today) {
-    const days = Math.round((new Date(`${today}T00:00:00`) - new Date(`${date}T00:00:00`)) / 86_400_000);
-    return days === 1 ? 'Overdue 1 day' : `Overdue ${days} days`;
-  }
-  return formatTargetDate(date);
-}
-
-function hasPlanningLink(item = {}) {
-  return Boolean(
-    `${item.linkedWorkflowId || ''}`.trim()
-    || `${item.linkedStudentId || ''}`.trim()
-    || `${item.linkedTutorId || ''}`.trim()
-    || `${item.parentPlanningId || ''}`.trim(),
-  );
-}
-
-function studentLabel(student = {}) {
-  return [
-    student.fullName || student.mmsId,
-    student.tutor ? `Tutor: ${student.tutor}` : '',
-    student.instrument || '',
-  ].filter(Boolean).join(' · ');
-}
-
-function findStudentById(studentOptions = [], mmsId = '') {
-  return studentOptions.find((student) => student.mmsId === mmsId) || null;
-}
-
-function findStudentSuggestions(studentOptions = [], query = '', limit = 6) {
-  const search = normaliseSearchText(query);
-  if (!search) {
-    return [];
-  }
-  const terms = search.split(/\s+/).filter(Boolean);
-
-  return studentOptions
-    .map((student) => {
-      const haystack = normaliseSearchText([
-        student.fullName,
-        student.mmsId,
-        student.tutor,
-        student.instrument,
-      ].filter(Boolean).join(' '));
-      const score = terms.reduce((sum, term) => (
-        haystack.includes(term) ? sum + (haystack.startsWith(term) ? 2 : 1) : sum
-      ), 0);
-      return { student, score };
-    })
-    .filter((entry) => entry.score > 0)
-    .sort((a, b) => b.score - a.score || a.student.fullName.localeCompare(b.student.fullName))
-    .slice(0, limit)
-    .map((entry) => entry.student);
-}
-
-function inferStudentFromText(studentOptions = [], rawText = '') {
-  const text = normaliseSearchText(rawText);
-  if (!text) {
-    return null;
-  }
-
-  const exactMatches = studentOptions
-    .map((student) => {
-      const name = normaliseSearchText(student.fullName);
-      if (!name || !text.includes(name)) {
-        return null;
-      }
-      return { student, score: name.length };
-    })
-    .filter(Boolean)
-    .sort((a, b) => b.score - a.score);
-
-  if (exactMatches.length) {
-    return exactMatches[0].student;
-  }
-
-  const studentQuery = text
-    .replace(/\b(please|can|could|you|we|need|to|for|from|until|pause|paused|pausing|lesson|lessons|away|off|holiday|holidays)\b/gu, ' ')
-    .replace(/\s+/gu, ' ')
-    .trim();
-  // Drop common words and ultra-short tokens so everyday language can't latch
-  // onto a name. If nothing substantial is left, don't guess a student.
-  const queryTerms = studentQuery.split(/\s+/).filter(isMeaningfulNameTerm);
-  if (!queryTerms.length) {
-    return null;
-  }
-
-  const exactFirstNameMatches = studentOptions.filter((student) => {
-    const firstName = normaliseSearchText(student.fullName).split(/\s+/)[0] || '';
-    return queryTerms.includes(firstName);
-  });
-  if (exactFirstNameMatches.length === 1) {
-    return exactFirstNameMatches[0];
-  }
-
-  const cleanQuery = queryTerms.join(' ');
-  const suggestions = findStudentSuggestions(studentOptions, cleanQuery, 3);
-  if (suggestions.length > 1) {
-    const firstNameMatches = suggestions.filter((student) => {
-      const firstName = normaliseSearchText(student.fullName).split(/\s+/)[0] || '';
-      // Only a length-4+ token may prefix-match (so "theo" finds Theodore but
-      // "the" never does); shorter tokens must match the first name exactly.
-      return queryTerms.some((term) => firstName === term || (term.length >= 4 && firstName.startsWith(term)));
-    });
-    if (firstNameMatches.length === 1) {
-      return firstNameMatches[0];
-    }
-  }
-  return suggestions.length === 1 ? suggestions[0] : null;
-}
-
-function firstLine(value = '') {
-  return `${value || ''}`
-    .split(/\n/)
-    .map((line) => line.trim())
-    .find(Boolean) || '';
-}
-
-function truncateTitle(value = '', max = 90) {
-  const text = firstLine(value).replace(/^[-•⁠\s]+/u, '').trim();
-  if (text.length <= max) return text;
-  return `${text.slice(0, max - 1)}...`;
-}
 
 function inferQuickCapture(raw = '') {
   const text = `${raw || ''}`.toLowerCase();
@@ -410,33 +226,6 @@ function buildQuickCaptureItem(rawNote = '', overrides = {}, studentOptions = []
   }
 
   return item;
-}
-
-function momentumClasses(momentum = '') {
-  if (momentum === 'moving') {
-    return 'border-emerald-200 bg-emerald-50 text-emerald-800';
-  }
-  if (momentum === 'stalled' || momentum === 'no_next_action') {
-    return 'border-amber-200 bg-amber-50 text-amber-800';
-  }
-  if (momentum === 'done') {
-    return 'border-slate-200 bg-slate-100 text-slate-700';
-  }
-  if (momentum === 'parked') {
-    return 'border-purple-200 bg-purple-50 text-purple-800';
-  }
-  return 'border-blue-100 bg-blue-50 text-slate-700';
-}
-
-function applySmartDefaults(form) {
-  const next = { ...form };
-  if (next.itemType === 'initiative' && next.status === 'inbox') {
-    next.status = 'active';
-  }
-  if (next.itemType === 'action' && next.status === 'inbox') {
-    next.status = 'active';
-  }
-  return next;
 }
 
 function SelectField({ label, value, options, onChange }) {
@@ -702,14 +491,6 @@ function LinkPill({ label, href = '' }) {
   ) : (
     <span className={classes}>{label}</span>
   );
-}
-
-function isPausePlanningItem(item = {}) {
-  return /\bpaus(?:e|ed|ing)\b/iu.test([
-    item.title,
-    item.notes,
-    item.nextAction,
-  ].join(' '));
 }
 
 function isSchoolNotePlanningItem(item = {}) {
