@@ -53,6 +53,15 @@ import {
   truncateTitle,
   momentumClasses,
   applySmartDefaults,
+  buildSearchText,
+  workflowHref,
+  buildTutorAbsenceWorkflowHref,
+  studentHref,
+  isSchoolNotePlanningItem,
+  hasPausePaymentConfirmation,
+  buildSchoolNoteItem,
+  SCHOOL_NOTE_TYPES,
+  PAUSE_PAYMENT_CONFIRMATION_NOTE,
 } from '@/lib/admin/planning-client-helpers.mjs';
 import { ADMIN_TUTORS } from '@/lib/admin/tutors-data.js';
 import { logCommunicationCopy } from '@/lib/admin/log-communication-copy.js';
@@ -132,9 +141,6 @@ const EMPTY_SCHOOL_NOTE_FORM = {
   nextAction: '',
 };
 
-const SCHOOL_NOTE_TYPES = new Set(['learning_note', 'strategic_note']);
-
-const PAUSE_PAYMENT_CONFIRMATION_NOTE = 'Payment pause confirmation message sent.';
 const PAUSE_EXPECTATION_SET_NOTE = 'Set Stripe paused expected from linked pause planning item.';
 const PAUSE_COMPLETED_NOTE = 'Pause completed from Planning: pause tool run, parent confirmation sent, and payment expectation aligned.';
 
@@ -432,56 +438,6 @@ function ExpandableText({ text = '', previewLines = 4, className = '' }) {
   );
 }
 
-function buildSearchText(item) {
-  return [
-    item.title,
-    item.notes,
-    item.owner,
-    item.areaLabel,
-    item.statusLabel,
-    item.itemTypeLabel,
-    item.linkedWorkflowId,
-    (item.linkedStudentIds || [item.linkedStudentId]).join(' '),
-    item.linkedTutorId,
-    item.outcome,
-    item.nextAction,
-    item.targetDate,
-    item.latestProgress?.progressNote,
-  ].join(' ').toLowerCase();
-}
-
-function workflowHref(workflowId = '') {
-  const key = `${workflowId || ''}`.trim().toLowerCase();
-  const routes = {
-    'tutor-absence': '/admin/workflows/tutor-absence',
-    'parent-understanding': '/admin/workflows/parent-understanding',
-    waiting: '/admin/waiting',
-    onboarding: '/admin/onboard',
-    showcase: '/admin/showcase',
-    holidays: '/admin/holidays',
-  };
-  return routes[key] || '';
-}
-
-// Tutor-absence cards keep the generic linkedWorkflowId ('tutor-absence') and store
-// the specific tutor + date as parseable lines in notes; build the prefilled deep
-// link from those so the workflow opens ready for that tutor/date.
-function buildTutorAbsenceWorkflowHref(item = {}) {
-  const notes = `${item.notes || ''}`;
-  const dateMatch = notes.match(/Tutor absence date:\s*(\d{4}-\d{2}-\d{2})/u);
-  const tutorMatch = notes.match(/^Tutor:\s*(\S+)/mu);
-  const tutor = tutorMatch ? tutorMatch[1] : `${item.linkedTutorId || ''}`.trim();
-  if (!dateMatch || !tutor) {
-    return '/admin/workflows/tutor-absence';
-  }
-  return `/admin/workflows/tutor-absence?tutor=${encodeURIComponent(tutor)}&date=${encodeURIComponent(dateMatch[1])}`;
-}
-
-function studentHref(studentId = '') {
-  const key = `${studentId || ''}`.trim();
-  return key ? `/admin/students/${encodeURIComponent(key)}` : '';
-}
-
 function LinkPill({ label, href = '' }) {
   const classes = 'rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-blue-50 hover:text-slate-900';
   return href ? (
@@ -491,16 +447,6 @@ function LinkPill({ label, href = '' }) {
   ) : (
     <span className={classes}>{label}</span>
   );
-}
-
-function isSchoolNotePlanningItem(item = {}) {
-  return SCHOOL_NOTE_TYPES.has(item.itemType);
-}
-
-function hasPausePaymentConfirmation(item = {}) {
-  return (item.progress || []).some((entry) => (
-    `${entry.progressNote || ''}`.toLowerCase().includes(PAUSE_PAYMENT_CONFIRMATION_NOTE.toLowerCase())
-  ));
 }
 
 function ItemForm({
@@ -618,32 +564,6 @@ function ItemForm({
       </button>
     </form>
   );
-}
-
-function buildSchoolNoteItem(form = {}) {
-  const mainNote = `${form.mainNote || ''}`.trim();
-  const keyIdeas = `${form.keyIdeas || ''}`.trim();
-  const applications = `${form.applications || ''}`.trim();
-  const sections = [
-    mainNote ? `Main note / transcript summary:\n${mainNote}` : '',
-    keyIdeas ? `Key ideas:\n${keyIdeas}` : '',
-    applications ? `Possible First Chord applications:\n${applications}` : '',
-  ].filter(Boolean);
-  const itemType = SCHOOL_NOTE_TYPES.has(form.noteKind) ? form.noteKind : 'learning_note';
-
-  return {
-    title: `${form.title || ''}`.trim(),
-    notes: sections.join('\n\n'),
-    itemType,
-    owner: form.owner || 'Unassigned',
-    status: form.status || 'active',
-    area: form.area || (itemType === 'learning_note' ? 'learning' : 'other'),
-    linkedWorkflowId: 'school-notes',
-    nextAction: `${form.nextAction || ''}`.trim(),
-    progressNote: itemType === 'learning_note'
-      ? 'Captured as a learning note.'
-      : 'Captured as a strategic note.',
-  };
 }
 
 function SchoolNoteCapture({ form, onChange, onSubmit, pending = false }) {

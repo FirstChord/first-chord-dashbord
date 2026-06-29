@@ -23,6 +23,13 @@ import {
   inferStudentFromText,
   truncateTitle,
   applySmartDefaults,
+  buildSearchText,
+  workflowHref,
+  buildTutorAbsenceWorkflowHref,
+  studentHref,
+  isSchoolNotePlanningItem,
+  hasPausePaymentConfirmation,
+  buildSchoolNoteItem,
 } from '../../lib/admin/planning-client-helpers.mjs';
 
 test('shortPreview truncates with an ellipsis past the max', () => {
@@ -166,4 +173,46 @@ test('inferStudentFromText avoids the stop-word trap and resolves real names', (
   assert.equal(inferStudentFromText(STUDENTS, 'pause the lesson next week'), null);
   // a real first name resolves
   assert.equal(inferStudentFromText(STUDENTS, 'Ada is away on holiday')?.mmsId, 'sdt_ada');
+});
+
+test('workflowHref maps known workflows and returns empty for unknown', () => {
+  assert.equal(workflowHref('tutor-absence'), '/admin/workflows/tutor-absence');
+  assert.equal(workflowHref('waiting'), '/admin/waiting');
+  assert.equal(workflowHref('nope'), '');
+});
+
+test('buildTutorAbsenceWorkflowHref prefills tutor+date from notes, falls back to base', () => {
+  const href = buildTutorAbsenceWorkflowHref({ notes: 'Tutor: Stef\nTutor absence date: 2026-07-06' });
+  assert.match(href, /tutor=Stef/);
+  assert.match(href, /date=2026-07-06/);
+  assert.equal(buildTutorAbsenceWorkflowHref({ notes: 'no tutor/date' }), '/admin/workflows/tutor-absence');
+});
+
+test('studentHref builds a student path or empty', () => {
+  assert.equal(studentHref('sdt_1'), '/admin/students/sdt_1');
+  assert.equal(studentHref(''), '');
+});
+
+test('isSchoolNotePlanningItem / hasPausePaymentConfirmation classify by type/progress', () => {
+  assert.equal(isSchoolNotePlanningItem({ itemType: 'learning_note' }), true);
+  assert.equal(isSchoolNotePlanningItem({ itemType: 'action' }), false);
+  assert.equal(hasPausePaymentConfirmation({ progress: [{ progressNote: 'Payment pause confirmation message sent.' }] }), true);
+  assert.equal(hasPausePaymentConfirmation({ progress: [{ progressNote: 'something else' }] }), false);
+});
+
+test('buildSchoolNoteItem maps a form into a planning item with sectioned notes', () => {
+  const item = buildSchoolNoteItem({ title: 'Marketing idea', noteKind: 'strategic_note', mainNote: 'do a campaign', keyIdeas: 'posters' });
+  assert.equal(item.itemType, 'strategic_note');
+  assert.equal(item.linkedWorkflowId, 'school-notes');
+  assert.match(item.notes, /Main note \/ transcript summary:\ndo a campaign/);
+  assert.match(item.notes, /Key ideas:\nposters/);
+  // unknown noteKind falls back to learning_note
+  assert.equal(buildSchoolNoteItem({ noteKind: 'bogus' }).itemType, 'learning_note');
+});
+
+test('buildSearchText flattens item fields to a lowercase haystack', () => {
+  const text = buildSearchText({ title: 'Pause ADA', notes: 'Holiday', owner: 'Tom', linkedStudentIds: ['sdt_1'] });
+  assert.match(text, /pause ada/);
+  assert.match(text, /holiday/);
+  assert.match(text, /tom/);
 });
