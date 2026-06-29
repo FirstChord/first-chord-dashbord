@@ -23,7 +23,7 @@ components/admin/
   AdminPlanningPageClient.js   ← thin orchestrator: state, server-action handlers, layout, composition
   planning/
     fields.js                  ✓ SelectField, TextField, DateField, StudentSearchField, TextAreaField, ExpandableText, LinkPill
-    PlanningCard.js            ☐ the per-item card (~620 lines) — the big one
+    PlanningCard.js            ✓ the per-item card — the big one
     DueTodayCard.js            ☐ wraps PlanningCard in compact mode
     QuickBrainCapture.js       ✓ quick-capture box (capture trio now in planning-client-helpers.mjs)
     SchoolNoteCapture.js       ✓ learning/strategic note form
