@@ -72,6 +72,24 @@ Use these questions when designing a workflow:
 
 Do not make workflows dense just because more data exists. Details can live behind panels, links, or student pages.
 
+## Hygiene Check
+
+Before meaningful commits, run:
+
+```bash
+npm run hygiene:check
+```
+
+This is a non-blocking prompt, not a gate. It scans for signals that future agents struggle with:
+
+- large code files that may be becoming context-heavy
+- large docs that may be turning into changelogs
+- meaningful code changes without repo docs
+- state-tab/Sheets changes without the schema map
+- admin route/workflow changes without a current-status note
+
+Use judgement. Tiny styling changes usually do not need docs. Behaviour, source-of-truth, workflow, safety, or state changes usually do.
+
 ## Overview / Meeting Surface Rule
 
 The `/admin` overview is not a full status board. It is the place Finn and Tom start a meeting or admin session.

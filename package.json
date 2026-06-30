@@ -16,6 +16,7 @@
     "sync-admin-tutors": "node scripts/sync-admin-tutors.js",
     "backup:sheets": "node scripts/backup-sheets-tabs.mjs",
     "ensure:state-tabs": "node scripts/ensure-state-tabs.mjs",
+    "hygiene:check": "node scripts/hygiene-check.mjs",
     "install:backup-schedule": "node scripts/install-sheets-backup-launch-agent.mjs",
     "lint": "next lint",
     "analyze": "ANALYZE=true npm run build",

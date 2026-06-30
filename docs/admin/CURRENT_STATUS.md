@@ -47,9 +47,12 @@ Durable rules (don't grow per session). The state-tab map is `docs/admin/STATE_T
 Before deploying, verify with:
 
 ```bash
+npm run hygiene:check
 npm run test:admin
 npm run build
 ```
+
+`hygiene:check` is deliberately non-blocking. It scans changed files and project size signals, then prints prompts for judgement: large files, meaningful code without docs, Sheets/state-layer touches without `STATE_TABS_SCHEMA.md`, and admin workflow/route changes without a current-status note.
 
 ## Next / Not now
 
