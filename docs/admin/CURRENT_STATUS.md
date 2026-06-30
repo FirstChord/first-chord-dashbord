@@ -26,7 +26,8 @@ The admin overview is a strict meeting-start surface, not a complete status boar
 
 - **Payroll → Wise pay-out (2026-06-27→29):** classifies by MMS attendance status (`AbsentNoMakeup` payable / `AbsentNotice` £0 / `Unrecorded`→review), adjustable window end, calmer cards, review split (past "needs recording" + "Fix in MMS" link vs upcoming), Wise batch CSV from `Tutor_Wise` + download-gated **batch mark-paid**, sticky tutor jump index.
 - **Reconciliation + lifecycle (2026-06-29):** reconciliation **Close redundant card** (retire a tutor-absence pause card once the student's own pause covers it); one-click **Mark student as left** (leave month → new `Students_Archive.date_left`); **editable pause-card dates**; passive **pause-contiguity flag** (merge deliberately deferred — see Learning Log + [[Summer edge-case season]]).
-- Finance layer (revenue/cost/margin/snapshots/trend/scenario/capacity/forecast), payroll V1, temporal reconciliation L1, roster movement → `git log` + Learning Log.
+- **Planning monolith split — Phase 3 done (2026-06-30):** `AdminPlanningPageClient.js` 3,732 → 1,167 lines (thin orchestrator); pure logic in `planning-client-helpers.mjs`, 7 shared fields + 6 feature components under `components/admin/planning/`; tests 382 → 433. Behaviour unchanged. Map: `docs/admin/MONOLITH_SPLIT_MAP.md`; why: [[Monolith Split — Why and How]].
+- Finance layer, payroll V1+Wise pay-out, temporal reconciliation L1, roster movement → `git log` + Learning Log.
 
 ## Standing context & policy
 
@@ -59,7 +60,7 @@ Open candidates (the Obsidian `08 Operations/Active Roadmap` is the fuller list)
 - Communication draft→approve layer before any WhatsApp Cloud API (no auto-send).
 - Practice Chat Level 2 delivery audit (read-only first) before widening beyond Finn/Tom/Fennella.
 - Future capacity overlay (tentative/hire availability) — only after the MMS `Free` view proves useful; keep separate from real calendar data.
-- **Monoliths to split** (deferred, deliberate): `AdminPlanningPageClient.js` (~3.7k lines), `AdminIssuesPageClient.js`, `sheets.js` — the real "repo is getting big" ceiling.
+- **Monoliths to split** (in progress): planning client **done** (see Recently shipped). Remaining feature/section-component peels (helpers already out): `AdminIssuesPageClient.js`, `AdminStudentDetailClient.js`, `AdminParentUnderstandingPageClient.js`. **Phase 4 = `sheets.js`** (~2.5k lines, 29 importers) → `lib/admin/sheets/*.mjs` behind a barrel re-export — last, most care. See `docs/admin/MONOLITH_SPLIT_MAP.md` + [[Monolith Split — Why and How]].
 
 **Do not do next:** heavy assignment/owner systems; WhatsApp auto-send; Stripe mutations from `/admin/flags`; a new database to replace Sheets; editing generated config files directly.
 
