@@ -427,6 +427,7 @@ export default function DashboardClient() {
               key={practiceChatPanel.url}
               src={practiceChatPanel.url}
               title={`Practice Chat: ${practiceChatPanel.name}`}
+              allow="microphone; clipboard-read; clipboard-write"
               className="h-full w-full flex-1 border-0"
             />
           </aside>
