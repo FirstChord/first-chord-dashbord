@@ -167,7 +167,7 @@ test('formatPracticeNoteHtml escapes note text and preserves paragraphs', () => 
   );
 });
 
-test('buildPracticeNoteAttendancePayload preserves MMS price context', () => {
+test('buildPracticeNoteAttendancePayload does not touch MMS billing context', () => {
   const payload = buildPracticeNoteAttendancePayload({
     attendance: {
       teacherNote: '',
@@ -183,8 +183,8 @@ test('buildPracticeNoteAttendancePayload preserves MMS price context', () => {
     ParentNote: '',
     StudentNote: '<p>Test</p>',
     AttendanceStatus: 'Present',
-    PriceOverride: 30,
   });
+  assert.equal(Object.hasOwn(payload, 'PriceOverride'), false);
 });
 
 test('buildPracticeNoteEmailPayload serialises recipient IDs for MMS emailnotes', () => {
