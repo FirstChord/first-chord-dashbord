@@ -19,6 +19,30 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-30 — Tutor dashboard daily schedule context
+
+**Feature/change:** Added a read-only daily schedule panel to `/dashboard`. `GET /api/tutor-schedule` reads one tutor/date from the MMS calendar, `buildTutorDaySchedule` normalises lessons, and `TutorSchedulePanel` shows the day’s lessons in the empty state and as a compact collapsible panel once a student is selected. Rows also translate MMS attendance statuses into tutor-facing context: expected, absent with notice, absent without notice, present, or mixed.
+
+**Why it exists:** Tutors need the dashboard to answer “who am I teaching today?” before they choose a student. This makes the tutor dashboard more lesson-day useful without adding write actions or changing Practice Chat behaviour yet.
+
+**Source-of-truth impact:** MMS calendar and attendance state remain the schedule/attendance truth. The dashboard returns derived read-only context only; it does not create, edit, cancel, or mark attendance on MMS events.
+
+**Files/functions involved:** `normaliseTutorScheduleEvent`, `buildAttendanceSummary`, `buildTutorDaySchedule`, `/api/tutor-schedule`, `TutorSchedulePanel`, `/dashboard/page-client`.
+
+**What to watch out for:** Schedule rows only open a student when the MMS event student ID is already present in the loaded tutor roster. Free slots are excluded from this tutor-day view. `AbsentNotice` is displayed as absence context only; do not infer practice-video obligations until that workflow is designed separately. Future Practice Chat side-panel work should pass explicit event/attendance context but keep Level 2 guardrails.
+
+### 2026-06-30 — Tutor dashboard identity consolidation
+
+**Feature/change:** Added `lib/tutor-dashboard-helpers.mjs` as the shared tutor-dashboard helper layer. The live tutor dashboard now renders tutor choices from `ADMIN_TUTORS`, and `lib/mms-client.js` resolves tutor MMS teacher IDs from the same generated source instead of maintaining its own hardcoded teacher map.
+
+**Why it exists:** The tutor/student dashboard is older than the admin dashboard and had started to duplicate source-of-truth logic. Centralising tutor identity reduces the chance that a tutor appears in one place but cannot load MMS students, or that future schedule features use a different teacher ID from admin workflows.
+
+**Source-of-truth impact:** No external truth moved. `ADMIN_TUTORS` remains generated tutor identity/context; MMS remains tutor roster and schedule truth. The dashboard helper is derived glue, not a new editable source.
+
+**Files/functions involved:** `getTutorDashboardOptions`, `getTutorDashboardOptionNames`, `resolveTutorTeacherId`, `buildTutorTeacherIdMap`, `filterTutorStudentsBySearch`, `/dashboard` tutor picker, `MMSClient.getStudentsForTeacher`.
+
+**What to watch out for:** old tutor aliases that are not in `ADMIN_TUTORS` are no longer silently supported by the roster helper. Add/correct tutors through the admin tutor source and regeneration process, not by patching `mms-client.js`.
+
 ### 2026-06-27 — Payroll hardening: since-last-paid window + override + double-pay guard
 
 **Feature/change:** Reworked the payroll pay-window from a fixed per-tutor cadence to **"since they were last paid → this Wednesday."** Pay date is the constant (every Wednesday); the *period* each invoice covers is variable, so anchoring to the last paid run is the right primitive. `resolveTutorPayrollWindow` (pure) + `overlapsPaidRun` (pure) + `cadenceLengthDays`. `buildPayrollPreview` now derives each tutor's window from their paid runs in `Payroll_Runs`, with a per-tutor override and a max-look-back cap. UI: window basis + day count on each card, a "Window start" adjust control (one tutor at a time, `?tutor=&start=`), and warnings for overlap / already-paid-through / capped. Page fetches 35 days of attendance to cover catch-up windows. 3 new tests; suite 363, build clean.

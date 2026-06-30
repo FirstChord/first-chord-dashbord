@@ -1,137 +1,149 @@
-# Student Portal System Documentation
+# Tutor And Student Dashboard System
 
-## Overview
+Last updated: 2026-06-30
 
-The Student Portal System provides personalized dashboards for 160+ music students with friendly URL access. Students can access their portals using simple names like `firstchord.co.uk/mathilde` instead of complex Railway URLs.
+## Purpose
 
-## System Architecture
+This document covers the public tutor dashboard at `/dashboard` and the student portal pages reached through friendly URLs such as `firstchord.co.uk/alex`.
 
-### Flow Diagram
-```
-WordPress Website (firstchord.co.uk)
-     ↓ (WordPress Redirection Plugin)
-Railway App (efficient-sparkle-production.up.railway.app)
-     ↓ (Next.js App Router)
-Dynamic Route Handler (/[studentName]/page.js)
-     ↓ (URL Mapping System)
-Student Dashboard Component
-     ↓ (API Integration)
-MMS API + Soundslice + Theta Music
-```
+The tutor/student surface is production-critical but older than the admin dashboard. Keep changes small, preserve the teaching workflow, and reuse admin-dashboard source-of-truth patterns before adding new features.
 
-### Core Components
+## Current Surfaces
 
-1. **WordPress Redirection Layer**
-   - Redirects `firstchord.co.uk/[name]` → `railway-app.com/[name]`
-   - Uses regex pattern `^/([a-z-]+)/?$` for validation
+### Tutor dashboard
 
-2. **Next.js App Router**
-   - Root-level dynamic route: `app/[studentName]/page.js`
-   - Handles friendly URL resolution and 404s
+Route:
 
-3. **URL Mapping System**
-   - Maps friendly names to MMS student IDs
-   - Handles name conflicts with last initials (e.g., `stella-c`, `stella-f`)
+- `app/dashboard/page.js`
+- `app/dashboard/page-client.js`
 
-4. **Security Layer**
-   - Whitelist of valid student IDs in `student-helpers.js`
-   - Prevents unauthorized access
+The tutor dashboard lets a tutor:
 
-5. **Data Integration**
-   - MMS API for lesson notes (with caching)
-   - Soundslice for practice materials
-   - Theta Music for student credentials
+- choose their tutor profile
+- view their current MMS roster
+- view a read-only daily lesson schedule from the MMS calendar
+- search students
+- open recent lesson notes
+- open Soundslice, Practice Chat, Theta Music, and MMS links
 
-## Key Files and Their Purposes
+### Student portal
 
-### Core System Files
+Routes:
 
-| File | Purpose | Key Functions |
-|------|---------|---------------|
-| `app/[studentName]/page.js` | Root-level dynamic routing | Handles `/alex`, `/mathilde` URLs |
-| `lib/student-url-mappings.js` | Friendly URL mappings | Maps names to student IDs |
-| `lib/student-helpers.js` | Security & data fetching | Whitelist validation, MMS integration |
-| `lib/soundslice-mappings.js` | Practice materials | Soundslice course assignments |
-| `lib/config/theta-credentials.js` | Student credentials | Theta Music login details |
+- `app/[studentName]/page.js`
+- `app/student/[studentId]/page.js`
 
-### UI Components
+The student portal lets a student/family:
 
-| Component | Purpose | Location |
-|-----------|---------|----------|
-| `StudentDashboard.js` | Main portal layout | `components/student-portal/` |
-| `StudentNotes.js` | Lesson notes display | `components/student-portal/` |
-| `StudentLinks.js` | Practice links & credentials | `components/student-portal/` |
+- see the latest parent-visible practice note
+- open Soundslice and Theta Music links
+- use a friendly URL generated from the registry
 
-## URL Mapping System
+## Source Of Truth Lanes
 
-### Friendly Name Format
-- **Single names**: `mathilde`, `alex`, `pablo`
-- **Conflict resolution**: `stella-c`, `stella-f`, `charlie-g`, `charlie-m`
-- **Special characters**: Use hyphens for conflicts only
+| Lane | Source | Notes |
+| --- | --- | --- |
+| Tutor roster | MMS | `/api/sync` and `/api/students` read live active MMS students for a tutor. |
+| Tutor identity | `ADMIN_TUTORS` | `lib/admin/tutors-data.js` is generated and now feeds tutor dashboard options and MMS teacher-ID lookup. |
+| Tutor daily schedule | MMS calendar | `/api/tutor-schedule` reads one tutor/date and returns read-only lesson context. |
+| Portal registry | `lib/config/students-registry.js` | Human-edited registry truth; generated student URL and helper files come from it. |
+| Lesson notes shown to students | `Practice_Notes_Log`, then MMS fallback | Sent/completed First Chord notes are preferred. MMS remains fallback for historical notes. |
+| Soundslice links | Registry/generated mappings | Used by both tutor dashboard and student portal links. |
+| Theta credentials | generated untracked config | Generated locally/build-time from registry; do not edit directly. |
 
-### Example Mappings
-```javascript
-'mathilde': 'sdt_H6CvJv',     // Mathilde thallon
-'alex': 'sdt_gwyQJr',         // Alex Chang
-'stella-c': 'sdt_x48LJT',     // Stella Cook
-'stella-f': 'sdt_Nt4LJ3',     // Stella French
+## Current Data Flow
+
+### Tutor roster
+
+```text
+tutor selects profile
+  -> /api/sync
+  -> mms-client-cached.getStudentsForTeacher()
+  -> MMS /search/students
+  -> enhanceStudentsWithSoundslice()
+  -> client-side short cache
 ```
 
-## Security Model
+MMS remains the source of truth for which active students belong to a tutor. The dashboard should not try to infer current tutor rosters from the registry alone.
 
-### Student ID Whitelist
-- All 160 students must be in `VALID_STUDENT_IDS` array
-- Security check in `isValidStudentId()` function
-- Prevents access to non-enrolled students
+### Student notes
 
-### Access Flow
-1. User visits friendly URL (e.g., `/mathilde`)
-2. System validates friendly name exists
-3. Maps to student ID and validates against whitelist
-4. Fetches student data if authorized
-5. Displays personalized dashboard
+```text
+student portal or tutor dashboard selects student
+  -> /api/notes/[studentId]
+  -> Practice_Notes_Log via getPracticeNoteLogRows()
+  -> latest portal-visible sent/completed note
+  -> fallback to MMS notes if no owned note exists
+```
 
-## Performance Features
+This means Practice Chat notes can become parent-visible without needing MMS as the primary read source, while older MMS notes still work.
 
-### Caching System
-- MMS API responses cached for student portals
-- Cache hits reduce load times by 97% (26-33x faster)
-- Optimized specifically for student portal requests
+### Tutor daily schedule
 
-### Mobile Optimization
-- Responsive design with Tailwind CSS
-- Mobile-first approach for student accessibility
-- Logo positioning and size adapted for mobile
+```text
+tutor + date
+  -> /api/tutor-schedule
+  -> getMmsTutorCalendarEventsForDate()
+  -> buildTutorDaySchedule()
+  -> read-only list of lessons
+```
 
-## WordPress Integration
+The schedule panel is intentionally lightweight. It does not create, edit, cancel, or mark attendance on MMS events. It shows the tutor what is on the calendar for that day and lets them open a student already present in their roster.
 
-### Redirection Plugin Setup
-1. Install WordPress Redirection plugin
-2. Create regex redirect rule:
-   - **Source**: `^/([a-z-]+)/?$`
-   - **Target**: `https://efficient-sparkle-production.up.railway.app/$1`
-   - **Type**: 301 redirect
-3. Enable regex matching option
+The schedule rows also translate MMS attendance status into tutor-facing context:
 
-### URL Pattern Handling
-- Supports lowercase letters and hyphens
-- Prevents conflicts with existing WordPress pages
-- Handles trailing slashes automatically
+- `Unrecorded` / blank = expected lesson
+- `AbsentNotice` = absent, notice given
+- `AbsentNoMakeup` = absent, no notice recorded
+- `Present` / `Attended` / `Completed` = already marked present
 
-## Deployment Process
+This is read-only interpretation of MMS state, not a new attendance source. Do not infer practice-video obligations here until that workflow is designed separately.
 
-### Railway Deployment
-1. Commit changes to git repository
-2. Railway auto-deploys from main branch
-3. New students immediately accessible
+## Important Files
 
-### WordPress Updates
-- Update redirect pattern if new character types needed
-- Test redirect functionality after changes
+| File | Purpose |
+| --- | --- |
+| `lib/tutor-dashboard-helpers.mjs` | Shared tutor option, teacher-ID lookup, and tutor-dashboard search helpers. |
+| `lib/mms-client.js` | MMS API client; roster lookup now resolves teacher IDs from shared tutor helpers. |
+| `lib/mms-client-cached.js` | Server-side short cache around MMS reads. |
+| `lib/cache.js` | Client-side short cache for tutor roster results. |
+| `app/api/sync/route.js` | Primary tutor roster refresh endpoint. |
+| `app/api/students/route.js` | Fallback tutor roster endpoint. |
+| `app/api/tutor-schedule/route.js` | Read-only tutor daily schedule endpoint. |
+| `app/api/notes/[studentId]/route.js` | Notes API with First Chord log first, MMS fallback. |
+| `components/navigation/QuickLinks.js` | Soundslice, Practice Chat, Theta, and MMS links. |
+| `components/tutor-dashboard/TutorSchedulePanel.js` | Tutor-facing daily schedule panel. |
+| `components/student-portal/StudentDashboard.js` | Student-facing portal layout. |
 
-## Current Statistics
-- **Total Students**: 160
-- **Name Conflicts Resolved**: 15+ (using last initial system)
-- **Performance Improvement**: 97% faster with caching
-- **Mobile-Responsive**: Yes
-- **Security**: Whitelist-based access control
+## Guardrails
+
+- Do not add new live MMS reads on page load unless the value is clear and bounded.
+- Prefer explicit refresh or short cache for MMS calendar/schedule reads.
+- Do not write attendance, notes, or emails from the tutor dashboard without the Practice Chat pilot guardrails.
+- Do not treat copied Practice Chat notes as proof that a parent received an email.
+- Do not edit generated files directly; edit the registry/source file and run `npm run generate-configs`.
+- Keep `ADMIN_TUTORS` as the shared tutor identity source unless there is a clear reason to change the source model.
+
+## Next Good Slice
+
+Before adding larger features, keep the tutor dashboard aligned with the admin dashboard patterns:
+
+1. Keep behaviour-preserving helper extraction small.
+2. Use schedule rows to open Practice Chat with the correct student and lesson context.
+3. Consider making Practice Chat a side-panel once lesson targeting is clear.
+4. Keep Practice Chat Level 2 restricted until caller identity, per-tutor authorisation, and duplicate-send concurrency are hardened.
+
+## Daily Schedule Direction
+
+The likely schedule flow should be:
+
+```text
+tutor + date
+  -> read MMS calendar events
+  -> normalise to time/student/duration/status/event IDs
+  -> cache briefly or refresh explicitly
+  -> display as "Today's lessons"
+  -> link each lesson to Practice Chat
+```
+
+MMS calendar remains the source of truth. The dashboard display is context, not a scheduling system.

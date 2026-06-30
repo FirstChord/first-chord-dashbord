@@ -5,9 +5,15 @@ import Image from 'next/image';
 import StudentCard from '@/components/student/StudentCard';
 import NotesPanel from '@/components/student/NotesPanel';
 import QuickLinks from '@/components/navigation/QuickLinks';
+import TutorSchedulePanel from '@/components/tutor-dashboard/TutorSchedulePanel';
 import { Users, Clock, Search } from 'lucide-react';
-import { generateUrls } from '@/lib/config';
 import { cache } from '@/lib/cache';
+import {
+  filterTutorStudentsBySearch,
+  getTutorDashboardOptionNames,
+} from '@/lib/tutor-dashboard-helpers.mjs';
+
+const TUTOR_OPTIONS = getTutorDashboardOptionNames();
 
 export default function DashboardClient() {
   const [tutor, setTutor] = useState('');
@@ -133,9 +139,7 @@ export default function DashboardClient() {
   }, [selectedStudent]);
 
   // Filter students by search
-  const filteredStudents = (students || []).filter(student =>
-    student.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredStudents = filterTutorStudentsBySearch(students, searchTerm);
 
   // Debug logging (only when needed)
   // console.log('🔍 Dashboard state:', { tutor, tutorLength: tutor.length, tutorType: typeof tutor, isEmpty: !tutor });
@@ -221,7 +225,7 @@ export default function DashboardClient() {
         <div className="bg-white p-12 rounded-xl shadow-lg max-w-4xl w-full mx-8 relative z-10">
           <h1 className="text-2xl font-bold mb-8 text-center">Select Your Profile</h1>
           <div className="grid grid-cols-4 gap-8">
-            {['Arion', 'Calum', 'Chloe', 'David', 'Dean', 'Eléna', 'Fennella', 'Finn', 'Ines', 'Kenny', 'Kim', 'Patrick', 'Robbie', 'Scott', 'Stef', 'Tom'].map(tutorName => (
+            {TUTOR_OPTIONS.map(tutorName => (
               <button
                 key={tutorName}
                 onClick={() => setTutor(tutorName)}
@@ -325,6 +329,14 @@ export default function DashboardClient() {
         <main className="flex-1 overflow-y-auto">
           {selectedStudent ? (
             <div className="p-6 max-w-6xl mx-auto">
+              <TutorSchedulePanel
+                tutor={tutor}
+                students={students}
+                onSelectStudent={setSelectedStudent}
+                compact
+                defaultCollapsed
+                collapseKey={selectedStudent?.mms_id || ''}
+              />
               <h2 className="text-3xl font-bold mb-6">{selectedStudent.name}</h2>
               
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -349,8 +361,13 @@ export default function DashboardClient() {
 
             </div>
           ) : (
-            <div className="flex items-center justify-center h-full text-gray-400">
-              <div className="text-center">
+            <div className="flex min-h-full items-center justify-center p-6 text-gray-500">
+              <div className="flex w-full max-w-3xl flex-col items-center gap-6">
+                <TutorSchedulePanel
+                  tutor={tutor}
+                  students={students}
+                  onSelectStudent={setSelectedStudent}
+                />
                 <Users className="w-16 h-16 mx-auto mb-4" />
                 <p className="text-xl">Select a student to begin</p>
               </div>
