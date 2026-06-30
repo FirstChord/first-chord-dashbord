@@ -1,6 +1,6 @@
 # Admin Current Status
 
-Last updated: 2026-06-29
+Last updated: 2026-06-30
 
 Tracked current-status entrypoint for agents working from the `music-school-dashboard` repo.
 
@@ -26,7 +26,7 @@ The admin overview is a strict meeting-start surface, not a complete status boar
 
 - **Payroll → Wise pay-out (2026-06-27→29):** classifies by MMS attendance status (`AbsentNoMakeup` payable / `AbsentNotice` £0 / `Unrecorded`→review), adjustable window end, calmer cards, review split (past "needs recording" + "Fix in MMS" link vs upcoming), Wise batch CSV from `Tutor_Wise` + download-gated **batch mark-paid**, sticky tutor jump index.
 - **Reconciliation + lifecycle (2026-06-29):** reconciliation **Close redundant card** (retire a tutor-absence pause card once the student's own pause covers it); one-click **Mark student as left** (leave month → new `Students_Archive.date_left`); **editable pause-card dates**; passive **pause-contiguity flag** (merge deliberately deferred — see Learning Log + [[Summer edge-case season]]).
-- **Planning monolith split — Phase 3 done (2026-06-30):** `AdminPlanningPageClient.js` 3,732 → 1,167 lines (thin orchestrator); pure logic in `planning-client-helpers.mjs`, 7 shared fields + 6 feature components under `components/admin/planning/`; tests 382 → 433. Behaviour unchanged. Map: `docs/admin/MONOLITH_SPLIT_MAP.md`; why: [[Monolith Split — Why and How]].
+- **Monolith split — planning + Sheets complete (2026-06-30):** `AdminPlanningPageClient.js` 3,732 → 1,167 lines (thin orchestrator), and `lib/admin/sheets.js` 2,466 → 8 lines (barrel re-export). Sheets domain code now lives under `lib/admin/sheets/` with the shared cache/client/header logic in `core.mjs`; all existing call sites still import `@/lib/admin/sheets`. Behaviour unchanged; tests remain 433. Map: `docs/admin/MONOLITH_SPLIT_MAP.md`; why: [[Monolith Split — Why and How]].
 - Finance layer, payroll V1+Wise pay-out, temporal reconciliation L1, roster movement → `git log` + Learning Log.
 
 ## Standing context & policy
@@ -60,7 +60,7 @@ Open candidates (the Obsidian `08 Operations/Active Roadmap` is the fuller list)
 - Communication draft→approve layer before any WhatsApp Cloud API (no auto-send).
 - Practice Chat Level 2 delivery audit (read-only first) before widening beyond Finn/Tom/Fennella.
 - Future capacity overlay (tentative/hire availability) — only after the MMS `Free` view proves useful; keep separate from real calendar data.
-- **Monoliths to split** (in progress): planning client **done** (see Recently shipped). Remaining feature/section-component peels (helpers already out): `AdminIssuesPageClient.js`, `AdminStudentDetailClient.js`, `AdminParentUnderstandingPageClient.js`. **Phase 4 = `sheets.js`** (~2.5k lines, 29 importers) → `lib/admin/sheets/*.mjs` behind a barrel re-export — last, most care. See `docs/admin/MONOLITH_SPLIT_MAP.md` + [[Monolith Split — Why and How]].
+- **Monoliths to split:** planning client and `sheets.js` are done (see Recently shipped). Remaining candidates are feature/section-component peels where helpers already exist: `AdminIssuesPageClient.js`, `AdminStudentDetailClient.js`, `AdminParentUnderstandingPageClient.js`. See `docs/admin/MONOLITH_SPLIT_MAP.md` + [[Monolith Split — Why and How]].
 
 **Do not do next:** heavy assignment/owner systems; WhatsApp auto-send; Stripe mutations from `/admin/flags`; a new database to replace Sheets; editing generated config files directly.
 
