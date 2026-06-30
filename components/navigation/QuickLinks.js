@@ -37,7 +37,7 @@ function buildPracticeChatUrl(student) {
   return `${practiceChatBaseUrl}/?${params.toString()}`;
 }
 
-export default function QuickLinks({ student }) {
+export default function QuickLinks({ student, onOpenPracticeChat }) {
   const [showCredentials, setShowCredentials] = useState(false);
   const [currentCredentials, setCurrentCredentials] = useState(null);
   const [copySuccess, setCopySuccess] = useState(false);
@@ -169,13 +169,24 @@ export default function QuickLinks({ student }) {
     <>
       <div className="space-y-3">
         <h3 className="font-semibold text-gray-800 mb-3">Quick Access</h3>
-        {links.map((link) => (
+        {links.map((link) => {
+          const isPracticeChat = link.name === "Practice Chat!";
+          return (
           <a
             key={link.name}
             href={link.url}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={link.name === "Theta Music Games" ? (e) => handleThetaMusicClick(e, link) : undefined}
+            onClick={
+              isPracticeChat && onOpenPracticeChat
+                ? (e) => {
+                    e.preventDefault();
+                    onOpenPracticeChat(link.url, student.name || 'Practice Chat');
+                  }
+                : link.name === "Theta Music Games"
+                  ? (e) => handleThetaMusicClick(e, link)
+                  : undefined
+            }
             className="flex items-center gap-3 p-4 bg-white rounded-lg border hover:shadow-md transition-shadow group"
           >
             <div className={`${link.color} text-white p-2 rounded-lg`}>
@@ -197,7 +208,8 @@ export default function QuickLinks({ student }) {
             </div>
             <ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
           </a>
-        ))}
+          );
+        })}
       </div>
 
       {/* Credentials Modal */}

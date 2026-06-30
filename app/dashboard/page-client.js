@@ -25,6 +25,7 @@ export default function DashboardClient() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
+  const [practiceChatPanel, setPracticeChatPanel] = useState(null);
   // const [isAuthenticated, setIsAuthenticated] = useState(true); // Always authenticated with hardcoded token
 
   // Fun loading messages
@@ -112,6 +113,17 @@ export default function DashboardClient() {
       syncStudentsFromMMS(tutor, false); // false = allow cache usage
     }
   }, [tutor]); // Removed syncStudentsFromMMS from dependencies to prevent infinite loop
+
+  useEffect(() => {
+    if (!practiceChatPanel) return undefined;
+    function onKey(event) {
+      if (event.key === 'Escape') {
+        setPracticeChatPanel(null);
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [practiceChatPanel]);
 
   // Fetch notes when student is selected
   useEffect(() => {
@@ -276,6 +288,7 @@ export default function DashboardClient() {
                 setTutor('');
                 setSelectedStudent(null);
                 setLastNotes(null);
+                setPracticeChatPanel(null);
               }}
               className="px-4 py-2 text-white rounded-lg transition-colors"
               style={{ backgroundColor: '#2F6B3D' }}
@@ -355,7 +368,10 @@ export default function DashboardClient() {
 
                 {/* Quick Links */}
                 <div>
-                  <QuickLinks student={selectedStudent} />
+                  <QuickLinks
+                    student={selectedStudent}
+                    onOpenPracticeChat={(url, name) => setPracticeChatPanel({ url, name })}
+                  />
                 </div>
               </div>
 
@@ -375,6 +391,47 @@ export default function DashboardClient() {
           )}
         </main>
       </div>
+
+      {practiceChatPanel ? (
+        <div className="fixed inset-0 z-50 flex">
+          <div
+            className="flex-1 bg-slate-900/25 backdrop-blur-[1px]"
+            onClick={() => setPracticeChatPanel(null)}
+            aria-hidden
+          />
+          <aside className="flex h-full w-full max-w-3xl flex-col border-l border-blue-100 bg-white shadow-2xl">
+            <header className="flex items-center justify-between gap-3 border-b border-blue-100 bg-gradient-to-r from-blue-50 to-green-50 px-5 py-3">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wide text-blue-700">Practice Chat</p>
+                <p className="text-sm font-bold text-slate-900">{practiceChatPanel.name}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href={practiceChatPanel.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-lg border border-blue-200 bg-white/90 px-3 py-1.5 text-xs font-bold text-blue-900 transition hover:bg-white"
+                >
+                  Open full page
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setPracticeChatPanel(null)}
+                  className="rounded-lg border border-blue-200 bg-white/90 px-3 py-1.5 text-xs font-bold text-blue-900 transition hover:bg-white"
+                >
+                  Close
+                </button>
+              </div>
+            </header>
+            <iframe
+              key={practiceChatPanel.url}
+              src={practiceChatPanel.url}
+              title={`Practice Chat: ${practiceChatPanel.name}`}
+              className="h-full w-full flex-1 border-0"
+            />
+          </aside>
+        </div>
+      ) : null}
 
       {/* First Chord Logo - Bottom Right Corner */}
       <div className="fixed bottom-4 right-4 z-10">

@@ -19,6 +19,18 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-30 — Practice Chat Side Panel On Tutor Dashboard
+
+**Feature/change:** Practice Chat now opens from the tutor dashboard inside a right-side iframe panel instead of always launching a new tab. The panel includes backdrop/Escape close behaviour and an `Open full page` fallback.
+
+**Why it exists:** Tutors should be able to move from student context into note capture without losing their place in the tutor dashboard. This follows the admin dashboard side-panel pattern already used for the payment pause tool.
+
+**Source-of-truth impact:** No source of truth moved. The tutor dashboard hosts the Practice Chat UI, but Practice Chat and its API routes remain responsible for note capture, delivery, and logging.
+
+**Files/functions involved:** `QuickLinks`, `DashboardClient`, Practice Chat URL builder in `components/navigation/QuickLinks.js`.
+
+**What to watch out for:** The hosted Practice Chat page must allow iframe embedding. Keep the full-page fallback because local Practice Chat testing still depends on the separate `localhost:8000` PWA server.
+
 ### 2026-06-30 — Tutor dashboard daily schedule context
 
 **Feature/change:** Added a read-only daily schedule panel to `/dashboard`. `GET /api/tutor-schedule` reads one tutor/date from the MMS calendar, `buildTutorDaySchedule` normalises lessons, and `TutorSchedulePanel` shows the day’s lessons in the empty state and as a compact collapsible panel once a student is selected. Rows also translate MMS attendance statuses into tutor-facing context: expected, absent with notice, absent without notice, present, or mixed.

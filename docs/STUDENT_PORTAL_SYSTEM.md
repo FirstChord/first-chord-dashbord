@@ -24,7 +24,8 @@ The tutor dashboard lets a tutor:
 - view a read-only daily lesson schedule from the MMS calendar
 - search students
 - open recent lesson notes
-- open Soundslice, Practice Chat, Theta Music, and MMS links
+- open Soundslice, Theta Music, and MMS links
+- open Practice Chat in a right-side panel, with a full-page fallback
 
 ### Student portal
 
@@ -120,6 +121,7 @@ This is read-only interpretation of MMS state, not a new attendance source. Do n
 - Do not add new live MMS reads on page load unless the value is clear and bounded.
 - Prefer explicit refresh or short cache for MMS calendar/schedule reads.
 - Do not write attendance, notes, or emails from the tutor dashboard without the Practice Chat pilot guardrails.
+- Practice Chat may be embedded as a side panel for tutor ergonomics, but the Practice Chat app/API remains the owner of note capture and delivery.
 - Do not treat copied Practice Chat notes as proof that a parent received an email.
 - Do not edit generated files directly; edit the registry/source file and run `npm run generate-configs`.
 - Keep `ADMIN_TUTORS` as the shared tutor identity source unless there is a clear reason to change the source model.
