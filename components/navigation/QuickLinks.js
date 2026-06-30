@@ -101,7 +101,8 @@ export default function QuickLinks({ student, onOpenPracticeChat }) {
       requiresAuth: false,
       color: "bg-pink-500"
     }] : [])
-    // COMMENT OUT AFTER SUMMER SHOW: To hide, re-comment this block
+    // Seasonal show link. Keep hidden until the next show; update copy/form URL before re-enabling.
+    /*
     ,{
       name: "Summer Show!",
       icon: <Star className="w-5 h-5 fill-yellow-400" />,
@@ -111,6 +112,7 @@ export default function QuickLinks({ student, onOpenPracticeChat }) {
       color: "bg-gradient-to-r from-yellow-400 to-orange-500",
       isSummer: true
     }
+    */
   ];
   
   const handleThetaMusicClick = (e, link) => {
