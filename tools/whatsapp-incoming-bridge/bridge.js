@@ -440,22 +440,26 @@ class WhatsAppIncomingBridge {
 
   // One-shot: connect, let chat history settle so we know last-active times,
   // enumerate every group the account is in (metadata only), and post them.
-  async runGroupSync({ waitMs = Number(process.env.GROUP_SYNC_WAIT_MS || 8000) || 8000 } = {}) {
+  // WhatsApp frequently closes the first connection ("restart required", 515)
+  // or drops briefly, so this reconnects on any non-logout close and only
+  // settles the promise once — on a successful sync or after max attempts.
+  async runGroupSync({
+    waitMs = Number(process.env.GROUP_SYNC_WAIT_MS || 8000) || 8000,
+    maxAttempts = Number(process.env.GROUP_SYNC_MAX_ATTEMPTS || 6) || 6,
+  } = {}) {
     this.validateConfig();
     const { state, saveCreds } = await useMultiFileAuthState(this.authDir);
     const { version } = await fetchLatestBaileysVersion();
     const chatTimestamps = new Map();
+    let attempts = 0;
+    let settled = false;
 
     return new Promise((resolve, reject) => {
-      const sock = makeWASocket({
-        version,
-        auth: state,
-        logger: P({ level: process.env.BAILEYS_LOG_LEVEL || 'silent' }),
-        browser: ['First Chord Incoming Bridge', 'Chrome', '121.0'],
-        markOnlineOnConnect: false,
-      });
-      this.sock = sock;
-      sock.ev.on('creds.update', saveCreds);
+      const finish = (fn, value) => {
+        if (settled) return;
+        settled = true;
+        fn(value);
+      };
 
       const recordChats = (chats = []) => {
         for (const chat of chats) {
@@ -463,53 +467,85 @@ class WhatsAppIncomingBridge {
           if (chat.id && ts) chatTimestamps.set(chat.id, ts);
         }
       };
-      sock.ev.on('messaging-history.set', ({ chats = [] }) => recordChats(chats));
-      sock.ev.on('chats.set', ({ chats = [] }) => recordChats(chats));
-      sock.ev.on('chats.upsert', (chats = []) => recordChats(chats));
 
-      sock.ev.on('connection.update', async (update) => {
-        const { connection, lastDisconnect, qr } = update;
-        if (qr) {
-          console.log('\nScan this QR code from WhatsApp Linked Devices:\n');
-          qrcode.generate(qr, { small: true });
-        }
-        if (connection === 'close') {
-          const statusCode = lastDisconnect?.error?.output?.statusCode;
-          if (statusCode === DisconnectReason.loggedOut) {
-            reject(new Error('WhatsApp session logged out — re-link the device and try again'));
+      const start = () => {
+        attempts += 1;
+        const sock = makeWASocket({
+          version,
+          auth: state,
+          logger: P({ level: process.env.BAILEYS_LOG_LEVEL || 'silent' }),
+          browser: ['First Chord Incoming Bridge', 'Chrome', '121.0'],
+          markOnlineOnConnect: false,
+          keepAliveIntervalMs: 25000,
+          connectTimeoutMs: 60000,
+          defaultQueryTimeoutMs: 60000,
+        });
+        this.sock = sock;
+        sock.ev.on('creds.update', saveCreds);
+        sock.ev.on('messaging-history.set', ({ chats = [] }) => recordChats(chats));
+        sock.ev.on('chats.set', ({ chats = [] }) => recordChats(chats));
+        sock.ev.on('chats.upsert', (chats = []) => recordChats(chats));
+
+        sock.ev.on('connection.update', async (update) => {
+          const { connection, lastDisconnect, qr } = update;
+          if (qr) {
+            console.log('\nScan this QR code from WhatsApp Linked Devices:\n');
+            qrcode.generate(qr, { small: true });
           }
-          return;
-        }
-        if (connection !== 'open') return;
 
-        try {
-          this.logInfo('Connected — letting chat history settle before syncing groups', { waitMs });
-          await new Promise((done) => setTimeout(done, waitMs));
+          if (connection === 'close') {
+            if (settled) return;
+            const statusCode = lastDisconnect?.error?.output?.statusCode;
+            if (statusCode === DisconnectReason.loggedOut) {
+              finish(reject, new Error('WhatsApp session logged out — re-link the device and try again'));
+              return;
+            }
+            if (attempts >= maxAttempts) {
+              finish(reject, new Error(`WhatsApp connection kept closing (last status ${statusCode ?? 'unknown'}) after ${attempts} attempts`));
+              return;
+            }
+            this.logWarn('Connection closed, reconnecting', { statusCode, attempt: attempts });
+            setTimeout(() => {
+              try { start(); } catch (error) { finish(reject, error); }
+            }, 2000);
+            return;
+          }
 
-          const participating = await sock.groupFetchAllParticipating();
-          const groups = Object.values(participating || {}).map((meta) => {
-            const ts = chatTimestamps.get(meta.id);
-            const participantPhones = (meta.participants || [])
-              .filter((participant) => `${participant.id || ''}`.endsWith('@s.whatsapp.net'))
-              .map((participant) => phoneFromJid(participant.id))
-              .filter(Boolean);
-            return {
-              chatId: meta.id,
-              chatName: meta.subject || '',
-              participantPhones,
-              lastActiveAt: ts ? new Date(ts * 1000).toISOString() : '',
-            };
-          });
+          if (connection !== 'open') return;
 
-          this.logInfo('Fetched participating groups', { groupCount: groups.length });
-          const result = await this.sendGroupSync(groups);
-          resolve(result);
-        } catch (error) {
-          reject(error);
-        } finally {
-          try { sock.end(); } catch { /* ignore */ }
-        }
-      });
+          try {
+            this.logInfo('Connected — letting chat history settle before syncing groups', { waitMs, attempt: attempts });
+            await new Promise((done) => setTimeout(done, waitMs));
+
+            const participating = await sock.groupFetchAllParticipating();
+            const groups = Object.values(participating || {}).map((meta) => {
+              const ts = chatTimestamps.get(meta.id);
+              const participantPhones = (meta.participants || [])
+                .filter((participant) => `${participant.id || ''}`.endsWith('@s.whatsapp.net'))
+                .map((participant) => phoneFromJid(participant.id))
+                .filter(Boolean);
+              return {
+                chatId: meta.id,
+                chatName: meta.subject || '',
+                participantPhones,
+                lastActiveAt: ts ? new Date(ts * 1000).toISOString() : '',
+              };
+            });
+
+            this.logInfo('Fetched participating groups', { groupCount: groups.length });
+            const result = await this.sendGroupSync(groups);
+            finish(resolve, result);
+            try { sock.end(); } catch { /* ignore */ }
+          } catch (error) {
+            // A dropped connection surfaces here as a query error — let the
+            // close handler reconnect and retry rather than failing outright.
+            this.logWarn('Group fetch failed; will retry on reconnect', { error: error.message, attempt: attempts });
+            try { sock.end(new Error('retry group sync')); } catch { /* ignore */ }
+          }
+        });
+      };
+
+      start();
     });
   }
 }
