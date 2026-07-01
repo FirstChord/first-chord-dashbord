@@ -12,6 +12,14 @@ export default withAuth(
           return true;
         }
 
+        if (pathname === '/api/admin/incoming-messages') {
+          const configured = `${process.env.INCOMING_MESSAGE_INGEST_SECRET || ''}`.trim();
+          const supplied = `${req.headers.get('x-firstchord-incoming-secret') || ''}`.trim();
+          if (configured && supplied === configured) {
+            return true;
+          }
+        }
+
         return Boolean(token?.email && isAllowedAdminEmail(token.email));
       },
     },

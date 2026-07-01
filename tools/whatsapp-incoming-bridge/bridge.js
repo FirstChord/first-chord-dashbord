@@ -185,9 +185,17 @@ class WhatsAppIncomingBridge {
         'x-firstchord-incoming-secret': this.webhookSecret,
       },
     });
+    const latest = Array.isArray(response.data?.inbox) ? response.data.inbox[0] : null;
     this.logInfo('Posted incoming message to dashboard', {
       status: response.status,
       messageId: payload.external_message_id,
+      contentType: response.headers?.['content-type'] || '',
+      success: response.data?.success,
+      responseKeys: response.data && typeof response.data === 'object' ? Object.keys(response.data) : [],
+      responsePreview: typeof response.data === 'string' ? response.data.slice(0, 120) : '',
+      inboxCount: Array.isArray(response.data?.inbox) ? response.data.inbox.length : null,
+      latestText: latest?.messageText ? `${latest.messageText}`.slice(0, 80) : '',
+      latestCategory: latest?.suspectedCategory || '',
     });
     return response.data;
   }
