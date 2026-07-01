@@ -7,6 +7,8 @@ import {
   deleteIncomingMessage,
   getIncomingMessageInbox,
   getWhatsappGroupMap,
+  reviewWhatsappGroup,
+  syncWhatsappGroups,
   updateIncomingMessageReview,
 } from '@/lib/admin/incoming-messages';
 
@@ -72,6 +74,23 @@ export async function POST(request) {
         confirmGroupMap: Boolean(body?.confirmGroupMap),
         actorEmail: session.user.email || '',
         status: body?.status || 'needs_review',
+      });
+    } else if (mode === 'sync_groups') {
+      // Bridge (secret) or admin can push the group dump.
+      const result = await syncWhatsappGroups({
+        groups: Array.isArray(body?.groups) ? body.groups : [],
+        actorEmail: isAdmin ? session.user.email || '' : 'incoming-message-bridge',
+      });
+      extra = { groupSyncSummary: result.summary };
+    } else if (mode === 'review_group') {
+      if (!isAdmin) {
+        return Response.json({ error: 'Admin session required for group review' }, { status: 401 });
+      }
+      await reviewWhatsappGroup({
+        chatId: `${body?.chatId || ''}`.trim(),
+        matchedMmsId: body?.matchedMmsId || '',
+        status: body?.status || 'confirmed',
+        actorEmail: session.user.email || '',
       });
     } else if (mode === 'convert') {
       if (!isAdmin) {

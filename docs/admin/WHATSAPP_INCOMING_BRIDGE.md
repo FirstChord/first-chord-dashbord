@@ -85,6 +85,7 @@ Useful commands:
 cd tools/whatsapp-incoming-bridge
 npm install
 npm start -- --send-test "Alex is away next Friday"
+npm start -- --sync-groups
 npm start
 ```
 
@@ -161,6 +162,26 @@ For group chats, it also stores:
 These are not source truth. They only help decide the next human action.
 
 Admins can correct a message's category/student match in the inbox. If a WhatsApp group is confirmed for a student, future messages from that group use the group map as high-confidence matching evidence before weaker text/name guesses.
+
+## Bulk Group ID Sync
+
+Instead of learning group IDs one starred message at a time, the bridge can import them all at once (metadata only — no message content):
+
+```bash
+npm start -- --sync-groups
+```
+
+This enumerates every group the linked account is in (`groupFetchAllParticipating`), waits briefly for chat history so it knows each group's last-active time, and POSTs the list to the dashboard (`mode: sync_groups`). The dashboard then, per group (`buildGroupSyncPlan` in `incoming-message-helpers.mjs`):
+
+- **keeps only First Chord groups** — the title must contain an instrument token (every FC group title has one; personal groups don't). The roster's own instruments are unioned into the keyword list automatically.
+- **drops groups inactive for 6+ months** (unknown last-active is kept, fail-open).
+- **auto-matches a student** by participant phone (deterministic, strongest), then by the known title format. FC group titles are `{Student first name} {Instrument} Lessons {emoji}` (e.g. "Alex Guitar Lessons 🎸"), so first-name + the student's own instrument is a strong signal that also disambiguates same-name students on different instruments. Stored as a `review` hint with the matched student, FC ID, and instrument.
+
+> **Format contract:** the group-title convention `{First name} {Instrument} Lessons {emoji}` is what both the instrument filter and the name/instrument matcher rely on. If that naming changes, revisit `detectInstrumentInName` / `matchGroupToStudent` in `incoming-message-helpers.mjs`.
+
+Confirmed groups are never downgraded by a sync — they only get their name/last-active refreshed. Ignored groups are left alone.
+
+Triage happens in the inbox's **WhatsApp groups** panel: each `review` group shows a student dropdown (pre-filled with the best guess) plus **Confirm** / **Not FC** buttons (`mode: review_group`). Confirming stores the full student/parent/tutor context and flips the group to `confirmed`, so every future message from it matches at high confidence with no further work. New groups that appear after a sync still arrive via the reactive starred-message path, or re-run the sync.
 
 Inbox status buttons:
 

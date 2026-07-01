@@ -19,6 +19,24 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-07-01 — Bulk WhatsApp group ID sync
+
+**Feature/change:** Added `npm start -- --sync-groups` to the bridge: it enumerates every group the linked account is in (`groupFetchAllParticipating`, metadata only), gathers last-active times from chat history, and POSTs them (`mode: sync_groups`). The dashboard keeps only First Chord groups (instrument token in the title, active within 6 months), auto-matches a student by participant phone then title name, and stores each as a `review` hint. New group-map panel in the inbox lets an admin confirm/ignore each group directly (`mode: review_group`) without waiting for a message.
+
+**Why it exists:** The group map was purely reactive — a group only became known when someone starred a message from it, so matching coverage grew slowly and "unmatched" messages from known groups were common. Bulk sync makes the roster a one-time triage instead of a slow drip. Key design principle: **decouple "knowing the groups" (cheap, metadata-only, bulk) from "capturing message content" (sensitive, targeted, starred)** — the sync never ingests message text.
+
+**Design decisions:**
+- **Instrument-token filter** is the FC/personal-group discriminator (Finn's constraint: every FC group title has an instrument + the student name). Whole-token match avoids substring false positives ("bass" ≠ "embassy"); roster instruments are unioned into the keyword list so new instruments self-register.
+- **Participant phone > title name** for matching — deterministic phone match against `contactNumber` beats name guessing. Only `@s.whatsapp.net` participants are used (LID ids excluded to avoid false phone collisions).
+- **6-month inactivity cutoff**, fail-open on unknown last-active (a groups-only sync should never silently drop a live group).
+- **Confirmed groups are never downgraded** by a sync; ignored groups are left alone.
+
+**Source-of-truth impact:** `WhatsApp_Group_Map` stays workflow state; now has two population paths (reactive capture + bulk sync) and a direct review path. `status` ∈ `review`/`confirmed`/`ignored`.
+
+**Files/functions involved:** `detectInstrumentInName`, `matchGroupToStudent`, `buildGroupSyncPlan` (`incoming-message-helpers.mjs`); `syncWhatsappGroups`, `reviewWhatsappGroup` (`incoming-messages.js`); `sync_groups`/`review_group` route modes; `runGroupSync`/`sendGroupSync` + `--sync-groups` (bridge `bridge.js`); `GroupMapPanel`/`GroupRow` (`AdminIncomingMessagesPageClient`).
+
+**What to watch out for:** `groupFetchAllParticipating` is metadata only — last-active comes from a best-effort history-sync wait (`GROUP_SYNC_WAIT_MS`, default 8s); groups without a timestamp are kept, not dropped. Baileys is unofficial (breakage risk, not ban risk for this read-only/low-volume use). If group-title conventions ever change (instrument dropped from the name), the instrument filter would start excluding real groups — that's the fragile contract.
+
 ### 2026-07-01 — Incoming message review audit trail
 
 **Feature/change:** Added `reviewed_by` (admin email) and `reviewed_at` (ISO) columns to `Incoming_Message_Inbox`, stamped on every review action — archive/ignore (`updateIncomingMessageReview`), correction (`correctIncomingMessage`), and convert (`convertIncomingMessageToPlanning`, via correct). Surfaced as a "Last actioned by … · <time>" line on each inbox card.

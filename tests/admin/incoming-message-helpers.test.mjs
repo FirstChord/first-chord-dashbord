@@ -2,13 +2,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  buildGroupSyncPlan,
   buildIncomingMessageRecord,
   buildIncomingPlanningDraft,
   buildIncomingReplyTemplate,
   buildWhatsappGroupMapRecord,
   classifyIncomingMessage,
+  detectInstrumentInName,
   groupIncomingMessages,
   isWhatsappGroupChatId,
+  matchGroupToStudent,
   matchIncomingMessageToStudent,
   normaliseIncomingMessagePayload,
   normalisePhone,
@@ -219,6 +222,62 @@ test('buildIncomingPlanningDraft maps a reviewed message into a planning item', 
   assert.deepEqual(draft.linkedStudentIds, ['sdt_alex']);
   assert.match(draft.notes, /Alex is away for two weeks/u);
   assert.match(draft.notes, /Suggested reply/u);
+});
+
+test('detectInstrumentInName spots FC instruments by whole token, not substring', () => {
+  assert.equal(detectInstrumentInName('Alex Chang Guitar Mondays'), 'guitar');
+  assert.equal(detectInstrumentInName('Sam Reid — Piano'), 'piano');
+  assert.equal(detectInstrumentInName('Ukulele Orchestra 2026', ['Ukulele Orchestra']), 'ukulele');
+  // No instrument token → not a First Chord group.
+  assert.equal(detectInstrumentInName('Family holiday plans'), '');
+  // "bass" as a token matches, but not inside another word like "embassy".
+  assert.equal(detectInstrumentInName('British Embassy chat'), '');
+});
+
+test('matchGroupToStudent prefers a participant phone match over the title name', () => {
+  const byPhone = matchGroupToStudent(
+    { chatName: 'Guitar group', participantPhones: ['+44 7788 626616', '+44 7000 000000'] },
+    students,
+  );
+  assert.equal(byPhone.matchedMmsId, 'sdt_alex');
+  assert.equal(byPhone.matchConfidence, 'high');
+  assert.match(byPhone.matchReasons, /number matches/u);
+
+  const byName = matchGroupToStudent({ chatName: 'Sam Reid Piano', participantPhones: [] }, students);
+  assert.equal(byName.matchedMmsId, 'sdt_sam');
+});
+
+test('matchGroupToStudent handles the real "{First} {Instrument} Lessons {emoji}" title', () => {
+  // First name only + the student's instrument, no phone — the common case.
+  const match = matchGroupToStudent({ chatName: 'Alex Guitar Lessons 🎸', participantPhones: [] }, students);
+  assert.equal(match.matchedMmsId, 'sdt_alex');
+  assert.equal(match.matchConfidence, 'high');
+  assert.match(match.matchReasons, /first name and instrument/u);
+});
+
+test('buildGroupSyncPlan keeps active FC groups, drops non-FC and stale ones', () => {
+  const now = new Date('2026-07-01T00:00:00Z');
+  const plan = buildGroupSyncPlan({
+    now,
+    students,
+    groups: [
+      { chatId: '111@g.us', chatName: 'Alex Chang Guitar', participantPhones: ['+447788626616'], lastActiveAt: '2026-06-20T00:00:00Z' },
+      { chatId: '222@g.us', chatName: 'Family chat', participantPhones: [], lastActiveAt: '2026-06-20T00:00:00Z' },
+      { chatId: '333@g.us', chatName: 'Old Piano group', participantPhones: [], lastActiveAt: '2025-01-01T00:00:00Z' },
+      { chatId: '444@g.us', chatName: 'Sam Reid Piano', participantPhones: [], lastActiveAt: '' },
+      { chatId: '19980372422675@lid', chatName: 'Guitar not-a-group', participantPhones: [], lastActiveAt: '' },
+    ],
+  });
+
+  assert.equal(plan.summary.kept, 2);
+  assert.equal(plan.summary.skippedNoInstrument, 1);
+  assert.equal(plan.summary.skippedInactive, 1);
+  assert.equal(plan.summary.skippedNotGroup, 1);
+  assert.deepEqual(plan.records.map((row) => row.chatId).sort(), ['111@g.us', '444@g.us']);
+
+  const alex = plan.records.find((row) => row.chatId === '111@g.us');
+  assert.equal(alex.matchedMmsId, 'sdt_alex');
+  assert.equal(alex.instrument, 'guitar');
 });
 
 test('groupIncomingMessages sorts newest first and normalises status/category', () => {

@@ -61,6 +61,17 @@ npm start -- --send-test "Alex is away next Friday"
 
 Then check `/admin/incoming-messages`.
 
+## Import all groups at once
+
+```bash
+npm start -- --sync-groups
+```
+
+Enumerates every group the account is in and posts them (metadata only — no message
+text) to the dashboard, which keeps the First Chord ones (instrument in the title,
+active within 6 months) and auto-matches a student by participant phone / name for you
+to confirm in the inbox. One-shot: it connects, syncs, prints a summary, and exits.
+
 ## Run
 
 ```bash

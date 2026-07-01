@@ -416,6 +416,102 @@ class WhatsAppIncomingBridge {
     });
     return this.sendPayload(payload);
   }
+
+  async sendGroupSync(groups = []) {
+    if (this.dryRun) {
+      this.logInfo('Dry run group sync', { groupCount: groups.length, sample: groups.slice(0, 5) });
+      return { dryRun: true, groups };
+    }
+
+    const response = await axios.post(this.webhookUrl, { mode: 'sync_groups', groups }, {
+      timeout: 30000,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-firstchord-incoming-secret': this.webhookSecret,
+      },
+    });
+    this.logInfo('Posted group sync to dashboard', {
+      status: response.status,
+      groupsSent: groups.length,
+      summary: response.data?.groupSyncSummary || null,
+    });
+    return response.data;
+  }
+
+  // One-shot: connect, let chat history settle so we know last-active times,
+  // enumerate every group the account is in (metadata only), and post them.
+  async runGroupSync({ waitMs = Number(process.env.GROUP_SYNC_WAIT_MS || 8000) || 8000 } = {}) {
+    this.validateConfig();
+    const { state, saveCreds } = await useMultiFileAuthState(this.authDir);
+    const { version } = await fetchLatestBaileysVersion();
+    const chatTimestamps = new Map();
+
+    return new Promise((resolve, reject) => {
+      const sock = makeWASocket({
+        version,
+        auth: state,
+        logger: P({ level: process.env.BAILEYS_LOG_LEVEL || 'silent' }),
+        browser: ['First Chord Incoming Bridge', 'Chrome', '121.0'],
+        markOnlineOnConnect: false,
+      });
+      this.sock = sock;
+      sock.ev.on('creds.update', saveCreds);
+
+      const recordChats = (chats = []) => {
+        for (const chat of chats) {
+          const ts = Number(chat.conversationTimestamp || 0);
+          if (chat.id && ts) chatTimestamps.set(chat.id, ts);
+        }
+      };
+      sock.ev.on('messaging-history.set', ({ chats = [] }) => recordChats(chats));
+      sock.ev.on('chats.set', ({ chats = [] }) => recordChats(chats));
+      sock.ev.on('chats.upsert', (chats = []) => recordChats(chats));
+
+      sock.ev.on('connection.update', async (update) => {
+        const { connection, lastDisconnect, qr } = update;
+        if (qr) {
+          console.log('\nScan this QR code from WhatsApp Linked Devices:\n');
+          qrcode.generate(qr, { small: true });
+        }
+        if (connection === 'close') {
+          const statusCode = lastDisconnect?.error?.output?.statusCode;
+          if (statusCode === DisconnectReason.loggedOut) {
+            reject(new Error('WhatsApp session logged out — re-link the device and try again'));
+          }
+          return;
+        }
+        if (connection !== 'open') return;
+
+        try {
+          this.logInfo('Connected — letting chat history settle before syncing groups', { waitMs });
+          await new Promise((done) => setTimeout(done, waitMs));
+
+          const participating = await sock.groupFetchAllParticipating();
+          const groups = Object.values(participating || {}).map((meta) => {
+            const ts = chatTimestamps.get(meta.id);
+            const participantPhones = (meta.participants || [])
+              .filter((participant) => `${participant.id || ''}`.endsWith('@s.whatsapp.net'))
+              .map((participant) => phoneFromJid(participant.id))
+              .filter(Boolean);
+            return {
+              chatId: meta.id,
+              chatName: meta.subject || '',
+              participantPhones,
+              lastActiveAt: ts ? new Date(ts * 1000).toISOString() : '',
+            };
+          });
+
+          this.logInfo('Fetched participating groups', { groupCount: groups.length });
+          const result = await this.sendGroupSync(groups);
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        } finally {
+          try { sock.end(); } catch { /* ignore */ }
+        }
+      });
+    });
+  }
 }
 
 async function main() {
@@ -431,6 +527,11 @@ async function main() {
     const text = process.argv.slice(testIndex + 1).join(' ').trim() || 'Alex is away next Friday';
     await bridge.sendTestPayload(text);
     return;
+  }
+  if (process.argv.includes('--sync-groups')) {
+    const result = await bridge.runGroupSync();
+    console.log('Group sync complete:', JSON.stringify(result?.groupSyncSummary || result || {}, null, 2));
+    process.exit(0);
   }
   await bridge.connect();
 }
