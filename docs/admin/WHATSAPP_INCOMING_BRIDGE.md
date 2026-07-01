@@ -69,7 +69,28 @@ Recommended bridge payload:
 }
 ```
 
-## Current Local Prototype
+## Dashboard-Owned Bridge Tool
+
+Preferred local tool:
+
+```text
+tools/whatsapp-incoming-bridge/
+```
+
+It is optional tooling and is not part of the Railway dashboard build. It has its own `package.json` so Baileys does not become a dashboard production dependency.
+
+Useful commands:
+
+```bash
+cd tools/whatsapp-incoming-bridge
+npm install
+npm start -- --send-test "Alex is away next Friday"
+npm start
+```
+
+See `tools/whatsapp-incoming-bridge/README.md` for setup.
+
+## Old Local Prototype
 
 Local folder:
 
@@ -77,7 +98,7 @@ Local folder:
 ~/Desktop/whatsapp
 ```
 
-That folder is not part of this repo. It currently sits under the old home-directory git clone, so do not commit from there.
+That folder is not part of this repo. It currently sits under the old home-directory git clone, so do not commit from there. Treat it as reference/history only.
 
 The local Baileys prototype should cache incoming message bodies from `messages.upsert`. A later `messages.update` star event often contains only the message key, not the message text. If the cache misses, the dashboard should still receive a placeholder, but those rows need manual review.
 
