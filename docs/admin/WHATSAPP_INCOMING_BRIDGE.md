@@ -165,13 +165,14 @@ Admins can correct a message's category/student match in the inbox. If a WhatsAp
 
 ## Bulk Group ID Sync
 
-Instead of learning group IDs one starred message at a time, the bridge can import them all at once (metadata only — no message content):
+Instead of learning group IDs one starred message at a time, the bridge can import them all at once (metadata only — no message content).
 
-```bash
-npm start -- --sync-groups
-```
+WhatsApp allows only **one live connection per linked device**, so there are two ways to sync depending on whether the always-on bridge is running:
 
-This enumerates every group the linked account is in (`groupFetchAllParticipating`), waits briefly for chat history so it knows each group's last-active time, and POSTs the list to the dashboard (`mode: sync_groups`). The dashboard then, per group (`buildGroupSyncPlan` in `incoming-message-helpers.mjs`):
+- **Bridge already running (preferred):** `kill -USR1 <pid>` triggers a sync on the bridge's *live* socket — no second connection, so it never trips WhatsApp's `connectionReplaced` (status 440). Or start the bridge with `SYNC_GROUPS_ON_START=true` to sync automatically shortly after connecting.
+- **Bridge not running:** `npm start -- --sync-groups` runs a one-shot (connect → sync → exit). It reconnects on transient closes but must **not** run alongside the always-on bridge (they clash with 440).
+
+Either path enumerates every group the linked account is in (`groupFetchAllParticipating`), uses chat history for each group's last-active time, and POSTs the list to the dashboard (`mode: sync_groups`). The dashboard then, per group (`buildGroupSyncPlan` in `incoming-message-helpers.mjs`):
 
 - **keeps only First Chord groups** — the title must contain an instrument token (every FC group title has one; personal groups don't). The roster's own instruments are unioned into the keyword list automatically.
 - **drops groups inactive for 6+ months** (unknown last-active is kept, fail-open).

@@ -63,14 +63,35 @@ Then check `/admin/incoming-messages`.
 
 ## Import all groups at once
 
+Enumerates every group the account is in and posts them (metadata only — no message
+text) to the dashboard, which keeps the First Chord ones (instrument in the title,
+active within 6 months) and auto-matches a student by participant phone / name for you
+to confirm in the inbox.
+
+WhatsApp allows only **one live connection per linked device**, so how you sync depends
+on whether the always-on bridge is already running:
+
+**If the bridge is already running** (recommended) — trigger a sync on its live
+connection with a signal, so there's no second connection and no `connectionReplaced`
+(440) clash:
+
+```bash
+kill -USR1 "$(pgrep -f 'node bridge.js')"
+```
+
+Watch the bridge's own log output for `Live group sync complete`. You can also start the
+bridge with `SYNC_GROUPS_ON_START=true` to sync automatically a few seconds after it
+connects.
+
+**If the bridge is NOT running** — use the one-shot command (connects, syncs, prints a
+summary, exits):
+
 ```bash
 npm start -- --sync-groups
 ```
 
-Enumerates every group the account is in and posts them (metadata only — no message
-text) to the dashboard, which keeps the First Chord ones (instrument in the title,
-active within 6 months) and auto-matches a student by participant phone / name for you
-to confirm in the inbox. One-shot: it connects, syncs, prints a summary, and exits.
+> Don't run `--sync-groups` while the always-on bridge is running — the two connections
+> fight (status 440). Use the `kill -USR1` signal instead.
 
 ## Run
 

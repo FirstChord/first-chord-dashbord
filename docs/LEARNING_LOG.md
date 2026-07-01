@@ -37,6 +37,8 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 **What to watch out for:** `groupFetchAllParticipating` is metadata only — last-active comes from a best-effort history-sync wait (`GROUP_SYNC_WAIT_MS`, default 8s); groups without a timestamp are kept, not dropped. Baileys is unofficial (breakage risk, not ban risk for this read-only/low-volume use). If group-title conventions ever change (instrument dropped from the name), the instrument filter would start excluding real groups — that's the fragile contract.
 
+**Follow-up (same day) — live-socket trigger:** the one-shot `--sync-groups` opens its *own* WhatsApp connection, which collides with the always-on bridge (both share one linked-device session → repeating `connectionReplaced`, status 440). WhatsApp allows only one live connection per device. Fix: the running bridge now syncs on its **own** socket via `SIGUSR1` (`kill -USR1 <pid>`) or `SYNC_GROUPS_ON_START=true`, sharing `collectParticipatingGroups`/`recordChatTimestamps`. The standalone command remains for when the bridge isn't running (and now reconnects on non-logout closes, e.g. 515 restart-required). Lesson: any second Baileys process on the same auth will fight the first — trigger work on the existing socket, don't spawn a rival.
+
 ### 2026-07-01 — Incoming message review audit trail
 
 **Feature/change:** Added `reviewed_by` (admin email) and `reviewed_at` (ISO) columns to `Incoming_Message_Inbox`, stamped on every review action — archive/ignore (`updateIncomingMessageReview`), correction (`correctIncomingMessage`), and convert (`convertIncomingMessageToPlanning`, via correct). Surfaced as a "Last actioned by … · <time>" line on each inbox card.

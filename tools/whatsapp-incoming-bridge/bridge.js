@@ -100,10 +100,17 @@ class WhatsAppIncomingBridge {
     this.cacheSaveTimer = null;
     this.writeStarredLog = parseBoolean(process.env.WRITE_STARRED_LOG);
     this.dryRun = parseBoolean(process.env.DRY_RUN);
+    this.syncGroupsOnStart = parseBoolean(process.env.SYNC_GROUPS_ON_START);
+    this.groupSyncWaitMs = Number(process.env.GROUP_SYNC_WAIT_MS || 8000) || 8000;
     this.logger = P({ level: process.env.LOG_LEVEL || 'info' });
     this.sock = null;
+    this.connected = false;
     this.recentMessages = new Map();
+    this.recentChatTimestamps = new Map();
     this.sentMessageIds = new Set();
+    this.groupSyncInFlight = false;
+    this.signalHandlersBound = false;
+    this.startupSyncDone = false;
     this.loadMessageCache();
   }
 
@@ -336,8 +343,20 @@ class WhatsAppIncomingBridge {
     });
   }
 
+  // `kill -USR1 <pid>` on the running bridge triggers a group sync on the live
+  // socket. Bound once, even across reconnects.
+  bindGroupSyncSignal() {
+    if (this.signalHandlersBound) return;
+    this.signalHandlersBound = true;
+    process.on('SIGUSR1', () => {
+      this.logInfo('SIGUSR1 received — running group sync on live connection');
+      this.triggerLiveGroupSync().catch((error) => this.logError('SIGUSR1 group sync failed', { error: error.message }));
+    });
+  }
+
   async connect() {
     this.validateConfig();
+    this.bindGroupSyncSignal();
     const { state, saveCreds } = await useMultiFileAuthState(this.authDir);
     const { version, isLatest } = await fetchLatestBaileysVersion();
     this.logInfo('Starting WhatsApp incoming bridge', {
@@ -346,6 +365,7 @@ class WhatsAppIncomingBridge {
       version: version.join('.'),
       isLatest,
       dryRun: this.dryRun,
+      syncGroupsOnStart: this.syncGroupsOnStart,
     });
 
     this.sock = makeWASocket({
@@ -360,6 +380,9 @@ class WhatsAppIncomingBridge {
     });
 
     this.sock.ev.on('creds.update', saveCreds);
+    this.sock.ev.on('messaging-history.set', ({ chats = [] }) => this.recordChatTimestamps(chats));
+    this.sock.ev.on('chats.set', ({ chats = [] }) => this.recordChatTimestamps(chats));
+    this.sock.ev.on('chats.upsert', (chats = []) => this.recordChatTimestamps(chats));
 
     this.sock.ev.on('connection.update', (update) => {
       const { connection, lastDisconnect, qr } = update;
@@ -369,10 +392,19 @@ class WhatsAppIncomingBridge {
       }
 
       if (connection === 'open') {
+        this.connected = true;
         this.logInfo('WhatsApp bridge connected');
+        if (this.syncGroupsOnStart && !this.startupSyncDone) {
+          this.startupSyncDone = true;
+          this.logInfo('Scheduling startup group sync', { waitMs: this.groupSyncWaitMs });
+          setTimeout(() => {
+            this.triggerLiveGroupSync().catch((error) => this.logError('Startup group sync failed', { error: error.message }));
+          }, this.groupSyncWaitMs);
+        }
       }
 
       if (connection === 'close') {
+        this.connected = false;
         const statusCode = lastDisconnect?.error?.output?.statusCode;
         const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
         this.logWarn('WhatsApp bridge connection closed', { statusCode, shouldReconnect });
@@ -438,6 +470,59 @@ class WhatsAppIncomingBridge {
     return response.data;
   }
 
+  // Metadata-only snapshot of every group the account is in, tagged with the
+  // last-active time we know from chat history. Shared by the one-shot command
+  // and the live (already-connected) trigger.
+  async collectParticipatingGroups(sock = this.sock, chatTimestamps = this.recentChatTimestamps) {
+    const participating = await sock.groupFetchAllParticipating();
+    return Object.values(participating || {}).map((meta) => {
+      const ts = chatTimestamps.get(meta.id);
+      const participantPhones = (meta.participants || [])
+        .filter((participant) => `${participant.id || ''}`.endsWith('@s.whatsapp.net'))
+        .map((participant) => phoneFromJid(participant.id))
+        .filter(Boolean);
+      return {
+        chatId: meta.id,
+        chatName: meta.subject || '',
+        participantPhones,
+        lastActiveAt: ts ? new Date(ts * 1000).toISOString() : '',
+      };
+    });
+  }
+
+  recordChatTimestamps(chats = []) {
+    for (const chat of chats) {
+      const ts = Number(chat.conversationTimestamp || 0);
+      if (chat.id && ts) this.recentChatTimestamps.set(chat.id, ts);
+    }
+  }
+
+  // Runs a group sync on the bridge's existing live connection — no second
+  // socket, so it never trips WhatsApp's "connection replaced" (440). Triggered
+  // by SIGUSR1 or, once, on startup when SYNC_GROUPS_ON_START is set.
+  async triggerLiveGroupSync() {
+    if (this.groupSyncInFlight) {
+      this.logWarn('Group sync already running — ignoring trigger');
+      return;
+    }
+    if (!this.sock || !this.connected) {
+      this.logWarn('Cannot sync groups yet — bridge is not connected');
+      return;
+    }
+    this.groupSyncInFlight = true;
+    try {
+      this.logInfo('Live group sync triggered');
+      const groups = await this.collectParticipatingGroups();
+      this.logInfo('Fetched participating groups', { groupCount: groups.length });
+      const result = await this.sendGroupSync(groups);
+      this.logInfo('Live group sync complete', { summary: result?.groupSyncSummary || null });
+    } catch (error) {
+      this.logError('Live group sync failed', { error: error.message });
+    } finally {
+      this.groupSyncInFlight = false;
+    }
+  }
+
   // One-shot: connect, let chat history settle so we know last-active times,
   // enumerate every group the account is in (metadata only), and post them.
   // WhatsApp frequently closes the first connection ("restart required", 515)
@@ -450,7 +535,6 @@ class WhatsAppIncomingBridge {
     this.validateConfig();
     const { state, saveCreds } = await useMultiFileAuthState(this.authDir);
     const { version } = await fetchLatestBaileysVersion();
-    const chatTimestamps = new Map();
     let attempts = 0;
     let settled = false;
 
@@ -461,12 +545,7 @@ class WhatsAppIncomingBridge {
         fn(value);
       };
 
-      const recordChats = (chats = []) => {
-        for (const chat of chats) {
-          const ts = Number(chat.conversationTimestamp || 0);
-          if (chat.id && ts) chatTimestamps.set(chat.id, ts);
-        }
-      };
+      const recordChats = (chats = []) => this.recordChatTimestamps(chats);
 
       const start = () => {
         attempts += 1;
@@ -517,21 +596,7 @@ class WhatsAppIncomingBridge {
             this.logInfo('Connected — letting chat history settle before syncing groups', { waitMs, attempt: attempts });
             await new Promise((done) => setTimeout(done, waitMs));
 
-            const participating = await sock.groupFetchAllParticipating();
-            const groups = Object.values(participating || {}).map((meta) => {
-              const ts = chatTimestamps.get(meta.id);
-              const participantPhones = (meta.participants || [])
-                .filter((participant) => `${participant.id || ''}`.endsWith('@s.whatsapp.net'))
-                .map((participant) => phoneFromJid(participant.id))
-                .filter(Boolean);
-              return {
-                chatId: meta.id,
-                chatName: meta.subject || '',
-                participantPhones,
-                lastActiveAt: ts ? new Date(ts * 1000).toISOString() : '',
-              };
-            });
-
+            const groups = await this.collectParticipatingGroups(sock);
             this.logInfo('Fetched participating groups', { groupCount: groups.length });
             const result = await this.sendGroupSync(groups);
             finish(resolve, result);
