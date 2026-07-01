@@ -32,6 +32,12 @@ const workflowSections = [
     status: 'Action flow',
   },
   {
+    href: '/admin/incoming-messages',
+    title: 'Message Inbox',
+    description: 'Review inbound parent messages from paste/starred WhatsApp before turning them into planning or workflow action.',
+    status: 'Intake',
+  },
+  {
     href: '/admin/finance/payroll',
     title: 'Payroll',
     description: 'Wednesday tutor-pay review from MMS attendance: per-tutor pay window (since last paid), mark reviewed/paid. Reconciliation support, not payment execution.',

@@ -104,6 +104,7 @@ For dashboard-owned Sheets tabs, use `docs/admin/STATE_TABS_SCHEMA.md` as the ca
 - `Planning_Items` = human-captured planning/task/initiative state
 - `Planning_Progress_Log` = append-only planning progress history
 - `Communication_Log` = append-only record of parent messages copied to send; record-only, not a sender
+- `Incoming_Message_Inbox` = review inbox for inbound messages; deterministic hints only, no automatic action
 - `Practice_Notes_Log` = dashboard-owned Practice Chat note/delivery memory; sent/completed rows are parent-visible in portals before MMS fallback
 
 ## Recent Important Work

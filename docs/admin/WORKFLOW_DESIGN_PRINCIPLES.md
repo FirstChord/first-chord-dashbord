@@ -137,6 +137,8 @@ Communication boundary:
 
 - `Communication_Log` records messages copied to send.
 - Copied is not the same as sent.
+- `Incoming_Message_Inbox` records inbound messages that need review.
+- Captured inbound messages are not instructions by themselves; they are prompts for human review.
 - The dashboard currently does not send WhatsApp messages.
 - Practice Chat lesson-note email is the narrow automated-email exception; do not treat it as precedent for payment, pause, onboarding, WhatsApp, marketing, or general parent messaging.
 

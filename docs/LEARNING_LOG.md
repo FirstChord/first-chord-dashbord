@@ -19,6 +19,18 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-06-30 — Incoming Message Inbox
+
+**Feature/change:** Added `Incoming_Message_Inbox` as a review inbox for inbound parent/tutor messages. Admins can paste a message manually at `/admin/incoming-messages`; a future n8n/starred-WhatsApp bridge can POST the same shape to `POST /api/admin/incoming-messages` using `INCOMING_MESSAGE_INGEST_SECRET`. The system deterministically labels likely absence/pause/payment/schedule messages and tries to match a student by phone/name.
+
+**Why it exists:** WhatsApp currently holds operational intent such as "we're away next week" or "can we pause lessons?" This gives the dashboard a safe intake lane before those messages become planning items, pause actions, or issue context.
+
+**Source-of-truth impact:** Inbound messages are not source truth and do not trigger actions. The inbox is workflow state: a captured prompt for human review. Sheets/MMS/Stripe still own the underlying operational facts; humans still approve pauses, payment changes, and parent-facing replies.
+
+**Files/functions involved:** `Incoming_Message_Inbox` headers in `lib/admin/sheets/core.mjs`; `lib/admin/sheets/incoming-messages.mjs`; `lib/admin/incoming-message-helpers.mjs`; `lib/admin/incoming-messages.js`; `app/api/admin/incoming-messages/route.js`; `/admin/incoming-messages`; workflow card in `/admin/workflows`.
+
+**What to watch out for:** Classification is keyword-based, not AI. False positives are expected and should remain harmless because review is manual. External bridge writes require a shared secret; CORS is not authentication. Do not auto-create pause/payment actions from inbound messages without designing the approval/recovery loop.
+
 ### 2026-06-30 — Practice Chat Side Panel On Tutor Dashboard
 
 **Feature/change:** Practice Chat now opens from the tutor dashboard inside a right-side iframe panel instead of always launching a new tab. The panel includes backdrop/Escape close behaviour and an `Open full page` fallback.
