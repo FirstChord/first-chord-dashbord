@@ -15,15 +15,19 @@ import {
 const students = [
   {
     mmsId: 'sdt_alex',
+    fcStudentId: 'fc_alex',
     firstName: 'Alex',
     lastName: 'Chang',
     fullName: 'Alex Chang',
     parentFirstName: 'Mina',
     parentLastName: 'Chang',
     contactNumber: '07788 626616',
+    tutor: 'Dean Louden',
+    instrument: 'Guitar',
   },
   {
     mmsId: 'sdt_sam',
+    fcStudentId: 'fc_sam',
     firstName: 'Sam',
     lastName: 'Reid',
     fullName: 'Sam Reid',
@@ -125,6 +129,33 @@ test('buildWhatsappGroupMapRecord stores only WhatsApp group chats', () => {
   assert.equal(map.status, 'review');
 
   assert.equal(buildWhatsappGroupMapRecord({ ...record, chatId: '19980372422675@lid' }), null);
+});
+
+test('buildWhatsappGroupMapRecord stores confirmed student and parent context', () => {
+  const map = buildWhatsappGroupMapRecord({
+    chatId: '120363400087109552@g.us',
+    chatName: 'Alex small group',
+    matchedMmsId: 'sdt_alex',
+    matchedFcId: 'fc_alex',
+    matchedStudentName: 'Alex Chang',
+    parentName: 'Mina Chang',
+    parentPhone: '07788 626616',
+    tutorName: 'Dean Louden',
+    instrument: 'Guitar',
+    groupMapStatus: 'confirmed',
+    confirmedBy: 'finn@example.com',
+    confirmedAt: '2026-07-01T10:00:00.000Z',
+  });
+
+  assert.equal(map.matchedMmsId, 'sdt_alex');
+  assert.equal(map.matchedFcId, 'fc_alex');
+  assert.equal(map.parentName, 'Mina Chang');
+  assert.equal(map.parentPhone, '07788 626616');
+  assert.equal(map.tutorName, 'Dean Louden');
+  assert.equal(map.instrument, 'Guitar');
+  assert.equal(map.status, 'confirmed');
+  assert.equal(map.confirmedBy, 'finn@example.com');
+  assert.equal(map.confirmedAt, '2026-07-01T10:00:00.000Z');
 });
 
 test('confirmed WhatsApp group map beats weaker text/name guesses', () => {

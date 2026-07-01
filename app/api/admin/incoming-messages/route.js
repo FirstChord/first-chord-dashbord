@@ -67,6 +67,7 @@ export async function POST(request) {
         matchedMmsId: body?.matchedMmsId || '',
         reviewNote: body?.reviewNote || '',
         confirmGroupMap: Boolean(body?.confirmGroupMap),
+        actorEmail: session.user.email || '',
       });
     } else if (mode === 'delete') {
       if (!isAdmin) {

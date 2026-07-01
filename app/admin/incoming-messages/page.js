@@ -19,9 +19,11 @@ export default async function AdminIncomingMessagesPage() {
 
   const studentOptions = students.map((student) => ({
     mmsId: student.mmsId,
+    fcStudentId: student.fcStudentId,
     fullName: student.fullName,
     tutor: student.tutor,
     parentName: [student.parentFirstName, student.parentLastName].filter(Boolean).join(' ').trim(),
+    parentPhone: student.contactNumber,
   }));
 
   return (

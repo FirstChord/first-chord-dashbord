@@ -71,9 +71,17 @@ function GroupMapPanel({ groups = [] }) {
               <p className="mt-1 break-all font-mono text-[11px] text-slate-500">{group.chatId}</p>
               <p className="mt-1 text-xs text-slate-500">
                 {group.matchedStudentName || 'No student hint yet'}
+                {group.matchedFcId ? ` · ${group.matchedFcId}` : ''}
                 {group.status ? ` · ${group.status}` : ''}
                 {group.lastSeenAt ? ` · last seen ${formatDateTime(group.lastSeenAt)}` : ''}
               </p>
+              {group.parentName || group.tutorName ? (
+                <p className="mt-1 text-xs text-slate-500">
+                  {group.parentName ? `Parent: ${group.parentName}` : ''}
+                  {group.parentName && group.tutorName ? ' · ' : ''}
+                  {group.tutorName ? `Tutor: ${group.tutorName}` : ''}
+                </p>
+              ) : null}
             </div>
           ))}
         </div>
@@ -116,7 +124,7 @@ function CorrectionPanel({ entry, studentOptions = [], onCorrect, isPending }) {
               <option value="">No student selected</option>
               {studentOptions.map((student) => (
                 <option key={student.mmsId} value={student.mmsId}>
-                  {student.fullName}{student.tutor ? ` · ${student.tutor}` : ''}
+                  {student.fullName}{student.fcStudentId ? ` · ${student.fcStudentId}` : ''}{student.parentName ? ` · ${student.parentName}` : ''}{student.tutor ? ` · ${student.tutor}` : ''}
                 </option>
               ))}
             </select>

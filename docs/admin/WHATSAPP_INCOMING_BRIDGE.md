@@ -153,11 +153,21 @@ For group chats, it also stores:
 - latest group name
 - first/last seen timestamps
 - latest matched student hint
+- confirmed matched MMS ID / FC ID when reviewed
+- parent name/phone, tutor, and instrument context when reviewed
+- who confirmed the group map and when
 - latest match confidence/reasons
 
 These are not source truth. They only help decide the next human action.
 
 Admins can correct a message's category/student match in the inbox. If a WhatsApp group is confirmed for a student, future messages from that group use the group map as high-confidence matching evidence before weaker text/name guesses.
+
+Inbox status buttons:
+
+- `Needs review`: keep the message open and flag that a human decision is still needed.
+- `Mark converted`: the message has been turned into the relevant next action, planning item, pause, note, or workflow follow-up. This does not create the action by itself; it closes the intake item after the action exists elsewhere.
+- `Ignore`: close noise/no-action messages without converting them.
+- `Delete test`: hard-delete test/noise rows only.
 
 ## Classification Evidence
 

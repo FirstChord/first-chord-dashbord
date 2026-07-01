@@ -21,11 +21,11 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ### 2026-07-01 — Incoming message corrections and WhatsApp group training
 
-**Feature/change:** Added review corrections for incoming WhatsApp/manual messages. Admins can correct the category, matched student, reviewer note, and optionally confirm a WhatsApp group-to-student map.
+**Feature/change:** Added review corrections for incoming WhatsApp/manual messages. Admins can correct the category, matched student, reviewer note, and optionally confirm a WhatsApp group-to-student map. Confirmed group maps now store selected student context: MMS ID, FC ID, parent name/phone, tutor, instrument, `confirmed_by`, and `confirmed_at`.
 
 **Why it exists:** Starred WhatsApp messages are useful evidence, but parent wording is often ambiguous. Corrections turn one-off review work into reusable matching context without letting messages trigger automatic actions.
 
-**Source-of-truth impact:** `Incoming_Message_Inbox` remains workflow state. `WhatsApp_Group_Map` is workflow/context state; confirmed groups become high-confidence matching evidence, not external truth.
+**Source-of-truth impact:** `Incoming_Message_Inbox` remains workflow state. `WhatsApp_Group_Map` is workflow/context state; confirmed groups become high-confidence matching evidence and communication context, not external truth.
 
 **Files/functions involved:** `classifyIncomingMessage`, `matchIncomingMessageToStudent`, `correctIncomingMessage`, `buildWhatsappGroupMapRecord`, `upsertWhatsappGroupMapRow`, `AdminIncomingMessagesPageClient`.
 
