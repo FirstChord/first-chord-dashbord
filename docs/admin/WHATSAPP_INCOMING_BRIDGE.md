@@ -164,6 +164,7 @@ Admins can correct a message's category/student match in the inbox. If a WhatsAp
 
 Inbox status buttons:
 
+- `Convert to plan + draft reply`: saves the reviewed category/student/group-map training, creates a linked `Planning_Items` action, archives the message (`converted`), and returns a suggested WhatsApp reply. See "From message to action" below.
 - `Save correction`: saves the reviewed category/student/group-map training and keeps the message open for action.
 - `Save + archive`: saves the correction and archives the message because the relevant action has been handled or logged elsewhere.
 - `Archive handled`: archives a message without changing the correction fields.
@@ -171,6 +172,17 @@ Inbox status buttons:
 - `Delete test`: hard-delete test/noise rows only.
 
 Archived/ignored rows are hidden by default so the inbox stays focused on messages still needing a decision.
+
+## From Message to Action
+
+Once a message is read correctly, `Convert to plan + draft reply` closes the loop:
+
+1. Applies any category/student/group-map correction from the panel.
+2. Creates a `Planning_Items` action (via `savePlanningItem`) linked to the matched student. The planning id is derived from the incoming id (`planning_<incomingId>`), so re-converting the same message upserts the same task instead of duplicating. Category maps to a planning `area` (absence/schedule → `workflow`, payment/leaving → `finance`, concern/general → `parent`). The original message, sender, and the suggested reply travel in the item notes.
+3. Writes `created_planning_id` back onto the inbox row and marks it `converted`.
+4. Returns a suggested WhatsApp reply, shown in an editable box with a Copy button.
+
+The reply is a **copy-paste draft only** — consistent with the transport-only boundary above, nothing is sent to WhatsApp automatically. The human edits it and sends it themselves. Reply wording is per-category and lives in `buildIncomingReplyTemplate` (`lib/admin/incoming-message-helpers.mjs`); the planning mapping lives in `buildIncomingPlanningDraft`.
 
 ## Classification Evidence
 

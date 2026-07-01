@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import {
   captureIncomingMessage,
+  convertIncomingMessageToPlanning,
   correctIncomingMessage,
   deleteIncomingMessage,
   getIncomingMessageInbox,
@@ -45,6 +46,7 @@ export async function POST(request) {
 
   const body = await request.json().catch(() => ({}));
   const mode = `${body?.mode || 'capture'}`.trim();
+  let extra = {};
 
   try {
     if (mode === 'review') {
@@ -70,6 +72,19 @@ export async function POST(request) {
         actorEmail: session.user.email || '',
         status: body?.status || 'needs_review',
       });
+    } else if (mode === 'convert') {
+      if (!isAdmin) {
+        return Response.json({ error: 'Admin session required for planning conversion' }, { status: 401 });
+      }
+      const result = await convertIncomingMessageToPlanning({
+        incomingId: `${body?.incomingId || ''}`.trim(),
+        category: body?.category || '',
+        matchedMmsId: body?.matchedMmsId || '',
+        reviewNote: body?.reviewNote || '',
+        confirmGroupMap: Boolean(body?.confirmGroupMap),
+        actorEmail: session.user.email || '',
+      });
+      extra = { planningId: result.planningId, replyTemplate: result.replyTemplate };
     } else if (mode === 'delete') {
       if (!isAdmin) {
         return Response.json({ error: 'Admin session required for message deletion' }, { status: 401 });
@@ -87,7 +102,7 @@ export async function POST(request) {
       getIncomingMessageInbox(),
       getWhatsappGroupMap(),
     ]);
-    return Response.json({ success: true, inbox, groupMap });
+    return Response.json({ success: true, inbox, groupMap, ...extra });
   } catch (error) {
     return Response.json({ error: error.message || 'Incoming message save failed' }, { status: 500 });
   }

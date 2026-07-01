@@ -446,7 +446,7 @@ test('buildTutorAbsenceCancellationMessageGroups creates one parent message for 
   assert.deepEqual(groups[0].missedDates, ['2026-07-03', '2026-07-10']);
   assert.equal(groups[0].messagedCount, 1);
   assert.equal(groups[0].allMessaged, false);
-  assert.match(groups[0].message, /Heya Rachel/u);
+  assert.match(groups[0].message, /Hi Rachel/u);
   assert.match(groups[0].message, /Tom is away/u);
   assert.match(groups[0].message, /Friday 3rd July and Friday 10th July/u);
 });

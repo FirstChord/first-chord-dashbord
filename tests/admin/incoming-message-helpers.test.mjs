@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 
 import {
   buildIncomingMessageRecord,
+  buildIncomingPlanningDraft,
+  buildIncomingReplyTemplate,
   buildWhatsappGroupMapRecord,
   classifyIncomingMessage,
   groupIncomingMessages,
@@ -175,6 +177,48 @@ test('confirmed WhatsApp group map beats weaker text/name guesses', () => {
   assert.equal(match.matchedMmsId, 'sdt_sam');
   assert.equal(match.matchConfidence, 'high');
   assert.match(match.matchReasons, /confirmed WhatsApp group/u);
+});
+
+test('buildIncomingReplyTemplate produces a per-category parent draft', () => {
+  const absence = buildIncomingReplyTemplate({
+    category: 'one_off_absence',
+    senderName: 'Mina Chang',
+    studentName: 'Alex Chang',
+    tutorName: 'Dean Louden',
+  });
+  assert.match(absence, /^Hi Mina/u);
+  assert.match(absence, /Alex/u);
+  assert.match(absence, /Dean/u);
+
+  const leaving = buildIncomingReplyTemplate({ category: 'leaving', senderName: 'Laura', studentName: 'Sam Reid' });
+  assert.match(leaving, /sorry to see Sam go/u);
+
+  // Unknown category still returns a safe acknowledgement.
+  assert.match(buildIncomingReplyTemplate({ category: 'wat', senderName: 'Jo' }), /^Hi Jo/u);
+});
+
+test('buildIncomingPlanningDraft maps a reviewed message into a planning item', () => {
+  const draft = buildIncomingPlanningDraft({
+    record: {
+      suspectedCategory: 'extended_absence',
+      matchedMmsId: 'sdt_alex',
+      matchedStudentName: 'Alex Chang',
+      senderName: 'Mina Chang',
+      senderPhone: '07788 626616',
+      messageText: 'Alex is away for two weeks',
+      source: 'whatsapp_starred',
+    },
+    student: { parentFirstName: 'Mina' },
+    replyTemplate: 'Hi Mina! Thanks for letting us know.',
+  });
+
+  assert.equal(draft.title, 'Extended absence: Alex Chang');
+  assert.equal(draft.itemType, 'action');
+  assert.equal(draft.status, 'active');
+  assert.equal(draft.area, 'workflow');
+  assert.deepEqual(draft.linkedStudentIds, ['sdt_alex']);
+  assert.match(draft.notes, /Alex is away for two weeks/u);
+  assert.match(draft.notes, /Suggested reply/u);
 });
 
 test('groupIncomingMessages sorts newest first and normalises status/category', () => {

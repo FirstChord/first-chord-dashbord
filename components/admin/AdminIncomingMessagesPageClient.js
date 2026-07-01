@@ -90,7 +90,7 @@ function GroupMapPanel({ groups = [] }) {
   );
 }
 
-function CorrectionPanel({ entry, studentOptions = [], onCorrect, isPending }) {
+function CorrectionPanel({ entry, studentOptions = [], onCorrect, onConvert, isPending }) {
   const [category, setCategory] = useState(entry.suspectedCategory || 'general');
   const [matchedMmsId, setMatchedMmsId] = useState(entry.matchedMmsId || '');
   const [reviewNote, setReviewNote] = useState('');
@@ -168,6 +168,14 @@ function CorrectionPanel({ entry, studentOptions = [], onCorrect, isPending }) {
           <button
             type="button"
             disabled={isPending || (confirmGroupMap && !canConfirmGroup)}
+            onClick={() => onConvert(entry, correctionPayload('converted'))}
+            className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm disabled:opacity-60"
+          >
+            Convert to plan + draft reply
+          </button>
+          <button
+            type="button"
+            disabled={isPending || (confirmGroupMap && !canConfirmGroup)}
             onClick={() => onCorrect(entry, correctionPayload('needs_review'))}
             className="rounded-full border border-blue-200 bg-white px-3 py-1.5 text-xs font-semibold text-blue-800 shadow-sm disabled:opacity-60"
           >
@@ -187,7 +195,54 @@ function CorrectionPanel({ entry, studentOptions = [], onCorrect, isPending }) {
   );
 }
 
-function MessageCard({ entry, studentOptions, onReview, onDelete, onCorrect, pendingId }) {
+function ReplyPanel({ conversion }) {
+  const [reply, setReply] = useState(conversion.replyTemplate || '');
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(reply);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  return (
+    <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50/50 px-3 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs font-semibold text-emerald-900">Planning item created — draft reply ready</p>
+        {conversion.planningId ? (
+          <Link
+            href={`/admin/planning?focus=${encodeURIComponent(conversion.planningId)}`}
+            className="rounded-full border border-emerald-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-emerald-800 shadow-sm"
+          >
+            Open plan
+          </Link>
+        ) : null}
+      </div>
+      <p className="mt-1 text-[11px] leading-5 text-emerald-800/80">
+        Edit if needed, then copy and send it yourself in WhatsApp. Nothing is sent automatically.
+      </p>
+      <textarea
+        value={reply}
+        onChange={(event) => setReply(event.target.value)}
+        rows={5}
+        className="mt-2 w-full rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm leading-6 text-slate-800 outline-none focus:border-emerald-300"
+      />
+      <button
+        type="button"
+        onClick={handleCopy}
+        className="mt-2 rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700"
+      >
+        {copied ? 'Copied' : 'Copy reply'}
+      </button>
+    </div>
+  );
+}
+
+function MessageCard({ entry, studentOptions, onReview, onDelete, onCorrect, onConvert, conversion, pendingId }) {
   const isPending = pendingId === entry.incomingId;
   return (
     <article className="rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-[0_12px_36px_rgba(15,23,42,0.05)]">
@@ -268,7 +323,10 @@ function MessageCard({ entry, studentOptions, onReview, onDelete, onCorrect, pen
         studentOptions={studentOptions}
         isPending={isPending}
         onCorrect={onCorrect}
+        onConvert={onConvert}
       />
+
+      {conversion ? <ReplyPanel conversion={conversion} /> : null}
     </article>
   );
 }
@@ -284,13 +342,16 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
   const [pendingId, setPendingId] = useState('');
   const [submitError, setSubmitError] = useState(error);
   const [showArchived, setShowArchived] = useState(false);
+  const [conversions, setConversions] = useState({});
 
   const openCount = useMemo(() => inbox.filter((entry) => ['inbox', 'needs_review'].includes(entry.status)).length, [inbox]);
   const absenceCount = useMemo(() => inbox.filter((entry) => ABSENCE_CATEGORIES.has(entry.suspectedCategory) && ['inbox', 'needs_review'].includes(entry.status)).length, [inbox]);
   const archivedCount = useMemo(() => inbox.filter((entry) => ['converted', 'ignored'].includes(entry.status)).length, [inbox]);
   const visibleInbox = useMemo(() => (
-    showArchived ? inbox : inbox.filter((entry) => ['inbox', 'needs_review'].includes(entry.status))
-  ), [inbox, showArchived]);
+    showArchived
+      ? inbox
+      : inbox.filter((entry) => ['inbox', 'needs_review'].includes(entry.status) || conversions[entry.incomingId])
+  ), [inbox, showArchived, conversions]);
 
   async function postPayload(payload) {
     const response = await fetch('/api/admin/incoming-messages', {
@@ -306,6 +367,7 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
     if (Array.isArray(data.groupMap)) {
       setGroupMap(data.groupMap);
     }
+    return data;
   }
 
   async function handleCapture(event) {
@@ -379,6 +441,29 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
       });
     } catch (caught) {
       setSubmitError(caught.message || 'Correction failed');
+    } finally {
+      setPendingId('');
+    }
+  }
+
+  async function handleConvert(entry, correction) {
+    setSubmitError('');
+    setPendingId(entry.incomingId);
+    try {
+      const data = await postPayload({
+        mode: 'convert',
+        incomingId: entry.incomingId,
+        ...correction,
+      });
+      setConversions((current) => ({
+        ...current,
+        [entry.incomingId]: {
+          planningId: data.planningId || '',
+          replyTemplate: data.replyTemplate || '',
+        },
+      }));
+    } catch (caught) {
+      setSubmitError(caught.message || 'Conversion failed');
     } finally {
       setPendingId('');
     }
@@ -497,9 +582,11 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
                 entry={entry}
                 studentOptions={studentOptions}
                 pendingId={pendingId}
+                conversion={conversions[entry.incomingId]}
                 onReview={handleReview}
                 onDelete={handleDelete}
                 onCorrect={handleCorrect}
+                onConvert={handleConvert}
               />
             ))}
           </div>

@@ -19,6 +19,24 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-07-01 — Incoming message → Planning item + WhatsApp reply draft
+
+**Feature/change:** Added `Convert to plan + draft reply` to the incoming inbox. One action applies the reviewed correction, creates a linked `Planning_Items` action, stamps `created_planning_id` on the inbox row, marks it `converted`, and returns a per-category WhatsApp reply draft shown in an editable copy box. `created_planning_id` was previously plumbed but never written by any flow — this wires it.
+
+**Why it exists:** The inbox captured and triaged messages but then dropped the human back into doing the follow-up by hand, outside the system. "Converted" meant only "archived". Closing the loop means a correct reading now produces both the tracked work item and the reply to send, so intent → action → parent communication all live in one place.
+
+**Design decisions:**
+- **Idempotent planning id** `planning_<incoming_id>` — re-converting upserts the same task instead of duplicating (mirrors the first-lesson-checkin deterministic-id pattern).
+- **Reply is copy-paste only.** No auto-send, keeping the bridge's transport-only boundary intact. `buildIncomingReplyTemplate` matches `buildTutorAbsenceMessage`'s tone.
+- **Category → planning `area`:** absence/schedule → `workflow`, payment/leaving → `finance`, concern/general → `parent`. Original message + suggested reply travel in the item notes so context stays with the plan.
+- Just-converted rows stay visible in the UI (via a client-side `conversions` map) even though `converted` is normally hidden, so the reply doesn't vanish on save.
+
+**Source-of-truth impact:** `Incoming_Message_Inbox` and `Planning_Items` both remain workflow state; the link is `created_planning_id`. No new tab.
+
+**Files/functions involved:** `buildIncomingReplyTemplate`, `buildIncomingPlanningDraft` (`incoming-message-helpers.mjs`), `convertIncomingMessageToPlanning` (`incoming-messages.js`), `mode: 'convert'` in the route, `ReplyPanel`/`handleConvert` in `AdminIncomingMessagesPageClient`.
+
+**What to watch out for:** Reply wording is generic per-category — always edited by a human before sending. If planning `area`/`status` conventions change, update `buildIncomingPlanningDraft`. The `/admin/planning?focus=` link param is forward-compatible only (the page doesn't consume `focus` yet).
+
 ### 2026-07-01 — Incoming message corrections and WhatsApp group training
 
 **Feature/change:** Added review corrections for incoming WhatsApp/manual messages. Admins can correct the category, matched student, reviewer note, and optionally confirm a WhatsApp group-to-student map. Confirmed group maps now store selected student context: MMS ID, FC ID, parent name/phone, tutor, instrument, `confirmed_by`, and `confirmed_at`.
