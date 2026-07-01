@@ -84,6 +84,30 @@ function extractMessageContent(message = {}) {
   };
 }
 
+// Coarse pre-filter so we don't ship every group the account is in (personal
+// chats, community groups, etc.) to the dashboard. First Chord group titles are
+// "{First name} {Instrument} Lessons {emoji}", so an instrument keyword or the
+// word "lessons" is a cheap, no-student-data signal. The dashboard still does
+// the authoritative instrument + roster + phone matching.
+const FC_GROUP_TITLE_KEYWORDS = [
+  'guitar', 'piano', 'keyboard', 'keys', 'voice', 'vocal', 'vocals', 'singing', 'sing',
+  'ukulele', 'uke', 'bass', 'drums', 'drum', 'violin', 'viola', 'cello', 'sax',
+  'saxophone', 'flute', 'clarinet', 'trumpet', 'theory', 'mandolin', 'banjo',
+  'lesson', 'lessons',
+];
+
+function titleLooksLikeFcGroup(name = '') {
+  const tokens = new Set(
+    `${name || ''}`
+      .toLowerCase()
+      .normalize('NFKD')
+      .replace(/[^\p{Letter}\p{Number}\s]/gu, ' ')
+      .split(/\s+/u)
+      .filter(Boolean),
+  );
+  return FC_GROUP_TITLE_KEYWORDS.some((keyword) => tokens.has(keyword));
+}
+
 class WhatsAppIncomingBridge {
   constructor(options = {}) {
     loadLocalEnv();
@@ -456,7 +480,7 @@ class WhatsAppIncomingBridge {
     }
 
     const response = await axios.post(this.webhookUrl, { mode: 'sync_groups', groups }, {
-      timeout: 30000,
+      timeout: 120000,
       headers: {
         'Content-Type': 'application/json',
         'x-firstchord-incoming-secret': this.webhookSecret,
@@ -475,19 +499,25 @@ class WhatsAppIncomingBridge {
   // and the live (already-connected) trigger.
   async collectParticipatingGroups(sock = this.sock, chatTimestamps = this.recentChatTimestamps) {
     const participating = await sock.groupFetchAllParticipating();
-    return Object.values(participating || {}).map((meta) => {
-      const ts = chatTimestamps.get(meta.id);
-      const participantPhones = (meta.participants || [])
-        .filter((participant) => `${participant.id || ''}`.endsWith('@s.whatsapp.net'))
-        .map((participant) => phoneFromJid(participant.id))
-        .filter(Boolean);
-      return {
-        chatId: meta.id,
-        chatName: meta.subject || '',
-        participantPhones,
-        lastActiveAt: ts ? new Date(ts * 1000).toISOString() : '',
-      };
-    });
+    const all = Object.values(participating || {});
+    const groups = all
+      .filter((meta) => titleLooksLikeFcGroup(meta.subject || ''))
+      .map((meta) => {
+        const ts = chatTimestamps.get(meta.id);
+        const participantPhones = (meta.participants || [])
+          .filter((participant) => `${participant.id || ''}`.endsWith('@s.whatsapp.net'))
+          .map((participant) => phoneFromJid(participant.id))
+          .filter(Boolean)
+          .slice(0, 50);
+        return {
+          chatId: meta.id,
+          chatName: meta.subject || '',
+          participantPhones,
+          lastActiveAt: ts ? new Date(ts * 1000).toISOString() : '',
+        };
+      });
+    this.logInfo('Filtered groups to likely First Chord lesson groups', { total: all.length, kept: groups.length });
+    return groups;
   }
 
   recordChatTimestamps(chats = []) {
