@@ -1,4 +1,5 @@
 auth_info_baileys/
+cache/
 logs/
 .env
 .env.local

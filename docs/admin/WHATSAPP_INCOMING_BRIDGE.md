@@ -1,6 +1,6 @@
 # WhatsApp Incoming Bridge
 
-Last updated: 2026-06-30
+Last updated: 2026-07-01
 
 ## Purpose
 
@@ -102,6 +102,14 @@ That folder is not part of this repo. It currently sits under the old home-direc
 
 The local Baileys prototype should cache incoming message bodies from `messages.upsert`. A later `messages.update` star event often contains only the message key, not the message text. If the cache misses, the dashboard should still receive a placeholder, but those rows need manual review.
 
+The repo bridge keeps this cache on local disk by default:
+
+```text
+tools/whatsapp-incoming-bridge/cache/recent-messages.json
+```
+
+That folder is gitignored because it can contain parent/student message text. It lets the bridge recover message bodies after a restart if the message arrived while the bridge was running. It does not recover messages from before the bridge ever saw them.
+
 Useful env vars for the local bridge:
 
 ```text
@@ -109,6 +117,7 @@ INCOMING_MESSAGE_WEBHOOK_URL=https://<dashboard>/api/admin/incoming-messages
 INCOMING_MESSAGE_INGEST_SECRET=<same value as Railway dashboard app>
 WHATSAPP_CAPTURED_BY=Finn
 WHATSAPP_CACHE_LIMIT=2000
+WHATSAPP_CACHE_MAX_AGE_DAYS=14
 ```
 
 ## Dashboard Storage
@@ -126,6 +135,32 @@ The dashboard stores deterministic hints:
 - review status
 
 These are not source truth. They only help decide the next human action.
+
+## Classification Evidence
+
+Starred bridge capture gives the dashboard:
+
+- message text
+- WhatsApp message ID
+- chat/group ID
+- chat/group name where available
+- sender display name where available
+- sender phone/JID where available
+- message timestamp
+- capture timestamp
+- captured-by name
+- raw JSON with message type, `fromMe`, and whether the bridge cache was hit
+
+Manual paste capture gives the dashboard:
+
+- message text
+- optional sender name
+- optional sender phone
+- optional chat/group name
+- logged-in dashboard user as the actor
+- capture timestamp
+
+The strongest future classification/matching evidence is sender phone, message text, chat/group name, and timestamp. Manual paste is still useful, but starred capture usually gives better metadata.
 
 ## Rollout
 

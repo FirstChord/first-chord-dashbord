@@ -7,7 +7,7 @@ This is optional tooling. It is not part of the Railway dashboard build.
 ## What It Does
 
 - connects to WhatsApp Web using Baileys
-- caches incoming message text locally in memory
+- caches recent incoming message text locally
 - when a message is starred, posts the cached message text + metadata to the dashboard
 - uses `INCOMING_MESSAGE_INGEST_SECRET` to authenticate with the dashboard endpoint
 
@@ -43,6 +43,16 @@ export BAILEYS_AUTH_DIR="~/auth_info_baileys"
 
 Without that, the bridge stores auth in `tools/whatsapp-incoming-bridge/auth_info_baileys/`, which is gitignored.
 
+Optional cache settings:
+
+```bash
+export WHATSAPP_CACHE_PATH="./cache/recent-messages.json"
+export WHATSAPP_CACHE_LIMIT="2000"
+export WHATSAPP_CACHE_MAX_AGE_DAYS="14"
+```
+
+The cache is gitignored and can contain parent/student message text.
+
 ## Test Without WhatsApp
 
 ```bash
@@ -65,7 +75,9 @@ WhatsApp > Settings > Linked Devices > Link a Device
 
 ## Privacy
 
-By default, the bridge does not write message payloads to disk. If debugging is needed:
+By default, the bridge writes a small recent-message cache to `cache/recent-messages.json`. This lets a message be captured if it arrived while the bridge was running but was starred later, even after a restart.
+
+If debugging is needed:
 
 ```bash
 export WRITE_STARRED_LOG=true
@@ -75,4 +87,4 @@ That writes to `logs/starred-payloads.ndjson`, which is gitignored and contains 
 
 ## Known Fragility
 
-Starred-message updates may arrive without message text. The bridge keeps a recent in-memory cache from `messages.upsert`; if the message is too old or the process restarted, the dashboard receives a placeholder and the row needs manual review.
+Starred-message updates may arrive without message text. The bridge keeps a recent local cache from `messages.upsert`; if the message arrived before the bridge saw it, or is outside the cache window, the dashboard receives a placeholder and the row needs manual review.

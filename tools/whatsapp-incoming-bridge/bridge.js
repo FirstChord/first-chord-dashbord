@@ -10,6 +10,24 @@ const qrcode = require('qrcode-terminal');
 
 const DEFAULT_DASHBOARD_URL = 'https://first-chord-dashbord-production.up.railway.app';
 
+function loadLocalEnv(filePath = path.join(__dirname, '.env')) {
+  if (!fs.existsSync(filePath)) return;
+  const lines = fs.readFileSync(filePath, 'utf8').split(/\r?\n/u);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#') || !trimmed.includes('=')) continue;
+    const index = trimmed.indexOf('=');
+    const key = trimmed.slice(0, index).trim();
+    let value = trimmed.slice(index + 1).trim();
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    if (key && typeof process.env[key] === 'undefined') {
+      process.env[key] = value;
+    }
+  }
+}
+
 function clean(value = '') {
   return `${value ?? ''}`.trim();
 }
@@ -18,6 +36,11 @@ function expandHome(input = '') {
   if (input === '~') return os.homedir();
   if (input.startsWith('~/')) return path.join(os.homedir(), input.slice(2));
   return input;
+}
+
+function resolveLocalPath(input = '', basePath = process.cwd()) {
+  const expanded = expandHome(clean(input));
+  return path.isAbsolute(expanded) ? expanded : path.resolve(basePath, expanded);
 }
 
 function parseBoolean(value = '') {
@@ -63,19 +86,25 @@ function extractMessageContent(message = {}) {
 
 class WhatsAppIncomingBridge {
   constructor(options = {}) {
+    loadLocalEnv();
     this.dashboardUrl = clean(options.dashboardUrl || process.env.DASHBOARD_BASE_URL || DEFAULT_DASHBOARD_URL).replace(/\/$/u, '');
     this.webhookUrl = clean(options.webhookUrl || process.env.INCOMING_MESSAGE_WEBHOOK_URL)
       || `${this.dashboardUrl}/api/admin/incoming-messages`;
     this.webhookSecret = clean(options.webhookSecret || process.env.INCOMING_MESSAGE_INGEST_SECRET);
     this.authDir = expandHome(clean(options.authDir || process.env.BAILEYS_AUTH_DIR || './auth_info_baileys'));
     this.captureName = clean(options.captureName || process.env.WHATSAPP_CAPTURED_BY || 'Finn');
-    this.maxCachedMessages = Number(process.env.WHATSAPP_CACHE_LIMIT || 2000);
+    this.maxCachedMessages = Math.max(100, Number(process.env.WHATSAPP_CACHE_LIMIT || 2000) || 2000);
+    const maxCacheAgeDays = Math.max(1, Number(process.env.WHATSAPP_CACHE_MAX_AGE_DAYS || 14) || 14);
+    this.maxCacheAgeMs = maxCacheAgeDays * 24 * 60 * 60 * 1000;
+    this.cachePath = resolveLocalPath(process.env.WHATSAPP_CACHE_PATH || './cache/recent-messages.json');
+    this.cacheSaveTimer = null;
     this.writeStarredLog = parseBoolean(process.env.WRITE_STARRED_LOG);
     this.dryRun = parseBoolean(process.env.DRY_RUN);
     this.logger = P({ level: process.env.LOG_LEVEL || 'info' });
     this.sock = null;
     this.recentMessages = new Map();
     this.sentMessageIds = new Set();
+    this.loadMessageCache();
   }
 
   validateConfig() {
@@ -99,10 +128,77 @@ class WhatsAppIncomingBridge {
     this.logger.error(data, message);
   }
 
-  trimCache() {
+  loadMessageCache() {
+    if (!fs.existsSync(this.cachePath)) return;
+
+    try {
+      const parsed = JSON.parse(fs.readFileSync(this.cachePath, 'utf8'));
+      const rows = Array.isArray(parsed) ? parsed : parsed?.messages;
+      if (!Array.isArray(rows)) return;
+
+      for (const row of rows) {
+        const cacheKey = clean(row?.cacheKey) || messageCacheKey({ remoteJid: row?.chatId, id: row?.messageId });
+        if (!cacheKey || !row?.messageId || !row?.chatId) continue;
+        this.recentMessages.set(cacheKey, { ...row, cacheKey });
+      }
+      this.trimCache({ persist: false });
+      this.logInfo('Loaded WhatsApp message cache', {
+        cachePath: this.cachePath,
+        cachedMessages: this.recentMessages.size,
+      });
+    } catch (error) {
+      this.logWarn('Could not load WhatsApp message cache', { cachePath: this.cachePath, error: error.message });
+    }
+  }
+
+  trimCache({ persist = true } = {}) {
+    const now = Date.now();
+    let changed = false;
+    for (const [key, value] of this.recentMessages.entries()) {
+      const cachedAt = Date.parse(value.cachedAt || value.messageAt || '');
+      if (Number.isFinite(cachedAt) && now - cachedAt > this.maxCacheAgeMs) {
+        this.recentMessages.delete(key);
+        changed = true;
+      }
+    }
+
     while (this.recentMessages.size > this.maxCachedMessages) {
       const firstKey = this.recentMessages.keys().next().value;
       this.recentMessages.delete(firstKey);
+      changed = true;
+    }
+
+    if (changed && persist) {
+      this.scheduleCacheSave();
+    }
+  }
+
+  scheduleCacheSave() {
+    if (this.cacheSaveTimer) return;
+    this.cacheSaveTimer = setTimeout(() => {
+      this.cacheSaveTimer = null;
+      this.saveMessageCache();
+    }, 750);
+    this.cacheSaveTimer.unref?.();
+  }
+
+  saveMessageCache() {
+    if (this.cacheSaveTimer) {
+      clearTimeout(this.cacheSaveTimer);
+      this.cacheSaveTimer = null;
+    }
+
+    try {
+      fs.mkdirSync(path.dirname(this.cachePath), { recursive: true });
+      const payload = {
+        savedAt: nowIso(),
+        messages: Array.from(this.recentMessages.values()),
+      };
+      const tempPath = `${this.cachePath}.tmp`;
+      fs.writeFileSync(tempPath, `${JSON.stringify(payload, null, 2)}\n`);
+      fs.renameSync(tempPath, this.cachePath);
+    } catch (error) {
+      this.logWarn('Could not save WhatsApp message cache', { cachePath: this.cachePath, error: error.message });
     }
   }
 
@@ -126,7 +222,9 @@ class WhatsAppIncomingBridge {
     const { text, type } = extractMessageContent(message);
     const senderJid = message.key.fromMe ? 'me' : message.key.participant || message.key.remoteJid;
     const timestamp = Number(message.messageTimestamp || Date.now() / 1000);
+    const cacheKey = messageCacheKey(message.key);
     const cached = {
+      cacheKey,
       messageId: message.key.id,
       chatId: message.key.remoteJid,
       senderName: message.pushName || '',
@@ -139,8 +237,9 @@ class WhatsAppIncomingBridge {
       cachedAt: nowIso(),
     };
 
-    this.recentMessages.set(messageCacheKey(message.key), cached);
+    this.recentMessages.set(cacheKey, cached);
     this.trimCache();
+    this.scheduleCacheSave();
     return cached;
   }
 
@@ -321,6 +420,12 @@ class WhatsAppIncomingBridge {
 
 async function main() {
   const bridge = new WhatsAppIncomingBridge();
+  for (const signal of ['SIGINT', 'SIGTERM']) {
+    process.once(signal, () => {
+      bridge.saveMessageCache();
+      process.exit(0);
+    });
+  }
   const testIndex = process.argv.indexOf('--send-test');
   if (testIndex !== -1) {
     const text = process.argv.slice(testIndex + 1).join(' ').trim() || 'Alex is away next Friday';
