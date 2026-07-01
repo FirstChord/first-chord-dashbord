@@ -97,6 +97,16 @@ function CorrectionPanel({ entry, studentOptions = [], onCorrect, isPending }) {
   const [confirmGroupMap, setConfirmGroupMap] = useState(isWhatsappGroup(entry.chatId));
   const canConfirmGroup = isWhatsappGroup(entry.chatId) && matchedMmsId;
 
+  function correctionPayload(status = 'needs_review') {
+    return {
+      category,
+      matchedMmsId,
+      reviewNote,
+      confirmGroupMap,
+      status,
+    };
+  }
+
   return (
     <details className="mt-4 rounded-2xl border border-blue-100 bg-blue-50/40 px-3 py-2">
       <summary className="cursor-pointer text-xs font-semibold text-blue-900">Correct interpretation</summary>
@@ -154,19 +164,22 @@ function CorrectionPanel({ entry, studentOptions = [], onCorrect, isPending }) {
             </span>
           </label>
         ) : null}
-        <div>
+        <div className="flex flex-wrap gap-2">
           <button
             type="button"
             disabled={isPending || (confirmGroupMap && !canConfirmGroup)}
-            onClick={() => onCorrect(entry, {
-              category,
-              matchedMmsId,
-              reviewNote,
-              confirmGroupMap,
-            })}
+            onClick={() => onCorrect(entry, correctionPayload('needs_review'))}
             className="rounded-full border border-blue-200 bg-white px-3 py-1.5 text-xs font-semibold text-blue-800 shadow-sm disabled:opacity-60"
           >
             Save correction
+          </button>
+          <button
+            type="button"
+            disabled={isPending || (confirmGroupMap && !canConfirmGroup)}
+            onClick={() => onCorrect(entry, correctionPayload('converted'))}
+            className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 shadow-sm disabled:opacity-60"
+          >
+            Save + archive
           </button>
         </div>
       </div>
@@ -227,18 +240,10 @@ function MessageCard({ entry, studentOptions, onReview, onDelete, onCorrect, pen
         <button
           type="button"
           disabled={isPending}
-          onClick={() => onReview(entry.incomingId, 'needs_review')}
-          className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 disabled:opacity-60"
-        >
-          Needs review
-        </button>
-        <button
-          type="button"
-          disabled={isPending}
           onClick={() => onReview(entry.incomingId, 'converted')}
           className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 disabled:opacity-60"
         >
-          Mark converted
+          Archive handled
         </button>
         <button
           type="button"
@@ -278,9 +283,14 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
   const [status, setStatus] = useState('');
   const [pendingId, setPendingId] = useState('');
   const [submitError, setSubmitError] = useState(error);
+  const [showArchived, setShowArchived] = useState(false);
 
   const openCount = useMemo(() => inbox.filter((entry) => ['inbox', 'needs_review'].includes(entry.status)).length, [inbox]);
   const absenceCount = useMemo(() => inbox.filter((entry) => ABSENCE_CATEGORIES.has(entry.suspectedCategory) && ['inbox', 'needs_review'].includes(entry.status)).length, [inbox]);
+  const archivedCount = useMemo(() => inbox.filter((entry) => ['converted', 'ignored'].includes(entry.status)).length, [inbox]);
+  const visibleInbox = useMemo(() => (
+    showArchived ? inbox : inbox.filter((entry) => ['inbox', 'needs_review'].includes(entry.status))
+  ), [inbox, showArchived]);
 
   async function postPayload(payload) {
     const response = await fetch('/api/admin/incoming-messages', {
@@ -462,14 +472,26 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
 
           <GroupMapPanel groups={groupMap} />
 
-          {!inbox.length ? (
+          {!visibleInbox.length ? (
             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-              No incoming messages yet.
+              {inbox.length ? 'No open incoming messages.' : 'No incoming messages yet.'}
+            </div>
+          ) : null}
+
+          {archivedCount ? (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowArchived((current) => !current)}
+                className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm"
+              >
+                {showArchived ? 'Hide archived' : `Show archived (${archivedCount})`}
+              </button>
             </div>
           ) : null}
 
           <div className="space-y-3">
-            {inbox.map((entry) => (
+            {visibleInbox.map((entry) => (
               <MessageCard
                 key={entry.incomingId}
                 entry={entry}

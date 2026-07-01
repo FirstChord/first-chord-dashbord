@@ -31,6 +31,8 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 **What to watch out for:** Group names can change, groups can contain siblings, and historical groups may belong to old students. Confirmed maps should improve matching, but consequential actions still need human review.
 
+**Follow-up UI hardening:** The inbox now hides archived/ignored rows by default. Correction is the primary action: `Save correction` keeps the row open, while `Save + archive` records the training and removes the row from the active inbox once the real action has been handled elsewhere.
+
 ### 2026-06-30 — Incoming Message Inbox
 
 **Feature/change:** Added `Incoming_Message_Inbox` as a review inbox for inbound parent/tutor messages. Admins can paste a message manually at `/admin/incoming-messages`; a future n8n/starred-WhatsApp bridge can POST the same shape to `POST /api/admin/incoming-messages` using `INCOMING_MESSAGE_INGEST_SECRET`. The system deterministically labels likely absence/pause/payment/schedule messages and tries to match a student by phone/name.

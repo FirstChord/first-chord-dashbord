@@ -164,10 +164,13 @@ Admins can correct a message's category/student match in the inbox. If a WhatsAp
 
 Inbox status buttons:
 
-- `Needs review`: keep the message open and flag that a human decision is still needed.
-- `Mark converted`: the message has been turned into the relevant next action, planning item, pause, note, or workflow follow-up. This does not create the action by itself; it closes the intake item after the action exists elsewhere.
+- `Save correction`: saves the reviewed category/student/group-map training and keeps the message open for action.
+- `Save + archive`: saves the correction and archives the message because the relevant action has been handled or logged elsewhere.
+- `Archive handled`: archives a message without changing the correction fields.
 - `Ignore`: close noise/no-action messages without converting them.
 - `Delete test`: hard-delete test/noise rows only.
+
+Archived/ignored rows are hidden by default so the inbox stays focused on messages still needing a decision.
 
 ## Classification Evidence
 

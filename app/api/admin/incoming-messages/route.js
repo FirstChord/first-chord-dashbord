@@ -68,6 +68,7 @@ export async function POST(request) {
         reviewNote: body?.reviewNote || '',
         confirmGroupMap: Boolean(body?.confirmGroupMap),
         actorEmail: session.user.email || '',
+        status: body?.status || 'needs_review',
       });
     } else if (mode === 'delete') {
       if (!isAdmin) {
