@@ -3,6 +3,7 @@ import { authOptions } from '@/lib/admin/auth';
 import {
   captureIncomingMessage,
   getIncomingMessageInbox,
+  getWhatsappGroupMap,
   updateIncomingMessageReview,
 } from '@/lib/admin/incoming-messages';
 
@@ -21,7 +22,11 @@ export async function GET() {
   }
 
   try {
-    return Response.json({ success: true, inbox: await getIncomingMessageInbox() });
+    const [inbox, groupMap] = await Promise.all([
+      getIncomingMessageInbox(),
+      getWhatsappGroupMap(),
+    ]);
+    return Response.json({ success: true, inbox, groupMap });
   } catch (error) {
     return Response.json({ error: error.message || 'Incoming inbox load failed' }, { status: 500 });
   }
@@ -56,7 +61,11 @@ export async function POST(request) {
       });
     }
 
-    return Response.json({ success: true, inbox: await getIncomingMessageInbox() });
+    const [inbox, groupMap] = await Promise.all([
+      getIncomingMessageInbox(),
+      getWhatsappGroupMap(),
+    ]);
+    return Response.json({ success: true, inbox, groupMap });
   } catch (error) {
     return Response.json({ error: error.message || 'Incoming message save failed' }, { status: 500 });
   }

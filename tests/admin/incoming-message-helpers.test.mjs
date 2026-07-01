@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 
 import {
   buildIncomingMessageRecord,
+  buildWhatsappGroupMapRecord,
   classifyIncomingMessage,
   groupIncomingMessages,
+  isWhatsappGroupChatId,
   matchIncomingMessageToStudent,
   normaliseIncomingMessagePayload,
   normalisePhone,
@@ -92,6 +94,31 @@ test('buildIncomingMessageRecord adds category, match, and raw payload', () => {
   assert.equal(record.status, 'inbox');
   assert.match(record.matchReasons, /attendance|pause|lesson cover/u);
   assert.match(record.rawJson, /Alex Chang/u);
+});
+
+test('buildWhatsappGroupMapRecord stores only WhatsApp group chats', () => {
+  assert.equal(isWhatsappGroupChatId('120363400087109552@g.us'), true);
+  assert.equal(isWhatsappGroupChatId('19980372422675@lid'), false);
+
+  const record = buildIncomingMessageRecord({
+    source: 'whatsapp_starred',
+    external_message_id: 'abc',
+    chat_id: '120363400087109552@g.us',
+    chat_name: 'Alex small group',
+    sender_name: 'Mina',
+    sender_phone: '+44 7788 626616',
+    message_text: 'Alex is away next Friday',
+    message_at: '2026-06-30T09:00:00Z',
+  }, { students, now: new Date('2026-06-30T10:00:00Z') });
+
+  const map = buildWhatsappGroupMapRecord(record);
+  assert.equal(map.chatId, '120363400087109552@g.us');
+  assert.equal(map.chatName, 'Alex small group');
+  assert.equal(map.lastIncomingId, record.incomingId);
+  assert.equal(map.matchedMmsId, 'sdt_alex');
+  assert.equal(map.status, 'review');
+
+  assert.equal(buildWhatsappGroupMapRecord({ ...record, chatId: '19980372422675@lid' }), null);
 });
 
 test('groupIncomingMessages sorts newest first and normalises status/category', () => {

@@ -126,6 +126,8 @@ Rows are written to `Incoming_Message_Inbox`.
 
 Lane: workflow state.
 
+Group chat IDs are also upserted to `WhatsApp_Group_Map` when the captured message comes from a WhatsApp group (`@g.us`).
+
 The dashboard stores deterministic hints:
 
 - suspected category
@@ -133,6 +135,14 @@ The dashboard stores deterministic hints:
 - match confidence
 - match reasons
 - review status
+
+For group chats, it also stores:
+
+- WhatsApp group ID
+- latest group name
+- first/last seen timestamps
+- latest matched student hint
+- latest match confidence/reasons
 
 These are not source truth. They only help decide the next human action.
 

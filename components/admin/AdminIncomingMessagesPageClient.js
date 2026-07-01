@@ -34,6 +34,46 @@ function confidenceTone(confidence) {
   return 'bg-slate-100 text-slate-600';
 }
 
+function GroupMapPanel({ groups = [] }) {
+  const visibleGroups = groups.slice(0, 8);
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-[0_12px_36px_rgba(15,23,42,0.04)]">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-900">WhatsApp groups learned</h3>
+          <p className="mt-1 text-xs leading-5 text-slate-500">
+            Group IDs are saved as matching hints only. They do not trigger actions.
+          </p>
+        </div>
+        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+          {groups.length}
+        </span>
+      </div>
+      {!visibleGroups.length ? (
+        <p className="mt-3 text-sm text-slate-500">No WhatsApp group IDs captured yet.</p>
+      ) : (
+        <div className="mt-3 space-y-2">
+          {visibleGroups.map((group) => (
+            <div key={group.chatId} className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-semibold text-slate-800">{group.chatName || 'Unnamed WhatsApp group'}</p>
+                <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${confidenceTone(group.matchConfidence)}`}>
+                  {group.matchConfidence || 'unmatched'}
+                </span>
+              </div>
+              <p className="mt-1 break-all font-mono text-[11px] text-slate-500">{group.chatId}</p>
+              <p className="mt-1 text-xs text-slate-500">
+                {group.matchedStudentName || 'No student hint yet'}
+                {group.lastSeenAt ? ` · last seen ${formatDateTime(group.lastSeenAt)}` : ''}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function MessageCard({ entry, onReview, pendingId }) {
   const isPending = pendingId === entry.incomingId;
   return (
@@ -113,8 +153,9 @@ function MessageCard({ entry, onReview, pendingId }) {
   );
 }
 
-export default function AdminIncomingMessagesPageClient({ initialInbox = [], error = '' }) {
+export default function AdminIncomingMessagesPageClient({ initialInbox = [], initialGroupMap = [], error = '' }) {
   const [inbox, setInbox] = useState(initialInbox);
+  const [groupMap, setGroupMap] = useState(initialGroupMap);
   const [messageText, setMessageText] = useState('');
   const [senderName, setSenderName] = useState('');
   const [senderPhone, setSenderPhone] = useState('');
@@ -137,6 +178,9 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], err
       throw new Error(data.error || 'Incoming message save failed');
     }
     setInbox(data.inbox || []);
+    if (Array.isArray(data.groupMap)) {
+      setGroupMap(data.groupMap);
+    }
   }
 
   async function handleCapture(event) {
@@ -265,6 +309,8 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], err
               <p className="mt-1 text-3xl font-semibold text-slate-900">{absenceCount}</p>
             </div>
           </div>
+
+          <GroupMapPanel groups={groupMap} />
 
           {!inbox.length ? (
             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
