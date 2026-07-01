@@ -136,6 +136,17 @@ The dashboard stores deterministic hints:
 - match reasons
 - review status
 
+Current categories are deliberately small:
+
+- `one_off_absence` — one missed lesson / cannot make it
+- `extended_absence` — multi-lesson break or pause period
+- `summer_break` — summer/holiday wording such as "last lesson before July/August/back to school"
+- `leaving` — lessons genuinely ending
+- `payment`
+- `schedule`
+- `concern`
+- `general`
+
 For group chats, it also stores:
 
 - WhatsApp group ID
@@ -145,6 +156,8 @@ For group chats, it also stores:
 - latest match confidence/reasons
 
 These are not source truth. They only help decide the next human action.
+
+Admins can correct a message's category/student match in the inbox. If a WhatsApp group is confirmed for a student, future messages from that group use the group map as high-confidence matching evidence before weaker text/name guesses.
 
 ## Classification Evidence
 

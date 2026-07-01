@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import {
   captureIncomingMessage,
+  correctIncomingMessage,
   deleteIncomingMessage,
   getIncomingMessageInbox,
   getWhatsappGroupMap,
@@ -55,6 +56,17 @@ export async function POST(request) {
         status: body?.status || '',
         reviewNote: body?.reviewNote || '',
         createdPlanningId: body?.createdPlanningId || '',
+      });
+    } else if (mode === 'correct') {
+      if (!isAdmin) {
+        return Response.json({ error: 'Admin session required for message correction' }, { status: 401 });
+      }
+      await correctIncomingMessage({
+        incomingId: `${body?.incomingId || ''}`.trim(),
+        category: body?.category || '',
+        matchedMmsId: body?.matchedMmsId || '',
+        reviewNote: body?.reviewNote || '',
+        confirmGroupMap: Boolean(body?.confirmGroupMap),
       });
     } else if (mode === 'delete') {
       if (!isAdmin) {

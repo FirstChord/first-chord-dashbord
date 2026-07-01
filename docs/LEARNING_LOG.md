@@ -19,6 +19,18 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-07-01 — Incoming message corrections and WhatsApp group training
+
+**Feature/change:** Added review corrections for incoming WhatsApp/manual messages. Admins can correct the category, matched student, reviewer note, and optionally confirm a WhatsApp group-to-student map.
+
+**Why it exists:** Starred WhatsApp messages are useful evidence, but parent wording is often ambiguous. Corrections turn one-off review work into reusable matching context without letting messages trigger automatic actions.
+
+**Source-of-truth impact:** `Incoming_Message_Inbox` remains workflow state. `WhatsApp_Group_Map` is workflow/context state; confirmed groups become high-confidence matching evidence, not external truth.
+
+**Files/functions involved:** `classifyIncomingMessage`, `matchIncomingMessageToStudent`, `correctIncomingMessage`, `buildWhatsappGroupMapRecord`, `upsertWhatsappGroupMapRow`, `AdminIncomingMessagesPageClient`.
+
+**What to watch out for:** Group names can change, groups can contain siblings, and historical groups may belong to old students. Confirmed maps should improve matching, but consequential actions still need human review.
+
 ### 2026-06-30 — Incoming Message Inbox
 
 **Feature/change:** Added `Incoming_Message_Inbox` as a review inbox for inbound parent/tutor messages. Admins can paste a message manually at `/admin/incoming-messages`; a future n8n/starred-WhatsApp bridge can POST the same shape to `POST /api/admin/incoming-messages` using `INCOMING_MESSAGE_INGEST_SECRET`. The system deterministically labels likely absence/pause/payment/schedule messages and tries to match a student by phone/name.

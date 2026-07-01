@@ -56,10 +56,16 @@ test('normaliseIncomingMessagePayload accepts bridge and manual field names', ()
 });
 
 test('classifyIncomingMessage detects absence/pause before general', () => {
-  assert.equal(classifyIncomingMessage('Alex cannot make his lesson on Friday').category, 'absence_pause');
-  assert.equal(classifyIncomingMessage('Can we pause Sam for two weeks?').category, 'absence_pause');
+  assert.equal(classifyIncomingMessage('Alex cannot make his lesson on Friday').category, 'one_off_absence');
+  assert.equal(classifyIncomingMessage('Can we pause Sam for two weeks?').category, 'extended_absence');
   assert.equal(classifyIncomingMessage('We need to stop lessons after July').category, 'leaving');
   assert.equal(classifyIncomingMessage('The Stripe payment failed').category, 'payment');
+});
+
+test('classifyIncomingMessage treats summer last-lesson wording as a break, not leaving', () => {
+  const result = classifyIncomingMessage('Yahya will be away for 1 week camp then going away for holiday so last lessons will be 15 of July');
+  assert.equal(result.category, 'summer_break');
+  assert.match(result.reasons.join(' '), /summer|holiday/u);
 });
 
 test('matchIncomingMessageToStudent prefers phone matches', () => {
@@ -89,7 +95,7 @@ test('buildIncomingMessageRecord adds category, match, and raw payload', () => {
     messageText: 'Mina here, Alex Chang is on holiday next week',
   }, { students, now: new Date('2026-06-30T10:00:00Z') });
 
-  assert.equal(record.suspectedCategory, 'absence_pause');
+  assert.equal(record.suspectedCategory, 'extended_absence');
   assert.equal(record.matchedMmsId, 'sdt_alex');
   assert.equal(record.status, 'inbox');
   assert.match(record.matchReasons, /attendance|pause|lesson cover/u);
@@ -119,6 +125,25 @@ test('buildWhatsappGroupMapRecord stores only WhatsApp group chats', () => {
   assert.equal(map.status, 'review');
 
   assert.equal(buildWhatsappGroupMapRecord({ ...record, chatId: '19980372422675@lid' }), null);
+});
+
+test('confirmed WhatsApp group map beats weaker text/name guesses', () => {
+  const match = matchIncomingMessageToStudent({
+    chatId: '120363400087109552@g.us',
+    senderName: 'Mariam',
+    messageText: 'Aria is mentioned, but this group is actually for Sam',
+  }, students, {
+    groupMapRows: [{
+      chatId: '120363400087109552@g.us',
+      matchedMmsId: 'sdt_sam',
+      matchedStudentName: 'Sam Reid',
+      status: 'confirmed',
+    }],
+  });
+
+  assert.equal(match.matchedMmsId, 'sdt_sam');
+  assert.equal(match.matchConfidence, 'high');
+  assert.match(match.matchReasons, /confirmed WhatsApp group/u);
 });
 
 test('groupIncomingMessages sorts newest first and normalises status/category', () => {

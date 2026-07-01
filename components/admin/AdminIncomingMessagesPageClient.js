@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import {
+  INCOMING_MESSAGE_CATEGORIES,
   labelIncomingCategory,
   labelIncomingStatus,
 } from '@/lib/admin/incoming-message-helpers.mjs';
@@ -32,6 +33,12 @@ function confidenceTone(confidence) {
   if (confidence === 'medium') return 'bg-blue-50 text-blue-800';
   if (confidence === 'low') return 'bg-amber-50 text-amber-800';
   return 'bg-slate-100 text-slate-600';
+}
+
+const ABSENCE_CATEGORIES = new Set(['one_off_absence', 'extended_absence', 'summer_break', 'absence_pause']);
+
+function isWhatsappGroup(chatId = '') {
+  return `${chatId || ''}`.trim().endsWith('@g.us');
 }
 
 function GroupMapPanel({ groups = [] }) {
@@ -64,6 +71,7 @@ function GroupMapPanel({ groups = [] }) {
               <p className="mt-1 break-all font-mono text-[11px] text-slate-500">{group.chatId}</p>
               <p className="mt-1 text-xs text-slate-500">
                 {group.matchedStudentName || 'No student hint yet'}
+                {group.status ? ` · ${group.status}` : ''}
                 {group.lastSeenAt ? ` · last seen ${formatDateTime(group.lastSeenAt)}` : ''}
               </p>
             </div>
@@ -74,7 +82,91 @@ function GroupMapPanel({ groups = [] }) {
   );
 }
 
-function MessageCard({ entry, onReview, onDelete, pendingId }) {
+function CorrectionPanel({ entry, studentOptions = [], onCorrect, isPending }) {
+  const [category, setCategory] = useState(entry.suspectedCategory || 'general');
+  const [matchedMmsId, setMatchedMmsId] = useState(entry.matchedMmsId || '');
+  const [reviewNote, setReviewNote] = useState('');
+  const [confirmGroupMap, setConfirmGroupMap] = useState(isWhatsappGroup(entry.chatId));
+  const canConfirmGroup = isWhatsappGroup(entry.chatId) && matchedMmsId;
+
+  return (
+    <details className="mt-4 rounded-2xl border border-blue-100 bg-blue-50/40 px-3 py-2">
+      <summary className="cursor-pointer text-xs font-semibold text-blue-900">Correct interpretation</summary>
+      <div className="mt-3 grid gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block">
+            <span className="text-xs font-semibold text-slate-600">Category</span>
+            <select
+              value={category}
+              onChange={(event) => setCategory(event.target.value)}
+              className="mt-1 w-full rounded-full border border-blue-100 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-300"
+            >
+              {INCOMING_MESSAGE_CATEGORIES.map((option) => (
+                <option key={option} value={option}>{labelIncomingCategory(option)}</option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-xs font-semibold text-slate-600">Matched student</span>
+            <select
+              value={matchedMmsId}
+              onChange={(event) => setMatchedMmsId(event.target.value)}
+              className="mt-1 w-full rounded-full border border-blue-100 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-300"
+            >
+              <option value="">No student selected</option>
+              {studentOptions.map((student) => (
+                <option key={student.mmsId} value={student.mmsId}>
+                  {student.fullName}{student.tutor ? ` · ${student.tutor}` : ''}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <label className="block">
+          <span className="text-xs font-semibold text-slate-600">Reviewer note</span>
+          <input
+            value={reviewNote}
+            onChange={(event) => setReviewNote(event.target.value)}
+            className="mt-1 w-full rounded-full border border-blue-100 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-300"
+            placeholder="e.g. Clarified: summer break, returning second week after schools restart."
+          />
+        </label>
+        {isWhatsappGroup(entry.chatId) ? (
+          <label className="flex items-start gap-2 rounded-xl border border-blue-100 bg-white/75 px-3 py-2 text-xs leading-5 text-slate-600">
+            <input
+              type="checkbox"
+              checked={confirmGroupMap}
+              disabled={!matchedMmsId}
+              onChange={(event) => setConfirmGroupMap(event.target.checked)}
+              className="mt-1"
+            />
+            <span>
+              Confirm this WhatsApp group belongs to the selected student.
+              {!matchedMmsId ? ' Select a student first.' : ' Future messages from this group will use that as high-confidence evidence.'}
+            </span>
+          </label>
+        ) : null}
+        <div>
+          <button
+            type="button"
+            disabled={isPending || (confirmGroupMap && !canConfirmGroup)}
+            onClick={() => onCorrect(entry, {
+              category,
+              matchedMmsId,
+              reviewNote,
+              confirmGroupMap,
+            })}
+            className="rounded-full border border-blue-200 bg-white px-3 py-1.5 text-xs font-semibold text-blue-800 shadow-sm disabled:opacity-60"
+          >
+            Save correction
+          </button>
+        </div>
+      </div>
+    </details>
+  );
+}
+
+function MessageCard({ entry, studentOptions, onReview, onDelete, onCorrect, pendingId }) {
   const isPending = pendingId === entry.incomingId;
   return (
     <article className="rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-[0_12px_36px_rgba(15,23,42,0.05)]">
@@ -157,11 +249,18 @@ function MessageCard({ entry, onReview, onDelete, pendingId }) {
           Delete test
         </button>
       </div>
+
+      <CorrectionPanel
+        entry={entry}
+        studentOptions={studentOptions}
+        isPending={isPending}
+        onCorrect={onCorrect}
+      />
     </article>
   );
 }
 
-export default function AdminIncomingMessagesPageClient({ initialInbox = [], initialGroupMap = [], error = '' }) {
+export default function AdminIncomingMessagesPageClient({ initialInbox = [], initialGroupMap = [], studentOptions = [], error = '' }) {
   const [inbox, setInbox] = useState(initialInbox);
   const [groupMap, setGroupMap] = useState(initialGroupMap);
   const [messageText, setMessageText] = useState('');
@@ -173,7 +272,7 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
   const [submitError, setSubmitError] = useState(error);
 
   const openCount = useMemo(() => inbox.filter((entry) => ['inbox', 'needs_review'].includes(entry.status)).length, [inbox]);
-  const absenceCount = useMemo(() => inbox.filter((entry) => entry.suspectedCategory === 'absence_pause' && ['inbox', 'needs_review'].includes(entry.status)).length, [inbox]);
+  const absenceCount = useMemo(() => inbox.filter((entry) => ABSENCE_CATEGORIES.has(entry.suspectedCategory) && ['inbox', 'needs_review'].includes(entry.status)).length, [inbox]);
 
   async function postPayload(payload) {
     const response = await fetch('/api/admin/incoming-messages', {
@@ -246,6 +345,22 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
       });
     } catch (caught) {
       setSubmitError(caught.message || 'Delete failed');
+    } finally {
+      setPendingId('');
+    }
+  }
+
+  async function handleCorrect(entry, correction) {
+    setSubmitError('');
+    setPendingId(entry.incomingId);
+    try {
+      await postPayload({
+        mode: 'correct',
+        incomingId: entry.incomingId,
+        ...correction,
+      });
+    } catch (caught) {
+      setSubmitError(caught.message || 'Correction failed');
     } finally {
       setPendingId('');
     }
@@ -350,9 +465,11 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
               <MessageCard
                 key={entry.incomingId}
                 entry={entry}
+                studentOptions={studentOptions}
                 pendingId={pendingId}
                 onReview={handleReview}
                 onDelete={handleDelete}
+                onCorrect={handleCorrect}
               />
             ))}
           </div>
