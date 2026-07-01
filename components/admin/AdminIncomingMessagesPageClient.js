@@ -291,6 +291,12 @@ function MessageCard({ entry, studentOptions, onReview, onDelete, onCorrect, onC
         <p className="mt-3 text-xs leading-5 text-slate-500">Review note: {entry.reviewNote}</p>
       ) : null}
 
+      {entry.reviewedBy || entry.reviewedAt ? (
+        <p className="mt-1 text-[11px] text-slate-400">
+          Last actioned{entry.reviewedBy ? ` by ${entry.reviewedBy}` : ''}{entry.reviewedAt ? ` · ${formatDateTime(entry.reviewedAt)}` : ''}
+        </p>
+      ) : null}
+
       <div className="mt-4 flex flex-wrap gap-2">
         <button
           type="button"

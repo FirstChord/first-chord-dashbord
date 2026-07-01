@@ -19,6 +19,18 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-07-01 — Incoming message review audit trail
+
+**Feature/change:** Added `reviewed_by` (admin email) and `reviewed_at` (ISO) columns to `Incoming_Message_Inbox`, stamped on every review action — archive/ignore (`updateIncomingMessageReview`), correction (`correctIncomingMessage`), and convert (`convertIncomingMessageToPlanning`, via correct). Surfaced as a "Last actioned by … · <time>" line on each inbox card.
+
+**Why it exists:** The inbox's whole job is "a human decided" — but archive/ignore recorded no actor or timestamp, so you couldn't later see who handled a message or when. This closes that gap without changing behaviour.
+
+**Source-of-truth impact:** `Incoming_Message_Inbox` stays workflow state; two new audit columns. `updateIncomingMessageReview` now takes `actorEmail` (passed from the route session), matching `correctIncomingMessage`.
+
+**Files/functions involved:** `INCOMING_MESSAGE_INBOX_HEADERS` (`sheets/core.mjs`), build/read mapping (`sheets/incoming-messages.mjs`), `updateIncomingMessageReview`/`correctIncomingMessage` (`incoming-messages.js`), route `review` mode, `MessageCard` (`AdminIncomingMessagesPageClient`).
+
+**What to watch out for:** New columns are appended to the live sheet by `ensureManagedSheet` on next run (reads map by header name, so constant order is cosmetic). `reviewed_at` is overwritten on each action (last-actioned, not first) — the full sequence still lives in nothing; if per-action history is ever needed, that's an append-only log, not this field.
+
 ### 2026-07-01 — Incoming message → Planning item + WhatsApp reply draft
 
 **Feature/change:** Added `Convert to plan + draft reply` to the incoming inbox. One action applies the reviewed correction, creates a linked `Planning_Items` action, stamps `created_planning_id` on the inbox row, marks it `converted`, and returns a per-category WhatsApp reply draft shown in an editable copy box. `created_planning_id` was previously plumbed but never written by any flow — this wires it.

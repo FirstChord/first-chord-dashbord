@@ -58,6 +58,7 @@ export async function POST(request) {
         status: body?.status || '',
         reviewNote: body?.reviewNote || '',
         createdPlanningId: body?.createdPlanningId || '',
+        actorEmail: session.user.email || '',
       });
     } else if (mode === 'correct') {
       if (!isAdmin) {
