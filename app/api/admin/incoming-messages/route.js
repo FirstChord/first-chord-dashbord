@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import {
   captureIncomingMessage,
+  deleteIncomingMessage,
   getIncomingMessageInbox,
   getWhatsappGroupMap,
   updateIncomingMessageReview,
@@ -54,6 +55,13 @@ export async function POST(request) {
         status: body?.status || '',
         reviewNote: body?.reviewNote || '',
         createdPlanningId: body?.createdPlanningId || '',
+      });
+    } else if (mode === 'delete') {
+      if (!isAdmin) {
+        return Response.json({ error: 'Admin session required for message deletion' }, { status: 401 });
+      }
+      await deleteIncomingMessage({
+        incomingId: `${body?.incomingId || ''}`.trim(),
       });
     } else {
       await captureIncomingMessage(body?.message || body || {}, {

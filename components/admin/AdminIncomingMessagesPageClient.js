@@ -74,7 +74,7 @@ function GroupMapPanel({ groups = [] }) {
   );
 }
 
-function MessageCard({ entry, onReview, pendingId }) {
+function MessageCard({ entry, onReview, onDelete, pendingId }) {
   const isPending = pendingId === entry.incomingId;
   return (
     <article className="rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-[0_12px_36px_rgba(15,23,42,0.05)]">
@@ -148,6 +148,14 @@ function MessageCard({ entry, onReview, pendingId }) {
         >
           Ignore
         </button>
+        <button
+          type="button"
+          disabled={isPending}
+          onClick={() => onDelete(entry)}
+          className="rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 disabled:opacity-60"
+        >
+          Delete test
+        </button>
       </div>
     </article>
   );
@@ -219,6 +227,25 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
       });
     } catch (caught) {
       setSubmitError(caught.message || 'Review update failed');
+    } finally {
+      setPendingId('');
+    }
+  }
+
+  async function handleDelete(entry) {
+    const label = entry.matchedStudentName || entry.senderName || entry.messageText?.slice(0, 40) || 'this message';
+    const confirmed = window.confirm(`Delete ${label} from the incoming message inbox? This is intended for test/noise rows.`);
+    if (!confirmed) return;
+
+    setSubmitError('');
+    setPendingId(entry.incomingId);
+    try {
+      await postPayload({
+        mode: 'delete',
+        incomingId: entry.incomingId,
+      });
+    } catch (caught) {
+      setSubmitError(caught.message || 'Delete failed');
     } finally {
       setPendingId('');
     }
@@ -325,6 +352,7 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
                 entry={entry}
                 pendingId={pendingId}
                 onReview={handleReview}
+                onDelete={handleDelete}
               />
             ))}
           </div>
