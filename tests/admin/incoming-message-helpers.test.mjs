@@ -285,9 +285,9 @@ test('decideSyncedGroupStatus buckets matched vs unmatched without downgrading d
   assert.equal(decideSyncedGroupStatus('', true), 'review');
   assert.equal(decideSyncedGroupStatus('', false), 'unmatched');
   assert.equal(decideSyncedGroupStatus('unmatched', true), 'review'); // upgrade once matched
-  assert.equal(decideSyncedGroupStatus('review', false), 'review'); // never downgrade a review
-  assert.equal(decideSyncedGroupStatus('confirmed', false), 'confirmed');
-  assert.equal(decideSyncedGroupStatus('ignored', true), 'ignored');
+  assert.equal(decideSyncedGroupStatus('review', false), 'unmatched'); // re-bucket auto-review when no longer matched
+  assert.equal(decideSyncedGroupStatus('confirmed', false), 'confirmed'); // keep human decision
+  assert.equal(decideSyncedGroupStatus('ignored', true), 'ignored'); // keep human decision
 });
 
 test('groupIncomingMessages sorts newest first and normalises status/category', () => {
