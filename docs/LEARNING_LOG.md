@@ -19,6 +19,23 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-07-02 — Tutor pay statement (Phase 1 of tutor-facing payroll)
+
+**Feature/change:** A read-only pay statement per tutor: line items + frozen total for a period. Reached from each reviewed/paid tutor card on the payroll page (`/admin/finance/payroll/statement?pid=<payrollId>`), with **Copy statement text** and **Copy share link**. The share link is a **signed, no-login public URL** (`/pay/statement/<token>`) the admin pastes to the tutor. Nothing is sent automatically.
+
+**Why it exists:** First step toward "tutors confirm what they're owed, then get paid" without building tutor auth yet. It de-risks the whole idea by testing the one thing that matters — *does the number match what the tutor expects?* — with zero auth and zero money movement. The signed link is deliberately the exact surface Phase 2 bolts a "Confirm" button onto.
+
+**Design decisions:**
+- **Frozen from the reviewed row.** The statement's total comes from the saved `Payroll_Runs` row (only reviewed/paid rows have a statement) — the same frozen source the Wise CSV now reads. Per-lesson lines are recomputed best-effort for that window (saved rows store totals only); if the recompute fails the frozen total still stands.
+- **Window reproduced via override.** `loadTutorStatement` rebuilds the preview with `overrides:{ [tutor]:{start,end} }` = the saved period and `payDate = periodEnd+1` (so the 35-day look-back cap can't clip it), so the resolved `payroll_id` matches the saved row and the right `payableSlots` come back. Attendance fetch is scoped to the one tutor's `teacherId`.
+- **Signed link, not a session.** Token = `base64url(payload).base64url(HMAC-SHA256)` using `NEXTAUTH_SECRET`, 30-day expiry, carries the `payroll_id`. The public view re-derives from the sheet (token is just proof of "this tutor, this row"), so it can't be forged or point at another tutor. `/pay/*` is outside the middleware matcher, so it's public by design.
+
+**Source-of-truth impact:** None. No new tabs/fields; reads `Payroll_Runs` + `Tutor_Pay` + MMS. New public route surface `/pay/statement/[token]` (read-only).
+
+**Files/functions involved:** `tutor-statement-helpers.mjs` (`buildTutorStatement`, `renderTutorStatementText/Html`, `signStatementToken`/`verifyStatementToken`/`buildStatementToken`); `lib/admin/tutor-statement.js` (`loadTutorStatement`); `components/finance/TutorStatementView.js` + `CopyStatementButton.js`; `app/admin/finance/payroll/statement/page.js`; `app/pay/statement/[token]/page.js`; Statement link on the payroll card.
+
+**What to watch out for:** The share link exposes one tutor's pay figure to anyone with the URL (no login) — fine for pasting to that tutor, but it *is* a bearer link (mitigated by HMAC + 30-day expiry; revoke by rotating `NEXTAUTH_SECRET`, which also drops sessions). Phase 2 (confirm) and Phase 3 (tutor self-select cadence + scheduled delivery) still need real tutor auth — there is none today (`isAdmin` is the only role). Don't add a tutor contact-email/send-from-dashboard path until `Tutor_Pay` gains a proper contact-email field (`Tutor_Wise.recipient_email` is the banking payee address, not a contact field).
+
 ### 2026-07-02 — Wise CSV: pay from saved reviewed rows, not a re-resolved window
 
 **Feature/change:** The Wise batch CSV (and the payout panel + batch-paid list) is now built from the saved reviewed `Payroll_Runs` rows directly (`selectPayableReviewedRuns`), joined to `Tutor_Wise` — instead of recomputing `buildPayrollPreview` and keeping its `reviewed` rows. Also: a 60s in-memory cache on `searchAttendanceForPayroll` (window adjusts stop re-fetching MMS), and real submit feedback on Mark reviewed / Mark paid (`save-buttons.js`, `useFormStatus` → spinner while saving, persisted "… ✓" after).

@@ -277,6 +277,14 @@ function PayrollTutorCard({ row, payDate }) {
           ) : (
             <p className="text-xs text-slate-500">{row.lessonCount} payable · {minutesLabel(row.teachingMinutes)}</p>
           )}
+          {row.status === 'reviewed' || row.status === 'paid' ? (
+            <Link
+              href={`/admin/finance/payroll/statement?pid=${encodeURIComponent(row.payrollId)}`}
+              className="mt-1 inline-block text-xs font-medium text-blue-700 hover:underline"
+            >
+              Statement →
+            </Link>
+          ) : null}
         </div>
       </div>
 
