@@ -119,11 +119,31 @@ function GroupRow({ group, studentOptions = [], onReviewGroup, isPending }) {
   );
 }
 
+const CONFIDENCE_ORDER = { high: 0, medium: 1, low: 2 };
+
+function byConfidence(a, b) {
+  return (CONFIDENCE_ORDER[a.matchConfidence] ?? 3) - (CONFIDENCE_ORDER[b.matchConfidence] ?? 3);
+}
+
 function GroupMapPanel({ groups = [], studentOptions = [], onReviewGroup, pendingChatId }) {
+  const [showUnmatched, setShowUnmatched] = useState(false);
   const [showResolved, setShowResolved] = useState(false);
-  const reviewGroups = groups.filter((group) => (group.status || 'review') === 'review');
+
+  // Matched a current student → review (surfaced, sorted best-match first).
+  // Matched nothing → unmatched (old students / non-lesson groups, hidden by default).
+  const reviewGroups = groups.filter((group) => (group.status || 'review') === 'review').sort(byConfidence);
+  const unmatchedGroups = groups.filter((group) => group.status === 'unmatched').sort(byConfidence);
   const resolvedGroups = groups.filter((group) => ['confirmed', 'ignored'].includes(group.status));
-  const visible = showResolved ? groups : reviewGroups;
+
+  const renderRow = (group) => (
+    <GroupRow
+      key={group.chatId}
+      group={group}
+      studentOptions={studentOptions}
+      onReviewGroup={onReviewGroup}
+      isPending={pendingChatId === group.chatId}
+    />
+  );
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-[0_12px_36px_rgba(15,23,42,0.04)]">
@@ -131,7 +151,7 @@ function GroupMapPanel({ groups = [], studentOptions = [], onReviewGroup, pendin
         <div>
           <h3 className="text-sm font-semibold text-slate-900">WhatsApp groups</h3>
           <p className="mt-1 text-xs leading-5 text-slate-500">
-            Matching hints only — they never trigger actions. Confirm a student so future messages from that group match instantly. Run <span className="font-mono">npm start -- --sync-groups</span> in the bridge to import them all.
+            Matching hints only — they never trigger actions. Confirm a student so future messages from that group match instantly. Unmatched groups (no current student) are hidden by default.
           </p>
         </div>
         <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
@@ -139,26 +159,27 @@ function GroupMapPanel({ groups = [], studentOptions = [], onReviewGroup, pendin
         </span>
       </div>
 
-      {!visible.length ? (
+      {!reviewGroups.length ? (
         <p className="mt-3 text-sm text-slate-500">
-          {groups.length ? 'No groups need review.' : 'No WhatsApp groups captured yet.'}
+          {groups.length ? 'No matched groups need review.' : 'No WhatsApp groups captured yet.'}
         </p>
       ) : (
         <div className="mt-3 space-y-2">
-          {visible.map((group) => (
-            <GroupRow
-              key={group.chatId}
-              group={group}
-              studentOptions={studentOptions}
-              onReviewGroup={onReviewGroup}
-              isPending={pendingChatId === group.chatId}
-            />
-          ))}
+          {reviewGroups.map(renderRow)}
         </div>
       )}
 
-      {resolvedGroups.length ? (
-        <div className="mt-3 flex justify-end">
+      <div className="mt-3 flex flex-wrap justify-end gap-2">
+        {unmatchedGroups.length ? (
+          <button
+            type="button"
+            onClick={() => setShowUnmatched((current) => !current)}
+            className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm"
+          >
+            {showUnmatched ? 'Hide unmatched' : `Show unmatched (${unmatchedGroups.length})`}
+          </button>
+        ) : null}
+        {resolvedGroups.length ? (
           <button
             type="button"
             onClick={() => setShowResolved((current) => !current)}
@@ -166,6 +187,21 @@ function GroupMapPanel({ groups = [], studentOptions = [], onReviewGroup, pendin
           >
             {showResolved ? 'Hide resolved' : `Show confirmed/ignored (${resolvedGroups.length})`}
           </button>
+        ) : null}
+      </div>
+
+      {showUnmatched && unmatchedGroups.length ? (
+        <div className="mt-2">
+          <p className="mb-2 text-xs font-semibold text-slate-500">Unmatched — likely old students or non-lesson groups. Pick a student if one belongs here.</p>
+          <div className="space-y-2">
+            {unmatchedGroups.map(renderRow)}
+          </div>
+        </div>
+      ) : null}
+
+      {showResolved && resolvedGroups.length ? (
+        <div className="mt-2 space-y-2">
+          {resolvedGroups.map(renderRow)}
         </div>
       ) : null}
     </section>

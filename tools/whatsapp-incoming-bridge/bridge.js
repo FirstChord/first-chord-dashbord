@@ -125,7 +125,7 @@ class WhatsAppIncomingBridge {
     this.writeStarredLog = parseBoolean(process.env.WRITE_STARRED_LOG);
     this.dryRun = parseBoolean(process.env.DRY_RUN);
     this.syncGroupsOnStart = parseBoolean(process.env.SYNC_GROUPS_ON_START);
-    this.groupSyncWaitMs = Number(process.env.GROUP_SYNC_WAIT_MS || 8000) || 8000;
+    this.groupSyncWaitMs = Number(process.env.GROUP_SYNC_WAIT_MS || 25000) || 25000;
     this.logger = P({ level: process.env.LOG_LEVEL || 'info' });
     this.sock = null;
     this.connected = false;
@@ -559,7 +559,7 @@ class WhatsAppIncomingBridge {
   // or drops briefly, so this reconnects on any non-logout close and only
   // settles the promise once — on a successful sync or after max attempts.
   async runGroupSync({
-    waitMs = Number(process.env.GROUP_SYNC_WAIT_MS || 8000) || 8000,
+    waitMs = Number(process.env.GROUP_SYNC_WAIT_MS || 25000) || 25000,
     maxAttempts = Number(process.env.GROUP_SYNC_MAX_ATTEMPTS || 6) || 6,
   } = {}) {
     this.validateConfig();

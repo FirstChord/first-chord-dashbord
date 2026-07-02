@@ -8,6 +8,7 @@ import {
   buildIncomingReplyTemplate,
   buildWhatsappGroupMapRecord,
   classifyIncomingMessage,
+  decideSyncedGroupStatus,
   detectInstrumentInName,
   groupIncomingMessages,
   isWhatsappGroupChatId,
@@ -278,6 +279,15 @@ test('buildGroupSyncPlan keeps active FC groups, drops non-FC and stale ones', (
   const alex = plan.records.find((row) => row.chatId === '111@g.us');
   assert.equal(alex.matchedMmsId, 'sdt_alex');
   assert.equal(alex.instrument, 'guitar');
+});
+
+test('decideSyncedGroupStatus buckets matched vs unmatched without downgrading decisions', () => {
+  assert.equal(decideSyncedGroupStatus('', true), 'review');
+  assert.equal(decideSyncedGroupStatus('', false), 'unmatched');
+  assert.equal(decideSyncedGroupStatus('unmatched', true), 'review'); // upgrade once matched
+  assert.equal(decideSyncedGroupStatus('review', false), 'review'); // never downgrade a review
+  assert.equal(decideSyncedGroupStatus('confirmed', false), 'confirmed');
+  assert.equal(decideSyncedGroupStatus('ignored', true), 'ignored');
 });
 
 test('groupIncomingMessages sorts newest first and normalises status/category', () => {
