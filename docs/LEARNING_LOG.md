@@ -19,6 +19,22 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-07-02 — Wise CSV: pay from saved reviewed rows, not a re-resolved window
+
+**Feature/change:** The Wise batch CSV (and the payout panel + batch-paid list) is now built from the saved reviewed `Payroll_Runs` rows directly (`selectPayableReviewedRuns`), joined to `Tutor_Wise` — instead of recomputing `buildPayrollPreview` and keeping its `reviewed` rows. Also: a 60s in-memory cache on `searchAttendanceForPayroll` (window adjusts stop re-fetching MMS), and real submit feedback on Mark reviewed / Mark paid (`save-buttons.js`, `useFormStatus` → spinner while saving, persisted "… ✓" after).
+
+**Why it exists:** A payroll row's identity is `payroll_<tutor>_<periodStart>_<periodEnd>` — **derived from the window**. The CSV recomputed the preview with *no* overrides, so every tutor resolved to their *default* window. Any tutor reviewed under a manually-adjusted window (e.g. David Husz — start pulled back to cover a longer invoice) produced a different `payroll_id`, so the saved reviewed row didn't match, the tutor silently reverted to `draft`, and dropped out of the CSV. Same root cause made the CSV look "stuck" after reviewing more (#4). Building from saved rows makes the payout window-independent — what's reviewed is what's paid.
+
+**Design decisions:**
+- **One payment per tutor.** Duplicate reviewed rows for a tutor (a window tweaked and re-reviewed — David had two, both £211.42) collapse to the latest reviewed row, but **every** duplicate's `payroll_id` is returned so a batch-paid flip clears them all (no lingering reviewed dupes). If duplicates disagree on amount → surface an `amountConflicts` warning in the panel rather than guess.
+- **CSV route no longer calls MMS** — it only needs saved runs + `Tutor_Wise`. Fewer calls, faster download.
+
+**Source-of-truth impact:** None to schema. `Payroll_Runs` and `Tutor_Wise` unchanged. Behavioural contract change: the Wise batch reflects *all* reviewed-unpaid rows regardless of the pay date / window in the URL (the `payDate` param now only names the download file).
+
+**Files/functions involved:** `selectPayableReviewedRuns` + `buildWiseBatch` (`lib/admin/wise-helpers.mjs`); `wise-csv/route.js`; `app/admin/finance/payroll/page.js`; `wise-payout-panel.js` (`amountConflicts`); `save-buttons.js` (new); `searchAttendanceForPayroll` cache (`lib/admin/mms.js`).
+
+**What to watch out for:** A reviewed row that never got paid stays in the CSV until marked paid — that's intended (it catches slipped-through weeks) but means old reviewed-unpaid rows accumulate; the mark-batch-paid flow is what clears them. Because the batch is now all-reviewed-unpaid, don't reintroduce a window/pay-date filter on the CSV expecting it to scope the batch. The attendance cache is 60s per (range+teachers) — after recording a lesson in MMS, the payroll figure can lag up to 60s.
+
 ### 2026-07-02 — Sibling groups (manual multi-student) + weekly re-sync
 
 **Feature/change:** (1) A launchd agent (`tools/whatsapp-incoming-bridge/launchd/com.firstchord.whatsapp-group-sync.plist`) sends the running bridge `SIGUSR1` every Monday 06:30 → live group re-sync, keeping the map fresh with zero effort. (2) Groups can hold multiple students: a new `additional_mms_ids` column + a "+ Student (sibling)" button on confirmed groups (`mode: add_group_student`). Matching now disambiguates a shared group by the student named in the message; if a shared-group message names nobody, it flags "needs manual review" rather than guessing (chosen deliberately — guessing could pause the wrong child's billing).

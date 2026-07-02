@@ -5,9 +5,24 @@ import {
   parseTutorWise,
   buildWiseBatch,
   buildPaymentReference,
+  selectPayableReviewedRuns,
   toWiseCsv,
   WISE_CSV_HEADERS,
 } from '../../lib/admin/wise-helpers.mjs';
+
+function savedRun(overrides = {}) {
+  return {
+    payroll_id: 'payroll_david_2026-06-16_2026-07-01',
+    tutor: 'David Husz',
+    tutor_short_name: 'David',
+    status: 'reviewed',
+    final_amount: 211.42,
+    period_end: '2026-07-01',
+    reviewed_at: '2026-07-01T10:00:00.000Z',
+    updated_at: '2026-07-01T10:00:00.000Z',
+    ...overrides,
+  };
+}
 
 function wiseRow(overrides = {}) {
   return {
@@ -98,6 +113,58 @@ test('buildWiseBatch skips a reviewed row whose recipient has no recipientId', (
   const result = buildWiseBatch({ rows: [payrollRow()], wiseByKey });
   assert.equal(result.includedCount, 0);
   assert.equal(result.missing.length, 1);
+});
+
+test('selectPayableReviewedRuns collapses a tutor reviewed under two windows to one payment', () => {
+  // David's real data: two reviewed rows, different window starts, same amount.
+  const { rows, amountConflicts } = selectPayableReviewedRuns([
+    savedRun({ payroll_id: 'payroll_david_2026-06-16_2026-07-01' }),
+    savedRun({ payroll_id: 'payroll_david_2026-06-15_2026-07-01', reviewed_at: '2026-07-01T11:00:00.000Z' }),
+  ]);
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].owedAmount, 211.42);
+  // Both ids carried so a batch-paid flip clears the duplicate too.
+  assert.deepEqual(rows[0].allPayrollIds.sort(), [
+    'payroll_david_2026-06-15_2026-07-01',
+    'payroll_david_2026-06-16_2026-07-01',
+  ]);
+  assert.equal(amountConflicts.length, 0);
+});
+
+test('selectPayableReviewedRuns warns when duplicate reviewed rows disagree on amount', () => {
+  const { rows, amountConflicts } = selectPayableReviewedRuns([
+    savedRun({ payroll_id: 'a', final_amount: 211.42, reviewed_at: '2026-07-01T10:00:00.000Z' }),
+    savedRun({ payroll_id: 'b', final_amount: 250, reviewed_at: '2026-07-01T12:00:00.000Z' }),
+  ]);
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].owedAmount, 250); // latest reviewed wins
+  assert.equal(amountConflicts.length, 1);
+  assert.equal(amountConflicts[0].tutor, 'David Husz');
+  assert.deepEqual(amountConflicts[0].amounts, [211.42, 250]);
+});
+
+test('selectPayableReviewedRuns ignores non-reviewed and non-positive rows', () => {
+  const { rows } = selectPayableReviewedRuns([
+    savedRun({ status: 'draft' }),
+    savedRun({ status: 'paid' }),
+    savedRun({ tutor: 'Kenny Bates', tutor_short_name: 'Kenny', final_amount: 0 }),
+  ]);
+  assert.equal(rows.length, 0);
+});
+
+test('selectPayableReviewedRuns feeds buildWiseBatch and carries all ids into the batch', () => {
+  const wiseByKey = parseTutorWise([wiseRow({ tutor: 'David', name: 'David Husz' })]);
+  const { rows } = selectPayableReviewedRuns([
+    savedRun({ payroll_id: 'payroll_david_2026-06-16_2026-07-01' }),
+    savedRun({ payroll_id: 'payroll_david_2026-06-15_2026-07-01' }),
+  ]);
+  const result = buildWiseBatch({ rows, wiseByKey });
+  assert.equal(result.includedCount, 1);
+  assert.equal(result.totalAmount, 211.42);
+  assert.deepEqual(result.includedPayrollIds.sort(), [
+    'payroll_david_2026-06-15_2026-07-01',
+    'payroll_david_2026-06-16_2026-07-01',
+  ]);
 });
 
 test('buildPaymentReference is short and falls back without a date', () => {

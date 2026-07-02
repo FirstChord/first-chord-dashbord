@@ -9,6 +9,7 @@ export default function WisePayoutPanel({
   includedCount = 0,
   totalLabel = '',
   missingNames = [],
+  amountConflicts = [],
   payDate,
   downloadHref,
   payrollIds = [],
@@ -79,6 +80,19 @@ export default function WisePayoutPanel({
       {missingNames.length ? (
         <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           No Wise recipient on file for {missingNames.join(', ')} — add them to the `Tutor_Wise` sheet to include them. They are not in the CSV and won’t be marked paid.
+        </div>
+      ) : null}
+
+      {amountConflicts.length ? (
+        <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+          <p className="font-semibold">Duplicate reviewed rows disagree on amount — the latest is used, but check before paying:</p>
+          <ul className="mt-1 list-disc pl-5">
+            {amountConflicts.map((conflict) => (
+              <li key={conflict.tutor}>
+                {conflict.tutor}: {conflict.amounts.map((amount) => `£${amount.toFixed(2)}`).join(' vs ')}
+              </li>
+            ))}
+          </ul>
         </div>
       ) : null}
     </section>

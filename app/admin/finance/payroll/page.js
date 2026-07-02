@@ -13,9 +13,10 @@ import {
 } from '@/lib/admin/payroll-helpers.mjs';
 import { ADMIN_TUTORS } from '@/lib/admin/tutors-data';
 import { formatMoney } from '@/lib/admin/finance-helpers.mjs';
-import { parseTutorWise, buildWiseBatch } from '@/lib/admin/wise-helpers.mjs';
+import { parseTutorWise, buildWiseBatch, selectPayableReviewedRuns } from '@/lib/admin/wise-helpers.mjs';
 import AdjustWindowForm from './adjust-window-form';
 import WisePayoutPanel from './wise-payout-panel';
+import PayrollSaveButtons from './save-buttons';
 
 export const dynamic = 'force-dynamic';
 
@@ -375,14 +376,7 @@ function PayrollTutorCard({ row, payDate }) {
           <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Notes</span>
           <input name="notes" defaultValue={row.notes || ''} placeholder="Invoice note, manual correction, checked against MMS..." className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" />
         </label>
-        <div className="flex items-end gap-2">
-          <button name="status" value="reviewed" className="rounded-xl border border-blue-200 bg-white px-4 py-2 text-sm font-semibold text-blue-700 shadow-sm">
-            Mark reviewed
-          </button>
-          <button name="status" value="paid" className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm">
-            Mark paid
-          </button>
-        </div>
+        <PayrollSaveButtons status={row.status} />
       </form>
     </article>
   );
@@ -428,7 +422,10 @@ export default async function AdminPayrollPage({ searchParams }) {
     payDate,
   });
   const activeRows = preview.rows.filter((row) => row.payModel !== 'salary' || row.lessonCount || row.reviewLessonCount || row.status !== 'draft');
-  const wiseBatch = buildWiseBatch({ rows: preview.rows, wiseByKey: parseTutorWise(tutorWiseRows) });
+  // Wise batch comes straight from saved reviewed rows (window-independent), so
+  // a tutor reviewed under an adjusted window still lands in the CSV.
+  const { rows: payableRows, amountConflicts } = selectPayableReviewedRuns(savedRuns);
+  const wiseBatch = buildWiseBatch({ rows: payableRows, wiseByKey: parseTutorWise(tutorWiseRows) });
 
   return (
     <div className="space-y-8">
@@ -489,6 +486,7 @@ export default async function AdminPayrollPage({ searchParams }) {
         payDate={payDate}
         downloadHref={`/admin/finance/payroll/wise-csv?payDate=${payDate}`}
         payrollIds={wiseBatch.includedPayrollIds}
+        amountConflicts={amountConflicts}
         markBatchPaidAction={markBatchPaidAction}
       />
 
