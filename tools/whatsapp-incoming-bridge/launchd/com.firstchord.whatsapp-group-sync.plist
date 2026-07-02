@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.firstchord.whatsapp-group-sync</string>
+
+  <!-- Weekly re-sync: signal the always-on bridge to sync groups on its live
+       socket (no restart, no 440). Requires the bridge to be running. -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/pkill</string>
+    <string>-USR1</string>
+    <string>-f</string>
+    <string>node bridge.js</string>
+  </array>
+
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Weekday</key>
+    <integer>1</integer>
+    <key>Hour</key>
+    <integer>6</integer>
+    <key>Minute</key>
+    <integer>30</integer>
+  </dict>
+</dict>
+</plist>

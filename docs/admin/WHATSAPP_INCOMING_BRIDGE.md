@@ -206,6 +206,20 @@ Once a message is read correctly, `Convert to plan + draft reply` closes the loo
 
 The reply is a **copy-paste draft only** — consistent with the transport-only boundary above, nothing is sent to WhatsApp automatically. The human edits it and sends it themselves. Reply wording is per-category and lives in `buildIncomingReplyTemplate` (`lib/admin/incoming-message-helpers.mjs`); the planning mapping lives in `buildIncomingPlanningDraft`.
 
+## Scheduled Weekly Re-sync
+
+To keep the group map fresh without manual effort, a launchd agent signals the running bridge to re-sync weekly (`SIGUSR1` on the live socket — no restart, no 440). New students' groups appear; departed students drop out (roster bucketing → `unmatched`).
+
+Template lives in the repo at `tools/whatsapp-incoming-bridge/launchd/com.firstchord.whatsapp-group-sync.plist`. Install (machine-local, not committed to `~/Library/LaunchAgents`):
+
+```bash
+cp tools/whatsapp-incoming-bridge/launchd/com.firstchord.whatsapp-group-sync.plist ~/Library/LaunchAgents/
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.firstchord.whatsapp-group-sync.plist
+launchctl print gui/$(id -u)/com.firstchord.whatsapp-group-sync | grep -iE 'state|Weekday|Hour'
+```
+
+Runs Monday 06:30 (`StartCalendarInterval`); if the Mac is asleep, launchd runs it on next wake. `state = not running` between runs is normal (it's idle until scheduled). The bridge must be running for the signal to do anything (it's a `KeepAlive` launchd agent, so it normally is).
+
 ## Classification Evidence
 
 Starred bridge capture gives the dashboard:
