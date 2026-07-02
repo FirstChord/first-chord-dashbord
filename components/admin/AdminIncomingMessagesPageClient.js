@@ -41,9 +41,15 @@ function isWhatsappGroup(chatId = '') {
   return `${chatId || ''}`.trim().endsWith('@g.us');
 }
 
-function GroupRow({ group, studentOptions = [], onReviewGroup, isPending }) {
+function GroupRow({ group, studentOptions = [], onReviewGroup, onAddGroupStudent, isPending }) {
   const [selectedMmsId, setSelectedMmsId] = useState(group.matchedMmsId || '');
+  const [addMmsId, setAddMmsId] = useState('');
+  const [showAdd, setShowAdd] = useState(false);
   const status = group.status || 'review';
+
+  const additionalIds = `${group.additionalMmsIds || ''}`.split(',').map((id) => id.trim()).filter(Boolean);
+  const additionalNames = additionalIds.map((id) => studentOptions.find((s) => s.mmsId === id)?.fullName || id);
+  const inGroup = new Set([group.matchedMmsId, ...additionalIds].filter(Boolean));
 
   return (
     <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
@@ -56,21 +62,56 @@ function GroupRow({ group, studentOptions = [], onReviewGroup, isPending }) {
       <p className="mt-1 break-all font-mono text-[11px] text-slate-500">{group.chatId}</p>
       <p className="mt-1 text-xs text-slate-500">
         {group.matchedStudentName || 'No student hint yet'}
+        {additionalNames.length ? ` + ${additionalNames.join(', ')}` : ''}
         {group.instrument ? ` · ${group.instrument}` : ''}
         {group.matchedFcId ? ` · ${group.matchedFcId}` : ''}
         {group.lastMessageAt ? ` · last active ${formatDateTime(group.lastMessageAt)}` : (group.lastSeenAt ? ` · last seen ${formatDateTime(group.lastSeenAt)}` : '')}
       </p>
 
       {status === 'confirmed' ? (
-        <div className="mt-2 flex flex-wrap gap-2">
-          <button
-            type="button"
-            disabled={isPending}
-            onClick={() => onReviewGroup(group.chatId, { status: 'review' })}
-            className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 disabled:opacity-60"
-          >
-            Re-review
-          </button>
+        <div className="mt-2 space-y-2">
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={() => setShowAdd((current) => !current)}
+              className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-800 disabled:opacity-60"
+            >
+              + Student (sibling)
+            </button>
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={() => onReviewGroup(group.chatId, { status: 'review' })}
+              className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 disabled:opacity-60"
+            >
+              Re-review
+            </button>
+          </div>
+          {showAdd ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={addMmsId}
+                onChange={(event) => setAddMmsId(event.target.value)}
+                className="rounded-full border border-blue-100 bg-white px-2.5 py-1 text-[11px] text-slate-800 outline-none focus:border-blue-300"
+              >
+                <option value="">Add another student…</option>
+                {studentOptions.filter((s) => !inGroup.has(s.mmsId)).map((student) => (
+                  <option key={student.mmsId} value={student.mmsId}>
+                    {student.fullName}{student.instrument ? ` · ${student.instrument}` : ''}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                disabled={isPending || !addMmsId}
+                onClick={() => { onAddGroupStudent(group.chatId, addMmsId); setAddMmsId(''); setShowAdd(false); }}
+                className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-800 disabled:opacity-60"
+              >
+                Add
+              </button>
+            </div>
+          ) : null}
         </div>
       ) : status === 'ignored' ? (
         <div className="mt-2 flex flex-wrap gap-2">
@@ -125,7 +166,7 @@ function byConfidence(a, b) {
   return (CONFIDENCE_ORDER[a.matchConfidence] ?? 3) - (CONFIDENCE_ORDER[b.matchConfidence] ?? 3);
 }
 
-function GroupMapPanel({ groups = [], studentOptions = [], onReviewGroup, pendingChatId }) {
+function GroupMapPanel({ groups = [], studentOptions = [], onReviewGroup, onAddGroupStudent, pendingChatId }) {
   const [showUnmatched, setShowUnmatched] = useState(false);
   const [showResolved, setShowResolved] = useState(false);
 
@@ -141,6 +182,7 @@ function GroupMapPanel({ groups = [], studentOptions = [], onReviewGroup, pendin
       group={group}
       studentOptions={studentOptions}
       onReviewGroup={onReviewGroup}
+      onAddGroupStudent={onAddGroupStudent}
       isPending={pendingChatId === group.chatId}
     />
   );
@@ -588,6 +630,22 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
     }
   }
 
+  async function handleAddGroupStudent(chatId, mmsId) {
+    setSubmitError('');
+    setPendingChatId(chatId);
+    try {
+      await postPayload({
+        mode: 'add_group_student',
+        chatId,
+        mmsId,
+      });
+    } catch (caught) {
+      setSubmitError(caught.message || 'Add student to group failed');
+    } finally {
+      setPendingChatId('');
+    }
+  }
+
   async function handleConvert(entry, correction) {
     setSubmitError('');
     setPendingId(entry.incomingId);
@@ -701,6 +759,7 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
             groups={groupMap}
             studentOptions={studentOptions}
             onReviewGroup={handleReviewGroup}
+            onAddGroupStudent={handleAddGroupStudent}
             pendingChatId={pendingChatId}
           />
 

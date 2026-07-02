@@ -19,6 +19,18 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-07-02 — Sibling groups (manual multi-student) + weekly re-sync
+
+**Feature/change:** (1) A launchd agent (`tools/whatsapp-incoming-bridge/launchd/com.firstchord.whatsapp-group-sync.plist`) sends the running bridge `SIGUSR1` every Monday 06:30 → live group re-sync, keeping the map fresh with zero effort. (2) Groups can hold multiple students: a new `additional_mms_ids` column + a "+ Student (sibling)" button on confirmed groups (`mode: add_group_student`). Matching now disambiguates a shared group by the student named in the message; if a shared-group message names nobody, it flags "needs manual review" rather than guessing (chosen deliberately — guessing could pause the wrong child's billing).
+
+**Why it exists:** The group map's weekly freshness stops the confirmations from decaying. Sibling families share one WhatsApp chat, so a 1-group→1-student map mis-attributes one child's messages. Manual add + name-based disambiguation is simpler and more accurate than auto-detecting siblings (shared surnames/phones make auto fragile).
+
+**Source-of-truth impact:** `WhatsApp_Group_Map` gains `additional_mms_ids` (comma list; primary stays in `matched_mms_id`). The scheduler plist is machine-local (`~/Library/LaunchAgents`), template committed for reproducibility.
+
+**Files/functions involved:** `matchIncomingMessageToStudent` (multi-student branch), `buildWhatsappGroupMapRecord`, `addStudentToGroup` (`incoming-messages.js`), `add_group_student` route mode, `GroupRow`/`GroupMapPanel` (`AdminIncomingMessagesPageClient`), `WHATSAPP_GROUP_MAP_HEADERS`.
+
+**What to watch out for:** Sibling disambiguation relies on the child's first name appearing in the message text — a message that just says "he/she" won't resolve and will (correctly) flag for review. `additional_mms_ids` is add-only in the UI for now; removing a mis-added sibling means editing the sheet.
+
 ### 2026-07-01 — Bulk WhatsApp group ID sync
 
 **Feature/change:** Added `npm start -- --sync-groups` to the bridge: it enumerates every group the linked account is in (`groupFetchAllParticipating`, metadata only), gathers last-active times from chat history, and POSTs them (`mode: sync_groups`). The dashboard keeps only First Chord groups (instrument token in the title, active within 6 months), auto-matches a student by participant phone then title name, and stores each as a `review` hint. New group-map panel in the inbox lets an admin confirm/ignore each group directly (`mode: review_group`) without waiting for a message.

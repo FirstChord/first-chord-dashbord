@@ -290,6 +290,43 @@ test('decideSyncedGroupStatus buckets matched vs unmatched without downgrading d
   assert.equal(decideSyncedGroupStatus('ignored', true), 'ignored'); // keep human decision
 });
 
+test('shared sibling group matches by name in the message, flags ambiguous otherwise', () => {
+  const groupMapRows = [{
+    chatId: '120363400087109552@g.us',
+    matchedMmsId: 'sdt_alex',
+    matchedStudentName: 'Alex Chang',
+    additionalMmsIds: 'sdt_sam',
+    status: 'confirmed',
+  }];
+
+  const named = matchIncomingMessageToStudent(
+    { chatId: '120363400087109552@g.us', messageText: 'Sam is off on Friday' },
+    students,
+    { groupMapRows },
+  );
+  assert.equal(named.matchedMmsId, 'sdt_sam');
+  assert.equal(named.matchConfidence, 'high');
+
+  const ambiguous = matchIncomingMessageToStudent(
+    { chatId: '120363400087109552@g.us', messageText: 'We are away next week' },
+    students,
+    { groupMapRows },
+  );
+  assert.equal(ambiguous.matchedMmsId, '');
+  assert.equal(ambiguous.matchConfidence, 'none');
+  assert.match(ambiguous.matchReasons, /needs manual review/u);
+});
+
+test('buildWhatsappGroupMapRecord carries additional_mms_ids for sibling groups', () => {
+  const record = buildWhatsappGroupMapRecord({
+    chatId: '120363400087109552@g.us',
+    additionalMmsIds: 'sdt_sam',
+    groupMapStatus: 'confirmed',
+  }, { chatId: '120363400087109552@g.us', matchedMmsId: 'sdt_alex', status: 'confirmed' });
+  assert.equal(record.additionalMmsIds, 'sdt_sam');
+  assert.equal(record.matchedMmsId, 'sdt_alex');
+});
+
 test('groupIncomingMessages sorts newest first and normalises status/category', () => {
   const grouped = groupIncomingMessages([
     { incomingId: 'old', capturedAt: '2026-06-01T10:00:00Z', status: 'weird', suspectedCategory: 'wat' },

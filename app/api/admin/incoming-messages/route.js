@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import {
+  addStudentToGroup,
   captureIncomingMessage,
   convertIncomingMessageToPlanning,
   correctIncomingMessage,
@@ -90,6 +91,15 @@ export async function POST(request) {
         chatId: `${body?.chatId || ''}`.trim(),
         matchedMmsId: body?.matchedMmsId || '',
         status: body?.status || 'confirmed',
+        actorEmail: session.user.email || '',
+      });
+    } else if (mode === 'add_group_student') {
+      if (!isAdmin) {
+        return Response.json({ error: 'Admin session required to edit a group' }, { status: 401 });
+      }
+      await addStudentToGroup({
+        chatId: `${body?.chatId || ''}`.trim(),
+        mmsId: `${body?.mmsId || ''}`.trim(),
         actorEmail: session.user.email || '',
       });
     } else if (mode === 'convert') {
