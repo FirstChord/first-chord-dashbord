@@ -67,4 +67,7 @@ test('getTutorSurfaceTokenSecret prefers explicit tutor dashboard secret', () =>
   assert.equal(getTutorSurfaceTokenSecret({
     NEXTAUTH_SECRET: 'nextauth-secret',
   }), 'nextauth-secret');
+  assert.equal(getTutorSurfaceTokenSecret({
+    MMS_BEARER_TOKEN: 'mms-token-secret',
+  }), 'mms-token-secret');
 });
