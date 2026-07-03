@@ -15,8 +15,12 @@ import {
   detectTutorAbsenceCapture,
   calculateFridayReviewDate,
   calculateMondayScheduleDate,
+  calculateMonthEndDate,
   calculateNextMeetingDate,
   buildMondaySchedulePlanningItem,
+  buildMonthEndExpensesPlanningItem,
+  shouldRefreshMonthEndExpensesPlanningItem,
+  MONTH_END_EXPENSES_PLANNING_ID,
   extractReflectionIntentions,
   buildReflectionIntentionDismissalNote,
   extractDismissedReflectionIntentions,
@@ -115,6 +119,34 @@ test('refreshes the Monday item when missing or completed-and-past', () => {
     { planningId: MONDAY_SCHEDULE_PLANNING_ID, targetDate: '2026-06-08', status: 'waiting' }, NOW), false);
   assert.equal(shouldRefreshMondaySchedulePlanningItem(
     { planningId: MONDAY_SCHEDULE_PLANNING_ID, targetDate: '2026-06-01', status: 'done' }, NOW), true);
+});
+
+test('calculates the month-end reconciliation date', () => {
+  assert.equal(calculateMonthEndDate(new Date('2026-06-03T12:00:00.000Z')), '2026-06-30'); // mid-month -> this month end
+  assert.equal(calculateMonthEndDate(new Date('2026-06-30T10:00:00.000Z')), '2026-06-30'); // month-end day -> same day
+  assert.equal(calculateMonthEndDate(new Date('2026-06-30T10:00:00.000Z'), { skipToday: true }), '2026-07-31'); // done on the day -> next month end
+  assert.equal(calculateMonthEndDate(new Date('2026-02-10T12:00:00.000Z')), '2026-02-28'); // February, non-leap
+});
+
+test('builds the month-end expenses item dated to month end', () => {
+  const item = buildMonthEndExpensesPlanningItem({ now: new Date('2026-06-03T12:00:00.000Z') });
+  assert.equal(item.planningId, MONTH_END_EXPENSES_PLANNING_ID);
+  assert.equal(item.targetDate, '2026-06-30');
+  assert.equal(item.area, 'finance');
+  assert.equal(item.itemType, 'action');
+  assert.equal(item.status, 'waiting');
+  assert.match(item.notes, /Expense_Log/);
+  assert.match(item.notes, /missing/i);
+});
+
+test('refreshes the month-end item when missing or completed-and-past', () => {
+  assert.equal(shouldRefreshMonthEndExpensesPlanningItem({}, NOW), true);
+  assert.equal(shouldRefreshMonthEndExpensesPlanningItem(
+    { planningId: MONTH_END_EXPENSES_PLANNING_ID, targetDate: '2026-06-30', status: 'waiting' }, NOW), false);
+  assert.equal(shouldRefreshMonthEndExpensesPlanningItem(
+    { planningId: MONTH_END_EXPENSES_PLANNING_ID, targetDate: '2026-06-30', status: 'done' }, NOW), false);
+  assert.equal(shouldRefreshMonthEndExpensesPlanningItem(
+    { planningId: MONTH_END_EXPENSES_PLANNING_ID, targetDate: '2026-05-31', status: 'done' }, NOW), true);
 });
 
 test('extracts next-improvement intentions from a reflection note', () => {

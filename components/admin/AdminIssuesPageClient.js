@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { AgeChip } from '@/components/admin/ui/AgeChip';
 import { buildIssueEvidenceSummary, formatDateTime } from '@/lib/admin/health-helpers.mjs';
 import { buildPauseWorkflowSummary } from '@/lib/admin/pause-workflow-helpers.mjs';
 import {
@@ -626,6 +627,54 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
     }
   }
 
+  async function handlePracticeFollowUpHandled(issue) {
+    setActionState({ pendingId: issue.issueId, error: '', success: '' });
+
+    try {
+      const response = await fetch('/api/admin/practice-notes/follow-up', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          deliveryKey: issue.practiceNote?.deliveryKey || '',
+          noteId: issue.practiceNote?.noteId || '',
+          mmsId: issue.mmsId,
+          studentName: issue.studentName || '',
+          issueId: issue.issueId,
+        }),
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok) {
+        setActionState({ pendingId: '', issueId: issue.issueId, error: payload.error || 'Follow-up update failed', success: '' });
+        return;
+      }
+
+      try {
+        await fetch(`/api/admin/issues/${issue.mmsId}/state`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            issueId: issue.issueId,
+            nextStatus: 'resolved',
+            note: 'Follow-up handled — parent note dealt with manually.',
+          }),
+        });
+      } catch {
+        // Best-effort persistence; the optimistic clear below still applies for this session.
+      }
+
+      setActionState({ pendingId: '', issueId: '', error: '', success: '' });
+      startSortedFade(
+        issue.issueId,
+        'Follow-up handled — nice one.',
+        () => setIssueList((current) => current.filter((entry) => entry.issueId !== issue.issueId)),
+      );
+    } catch (error) {
+      setActionState({ pendingId: '', issueId: issue.issueId, error: error.message || 'Follow-up update failed', success: '' });
+    }
+  }
+
   const activeIssues = issueList.filter((issue) => ['open', 'acknowledged'].includes(issue.status));
   const activeIssueCount = activeIssues.length;
   const activeDetectedIssueCount = activeIssues.filter((issue) => issue.sourcePresent).length;
@@ -885,6 +934,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                 else if (primaryQuickAction) primaryKind = 'quick';
                 else if (needsLiveStripeReview(issue)) primaryKind = 'refresh';
                 else if (issue.type === 'SHEETS ONLY') primaryKind = 'create';
+                else if (issue.type === 'PRACTICE NOTE DELIVERY FAILED' && issue.practiceNote) primaryKind = 'follow_up';
                 else if (issue.adminStudentPath) primaryKind = 'open';
 
                 return (
@@ -909,6 +959,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                           Resolved but still detected
                         </span>
                       ) : null}
+                      <AgeChip updatedAt={issue.updatedAt} />
                     </div>
                     <p className="text-base leading-relaxed text-slate-800">{getIssueStory(issue)}</p>
                     {getIssueWhatToDo(issue) ? (
@@ -970,6 +1021,27 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                   >
                     {actionState.pendingId === issue.issueId ? 'Creating…' : 'Create registry entry'}
                   </button>
+                ) : null}
+                {primaryKind === 'follow_up' ? (
+                  <>
+                    {issue.adminStudentPath ? (
+                      <button
+                        type="button"
+                        onClick={() => setRecordPanel({ path: issue.adminStudentPath, name: getStudentLabel(issue) })}
+                        className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700"
+                      >
+                        Open student record
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => handlePracticeFollowUpHandled(issue)}
+                      disabled={actionState.pendingId === issue.issueId}
+                      className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-900 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {actionState.pendingId === issue.issueId ? 'Saving…' : 'Mark follow-up handled'}
+                    </button>
+                  </>
                 ) : null}
                 {primaryKind === 'open' && issue.adminStudentPath ? (
                   <button

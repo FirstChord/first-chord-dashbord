@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Check, Copy, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { AgeChip } from '@/components/admin/ui/AgeChip';
 import { logCommunicationCopy } from '@/lib/admin/log-communication-copy.js';
 
 const WAITING_STATUS_OPTIONS = [
@@ -297,6 +298,7 @@ export default function AdminWaitingPageClient({ initialStudents, initialCapacit
                     <span className="rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-700">Instrument: {formatInstrumentList(student.instruments)}</span>
                     <span className="rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-700">Added: {formatDate(student.dateStarted)}</span>
                     <span className="rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-700">Updated: {formatDateTime(student.waitingUpdatedAt)}</span>
+                    <AgeChip updatedAt={student.waitingUpdatedAt} className="px-2.5 py-1" />
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-3">

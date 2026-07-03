@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Check, Copy, Loader2, Search } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { AgeChip } from '@/components/admin/ui/AgeChip';
 import {
   buildParentUnderstandingSummary,
   calculateUnderstandingScore,
@@ -150,6 +151,7 @@ function QueueItem({ record, selected, unsaved, onSelect }) {
         {signals.length ? (
           <span className="rounded-full bg-amber-50 px-2 py-1 text-amber-800">{signals.length} signal{signals.length === 1 ? '' : 's'}</span>
         ) : null}
+        <AgeChip updatedAt={record.state?.updatedAt} />
       </div>
     </button>
   );
