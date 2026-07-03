@@ -137,7 +137,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
   );
 
   async function handleDelete(issue) {
-    const confirmed = window.confirm(`Delete the registry entry for ${issue.studentName || issue.mmsId}? This will remove their portal-side record but will not touch MMS.`);
+    const confirmed = window.confirm(`Remove ${issue.studentName || issue.mmsId} from the portal? This deletes their portal access and dashboard record but will not touch MMS.`);
     if (!confirmed) return;
 
     setActionState({ pendingId: issue.id, error: '', success: '' });
@@ -435,7 +435,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
     }
 
     const confirmed = window.confirm(
-      `Mark ${visibleSystemClearedIssues.length} system-cleared issue${visibleSystemClearedIssues.length === 1 ? '' : 's'} as resolved? These issues are not currently detected and will reappear if a future source check finds them again.`,
+      `Clear ${visibleSystemClearedIssues.length} fixed issue${visibleSystemClearedIssues.length === 1 ? '' : 's'}? The system no longer detects ${visibleSystemClearedIssues.length === 1 ? 'it' : 'them'} — cleared issues will reappear if a future check finds them again.`,
     );
 
     if (!confirmed) {
@@ -478,7 +478,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
       setActionState({
         pendingId: '',
         error: '',
-        success: `Resolved ${payload.resolvedCount || 0} system-cleared issue${payload.resolvedCount === 1 ? '' : 's'}.`,
+        success: `Cleared ${payload.resolvedCount || 0} fixed issue${payload.resolvedCount === 1 ? '' : 's'}.`,
       });
     } catch (error) {
       setActionState({ pendingId: '', error: error.message || 'Bulk issue update failed', success: '' });
@@ -492,7 +492,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
 
     if (['PAYMENT SETUP PENDING', 'SETUP PENDING STRIPE LINKED'].includes(issue.type)) {
       return [
-        { label: 'Set Stripe active expected', payload: { paymentMode: 'stripe', paymentExpectation: 'stripe_active_expected' } },
+        { label: 'Expect payments active', payload: { paymentMode: 'stripe', paymentExpectation: 'stripe_active_expected' } },
         { label: 'Mark manual payer', payload: { paymentMode: 'manual', paymentExpectation: '' } },
       ];
     }
@@ -507,21 +507,21 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
     if (issue.type === 'SUBSCRIPTION_STATE_MISMATCH') {
       return [
         { label: 'Set Stripe paused expected', payload: { paymentExpectation: 'stripe_paused_expected' } },
-        { label: 'Set Stripe active expected', payload: { paymentExpectation: 'stripe_active_expected' } },
+        { label: 'Expect payments active', payload: { paymentExpectation: 'stripe_active_expected' } },
         { label: 'Set inactive / stopped', payload: { paymentExpectation: 'inactive_or_stopped' } },
       ];
     }
 
     if (issue.type === 'PAUSE EXPECTATION MISMATCH') {
       return [
-        { label: 'Confirm pause and set paused expected', payload: { paymentExpectation: 'stripe_paused_expected' } },
-        { label: 'Set Stripe active expected', payload: { paymentExpectation: 'stripe_active_expected' } },
+        { label: 'Confirm pause — expect payments paused', payload: { paymentExpectation: 'stripe_paused_expected' } },
+        { label: 'Expect payments active', payload: { paymentExpectation: 'stripe_active_expected' } },
       ];
     }
 
     if (issue.type === 'PAUSE EXPECTATION STALE') {
       return [
-        { label: 'Set Stripe active expected', payload: { paymentExpectation: 'stripe_active_expected' } },
+        { label: 'Expect payments active', payload: { paymentExpectation: 'stripe_active_expected' } },
         { label: 'Set inactive / stopped', payload: { paymentExpectation: 'inactive_or_stopped' } },
       ];
     }
@@ -529,7 +529,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
     if (issue.type === 'INACTIVE_STILL_BILLING') {
       return [
         { label: 'Set Stripe paused expected', payload: { paymentExpectation: 'stripe_paused_expected' } },
-        { label: 'Set Stripe active expected', payload: { paymentExpectation: 'stripe_active_expected' } },
+        { label: 'Expect payments active', payload: { paymentExpectation: 'stripe_active_expected' } },
       ];
     }
 
@@ -772,9 +772,9 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
         <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
-              <h3 className="text-sm font-semibold text-emerald-950">System-cleared issues ready to remove</h3>
+              <h3 className="text-sm font-semibold text-emerald-950">Fixed issues ready to clear</h3>
               <p className="mt-1 text-sm text-emerald-900">
-                {visibleSystemClearedIssues.length} visible issue{visibleSystemClearedIssues.length === 1 ? '' : 's'} are no longer detected by the latest source check. Marking them resolved clears them from the active queue; they will reappear if detected again.
+                {visibleSystemClearedIssues.length} visible issue{visibleSystemClearedIssues.length === 1 ? ' is' : 's are'} no longer detected by the latest source check. Clearing removes them from the active queue; they will reappear if detected again.
               </p>
             </div>
             <button
@@ -783,7 +783,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
               disabled={actionState.pendingId === 'bulk-system-cleared'}
               className="rounded-lg border border-emerald-300 bg-white px-4 py-2 text-sm font-medium text-emerald-900 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {actionState.pendingId === 'bulk-system-cleared' ? 'Resolving…' : 'Resolve system-cleared'}
+              {actionState.pendingId === 'bulk-system-cleared' ? 'Clearing…' : 'Clear fixed issues'}
             </button>
           </div>
         </section>
@@ -1139,7 +1139,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                           disabled={actionState.pendingId === issue.id}
                           className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-800 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          {actionState.pendingId === issue.id ? 'Deleting…' : 'Delete registry entry'}
+                          {actionState.pendingId === issue.id ? 'Removing…' : 'Remove from portal'}
                         </button>
                       ) : null}
                       {!refreshStripeFirst && needsLiveStripeReview(issue) && primaryQuickAction ? (

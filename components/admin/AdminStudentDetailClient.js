@@ -411,8 +411,8 @@ export default function AdminStudentDetailClient({
   function handleDeleteRegistryEntry() {
     runExitAction({
       action: 'delete_registry_entry',
-      actionLabel: 'Delete registry entry',
-      promptText: `Why are you deleting registry access for ${student.fullName || student.mmsId}?`,
+      actionLabel: 'Remove portal access',
+      promptText: `Why are you removing portal access for ${student.fullName || student.mmsId}?`,
       confirmText: 'This removes the portal/dashboard registry entry. It does not remove the Students sheet row or change MMS. Continue?',
       onSuccess: (data) => {
         setExitState((current) => ({
@@ -723,7 +723,7 @@ export default function AdminStudentDetailClient({
                 disabled={isPending || exitState.sheetArchived || !leftMonth}
                 className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isPending ? 'Working…' : exitState.sheetArchived ? 'Left' : 'Mark as left'}
+                {isPending ? 'Working…' : exitState.sheetArchived ? 'Left ✓' : 'Mark as left'}
               </button>
             </div>
           </div>
@@ -744,12 +744,12 @@ export default function AdminStudentDetailClient({
               disabled={isPending || exitState.sheetArchived}
               className="mt-3 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isPending ? 'Saving…' : archiveAlreadyMarked ? 'Log note' : 'Mark inactive'}
+              {isPending ? 'Saving…' : archiveAlreadyMarked ? 'Add note' : 'Mark inactive in Sheets'}
             </button>
           </div>
           <div className={`rounded-xl border p-4 ${!exitState.registryPresent ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-slate-50'}`}>
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Step 2</p>
-            <p className="mt-2 text-sm font-medium text-slate-900">Remove registry access</p>
+            <p className="mt-2 text-sm font-medium text-slate-900">Remove portal access</p>
             <p className="mt-1 text-xs text-slate-600">Deletes the portal/dashboard registry entry.</p>
             <button
               type="button"
@@ -757,7 +757,7 @@ export default function AdminStudentDetailClient({
               disabled={isPending || !archiveAlreadyMarked || !exitState.registryPresent || exitState.sheetArchived}
               className="mt-3 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isPending ? 'Saving…' : exitState.registryPresent ? 'Delete registry' : 'Done'}
+              {isPending ? 'Saving…' : exitState.registryPresent ? 'Remove portal access' : 'Done'}
             </button>
           </div>
           <div className={`rounded-xl border p-4 ${exitState.mmsInactive ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-slate-50'}`}>
@@ -770,7 +770,7 @@ export default function AdminStudentDetailClient({
               disabled={isPending || !archiveAlreadyMarked || exitState.mmsInactive || exitState.sheetArchived}
               className="mt-3 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isPending ? 'Saving…' : exitState.mmsInactive ? 'Done' : 'Mark MMS inactive'}
+              {isPending ? 'Saving…' : exitState.mmsInactive ? 'Done' : 'Mark inactive in MMS'}
             </button>
           </div>
           <div className={`rounded-xl border p-4 ${exitState.sheetArchived ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-slate-50'}`}>
@@ -783,7 +783,7 @@ export default function AdminStudentDetailClient({
               disabled={isPending || !archiveAlreadyMarked || exitState.sheetArchived}
               className="mt-3 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isPending ? 'Saving…' : exitState.sheetArchived ? 'Archived' : 'Archive row'}
+              {isPending ? 'Saving…' : exitState.sheetArchived ? 'Archived' : 'Archive student'}
             </button>
           </div>
         </div>
@@ -988,19 +988,19 @@ export default function AdminStudentDetailClient({
             <div className="mt-4 flex flex-wrap gap-3">
               <button
                 type="button"
-                onClick={() => handleQuickPaymentExpectation('stripe_paused_expected', 'Confirm pause and set paused expected')}
+                onClick={() => handleQuickPaymentExpectation('stripe_paused_expected', 'Confirm pause — expect payments paused')}
                 disabled={isPending}
                 className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Confirm pause and set paused expected
+                Confirm pause — expect payments paused
               </button>
               <button
                 type="button"
-                onClick={() => handleQuickPaymentExpectation('stripe_active_expected', 'Set Stripe active expected')}
+                onClick={() => handleQuickPaymentExpectation('stripe_active_expected', 'Expect payments active')}
                 disabled={isPending}
                 className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Set Stripe active expected
+                Expect payments active
               </button>
             </div>
             {pauseWorkflow.liveStripeMismatch ? (

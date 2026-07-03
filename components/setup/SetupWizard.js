@@ -35,7 +35,7 @@ export default function SetupWizard({ tutorName, onComplete }) {
               Chrome is already set up with your profile.
             </p>
             <p className="text-sm text-green-600 mt-2">
-              ✓ No action needed - click "Mark Done"
+              ✓ No action needed - click "Mark done"
             </p>
           </SetupStep>
 
@@ -163,7 +163,7 @@ function SetupStep({ number, title, completed, onComplete, children }) {
               : 'bg-gray-200 hover:bg-gray-300'
           }`}
         >
-          {completed ? '✓ Done' : 'Mark Done'}
+          {completed ? '✓ Done' : 'Mark done'}
         </button>
       </div>
     </div>

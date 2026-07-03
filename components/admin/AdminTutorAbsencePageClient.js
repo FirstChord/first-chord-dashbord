@@ -492,7 +492,7 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
                       className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-900 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {groupMessageState.pendingKey === group.groupKey ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-                      {group.allMessaged ? 'Period messaged' : 'Mark period messaged'}
+                      {group.allMessaged ? 'Parents messaged ✓' : 'Mark parents messaged'}
                     </button>
                   </div>
                 </div>
@@ -615,7 +615,7 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
                           className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-950 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {paymentUpdateState.pendingId === lesson.eventId ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-                          {alreadyPausedExpected || state.paymentExpectationAligned ? 'Paused expected set' : 'Set paused expected'}
+                          {alreadyPausedExpected || state.paymentExpectationAligned ? 'Expecting paused payments ✓' : 'Expect payments paused'}
                         </button>
                         <label className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700">
                           <input
@@ -675,7 +675,7 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
               pending={saveState.pending && saveState.action !== 'resolved' && saveState.action !== 'delete'}
               disabled={saveState.pending}
               variant="blue"
-              pendingLabel="Saving..."
+              pendingLabel="Saving…"
             >
               Save progress
             </ActionButton>
@@ -686,7 +686,7 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
               disabled={saveState.pending || !summary.canResolve}
               variant="green"
               icon={<Check className="h-4 w-4" />}
-              pendingLabel="Resolving..."
+              pendingLabel="Resolving…"
             >
               Resolve absence
             </ActionButton>
@@ -698,7 +698,7 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
                 disabled={saveState.pending}
                 variant="red"
                 icon={<Trash2 className="h-4 w-4" />}
-                pendingLabel="Deleting..."
+                pendingLabel="Deleting…"
               >
                 Delete logged date
               </ConfirmButton>

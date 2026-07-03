@@ -252,6 +252,20 @@ if (addedRawButtons.length) {
   });
 }
 
+// Label-looking strings (quoted, capital start) containing internal jargon.
+// Heuristic on purpose: state values like 'stripe_active_expected' are
+// lowercase and don't match; "Set paused expected" does.
+const addedJargonLabels = hasAddedLine(fileDiffs, (file, lines) => (
+  /^components\//u.test(file)
+  && lines.some((line) => /['"`>][A-Z][^'"`<>]*\b(registry|system-cleared|expected|MMS row|sheet row)\b/u.test(line))
+));
+if (addedJargonLabels.length) {
+  warnings.push({
+    title: 'Possible internal jargon in new UI copy',
+    body: `${addedJargonLabels.map(([file]) => `  - ${file}`).join('\n')}\n  Button/label copy should predict the outcome without internal state names — see docs/admin/COPY_AND_TONE.md → Buttons.`,
+  });
+}
+
 console.log('First Chord hygiene check');
 console.log('Non-blocking: warnings are prompts for judgement, not failures.');
 console.log(`Changed files: ${files.length}`);

@@ -56,13 +56,13 @@ test('paymentQuickActionResolvesIssue only resolves matching expectation transit
   assert.equal(paymentQuickActionResolvesIssue({ type: 'PAUSE EXPECTATION MISMATCH' }, { payload: {} }), false);
 });
 
-test('getPrimaryPaymentQuickAction finds the right action by label', () => {
+test('getPrimaryPaymentQuickAction finds the right action by payload, not label', () => {
   const actions = [
-    { label: 'Set Stripe active expected' },
-    { label: 'Confirm pause and set paused expected' },
+    { label: 'Expect payments active', payload: { paymentExpectation: 'stripe_active_expected' } },
+    { label: 'Confirm pause — expect payments paused', payload: { paymentExpectation: 'stripe_paused_expected' } },
   ];
-  assert.equal(getPrimaryPaymentQuickAction({ type: 'PAUSE EXPECTATION MISMATCH' }, actions).label, 'Confirm pause and set paused expected');
-  assert.equal(getPrimaryPaymentQuickAction({ type: 'PAUSE EXPECTATION STALE' }, actions).label, 'Set Stripe active expected');
+  assert.equal(getPrimaryPaymentQuickAction({ type: 'PAUSE EXPECTATION MISMATCH' }, actions).label, 'Confirm pause — expect payments paused');
+  assert.equal(getPrimaryPaymentQuickAction({ type: 'PAUSE EXPECTATION STALE' }, actions).label, 'Expect payments active');
   assert.equal(getPrimaryPaymentQuickAction({ type: 'PAYMENT_FAILED' }, actions), null);
 });
 

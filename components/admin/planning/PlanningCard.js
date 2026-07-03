@@ -408,7 +408,7 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
                             {scheduleRefreshState.pendingId === repairOptions.linkedStudentId ? (
                               <>
                                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                Refreshing...
+                                Refreshing…
                               </>
                             ) : 'Refresh schedule from MMS'}
                           </button>
@@ -548,7 +548,7 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
                 onClick={() => onPauseCompleted(item)}
                 className="inline-flex min-h-10 items-center justify-center rounded-lg bg-amber-950 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-900 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isPending ? 'Completing...' : 'Mark pause completed'}
+                {isPending ? 'Completing…' : 'Mark pause completed'}
               </button>
               <p className="text-xs leading-5 text-amber-800">
                 Logs the confirmation and sets paused-expected if needed — doesn&apos;t run Stripe directly.
@@ -645,7 +645,7 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-          {isSchoolForwardReview ? 'Add Friday reflection' : 'Log'}
+          {isSchoolForwardReview ? 'Add Friday reflection' : 'Add note'}
         </button>
       </form>
     </article>

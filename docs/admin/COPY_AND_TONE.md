@@ -73,6 +73,21 @@ Issue copy should be direct and specific:
 
 Keep debug IDs, raw source keys, and long reasoning out of the default card view.
 
+## Buttons
+
+A button label must predict its outcome for someone who does not know the internal state model.
+
+Rules:
+
+1. **Verb + plain object.** Say what happens in English, not in system vocabulary: "Expect payments paused", not "Set paused expected"; "Clear fixed issues", not "Resolve system-cleared".
+2. **No internal names on buttons.** Tab names, column names, state values, and system shorthand (`registry`, `row`, `expected`, `system-cleared`) stay in code and docs. If two buttons act on different systems, name the system in plain words: "Mark inactive in Sheets" / "Mark inactive in MMS".
+3. **One completion verb per object family.** Planning items are marked **done**; issues are **resolved** (or **cleared** when the system fixed them); workflow/checklist steps are **completed**. Don't mix verbs within a family.
+4. **Disabled buttons say why.** The label itself explains the block: "Download the Wise CSV first". A greyed-out mystery button is a question the reader has to go and answer.
+5. **Pending `…`, success `✓`.** Pending labels use the single ellipsis character ("Saving…", never "Saving..."), success states get a check ("Copied ✓", "Parents messaged ✓"). The `ActionButton` primitive bakes both in — prefer it for new async buttons (see `UI_CONVENTIONS.md`).
+6. **Confirm dialogs explain consequences**, including what is preserved: "It will be parked, not deleted, so the history stays available" is the house standard.
+
+The hygiene check advisorily flags new button labels containing internal-jargon tokens in changed files.
+
 ## Message Templates
 
 Templates can use a warmer First Chord voice than admin controls.

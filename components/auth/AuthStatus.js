@@ -23,7 +23,7 @@ export default function AuthStatus({ student }) {
   const statusConfig = {
     'logged-in': { icon: CheckCircle, color: 'text-green-500', text: 'Ready' },
     'needs-login': { icon: AlertCircle, color: 'text-yellow-500', text: 'Login Required' },
-    'checking': { icon: AlertCircle, color: 'text-gray-400', text: 'Checking...' }
+    'checking': { icon: AlertCircle, color: 'text-gray-400', text: 'Checking…' }
   };
 
   return (

@@ -96,7 +96,7 @@ test('buildStudentExitStepEvent records named exit workflow steps', () => {
     actorEmail: 'admin@example.com',
     occurredAt: '2026-06-04T12:10:00.000Z',
     eventType: 'student_exit_registry_deleted',
-    actionLabel: 'Delete registry entry',
+    actionLabel: 'Remove portal access',
     note: 'Student has left and portal access should close.',
     payload: {
       registry_deleted: true,
@@ -108,7 +108,7 @@ test('buildStudentExitStepEvent records named exit workflow steps', () => {
   assert.equal(event.entityType, 'student');
   assert.equal(event.entityId, 'sdt_123');
   assert.equal(payload.source, 'admin_student_exit_workflow');
-  assert.equal(payload.action_label, 'Delete registry entry');
+  assert.equal(payload.action_label, 'Remove portal access');
   assert.equal(payload.registry_deleted, true);
   assert.equal(payload.note, 'Student has left and portal access should close.');
 });

@@ -128,7 +128,7 @@ export async function POST(request, { params }) {
           actorEmail: session.user.email || '',
           occurredAt: now,
           eventType: 'student_exit_registry_deleted',
-          actionLabel: 'Delete registry entry',
+          actionLabel: 'Remove portal access',
           note,
           payload: {
             registry_deleted: true,
