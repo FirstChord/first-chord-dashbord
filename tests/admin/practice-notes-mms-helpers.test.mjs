@@ -187,6 +187,24 @@ test('buildPracticeNoteAttendancePayload does not touch MMS billing context', ()
   assert.equal(Object.hasOwn(payload, 'PriceOverride'), false);
 });
 
+test('buildPracticeNoteAttendancePayload can mark same-day absence without notes email', () => {
+  const payload = buildPracticeNoteAttendancePayload({
+    attendance: {
+      teacherNote: '',
+      parentNote: '',
+    },
+    noteHtml: '',
+    attendanceStatus: 'AbsentNoMakeup',
+  });
+
+  assert.deepEqual(payload, {
+    TeacherNote: '',
+    ParentNote: '',
+    StudentNote: '',
+    AttendanceStatus: 'AbsentNoMakeup',
+  });
+});
+
 test('buildPracticeNoteEmailPayload serialises recipient IDs for MMS emailnotes', () => {
   assert.deepEqual(buildPracticeNoteEmailPayload([
     { recipientProfileId: 'prt_one' },

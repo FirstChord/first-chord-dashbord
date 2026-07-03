@@ -133,6 +133,44 @@ export default function DashboardClient() {
     return () => window.removeEventListener('keydown', onKey);
   }, [practiceChatPanel]);
 
+  useEffect(() => {
+    if (!practiceChatPanel?.url) return undefined;
+
+    let closeTimer = null;
+    let expectedOrigin = '';
+    try {
+      expectedOrigin = new URL(practiceChatPanel.url).origin;
+    } catch {
+      expectedOrigin = '';
+    }
+
+    function onPracticeChatMessage(event) {
+      const message = event.data || {};
+      if (message.type !== 'firstchord:practice-chat-complete') return;
+      if (expectedOrigin && event.origin !== expectedOrigin) return;
+
+      setPracticeChatPanel((current) => (
+        current
+          ? {
+              ...current,
+              completed: true,
+              completedStatus: message.status || 'completed',
+            }
+          : current
+      ));
+
+      closeTimer = window.setTimeout(() => {
+        setPracticeChatPanel(null);
+      }, 1100);
+    }
+
+    window.addEventListener('message', onPracticeChatMessage);
+    return () => {
+      window.removeEventListener('message', onPracticeChatMessage);
+      if (closeTimer) window.clearTimeout(closeTimer);
+    };
+  }, [practiceChatPanel?.url]);
+
   // Fetch notes when student is selected
   useEffect(() => {
     if (selectedStudent) {
@@ -382,7 +420,7 @@ export default function DashboardClient() {
                 <div>
                   <QuickLinks
                     student={selectedStudent}
-                    onOpenPracticeChat={(url, name) => setPracticeChatPanel({ url, name })}
+                    onOpenPracticeChat={(url, name) => setPracticeChatPanel({ url, name, completed: false })}
                   />
                 </div>
               </div>
@@ -418,6 +456,11 @@ export default function DashboardClient() {
                 <p className="text-sm font-bold text-slate-900">{practiceChatPanel.name}</p>
               </div>
               <div className="flex items-center gap-2">
+                {practiceChatPanel.completed ? (
+                  <div className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800 shadow-sm">
+                    {practiceChatPanel.completedStatus === 'absent_no_makeup' ? 'Attendance saved' : 'Lesson done'} ✓ Closing...
+                  </div>
+                ) : null}
                 <a
                   href={practiceChatPanel.url}
                   target="_blank"

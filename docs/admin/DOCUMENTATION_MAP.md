@@ -1,6 +1,6 @@
 # Documentation Map
 
-Last updated: 2026-06-21
+Last updated: 2026-07-03
 
 The docs are useful, but there are many entry points. This map defines the canonical ones so future agents do not treat old drafts as current authority.
 
@@ -13,12 +13,14 @@ Read in this order:
 3. `docs/admin/V3_LOOP_ARCHITECTURE.md`
 4. `docs/admin/STATE_TABS_SCHEMA.md` — canonical dashboard state lane map
 5. `docs/admin/HYGIENE_AND_SECRETS.md`
-6. `docs/admin/OWNERSHIP_MATRIX.md`
-7. `docs/admin/SCHOOL_POLICY.md`
-8. `docs/admin/PAYMENTS_RULES.md` when touching payments, pauses, Stripe, or setup-pending logic
-9. `docs/admin/TUTOR_ABSENCE_PAUSE_BRIDGE.md` when touching tutor absence, pause planning, or finance pause forecasts
-10. `docs/admin/STATE_TABS_SCHEMA.md` + `docs/admin/CURRENT_STATUS.md` finance section when touching `/admin/finance`, payroll, `Tutor_Pay`, `Finance_Snapshot`, or `Payroll_Runs`
-11. `docs/admin/PRACTICE_CHAT_DELIVERY_AUDIT.md` when touching Practice Chat Level 2 delivery or rollout
+6. `docs/admin/OPERATIONS_RUNBOOK.md` when touching deployment, auth, env vars, recovery, backups, or integration health
+7. `docs/admin/OWNERSHIP_MATRIX.md`
+8. `docs/admin/SCHOOL_POLICY.md`
+9. `docs/admin/PAYMENTS_RULES.md` when touching payments, pauses, Stripe, or setup-pending logic
+10. `docs/admin/TUTOR_ABSENCE_PAUSE_BRIDGE.md` when touching tutor absence, pause planning, or finance pause forecasts
+11. `docs/admin/WHATSAPP_INCOMING_BRIDGE.md` when touching incoming WhatsApp capture, group maps, or message classification
+12. `docs/admin/STATE_TABS_SCHEMA.md` + `docs/admin/CURRENT_STATUS.md` finance section when touching `/admin/finance`, payroll, `Tutor_Pay`, `Finance_Snapshot`, or `Payroll_Runs`
+13. `docs/admin/PRACTICE_CHAT_DELIVERY_AUDIT.md` when touching Practice Chat Level 2 delivery or rollout
 
 `docs/admin/AUDIT_2026-06-10.md` is critique input, not a live plan. Use judgement before implementing its recommendations.
 
@@ -48,6 +50,16 @@ Repo `docs/LEARNING_LOG.md` should capture engineering decisions that future age
 Obsidian `06 Learning Log/` should capture operating/product lessons that might be useful for delegation, blog posts, or future generalisation.
 
 Do not duplicate every small change in both places. For a meaningful architectural change, add the repo note if it affects implementation, and the Obsidian note if it changes the operating model.
+
+## Documentation Maintenance Rule
+
+Every meaningful change affecting architecture, integrations, source-of-truth lanes, workflow state, security, deployment, financial logic, communication, or recovery should either update the relevant doc or explicitly state why no documentation change is required. Minor styling, copy polish, and local UI layout tweaks should not create documentation churn.
+
+If a change adds a new dashboard-owned Sheets tab, also update:
+
+- `docs/admin/STATE_TABS_SCHEMA.md`
+- `scripts/backup-sheets-tabs.mjs`, unless there is a clear reason not to back it up
+- `docs/admin/OPERATIONS_RUNBOOK.md` if recovery or sensitive-data handling changes
 
 ## Historical Docs
 

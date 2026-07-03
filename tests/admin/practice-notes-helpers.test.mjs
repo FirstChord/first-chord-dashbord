@@ -179,6 +179,12 @@ test('portal practice note visibility only allows sent or completed rows', () =>
     operationStatus: 'completed',
   }), true);
   assert.equal(isPracticeNoteVisibleInPortal({
+    mmsAttendanceStatus: 'AbsentNoMakeup',
+    emailSendStatus: 'not_sent_absent',
+    operationStatus: 'attendance_only_completed',
+    completedAt: '2026-06-12T10:00:00.000Z',
+  }), false);
+  assert.equal(isPracticeNoteVisibleInPortal({
     operationStatus: 'in_progress',
     rawNoteText: 'Draft note',
   }), false);

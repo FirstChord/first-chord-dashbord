@@ -57,7 +57,7 @@ This admin index is the map of durable admin documentation. Older V1/V2 drafts a
 ## Operations
 
 - [OPERATIONS_RUNBOOK.md](./OPERATIONS_RUNBOOK.md)
-  Practical recovery and credential runbook for MMS, Google Sheets, Railway, admin auth, deploys, rollbacks, and Sheets backups.
+  Practical recovery and credential runbook for MMS, Google Sheets, Railway, admin auth, deploys, rollbacks, Sheets backups, and component-level diagnostic boundaries.
 - [RAILWAY_ADMIN_LAUNCH_CHECKLIST.md](./RAILWAY_ADMIN_LAUNCH_CHECKLIST.md)
   Railway deployment and environment setup checklist.
 - [BUG_FIXES.md](./BUG_FIXES.md)

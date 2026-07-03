@@ -1,6 +1,6 @@
 # State Tabs Schema
 
-Last updated: 2026-06-30
+Last updated: 2026-07-03
 
 This note is the canonical map for dashboard-owned state lanes. It documents the Google Sheets tabs that store workflow state, cache snapshots, append-only logs, or derived context. It is intentionally about dashboard state, not the main `Students` operational sheet.
 

@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { appendPlanningProgressLogRow, getPlanningItemRows, upsertPlanningItemRow } from '../lib/admin/sheets.js';
@@ -22,14 +22,19 @@ const BACKUP_TABS = [
   'Planning_Items',
   'Planning_Progress_Log',
   'Practice_Notes_Log',
+  'Communication_Log',
+  'Incoming_Message_Inbox',
+  'WhatsApp_Group_Map',
   'Tutor_Pay',
   'Expenses',
   'Expense_Log',
   'Finance_Snapshot',
   'Payroll_Runs',
+  'Tutor_Wise',
   'Students_Archive',
 ];
 const OPTIONAL_MISSING_TABS = new Set(['Students_Archive']);
+const BACKUP_SET_RETENTION_COUNT = 8;
 
 function timestampForFolder(date = new Date()) {
   return date.toISOString().replace(/\.\d{3}Z$/u, 'Z').replace(/[:]/g, '-');
@@ -101,6 +106,39 @@ async function backupTab({ tabName, outputDir, getSheetValues }) {
   };
 }
 
+async function pruneOldBackupSets({ backupRoot, keepCount = BACKUP_SET_RETENTION_COUNT }) {
+  const entries = await readdir(backupRoot, { withFileTypes: true });
+  const backupDirs = [];
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) {
+      continue;
+    }
+
+    const fullPath = path.join(backupRoot, entry.name);
+    const stats = await stat(fullPath);
+    backupDirs.push({
+      name: entry.name,
+      fullPath,
+      mtimeMs: stats.mtimeMs,
+    });
+  }
+
+  backupDirs.sort((a, b) => {
+    const nameCompare = b.name.localeCompare(a.name);
+    if (nameCompare !== 0) return nameCompare;
+    return b.mtimeMs - a.mtimeMs;
+  });
+
+  const pruned = [];
+  for (const backupDir of backupDirs.slice(keepCount)) {
+    await rm(backupDir.fullPath, { recursive: true, force: true });
+    pruned.push(backupDir.name);
+  }
+
+  return pruned;
+}
+
 async function main() {
   await loadLocalEnv(repoRoot);
 
@@ -110,7 +148,8 @@ async function main() {
 
   const { getSheetValues } = await import('../lib/admin/sheets.js');
   const timestamp = timestampForFolder();
-  const outputDir = path.join(repoRoot, 'backups', 'sheets', timestamp);
+  const backupRoot = path.join(repoRoot, 'backups', 'sheets');
+  const outputDir = path.join(backupRoot, timestamp);
   await mkdir(outputDir, { recursive: true });
 
   const startedAt = new Date().toISOString();
@@ -173,7 +212,11 @@ async function main() {
     createdAt: manifest.completedAt,
     createdBy: 'local_backup_script',
   });
+  const prunedBackups = await pruneOldBackupSets({ backupRoot });
   console.log(`Next backup reminder set for ${planningItem.targetDate}`);
+  if (prunedBackups.length > 0) {
+    console.log(`Pruned old backup sets beyond latest ${BACKUP_SET_RETENTION_COUNT}: ${prunedBackups.join(', ')}`);
+  }
   console.log(`Backup complete: ${outputDir}`);
 }
 

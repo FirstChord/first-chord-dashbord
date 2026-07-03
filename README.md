@@ -46,7 +46,7 @@ Visit `http://localhost:3000`
 - **Runtime**: Node.js 20+
 - **UI**: React 19, Tailwind CSS 4
 - **APIs**: MMS API, Google Sheets API
-- **Deployment**: Railway / Vercel
+- **Deployment**: Railway
 
 ## 🔧 Scripts
 
@@ -72,4 +72,4 @@ See the [Troubleshooting Guide](docs/TROUBLESHOOTING_GUIDE.md) or [Documentation
 
 ---
 
-**Last Updated**: May 2026
+**Last Updated**: July 2026

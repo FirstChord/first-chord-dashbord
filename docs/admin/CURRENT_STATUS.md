@@ -1,6 +1,6 @@
 # Admin Current Status
 
-Last updated: 2026-06-30
+Last updated: 2026-07-03
 
 Tracked current-status entrypoint for agents working from the `music-school-dashboard` repo.
 
@@ -24,6 +24,7 @@ The admin overview is a strict meeting-start surface, not a complete status boar
 
 *Last working arc only — older work is in `git log --oneline` + the Learning Log.*
 
+- **Operations/recovery docs hardening (2026-07-03):** `OPERATIONS_RUNBOOK.md` now has a component recovery matrix for admin/Railway, Sheets, MMS, Practice Chat/Gmail, WhatsApp intake, tutor absence/pause bridge, finance/payroll, and backups. `DOCUMENTATION_MAP.md` records the maintenance rule: meaningful changes touching integrations, state lanes, security, finance, communication, or recovery should update docs or explicitly state why no docs change is needed. Backup coverage now tracks communication/WhatsApp/payroll support tabs in `scripts/backup-sheets-tabs.mjs`.
 - **Tutor pay statement — Phase 1 (2026-07-02):** read-only per-tutor statement (line items + frozen total from the reviewed `Payroll_Runs` row) at `/admin/finance/payroll/statement?pid=…`, reached from each reviewed/paid tutor card. **Copy text** + **Copy share link**; the link is a signed, no-login public URL (`/pay/statement/<token>`, HMAC via `NEXTAUTH_SECRET`, 30-day expiry) the admin pastes to the tutor. Nothing auto-sends; no money moves. First step of the tutor-facing payroll loop (Phase 2 = tutor confirm on that same link; Phase 3 = tutor self-select cadence + scheduled delivery — **both need real tutor auth, which doesn't exist yet**). Why: [[Learning Log 2026-07-02 tutor statement]].
 - **Payroll fixes (2026-07-02):** (1) **Wise CSV now pays from saved reviewed `Payroll_Runs` rows** (`selectPayableReviewedRuns`), not a re-resolved preview — a tutor reviewed under a manually-adjusted window (e.g. David Husz) was silently dropped because the window-derived `payroll_id` no longer matched; this also fixes the "CSV won't update after reviewing more". Duplicate reviewed rows per tutor collapse to one payment (all ids cleared on batch-paid; amount disagreement surfaces a warning). (2) **60s attendance cache** so window adjusts don't re-hit MMS (the slow/fast variance). (3) **Submit feedback** on Mark reviewed / Mark paid (spinner → "… ✓"). Why: [[Learning Log 2026-07-02]].
 - **Incoming inbox — loop close + audit + group map (2026-07-01→02):** (1) `Convert to plan + draft reply` creates an idempotent linked `Planning_Items` action, stamps `created_planning_id`, returns a per-category WhatsApp reply (copy-paste only; tone "Hi/Hello/Hey", never "Heya"). (2) Every review action stamps `reviewed_by`/`reviewed_at`. (3) WhatsApp group map: bulk sync (bridge pre-filter → batched writes), roster-based bucketing (matched→review, unmatched→hidden), **weekly auto re-sync** (launchd `SIGUSR1`), and **sibling groups** (`additional_mms_ids` + "+ Student" button; matching disambiguates by named student, flags ambiguous for review). Doc: `docs/admin/WHATSAPP_INCOMING_BRIDGE.md`.

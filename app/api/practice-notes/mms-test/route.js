@@ -2,7 +2,10 @@ import {
   executePracticeNoteMmsTestWrite,
   previewPracticeNoteMmsTestWrite,
 } from '@/lib/admin/mms';
-import { isPracticeNotesLevel2PilotStudent } from '@/lib/admin/practice-notes-mms-helpers.mjs';
+import {
+  isPracticeNotesLevel2PilotStudent,
+  normalisePracticeNoteAttendanceStatus,
+} from '@/lib/admin/practice-notes-mms-helpers.mjs';
 import {
   buildPracticeNoteDeliveryKey,
   findPracticeNoteDeliveryRecord,
@@ -37,6 +40,11 @@ export async function POST(request) {
     const noteText = `${body.rawNoteText || body.noteText || ''}`.trim();
     const mode = body.mode === 'execute' ? 'execute' : 'dry_run';
     const targetAttendanceId = `${body.targetAttendanceId || ''}`.trim();
+    const attendanceStatus = normalisePracticeNoteAttendanceStatus(body.attendanceStatus);
+    const isAbsentNoMakeup = attendanceStatus === 'AbsentNoMakeup';
+    const effectiveNoteText = noteText || (isAbsentNoMakeup
+      ? 'Student marked absent with no makeup from Practice Chat. No practice note email sent.'
+      : '');
 
     const pilotStudent = await getAdminStudentByMmsId(studentId);
     if (!pilotStudent) {
@@ -54,7 +62,7 @@ export async function POST(request) {
       }, { status: 403, headers });
     }
 
-    if (!noteText) {
+    if (!effectiveNoteText) {
       return Response.json({ error: 'noteText is required' }, { status: 400, headers });
     }
 
@@ -64,7 +72,12 @@ export async function POST(request) {
       }, { status: 400, headers });
     }
 
-    const preview = await previewPracticeNoteMmsTestWrite({ studentId, noteText, targetAttendanceId });
+    const preview = await previewPracticeNoteMmsTestWrite({
+      studentId,
+      noteText: effectiveNoteText,
+      targetAttendanceId,
+      attendanceStatus,
+    });
 
     if (mode !== 'execute') {
       return Response.json({
@@ -82,7 +95,7 @@ export async function POST(request) {
     const deliveryKey = buildPracticeNoteDeliveryKey({
       studentMmsId: studentId,
       mmsAttendanceId: target.attendanceId || targetAttendanceId,
-      rawNoteText: noteText,
+      rawNoteText: effectiveNoteText,
     });
     const existingRows = await getPracticeNoteLogRows(studentId);
     const existingDelivery = findPracticeNoteDeliveryRecord(existingRows, deliveryKey);
@@ -95,12 +108,12 @@ export async function POST(request) {
       studentName: preview.student?.name || snapshot.studentName || '',
       tutorName: target.teacherName || snapshot.tutorName || snapshot.tutor || '',
       lessonDate: target.eventStartDate || snapshot.lessonDate || '',
-      rawNoteText: noteText,
+      rawNoteText: effectiveNoteText,
       copiedToClipboard: false,
       attendanceStepOpened: true,
       mmsEventId: target.eventId || '',
       mmsAttendanceId: target.attendanceId || targetAttendanceId,
-      mmsAttendanceStatus: existingDelivery?.mmsAttendanceStatus || 'Present',
+      mmsAttendanceStatus: existingDelivery?.mmsAttendanceStatus || attendanceStatus,
       targetSelectionReason: selection.reason || '',
       targetSelectionLabel: selection.label || '',
       recipientProfileId: recipient.recipientProfileId || existingDelivery?.recipientProfileId || '',
@@ -112,7 +125,11 @@ export async function POST(request) {
       userAgent: request.headers.get('user-agent') || snapshot.userAgent || '',
     };
 
-    if (existingDelivery && isPracticeNoteDeliveryEmailSent(existingDelivery)) {
+    const alreadyCompleted = isAbsentNoMakeup
+      ? existingDelivery?.mmsAttendanceSaved && existingDelivery?.mmsAttendanceStatus === 'AbsentNoMakeup'
+      : existingDelivery && isPracticeNoteDeliveryEmailSent(existingDelivery);
+
+    if (existingDelivery && alreadyCompleted) {
       return Response.json({
         success: true,
         mode,
@@ -120,7 +137,9 @@ export async function POST(request) {
         idempotency: {
           status: 'already_completed',
           deliveryKey,
-          message: 'This exact note has already been emailed for the selected lesson.',
+          message: isAbsentNoMakeup
+            ? 'This selected lesson has already been marked absent with no makeup.'
+            : 'This exact note has already been emailed for the selected lesson.',
         },
         practiceNoteLog: {
           ok: true,
@@ -140,7 +159,8 @@ export async function POST(request) {
         practiceNoteEmail: {
           ok: true,
           skipped: true,
-          channel: existingDelivery.emailChannel || 'gmail',
+          channel: isAbsentNoMakeup ? 'none' : existingDelivery.emailChannel || 'gmail',
+          reason: isAbsentNoMakeup ? 'student_absent_no_makeup' : '',
           toEmail: existingDelivery.recipientEmail || '',
           gmailMessageId: existingDelivery.gmailMessageId || '',
           gmailThreadId: existingDelivery.gmailThreadId || '',
@@ -149,7 +169,8 @@ export async function POST(request) {
         emailNotes: {
           ok: true,
           skipped: true,
-          channel: existingDelivery.emailChannel || 'gmail',
+          channel: isAbsentNoMakeup ? 'none' : existingDelivery.emailChannel || 'gmail',
+          reason: isAbsentNoMakeup ? 'student_absent_no_makeup' : '',
           toEmail: existingDelivery.recipientEmail || '',
           gmailMessageId: existingDelivery.gmailMessageId || '',
           gmailThreadId: existingDelivery.gmailThreadId || '',
@@ -216,25 +237,32 @@ export async function POST(request) {
     const result = existingDelivery?.mmsAttendanceSaved
       ? await executePracticeNoteEmailRetry({
           preview,
-          noteText,
+          noteText: effectiveNoteText,
           existingDelivery,
         })
-      : await executePracticeNoteMmsTestWrite({ studentId, noteText, targetAttendanceId });
+      : await executePracticeNoteMmsTestWrite({
+          studentId,
+          noteText: effectiveNoteText,
+          targetAttendanceId,
+          attendanceStatus,
+        });
 
     const email = result.practiceNoteEmail || result.emailNotes || {};
+    const completedAt = new Date().toISOString();
     const finalNote = normalisePracticeNotePayload({
       ...baseNotePayload,
       recipientEmail: recipient.email || email.toEmail || existingDelivery?.recipientEmail || '',
-      emailChannel: email.channel || 'gmail',
-      emailSendStatus: email.ok === false ? 'failed' : 'sent',
-      emailSentAt: email.ok === false ? '' : new Date().toISOString(),
+      emailChannel: isAbsentNoMakeup ? 'none' : email.channel || 'gmail',
+      emailSendStatus: isAbsentNoMakeup ? 'not_sent_absent' : email.ok === false ? 'failed' : 'sent',
+      emailSentAt: isAbsentNoMakeup || email.ok === false ? '' : completedAt,
       gmailMessageId: email.gmailMessageId || '',
       gmailThreadId: email.gmailThreadId || '',
       emailError: email.error || '',
       manualFollowUpNeeded: email.ok === false,
       mmsAttendanceSaved: Boolean(result.attendanceSave?.ok || existingDelivery?.mmsAttendanceSaved),
-      operationStatus: email.ok === false ? 'email_failed' : 'completed',
-      completedAt: email.ok === false ? '' : new Date().toISOString(),
+      mmsAttendanceStatus: attendanceStatus,
+      operationStatus: isAbsentNoMakeup ? 'attendance_only_completed' : email.ok === false ? 'email_failed' : 'completed',
+      completedAt: email.ok === false ? '' : completedAt,
     });
 
     try {

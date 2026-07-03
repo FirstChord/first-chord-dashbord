@@ -60,7 +60,9 @@ These names come from real code reads of `process.env` and local token paths.
 | `GROUP_LESSON_PAYMENT_LINK` | Group onboarding copy | Group payment link may be wrong or use fallback | Set to current group lesson payment link. |
 | `HANDBOOK_URL` | Onboarding and parent messaging copy | Handbook link may be wrong or use default | Usually `https://firstchord.co.uk/handbook`. |
 | `GMAIL_CLIENT_ID` | Practice note email sending | Practice Chat Level 2 falls back to `GOOGLE_CLIENT_ID`; if neither is present, email sending fails | Optional when the Gmail refresh token was generated with the existing dashboard Google OAuth client. |
+| `GMAIL_OAUTH_CLIENT_ID` | Legacy/alternate Gmail token scripts | Token minting scripts may not find the client ID if they do not fall back | Prefer `GMAIL_CLIENT_ID`; keep aliases only if a local script still reads them. |
 | `GMAIL_CLIENT_SECRET` | Practice note email sending | Practice Chat Level 2 falls back to `GOOGLE_CLIENT_SECRET`; if neither is present, email sending fails | Optional when the Gmail refresh token was generated with the existing dashboard Google OAuth client. |
+| `GMAIL_OAUTH_CLIENT_SECRET` | Legacy/alternate Gmail token scripts | Token minting scripts may not find the client secret if they do not fall back | Prefer `GMAIL_CLIENT_SECRET`; keep aliases only if a local script still reads them. |
 | `GMAIL_REFRESH_TOKEN` | Practice note email sending | Practice Chat Level 2 cannot send First Chord parent emails once missing/revoked | Generate as `musiclessons@firstchord.co.uk` with `https://www.googleapis.com/auth/gmail.send`; do not reuse Sheets token. Re-mint with `node scripts/mint-gmail-token.mjs` (use the same OAuth client as `GMAIL_CLIENT_ID`/`GOOGLE_CLIENT_ID`). An `invalid_grant` failure means this token is dead — re-mint it. The OAuth consent screen is Internal, so tokens don't expire on a schedule. |
 | `PRACTICE_NOTES_FROM_EMAIL` | Practice note email sending | Sender may default incorrectly | Usually `musiclessons@firstchord.co.uk`. |
 | `PRACTICE_NOTES_FROM_NAME` | Practice note email sending | Sender display name may default incorrectly | Usually `First Chord Music School`. |
@@ -68,6 +70,9 @@ These names come from real code reads of `process.env` and local token paths.
 | `NEXT_PUBLIC_PRACTICE_CHAT_API_SECRET` | Practice Chat quick-link handoff | Dashboard quick links will not pass the secret to Practice Chat | Must match `PRACTICE_CHAT_API_SECRET` if the shared-secret guard is enabled. This is a coarse shared secret, not per-tutor authentication. |
 | `NEXT_PUBLIC_PRACTICE_CHAT_DASHBOARD_BASE_URL` | Practice Chat quick-link API target override | Practice Chat links may post back to the wrong Railway domain if the default changes | Optional. Defaults to the canonical admin API app `https://first-chord-dashbord-production.up.railway.app`; set it if the admin Railway domain changes. |
 | `INCOMING_MESSAGE_INGEST_SECRET` | Incoming message bridge guard | n8n/starred-WhatsApp bridge posts to `/api/admin/incoming-messages` are rejected; manual admin paste still works | Shared secret for external inbound-message capture. Send it as `x-firstchord-incoming-secret`. This is intake-only auth, not permission to auto-act on messages. |
+| `SCHEDULE_REFRESH_SECRET` | Schedule refresh cron and manual cron endpoint | GitHub schedule refresh cannot update `Schedule_Context`; capacity/value/schedule context may become stale | Must be set in Railway and GitHub Actions secrets. If missing, the cron endpoint returns 503. |
+| `FINANCE_SNAPSHOT_SECRET` | Finance snapshot cron endpoint | Weekly/monthly `Finance_Snapshot` rows are not created | Must be set in Railway and GitHub Actions secrets. If missing, the cron endpoint returns 503. |
+| `NEXT_PUBLIC_PAYMENT_PAUSE_PWA_URL` | Planning/payment pause quick links | Pause task links may open the default/old pause tool URL | Set only if the pause PWA URL changes. |
 | `DISABLE_API_CACHE` | API cache emergency bypass | Not required; setting `true` bypasses cache | Use only for debugging stale data. |
 | `DISABLE_MMS_CACHE` | MMS cache emergency bypass | Not required; setting `true` bypasses MMS cache | Use only when debugging stale MMS reads. |
 | `ANALYZE` | Next bundle analysis | No operational impact | Development-only. |
@@ -80,6 +85,19 @@ These names come from real code reads of `process.env` and local token paths.
 | `.env` | Some local scripts/tools | Local scripts may fail | Prefer `.env.local` for app runtime. Do not commit. |
 | `~/token_musiclessons.json` | Local Google Sheets auth fallback in `lib/admin/sheets.js` | Local Sheets reads/writes fail unless env OAuth values are present | Regenerate Google OAuth token JSON. FINN TO FILL IN exact command/account. |
 | `lib/config/theta-credentials.js` | Student portal Theta login lookup | Student portal credential lookup fails if config generation has not run | Run `npm run generate-configs`. This file is generated and ignored. |
+
+### Local Tool Env
+
+These are used by local helper tools rather than the Railway app. Keep them out of git.
+
+| Name | Used by | What breaks if missing | Recovery |
+| --- | --- | --- | --- |
+| `DASHBOARD_BASE_URL` or `INCOMING_MESSAGE_WEBHOOK_URL` | `tools/whatsapp-incoming-bridge` | Starred/manual WhatsApp captures post to the wrong dashboard or fail | Set to the canonical admin Railway URL. |
+| `INCOMING_MESSAGE_INGEST_SECRET` | `tools/whatsapp-incoming-bridge` | Bridge posts are rejected by the dashboard API | Must match Railway's value. Store in the bridge `.env.local`, not in git. |
+| `BAILEYS_AUTH_DIR` | WhatsApp bridge local session | Bridge may ask for a new WhatsApp pairing or use a different session | Defaults to the local auth folder. Keep this private and local. |
+| `BAILEYS_LOG_LEVEL` / `LOG_LEVEL` | WhatsApp bridge logging | No operational breakage | Optional debugging only. |
+| `DRY_RUN` | WhatsApp bridge testing | Messages may be logged but not posted when set true | Use for local testing only. |
+| `WHATSAPP_CACHE_PATH`, `WHATSAPP_CACHE_LIMIT`, `WHATSAPP_CACHE_MAX_AGE_DAYS`, `WHATSAPP_CAPTURED_BY`, `WRITE_STARRED_LOG`, `SYNC_GROUPS_ON_START`, `GROUP_SYNC_MAX_ATTEMPTS`, `GROUP_SYNC_WAIT_MS` | WhatsApp bridge capture/group-map helpers | Group cache, capture attribution, or starred-log behaviour may differ from expected | Leave defaults unless debugging the bridge. Document any permanent change in `docs/admin/WHATSAPP_INCOMING_BRIDGE.md`. |
 
 ## Secret Handling Notes
 
@@ -98,6 +116,49 @@ As of 13 June 2026, the Railway account has three relevant projects:
 | `awake-connection` | `enhanced-music-lesson-notes` | `https://enhanced-music-lesson-notes-production.up.railway.app` | Practice Chat speech/Whisper relay. | OpenAI relay env only. |
 
 Do not assume a GitHub deploy to one Railway service means all Railway services have the same environment variables. Practice Chat quick links should use the canonical admin API base URL for writeback, even if the tutor opens the public dashboard from an older domain.
+
+## Component Recovery Matrix
+
+This is the first place to look when something is down. The detailed docs linked in the final column remain the source for edge cases.
+
+| Component | Purpose / owner | Healthy state and evidence | Safe retry | Do not retry blindly | Related docs/tests/pages |
+| --- | --- | --- | --- | --- | --- |
+| Admin app, auth, and Railway deploy | Hosts `/admin`, portals, APIs, and authenticated operating workflows. Owner: Finn. | Railway service `pure-spontaneity` is serving the canonical domain; `/admin/login` works; `npm run test:admin` and `npm run build` pass locally. | Railway redeploy of the last good commit; local rebuild; restart service after env changes. | Do not push/redeploy untested code to fix a live outage unless local build passes or rollback is the explicit plan. | This runbook; `docs/admin/BUG_FIXES.md`; `/admin`; `/admin/login`. |
+| Google Sheets state store | Operational school truth and dashboard workflow state. Owner: Finn/Tom depending on workflow. | Admin pages load; writes persist; backup script completes; managed tabs match `STATE_TABS_SCHEMA.md`. | Re-run a failed save only after checking the page did not already write; run `npm run backup:sheets` for recovery snapshots; run `npm run ensure:state-tabs` when tabs are missing. | Do not rename headers/tabs casually. Do not bulk paste over a tab without first duplicating it or using a dated backup. | `docs/admin/STATE_TABS_SCHEMA.md`; `scripts/backup-sheets-tabs.mjs`; `npm run backup:sheets`; `/admin/planning`, `/admin/issues`. |
+| MMS integration | External lesson, schedule, attendance, contact, and billing-continuity source. Owner: Finn. | MMS health card is healthy; waiting list/capacity/tutor absence lesson lookup return expected data; `MMS_BEARER_TOKEN` is present. | Restart after env changes; refresh specific schedule caches; use `DISABLE_MMS_CACHE=true` briefly only for stale-read diagnosis. | Do not assume an empty MMS result means no lessons exist until token, date, tutor ID, and cache have been checked. Do not drop MMS attendance writes while payroll still relies on MMS. | `/admin/waiting`; `/admin/capacity`; `/admin/workflows/tutor-absence`; `lib/admin/mms.js`; `docs/admin/TUTOR_ABSENCE_PAUSE_BRIDGE.md`. |
+| Practice Chat and Gmail delivery | Captures lesson notes, optionally marks attendance, and sends parent emails. Owner: Finn during pilot. | Practice Chat can preview a lesson target; completed rows in `Practice_Notes_Log` show `email_send_status=sent`, Gmail ID, MMS attendance ID when relevant, and `operation_status=completed`. | If MMS saved but Gmail failed, retry only the Gmail/send step if the delivery row proves no email was sent. If a draft/snapshot failed before email, re-run from the PWA after checking the selected lesson. | Do not double-submit parent emails. Do not widen Level 2 beyond the pilot until caller identity/authorization and duplicate-send concurrency are hardened. | `docs/admin/PRACTICE_CHAT_DELIVERY_AUDIT.md`; `docs/admin/STATE_TABS_SCHEMA.md`; `tests/admin/practice-notes-*.test.mjs`; student detail recent notes panel. |
+| Incoming WhatsApp bridge | Captures starred/manual WhatsApp messages into a review inbox. Owner: Finn/Tom for local operation. | Bridge logs `WhatsApp bridge connected`; starred messages post 200 to `/api/admin/incoming-messages`; `Incoming_Message_Inbox` rows appear; `WhatsApp_Group_Map` has current group IDs. | Restart the local bridge; run a manual `--send-test`; re-sync groups when mappings are stale. | Do not let captured messages auto-pause, auto-message, or auto-change payments. Bridge intake is evidence capture only. | `docs/admin/WHATSAPP_INCOMING_BRIDGE.md`; `tools/whatsapp-incoming-bridge/README.md`; `/admin/incoming-messages`. |
+| Tutor absence and pause bridge | Turns tutor-away decisions into cover/cancel communication and structured pause plans. Owner: Finn/Tom. | Tutor absence record shows the chosen outcome; cancelled dates produce grouped structured pause planning items; superseded single-day plans are parked; finance pause forecast reads the grouped item. | Repair/merge structured pause dates from the planning card if capture was messy; park duplicate plans instead of deleting history unless they are test records. | Do not run Stripe pauses automatically from tutor absence. Do not message parents before cover/cancel decision is confirmed. | `docs/admin/TUTOR_ABSENCE_PAUSE_BRIDGE.md`; `/admin/workflows/tutor-absence`; `/admin/planning`; tests around tutor absence pause planning. |
+| Finance snapshots and payroll context | Read-only finance estimate, snapshots, expenses, payroll review, and Wise preparation. Owner: Finn/Tom. | `/admin/finance` loads; latest `Finance_Snapshot` row exists after weekly/monthly cron; `Payroll_Runs` status reflects review/payment state; estimates are labelled as estimates. | Re-run snapshot cron with the secret if GitHub action failed; correct config tabs (`Tutor_Pay`, `Expenses`) before trusting numbers. | Do not treat finance estimates as Stripe/accounting truth. Do not mark payroll paid unless Tom has actually paid it. | `/admin/finance`; `/admin/payroll`; `.github/workflows/finance-snapshot.yml`; `docs/admin/TUTOR_FACING_PAYROLL_ROADMAP.md`; finance/payroll tests. |
+| Backups and restore | Local recovery copy of operational Sheets tabs. Owner: Finn, with Tom able to follow runbook. | `npm run backup:sheets` creates dated CSV/JSON files plus `manifest.json`; no failed tabs; planning reminder moves 14 days forward. | Re-run after fixing auth/network; restore into a duplicate/temp Sheet tab first. | Do not commit backups. Do not overwrite live tabs without comparing headers and taking a current backup. | Backup section below; `scripts/backup-sheets-tabs.mjs`; `backups/sheets/` ignored directory. |
+
+## Component Runbook Template
+
+Use this compact shape when adding a new high-risk component doc. Do not force it onto small styling or copy-only changes.
+
+```md
+## Component Name
+
+Purpose:
+Owner:
+Source of truth:
+Inputs:
+Outputs:
+Dependencies:
+Sensitive data:
+Healthy state:
+Health signals:
+Last successful activity:
+Common failure modes:
+Diagnostic steps:
+Safe retry procedure:
+Actions that must not be retried blindly:
+Rollback or recovery procedure:
+Escalation point:
+Related tests:
+Related dashboard pages:
+Last verified:
+```
 
 ## If MMS API Is Failing
 
@@ -327,14 +388,17 @@ Follow-up verified run after creating `Students_Archive`:
 backups/sheets/2026-06-11T12-46-00Z/
 ```
 
-That run backed up all 12 tabs with zero failed or skipped tabs and set the next planning reminder for `2026-06-25`.
+That run backed up all then-current tabs with zero failed or skipped tabs and set the next planning reminder for `2026-06-25`.
 
-New dashboard-owned state tabs should be added to `scripts/backup-sheets-tabs.mjs`. `Practice_Notes_Log` is included because it stores student-linked note snapshots from Practice Chat. Finance/payroll tabs are included because they store sensitive operating assumptions and review state: `Tutor_Pay`, `Expenses`, `Expense_Log`, `Finance_Snapshot`, and `Payroll_Runs`.
+New dashboard-owned state tabs should be added to `scripts/backup-sheets-tabs.mjs`. `Practice_Notes_Log` is included because it stores student-linked note snapshots from Practice Chat. Communication and WhatsApp tabs are included because they hold incoming-message evidence and group identity mappings: `Communication_Log`, `Incoming_Message_Inbox`, and `WhatsApp_Group_Map`. Finance/payroll tabs are included because they store sensitive operating assumptions and review state: `Tutor_Pay`, `Expenses`, `Expense_Log`, `Finance_Snapshot`, `Payroll_Runs`, and `Tutor_Wise`.
+
+If `STATE_TABS_SCHEMA.md` gains a new dashboard-owned tab, update the backup script in the same change or explicitly explain why that tab should not be backed up.
 
 Retention policy for now:
 
 - Keep local dated backups in `backups/sheets/`.
-- Review/prune manually after 8 backups.
+- Keep only the latest 8 backup sets. The backup script prunes older dated folders after a successful backup.
+- This retention cap matters because the backups include communication/WhatsApp message evidence, which is useful for recovery but sensitive.
 - Do not upload to public storage.
 - FINN TO FILL IN whether a private Google Drive backup folder should become the long-term destination.
 

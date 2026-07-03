@@ -19,6 +19,30 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-07-03 — Operations recovery matrix and backup coverage
+
+**Feature/change:** Added a component recovery matrix to `OPERATIONS_RUNBOOK.md`, tightened the documentation maintenance rule in `DOCUMENTATION_MAP.md`, and expanded `scripts/backup-sheets-tabs.mjs` to include communication, WhatsApp, and payroll support tabs. The backup script now keeps only the latest 8 dated backup sets.
+
+**Why it exists:** The dashboard now has enough moving parts that recovery cannot depend on Finn remembering where each signal lives. Operators and future agents need one place to see what each component owns, how to tell whether it is healthy, what can be retried safely, and which actions can duplicate messages, payments, or state.
+
+**Source-of-truth impact:** No source-of-truth ownership changed. The backup script now better matches the documented dashboard-owned state lanes, so local recovery snapshots include more of the operational memory.
+
+**Files/functions involved:** `docs/admin/OPERATIONS_RUNBOOK.md`, `docs/admin/DOCUMENTATION_MAP.md`, `docs/admin/CURRENT_STATUS.md`, `docs/admin/NEW_AGENT_START_HERE.md`, `docs/admin/STATE_TABS_SCHEMA.md`, `docs/admin/PRACTICE_CHAT_DELIVERY_AUDIT.md`, `scripts/backup-sheets-tabs.mjs`.
+
+**What to watch out for:** If `STATE_TABS_SCHEMA.md` gains another dashboard-owned state tab, the backup script should be updated in the same change or the omission should be explicit. The 8-set retention cap is intentional because message backups contain parent/student communication evidence. Recovery docs should stay short and evidence-based; do not turn them into speculative manuals.
+
+### 2026-07-03 — Practice Chat typed fallback and same-day absence branch
+
+**Feature/change:** Practice Chat now has a discreet typed-notes route that opens the same final review/edit screen with the three note headings prefilled. The Level 2 pilot route also supports an attendance-only `AbsentNoMakeup` branch for same-day cancellations/no-shows: it writes the selected MMS attendance as `AbsentNoMakeup`, skips the parent practice-note email, logs the action with `email_send_status = not_sent_absent`, and keeps the student portal notes feed from showing the attendance-only row as a practice note.
+
+**Why it exists:** Practice Chat should become the guided route for lesson completion, while still supporting tutors who prefer to type and the rare case where the student is absent on the day. Speech-to-text remains the main path; typing and absence are controlled escape hatches inside the same workflow.
+
+**Source-of-truth impact:** MMS remains the attendance source of truth. `Practice_Notes_Log` records the dashboard/PWA delivery or attendance action as workflow/audit state. Gmail remains the delivery channel only for real practice notes; absence does not send email.
+
+**Files/functions involved:** Practice Chat PWA `public/index.html`, `public/src/app.js`, `public/src/practice-note-sync.js`; dashboard route `app/api/practice-notes/mms-test/route.js`; `previewPracticeNoteMmsTestWrite` / `executePracticeNoteMmsTestWrite` in `lib/admin/mms.js`; `buildPracticeNoteAttendancePayload` / `normalisePracticeNoteAttendanceStatus`; `isPracticeNoteVisibleInPortal`.
+
+**What to watch out for:** `AbsentNoMakeup` is payable/invoiced in payroll logic. Do not use this for planned absences where Finn/Tom have already paused/cancelled through admin workflows. If a future "absence with notice" tutor path is added, it needs a separate `AbsentNotice` branch and different payment/payroll implications.
+
 ### 2026-07-03 — Bounded SWR Sheets Cache + UI Action Discipline
 
 **Feature/change:** The core dashboard Sheets read cache now uses bounded stale-while-revalidate for normal reads: fresh rows are served for 60s, recently-stale rows are served immediately while a background refresh updates the cache, and rows older than the hard cap block for a fresh Google Sheets read. Added small admin UI primitives (`ActionButton`, `ConfirmButton`, `StatusBanner`, `useAsyncAction`) plus hygiene warnings for new full-page reloads, raw async admin buttons, and direct admin fetches.

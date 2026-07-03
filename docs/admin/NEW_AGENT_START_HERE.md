@@ -1,6 +1,6 @@
 # New Agent Start Here — Admin Dashboard
 
-Last updated: 2026-06-23
+Last updated: 2026-07-03
 
 This is the practical handoff note for a new Codex/AI agent working on the First Chord admin dashboard.
 
@@ -77,17 +77,18 @@ Keep this short; it is an operator pointer, not a permissions model.
 2. `docs/admin/V3_LOOP_ARCHITECTURE.md`
 3. `docs/admin/OWNERSHIP_MATRIX.md`
 4. `docs/admin/STATE_TABS_SCHEMA.md` — canonical state lane map
-5. `docs/admin/WORKFLOW_DESIGN_PRINCIPLES.md`
-6. `docs/admin/COPY_AND_TONE.md`
-7. `docs/admin/UI_CONVENTIONS.md`
-8. `docs/admin/HYGIENE_AND_SECRETS.md`
-9. `docs/admin/DOCUMENTATION_MAP.md`
-10. `docs/admin/SCHOOL_POLICY.md`
-11. `docs/admin/PAYMENTS_RULES.md` if touching Stripe, pauses, or payment expectations
-12. `docs/admin/BUG_FIXES.md` if debugging Railway, MMS calendar times, or recent production issues
-13. `docs/admin/PRACTICE_CHAT_DELIVERY_AUDIT.md` if touching Practice Chat Level 2 delivery or rollout
-14. Obsidian: `08 Operations/Current System Map.md`
-15. Obsidian: `08 Operations/Active Roadmap.md`
+5. `docs/admin/OPERATIONS_RUNBOOK.md` — recovery, env vars, component health, backups, and deploy rollback
+6. `docs/admin/WORKFLOW_DESIGN_PRINCIPLES.md`
+7. `docs/admin/COPY_AND_TONE.md`
+8. `docs/admin/UI_CONVENTIONS.md`
+9. `docs/admin/HYGIENE_AND_SECRETS.md`
+10. `docs/admin/DOCUMENTATION_MAP.md`
+11. `docs/admin/SCHOOL_POLICY.md`
+12. `docs/admin/PAYMENTS_RULES.md` if touching Stripe, pauses, or payment expectations
+13. `docs/admin/BUG_FIXES.md` if debugging Railway, MMS calendar times, or recent production issues
+14. `docs/admin/PRACTICE_CHAT_DELIVERY_AUDIT.md` if touching Practice Chat Level 2 delivery or rollout
+15. Obsidian: `08 Operations/Current System Map.md`
+16. Obsidian: `08 Operations/Active Roadmap.md`
 
 ## Source-of-Truth Rules
 

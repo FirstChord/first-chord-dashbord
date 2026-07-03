@@ -1,6 +1,6 @@
 # Practice Chat Delivery Audit
 
-Last updated: 2026-06-21
+Last updated: 2026-07-03
 
 This is a read-only audit note for Practice Chat delivery before widening Level 2 beyond Finn, Tom, and Fenella.
 
@@ -13,9 +13,10 @@ Level 2 Practice Chat currently:
 - accepts calls from the Practice Chat PWA through dashboard API routes
 - uses a shared bridge secret plus allowed browser origins
 - is limited to dashboard-verified students whose tutor is Finn, Tom, or Fenella, plus Test Studenty
+- allows speech capture or a typed-note fallback before the final human-reviewed action
 - previews the selected MMS attendance target before writing
-- writes the note/attendance to MMS
-- sends the parent note through First Chord Gmail
+- can mark the student `Present`, write the note/attendance to MMS, and send the parent note through First Chord Gmail
+- can mark an on-the-day cancellation as `AbsentNoMakeup` without sending a parent practice-note email
 - upserts delivery/audit state into `Practice_Notes_Log`
 - uses `delivery_key = student + MMS attendance + note hash` to avoid duplicate sends for the same delivery
 
@@ -52,6 +53,7 @@ Before enabling Level 2 for more tutors:
 - `Practice_Notes_Log` is dashboard-owned learning/delivery memory.
 - MMS remains attendance/payroll continuity until payroll no longer depends on MMS attendance.
 - Sent/completed First Chord notes can be parent-visible in portals.
+- Absence-only rows are attendance evidence, not parent-note delivery evidence.
 - Draft, in-progress, failed, and snapshot-only rows are not proof of delivery.
 
 ## Manual Checks Before Widening
@@ -60,5 +62,6 @@ Before enabling Level 2 for more tutors:
 - Confirm the parent receives the email.
 - Confirm MMS attendance is present and the note is visible where expected.
 - Confirm `Practice_Notes_Log` contains recipient, send status, Gmail ID, MMS attendance ID, and completed status.
+- Confirm an `AbsentNoMakeup` test row records attendance status without sending a parent email.
 - Attempt a duplicate send and confirm it returns the existing delivery rather than emailing again.
 - Confirm failed Gmail or MMS paths are visible enough for admin follow-up.
