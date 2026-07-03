@@ -1,5 +1,6 @@
 import mmsClient from '@/lib/mms-client-cached';
 import { enhanceStudentsWithSoundslice } from '@/lib/soundslice-mappings';
+import { addStudentNotesTokens } from '@/lib/tutor-surface-token.mjs';
 
 // BYPASS DATABASE - JUST USE MMS DATA DIRECTLY WITH HARDCODED SOUNDSLICE
 export async function POST(request) {
@@ -24,15 +25,16 @@ export async function POST(request) {
     if (mmsResult.success && mmsResult.students) {
       // Enhance MMS data with hardcoded Soundslice courses
       const enhancedStudents = enhanceStudentsWithSoundslice(mmsResult.students);
+      const studentsWithNoteTokens = addStudentNotesTokens(enhancedStudents, { tutor });
       console.log('Enhanced students with Soundslice courses');
       
       // Return enhanced data directly - no database saving
       return Response.json({
         success: true,
-        students: enhancedStudents,
-        count: enhancedStudents.length,
+        students: studentsWithNoteTokens,
+        count: studentsWithNoteTokens.length,
         source: 'mms',
-        message: `Successfully fetched ${enhancedStudents.length} students from MMS with Soundslice courses`
+        message: `Successfully fetched ${studentsWithNoteTokens.length} students from MMS with Soundslice courses`
       });
     } else {
       console.log('MMS fetch failed:', mmsResult.message);

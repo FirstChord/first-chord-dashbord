@@ -1,10 +1,21 @@
 // app/api/mms/[...path]/route.js
 import { cookies } from 'next/headers'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/admin/auth'
 import { getMmsBearerToken } from '@/lib/mms-token'
 
 const MMS_BASE_URL = process.env.MMS_API_URL || 'https://api.mymusicstaff.com'
 
+async function requireAdminSession() {
+  const session = await getServerSession(authOptions)
+  return Boolean(session?.user?.isAdmin)
+}
+
 export async function GET(request, { params }) {
+  if (!await requireAdminSession()) {
+    return Response.json({ error: 'Admin session required' }, { status: 401 })
+  }
+
   const cookieStore = await cookies()
   const token = cookieStore.get('mms-token')
   const defaultToken = getMmsBearerToken()
@@ -16,7 +27,8 @@ export async function GET(request, { params }) {
     return Response.json({ error: 'Not authenticated' }, { status: 401 })
   }
   
-  const path = params.path.join('/')
+  const resolvedParams = await params
+  const path = (resolvedParams.path || []).join('/')
   const url = new URL(request.url)
   const queryString = url.search
   
@@ -36,6 +48,10 @@ export async function GET(request, { params }) {
 }
 
 export async function POST(request, { params }) {
+  if (!await requireAdminSession()) {
+    return Response.json({ error: 'Admin session required' }, { status: 401 })
+  }
+
   const cookieStore = await cookies()
   const token = cookieStore.get('mms-token')
   const defaultToken = getMmsBearerToken()
@@ -48,7 +64,8 @@ export async function POST(request, { params }) {
   }
   
   const body = await request.json()
-  const path = params.path.join('/')
+  const resolvedParams = await params
+  const path = (resolvedParams.path || []).join('/')
   
   try {
     const response = await fetch(`${MMS_BASE_URL}/${path}`, {

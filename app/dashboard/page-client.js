@@ -15,6 +15,14 @@ import {
 
 const TUTOR_OPTIONS = getTutorDashboardOptionNames();
 
+function notesUrlForStudent(student = {}) {
+  const studentId = student.mms_id || student.ID || '';
+  const token = student.noteAccessToken || student.note_access_token || '';
+  const params = new URLSearchParams();
+  if (token) params.set('token', token);
+  return `/api/notes/${encodeURIComponent(studentId)}${params.toString() ? `?${params.toString()}` : ''}`;
+}
+
 export default function DashboardClient() {
   const [tutor, setTutor] = useState('');
   const [students, setStudents] = useState([]);
@@ -130,9 +138,13 @@ export default function DashboardClient() {
     if (selectedStudent) {
       setLoading(true);
       
-      fetch(`/api/notes/${selectedStudent.mms_id}`)
+      fetch(notesUrlForStudent(selectedStudent))
         .then(res => res.json())
         .then(data => {
+          if (!data.success && data.code === 'notes_token_required' && tutor) {
+            cache.clearStudents(tutor);
+            syncStudentsFromMMS(tutor, true);
+          }
           setLastNotes(data.notes);
           setNotesSource(data.source);
           setLoading(false);

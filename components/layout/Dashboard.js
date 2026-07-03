@@ -9,6 +9,14 @@ import AuthStatus from '@/components/auth/AuthStatus';
 import { cache } from '@/lib/cache';
 import { Users, Clock, Search, RefreshCw } from 'lucide-react';
 
+function notesUrlForStudent(student = {}) {
+  const studentId = student.mms_id || student.ID || '';
+  const token = student.noteAccessToken || student.note_access_token || '';
+  const params = new URLSearchParams();
+  if (token) params.set('token', token);
+  return `/api/notes/${encodeURIComponent(studentId)}${params.toString() ? `?${params.toString()}` : ''}`;
+}
+
 export default function Dashboard({ initialData }) {
   const [students, setStudents] = useState(initialData?.students || []);
   const [allStudents, setAllStudents] = useState(initialData?.students || []);
@@ -150,9 +158,13 @@ export default function Dashboard({ initialData }) {
     if (selectedStudent) {
       setLoading(true);
       
-      fetch(`/api/notes/${selectedStudent.mms_id}`)
+      fetch(notesUrlForStudent(selectedStudent))
         .then(res => res.json())
         .then(data => {
+          if (!data.success && data.code === 'notes_token_required' && tutor) {
+            cache.clearStudents(tutor);
+            syncStudentsFromMMS(tutor, true);
+          }
           setLastNotes(data.lastNotes);
           setNotesSource(data.source);
           setLoading(false);

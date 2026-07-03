@@ -1,6 +1,39 @@
 import mmsClient from '@/lib/mms-client-cached';
 import { getPracticeNoteLogRows } from '@/lib/admin/sheets';
 import { selectLatestPortalPracticeNote } from '@/lib/admin/practice-notes-helpers.mjs';
+import { getTutorSurfaceTokenSecret, verifyStudentNotesToken } from '@/lib/tutor-surface-token.mjs';
+
+function authorizeNotesRequest(request, studentId) {
+  const { searchParams } = new URL(request.url);
+  const token = searchParams.get('token') || '';
+  const secret = getTutorSurfaceTokenSecret();
+
+  if (!secret) {
+    return {
+      ok: false,
+      status: 503,
+      body: {
+        success: false,
+        code: 'notes_token_secret_missing',
+        message: 'Notes access is not configured',
+      },
+    };
+  }
+
+  if (!verifyStudentNotesToken(token, { studentId, secret })) {
+    return {
+      ok: false,
+      status: 401,
+      body: {
+        success: false,
+        code: 'notes_token_required',
+        message: 'A valid notes access token is required',
+      },
+    };
+  }
+
+  return { ok: true };
+}
 
 async function getFirstChordPortalNote(studentId) {
   try {
@@ -34,11 +67,10 @@ function notesResponse({ notes, source }) {
 
 export async function POST(request, { params }) {
   const { studentId } = await params;
-  const { searchParams } = new URL(request.url);
-  const token = searchParams.get('token');
-  
-  console.log(`=== Notes API called for student: ${studentId} ===`);
-  console.log('Token from URL:', token ? 'Present' : 'Not provided');
+  const auth = authorizeNotesRequest(request, studentId);
+  if (!auth.ok) {
+    return Response.json(auth.body, { status: auth.status });
+  }
   
   try {
     const ownedNote = await getFirstChordPortalNote(studentId);
@@ -80,8 +112,10 @@ export async function POST(request, { params }) {
 
 export async function GET(request, { params }) {
   const { studentId } = await params;
-  
-  console.log(`=== Get Notes API called for student: ${studentId} ===`);
+  const auth = authorizeNotesRequest(request, studentId);
+  if (!auth.ok) {
+    return Response.json(auth.body, { status: auth.status });
+  }
   
   try {
     const ownedNote = await getFirstChordPortalNote(studentId);
