@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import StudentCard from '@/components/student/StudentCard';
 import NotesPanel from '@/components/student/NotesPanel';
 import QuickLinks from '@/components/navigation/QuickLinks';
@@ -18,6 +19,7 @@ function notesUrlForStudent(student = {}) {
 }
 
 export default function Dashboard({ initialData }) {
+  const router = useRouter();
   const [students, setStudents] = useState(initialData?.students || []);
   const [allStudents, setAllStudents] = useState(initialData?.students || []);
   const [filteredStudents, setFilteredStudents] = useState([]);
@@ -208,8 +210,8 @@ export default function Dashboard({ initialData }) {
     if (tutor) {
       syncStudentsFromMMS(tutor, true); // true = force sync, bypass cache
     } else {
-      // Refresh all students data
-      window.location.reload();
+      cache.clearAll();
+      router.refresh();
     }
   };
 

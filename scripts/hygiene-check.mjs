@@ -81,6 +81,28 @@ function changedDiff() {
   return runGit(['diff', '--', '.']);
 }
 
+function changedDiffByFile() {
+  const output = runGit(['diff', '--unified=0', '--', '.']);
+  const files = new Map();
+  let currentFile = '';
+
+  for (const line of output.split('\n')) {
+    if (line.startsWith('+++ b/')) {
+      currentFile = line.slice('+++ b/'.length);
+      if (!files.has(currentFile)) files.set(currentFile, []);
+      continue;
+    }
+
+    if (!currentFile || !line.startsWith('+') || line.startsWith('+++')) {
+      continue;
+    }
+
+    files.get(currentFile).push(line.slice(1));
+  }
+
+  return files;
+}
+
 function formatRows(rows) {
   return rows.map((row) => `  - ${row.path}: ${row.lines} lines`).join('\n');
 }
@@ -141,6 +163,14 @@ function hasRouteOrWorkflowTouch(files) {
   ));
 }
 
+function hasAddedLine(fileDiffs, predicate) {
+  return [...fileDiffs.entries()].filter(([file, lines]) => predicate(file, lines));
+}
+
+function isCodeFile(file) {
+  return CODE_EXTENSIONS.has(path.extname(file));
+}
+
 function printSection(title, body) {
   console.log(`\n${title}`);
   console.log(body);
@@ -148,6 +178,7 @@ function printSection(title, body) {
 
 const files = changedFiles();
 const diffText = changedDiff();
+const fileDiffs = changedDiffByFile();
 const warnings = [];
 
 const largeCodeFiles = collectLargeCodeFiles();
@@ -184,6 +215,40 @@ if (hasRouteOrWorkflowTouch(files) && !files.includes('docs/admin/CURRENT_STATUS
   warnings.push({
     title: 'Admin route/workflow changed',
     body: 'If this changed a live workflow or surfaced a new operating layer, update docs/admin/CURRENT_STATUS.md or the relevant workflow doc.',
+  });
+}
+
+const addedReloads = hasAddedLine(fileDiffs, (file, lines) => (
+  isCodeFile(file)
+  && lines.some((line) => /window\.location\.reload\(/u.test(line))
+));
+if (addedReloads.length) {
+  warnings.push({
+    title: 'New full-page reload introduced',
+    body: `${addedReloads.map(([file]) => `  - ${file}`).join('\n')}\n  Prefer local state updates or router.refresh() so users keep context and avoid a white flash.`,
+  });
+}
+
+const addedAdminFetches = hasAddedLine(fileDiffs, (file, lines) => (
+  /^components\/admin\//u.test(file)
+  && lines.some((line) => /fetch\((['"])\/api\/admin\//u.test(line))
+));
+if (addedAdminFetches.length) {
+  warnings.push({
+    title: 'New direct admin fetch introduced',
+    body: `${addedAdminFetches.map(([file]) => `  - ${file}`).join('\n')}\n  If this is async UI work, pair it with visible pending/error/success feedback. Prefer the shared async/action-button pattern when practical.`,
+  });
+}
+
+const addedRawButtons = hasAddedLine(fileDiffs, (file, lines) => (
+  /^components\/admin\//u.test(file)
+  && !/^components\/admin\/ui\//u.test(file)
+  && lines.some((line) => /<button(?:\s|>)/u.test(line))
+));
+if (addedRawButtons.length) {
+  warnings.push({
+    title: 'New raw admin buttons introduced',
+    body: `${addedRawButtons.map(([file]) => `  - ${file}`).join('\n')}\n  For new async actions, use ActionButton/ConfirmButton or explain why a plain button is only local UI state.`,
   });
 }
 

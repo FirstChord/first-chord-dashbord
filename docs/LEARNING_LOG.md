@@ -19,6 +19,18 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-07-03 — Bounded SWR Sheets Cache + UI Action Discipline
+
+**Feature/change:** The core dashboard Sheets read cache now uses bounded stale-while-revalidate for normal reads: fresh rows are served for 60s, recently-stale rows are served immediately while a background refresh updates the cache, and rows older than the hard cap block for a fresh Google Sheets read. Added small admin UI primitives (`ActionButton`, `ConfirmButton`, `StatusBanner`, `useAsyncAction`) plus hygiene warnings for new full-page reloads, raw async admin buttons, and direct admin fetches.
+
+**Why it exists:** The dashboard was already fast inside the 60s TTL but could feel slow on the first hit after the TTL because pages blocked on several full Google Sheets reads. Bounded SWR keeps active admin sessions cache-speed without letting a quiet tab serve hour-old data. The UI primitives make pending/success/error feedback the default path for future agents.
+
+**Source-of-truth impact:** None. Google Sheets remains the operational store. This only changes read freshness behaviour for cached dashboard reads. Dashboard-owned writes still invalidate their tab cache; external writers are bounded by the hard max age.
+
+**Files/functions involved:** `getSheetValues`, `getStaleCachedSheetValues`, `setCachedSheetValues` (`lib/admin/sheets/core.mjs`); `getIssueQueueRows` (`lib/admin/sheets/issues.mjs`); `components/admin/ui/*`; `scripts/hygiene-check.mjs`; `docs/admin/UI_CONVENTIONS.md`.
+
+**What to watch out for:** Do not use bounded-stale reads for paths that need immediate external truth after an off-dashboard write. If a workflow depends on a live vendor/system value, use an explicit refresh or a direct source read. If page loads still feel slow, measure which section is blocking before adding more Suspense boundaries.
+
 ### 2026-07-02 — Tutor pay statement (Phase 1 of tutor-facing payroll)
 
 **Feature/change:** A read-only pay statement per tutor: line items + frozen total for a period. Reached from each reviewed/paid tutor card on the payroll page (`/admin/finance/payroll/statement?pid=<payrollId>`), with **Copy statement text** and **Copy share link**. The share link is a **signed, no-login public URL** (`/pay/statement/<token>`) the admin pastes to the tutor. Nothing is sent automatically.

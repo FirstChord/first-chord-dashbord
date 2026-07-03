@@ -18,7 +18,14 @@ How fast something *feels* vs how fast it technically is. Skeletons improve perc
 
 A cache keeps a temporary copy of data to avoid re-fetching. TTL ("time to live") is how long the copy is trusted before refetching.
 
-- The Sheets read cache (`SHEETS_READ_TTL_MS` in `lib/admin/sheets.js`) is 60s. Dashboard writes call `invalidateSheetReadCache` for the affected tab, so the admin's own edits appear immediately; only passive cross-source drift can lag up to the TTL.
+- The Sheets read cache (`SHEETS_READ_TTL_MS` in `lib/admin/sheets/core.mjs`) is fresh for 60s, then uses bounded stale-while-revalidate for a short window. Recent stale rows can render instantly while the server refreshes the cache in the background; very old rows block for a fresh Google Sheets read. Dashboard writes call `invalidateSheetReadCache` for the affected tab, so the admin's own edits appear immediately. External writers are bounded by the hard max age.
+
+## Stale-While-Revalidate
+
+A cache pattern where the app serves a recently-stale value immediately, then refreshes it in the background for the next request.
+
+- First Chord uses this only with a hard cap. It is meant for admin speed, not for replacing source-of-truth checks.
+- If a workflow must know live MMS, Stripe, or a just-edited Sheet value, use an explicit refresh or direct source read.
 
 ## Server component
 

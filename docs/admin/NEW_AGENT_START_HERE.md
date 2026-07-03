@@ -79,14 +79,15 @@ Keep this short; it is an operator pointer, not a permissions model.
 4. `docs/admin/STATE_TABS_SCHEMA.md` — canonical state lane map
 5. `docs/admin/WORKFLOW_DESIGN_PRINCIPLES.md`
 6. `docs/admin/COPY_AND_TONE.md`
-7. `docs/admin/HYGIENE_AND_SECRETS.md`
-8. `docs/admin/DOCUMENTATION_MAP.md`
-9. `docs/admin/SCHOOL_POLICY.md`
-10. `docs/admin/PAYMENTS_RULES.md` if touching Stripe, pauses, or payment expectations
-11. `docs/admin/BUG_FIXES.md` if debugging Railway, MMS calendar times, or recent production issues
-12. `docs/admin/PRACTICE_CHAT_DELIVERY_AUDIT.md` if touching Practice Chat Level 2 delivery or rollout
-13. Obsidian: `08 Operations/Current System Map.md`
-14. Obsidian: `08 Operations/Active Roadmap.md`
+7. `docs/admin/UI_CONVENTIONS.md`
+8. `docs/admin/HYGIENE_AND_SECRETS.md`
+9. `docs/admin/DOCUMENTATION_MAP.md`
+10. `docs/admin/SCHOOL_POLICY.md`
+11. `docs/admin/PAYMENTS_RULES.md` if touching Stripe, pauses, or payment expectations
+12. `docs/admin/BUG_FIXES.md` if debugging Railway, MMS calendar times, or recent production issues
+13. `docs/admin/PRACTICE_CHAT_DELIVERY_AUDIT.md` if touching Practice Chat Level 2 delivery or rollout
+14. Obsidian: `08 Operations/Current System Map.md`
+15. Obsidian: `08 Operations/Active Roadmap.md`
 
 ## Source-of-Truth Rules
 
@@ -152,6 +153,7 @@ Overview now acts as the meeting-start surface:
 - deliberately not front-page by default: parent understanding, broad school/payment context, and system health when everything is quiet
 - design rule: do not add a card because the data exists; add it only if Finn/Tom would click it in a meeting and do work
 - copy/tone guide: `docs/admin/COPY_AND_TONE.md`
+- UI/action guide: `docs/admin/UI_CONVENTIONS.md`; new async admin actions should show pending/success/error feedback and should avoid `window.location.reload()`
 
 Practice Chat now has a dashboard bridge:
 

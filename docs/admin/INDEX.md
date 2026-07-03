@@ -26,6 +26,8 @@ This admin index is the map of durable admin documentation. Older V1/V2 drafts a
   Safe intake contract for manual/starred WhatsApp messages into `Incoming_Message_Inbox`; review-only, no automatic action.
 - [COPY_AND_TONE.md](./COPY_AND_TONE.md)
   Lightweight voice guide for calm, human, action-led dashboard copy.
+- [UI_CONVENTIONS.md](./UI_CONVENTIONS.md)
+  Lightweight UI/action conventions for async buttons, status feedback, destructive actions, and avoiding full-page reloads.
 - [HYGIENE_AND_SECRETS.md](./HYGIENE_AND_SECRETS.md)
   Trust-floor notes for the home-directory git repo, Theta credentials, test students, and secret handling.
 - [OPERATING_DASHBOARD_BUILD_BLUEPRINT.md](./OPERATING_DASHBOARD_BUILD_BLUEPRINT.md)

@@ -83,6 +83,16 @@ npm run backup:sheets
 
 This currently covers the one-row state upserts. Bulk issue sync still has custom logic because it batches appends and updates multiple rows.
 
+## Read Cache Contract
+
+Shared sheet reads use a short in-process cache in `lib/admin/sheets/core.mjs`.
+
+- fresh cache window: repeat reads return immediately
+- bounded stale window: recently-stale rows may render immediately while a background refresh updates the cache
+- hard max age: old rows block for a fresh Google Sheets read
+
+Dashboard-owned writes call `invalidateSheetReadCache()` for the affected tab. External writers, such as separate tools or manual Sheets edits, can therefore be briefly stale but should not remain stale beyond the hard cap. If a workflow needs immediate external truth, use an explicit refresh or a direct source read instead of relying on cached rows.
+
 ## Concurrency And Limits
 
 Google Sheets is acceptable for the current scale because writes are low-volume and mostly human-triggered. The main risk is two users editing the same keyed row at nearly the same time. The current pattern is last-write-wins.

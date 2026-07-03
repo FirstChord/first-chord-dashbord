@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Check, Copy, Loader2, Search, Trash2 } from 'lucide-react';
 import {
   buildTutorAbsenceMessage,
@@ -9,6 +10,8 @@ import {
   summariseTutorAbsenceState,
 } from '@/lib/admin/tutor-absence-helpers.mjs';
 import { logCommunicationCopy } from '@/lib/admin/log-communication-copy.js';
+import { ActionButton } from '@/components/admin/ui/ActionButton';
+import { ConfirmButton } from '@/components/admin/ui/ConfirmButton';
 
 const PAYMENT_PAUSE_PWA_URL = process.env.NEXT_PUBLIC_PAYMENT_PAUSE_PWA_URL || 'https://payment-pause-pwa.web.app/';
 
@@ -102,11 +105,12 @@ function MessageButton({ body, copiedId, copyId, onCopy, context = null, label =
 }
 
 export default function AdminTutorAbsencePageClient({ workflow }) {
+  const router = useRouter();
   const [decision, setDecision] = useState(workflow.state.decision || '');
   const [coverTutorShortName, setCoverTutorShortName] = useState(workflow.state.coverTutorShortName || '');
   const [messageState, setMessageState] = useState(workflow.state.messageState || {});
   const [note, setNote] = useState(workflow.state.note || '');
-  const [saveState, setSaveState] = useState({ pending: false, error: '', savedAt: '' });
+  const [saveState, setSaveState] = useState({ pending: false, action: '', error: '', savedAt: '' });
   const [copiedId, setCopiedId] = useState('');
   const [paymentUpdateState, setPaymentUpdateState] = useState({ pendingId: '', error: '' });
   const [groupMessageState, setGroupMessageState] = useState({ pendingKey: '', error: '', markedKey: '' });
@@ -135,7 +139,7 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
         ...patch,
       },
     }));
-    setSaveState({ pending: false, error: '', savedAt: '' });
+    setSaveState({ pending: false, action: '', error: '', savedAt: '' });
   }
 
   function updateWorkflowChecklist(patch) {
@@ -146,7 +150,7 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
         ...patch,
       },
     }));
-    setSaveState({ pending: false, error: '', savedAt: '' });
+    setSaveState({ pending: false, action: '', error: '', savedAt: '' });
   }
 
   function setAllMessaged() {
@@ -158,7 +162,7 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
       };
     }
     setMessageState(next);
-    setSaveState({ pending: false, error: '', savedAt: '' });
+    setSaveState({ pending: false, action: '', error: '', savedAt: '' });
   }
 
   async function copyMessage(copyId, body, context = null) {
@@ -202,7 +206,7 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
         throw new Error(payload.error || 'Could not mark grouped message sent');
       }
       setGroupMessageState({ pendingKey: '', error: '', markedKey: groupKey });
-      window.location.reload();
+      router.refresh();
     } catch (error) {
       setGroupMessageState({ pendingKey: '', error: error.message || 'Could not mark grouped message sent', markedKey: '' });
     }
@@ -238,7 +242,7 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
   }
 
   async function saveAbsence(status = 'in_progress') {
-    setSaveState({ pending: true, error: '', savedAt: '' });
+    setSaveState({ pending: true, action: status, error: '', savedAt: '' });
     try {
       const response = await fetch('/api/admin/tutor-absence', {
         method: 'POST',
@@ -259,20 +263,17 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
       });
       const payload = await response.json();
       if (!response.ok) {
-        setSaveState({ pending: false, error: payload.error || 'Save failed', savedAt: '' });
+        setSaveState({ pending: false, action: '', error: payload.error || 'Save failed', savedAt: '' });
         return;
       }
-      setSaveState({ pending: false, error: '', savedAt: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) });
+      setSaveState({ pending: false, action: '', error: '', savedAt: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) });
     } catch (error) {
-      setSaveState({ pending: false, error: error.message || 'Save failed', savedAt: '' });
+      setSaveState({ pending: false, action: '', error: error.message || 'Save failed', savedAt: '' });
     }
   }
 
   async function deleteAbsence() {
-    const confirmed = window.confirm('Delete this logged tutor absence date? Use this when the tutor is no longer off and the date should disappear from the workflow.');
-    if (!confirmed) return;
-
-    setSaveState({ pending: true, error: '', savedAt: '' });
+    setSaveState({ pending: true, action: 'delete', error: '', savedAt: '' });
     try {
       const response = await fetch('/api/admin/tutor-absence', {
         method: 'DELETE',
@@ -281,12 +282,12 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
       });
       const payload = await response.json();
       if (!response.ok) {
-        setSaveState({ pending: false, error: payload.error || 'Delete failed', savedAt: '' });
+        setSaveState({ pending: false, action: '', error: payload.error || 'Delete failed', savedAt: '' });
         return;
       }
       window.location.href = '/admin/workflows/tutor-absence';
     } catch (error) {
-      setSaveState({ pending: false, error: error.message || 'Delete failed', savedAt: '' });
+      setSaveState({ pending: false, action: '', error: error.message || 'Delete failed', savedAt: '' });
     }
   }
 
@@ -364,7 +365,7 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
               onClick={() => {
                 setDecision('cancel_day');
                 setCoverTutorShortName('');
-                setSaveState({ pending: false, error: '', savedAt: '' });
+                setSaveState({ pending: false, action: '', error: '', savedAt: '' });
               }}
               className={`rounded-full border px-4 py-2 text-sm font-semibold ${decision === 'cancel_day' ? 'border-red-200 bg-red-50 text-red-900' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
             >
@@ -374,7 +375,7 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
               type="button"
               onClick={() => {
                 setDecision('cover');
-                setSaveState({ pending: false, error: '', savedAt: '' });
+                setSaveState({ pending: false, action: '', error: '', savedAt: '' });
               }}
               className={`rounded-full border px-4 py-2 text-sm font-semibold ${decision === 'cover' ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
             >
@@ -388,7 +389,7 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
                 value={coverTutorShortName}
                 onChange={(event) => {
                   setCoverTutorShortName(event.target.value);
-                  setSaveState({ pending: false, error: '', savedAt: '' });
+                  setSaveState({ pending: false, action: '', error: '', savedAt: '' });
                 }}
                 className="mt-2 w-full max-w-md rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm text-slate-700"
               >
@@ -661,41 +662,46 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
             value={note}
             onChange={(event) => {
               setNote(event.target.value);
-              setSaveState({ pending: false, error: '', savedAt: '' });
+              setSaveState({ pending: false, action: '', error: '', savedAt: '' });
             }}
             rows={3}
             placeholder="Internal note from WhatsApp or decision context"
             className="mt-4 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-300"
           />
           <div className="mt-4 flex flex-wrap items-center gap-3">
-            <button
+            <ActionButton
               type="button"
               onClick={() => saveAbsence(summary.remainingMessages ? 'parents_to_message' : 'in_progress')}
+              pending={saveState.pending && saveState.action !== 'resolved' && saveState.action !== 'delete'}
               disabled={saveState.pending}
-              className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-5 py-2 text-sm font-semibold text-blue-900 hover:bg-blue-100 disabled:cursor-wait disabled:opacity-70"
+              variant="blue"
+              pendingLabel="Saving..."
             >
-              {saveState.pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               Save progress
-            </button>
-            <button
+            </ActionButton>
+            <ActionButton
               type="button"
               onClick={() => saveAbsence('resolved')}
+              pending={saveState.pending && saveState.action === 'resolved'}
               disabled={saveState.pending || !summary.canResolve}
-              className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-5 py-2 text-sm font-semibold text-emerald-900 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+              variant="green"
+              icon={<Check className="h-4 w-4" />}
+              pendingLabel="Resolving..."
             >
-              <Check className="h-4 w-4" />
               Resolve absence
-            </button>
+            </ActionButton>
             {hasSavedAbsence ? (
-              <button
-                type="button"
-                onClick={deleteAbsence}
+              <ConfirmButton
+                confirmMessage="Delete this logged tutor absence date? Use this when the tutor is no longer off and the date should disappear from the workflow."
+                onConfirm={deleteAbsence}
+                pending={saveState.pending && saveState.action === 'delete'}
                 disabled={saveState.pending}
-                className="inline-flex items-center gap-2 rounded-full border border-red-200 bg-white px-5 py-2 text-sm font-semibold text-red-800 hover:bg-red-50 disabled:cursor-wait disabled:opacity-70"
+                variant="red"
+                icon={<Trash2 className="h-4 w-4" />}
+                pendingLabel="Deleting..."
               >
-                {saveState.pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                 Delete logged date
-              </button>
+              </ConfirmButton>
             ) : null}
             {saveState.savedAt ? <span className="text-sm text-emerald-700">Saved at {saveState.savedAt}</span> : null}
             {saveState.error ? <span className="text-sm text-red-700">{saveState.error}</span> : null}
