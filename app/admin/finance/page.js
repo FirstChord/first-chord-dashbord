@@ -161,6 +161,70 @@ function TextInput({ label, name, type = 'text', required = false, placeholder =
   );
 }
 
+function SectionHeader({ kicker = '', title, children }) {
+  return (
+    <div className="text-center">
+      {kicker ? <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-500">{kicker}</p> : null}
+      <h2 className="mt-1 text-2xl font-semibold text-slate-900">{title}</h2>
+      {children ? <p className="mx-auto mt-2 max-w-3xl text-sm text-slate-600">{children}</p> : null}
+    </div>
+  );
+}
+
+function AttentionList({ items = [] }) {
+  if (!items.length) {
+    return (
+      <div className="rounded-[1.4rem] border border-emerald-100 bg-emerald-50/80 p-5">
+        <p className="text-sm font-semibold text-emerald-900">Nothing urgent to check</p>
+        <p className="mt-1 text-sm text-emerald-800">
+          The finance model has enough structure to be useful. Keep treating it as a planning estimate, not accounting.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-[1.4rem] border border-amber-100 bg-amber-50/70 p-5">
+      <p className="text-sm font-semibold text-amber-950">Finance attention</p>
+      <div className="mt-3 space-y-3">
+        {items.map((item) => (
+          <div key={item.title} className="rounded-2xl bg-white/80 px-4 py-3">
+            <p className="text-sm font-semibold text-slate-900">{item.title}</p>
+            <p className="mt-1 text-sm text-slate-600">{item.detail}</p>
+            {item.href ? (
+              <Link href={item.href} className="mt-2 inline-block text-xs font-semibold text-blue-700 underline-offset-2 hover:underline">
+                Check this →
+              </Link>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function EvidenceSection({ title, summary, children, defaultOpen = false }) {
+  return (
+    <details open={defaultOpen} className="group rounded-[1.6rem] border border-slate-200 bg-white/90 p-5 shadow-sm">
+      <summary className="cursor-pointer list-none">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-base font-semibold text-slate-900">{title}</h3>
+            {summary ? <p className="mt-1 text-sm text-slate-600">{summary}</p> : null}
+          </div>
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500 group-open:hidden">
+            Show detail
+          </span>
+          <span className="hidden rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white group-open:inline">
+            Hide detail
+          </span>
+        </div>
+      </summary>
+      <div className="mt-4">{children}</div>
+    </details>
+  );
+}
+
 export default async function AdminFinancePage({ searchParams }) {
   const params = (await searchParams) || {};
   const trendPeriod = params.trend === 'monthly' ? 'monthly' : 'weekly';
@@ -231,6 +295,74 @@ export default async function AdminFinancePage({ searchParams }) {
 
   const marginTone = totals.marginMonthly >= 0 ? 'border-emerald-200 bg-emerald-50' : 'border-rose-200 bg-rose-50';
   const today = new Date().toISOString().slice(0, 10);
+  const breakEvenDelta = scenario.breakEvenActiveCount === null ? null : activeNow - scenario.breakEvenActiveCount;
+  const breakEvenText = breakEvenDelta === null
+    ? 'Break-even not computable yet'
+    : breakEvenDelta >= 0
+      ? `${breakEvenDelta} above break-even`
+      : `${Math.abs(breakEvenDelta)} below break-even`;
+  const breakEvenTone = breakEvenDelta === null
+    ? 'border-slate-200 bg-slate-50'
+    : breakEvenDelta >= 0
+      ? 'border-emerald-200 bg-emerald-50'
+      : 'border-rose-200 bg-rose-50';
+  const modelConfidenceLabel = coverage.isClean && !pauseForecast.summary.unparsedCount && !stripeActuals.staleCount
+    ? 'Good'
+    : coverage.coveragePct !== null && coverage.coveragePct >= 95
+      ? 'Useful with checks'
+      : 'Needs cleanup';
+  const mainDriver = totals.marginMonthly < 0
+    ? revenue.paused.count > 0
+      ? `${revenue.paused.count} students are paused while fixed costs keep running.`
+      : 'Fixed salaries and overhead are higher than current contribution.'
+    : revenue.paused.count > 0
+      ? `Margin is positive, but ${revenue.paused.count} paused students are holding back run-rate.`
+      : 'Current active billing covers the fixed cost base.';
+  const outlookText = pauseForecast.summary.belowBreakEvenWeeks
+    ? `${pauseForecast.summary.belowBreakEvenWeeks} of the next ${pauseForecast.summary.horizonWeeks} weeks projected below break-even.`
+    : `Next ${pauseForecast.summary.horizonWeeks} weeks currently stay above break-even.`;
+  const attentionItems = [
+    pauseForecast.summary.unparsedCount
+      ? {
+          title: `${pauseForecast.summary.unparsedCount} pause plan${pauseForecast.summary.unparsedCount === 1 ? '' : 's'} could not be read`,
+          detail: 'These are excluded from the 12-week forecast, so projected margin may be too optimistic.',
+          href: '/admin/planning?filter=all',
+        }
+      : null,
+    coverage.flagCounts.noSchedule
+      ? {
+          title: `${coverage.flagCounts.noSchedule} active student${coverage.flagCounts.noSchedule === 1 ? '' : 's'} missing schedule context`,
+          detail: 'Schedule gaps affect tutor-cost confidence and make pause forecasting less reliable.',
+          href: '/admin/capacity',
+        }
+      : null,
+    coverage.flagCounts.noRevenuePrice || coverage.flagCounts.noDuration
+      ? {
+          title: `${(coverage.flagCounts.noRevenuePrice || 0) + (coverage.flagCounts.noDuration || 0)} pricing input gap${((coverage.flagCounts.noRevenuePrice || 0) + (coverage.flagCounts.noDuration || 0)) === 1 ? '' : 's'}`,
+          detail: 'Students with no price or duration use weaker assumptions, which can distort revenue and margin.',
+          href: '/admin/students',
+        }
+      : null,
+    coverage.tutorsNotInPayTable.length
+      ? {
+          title: `${coverage.tutorsNotInPayTable.length} tutor${coverage.tutorsNotInPayTable.length === 1 ? '' : 's'} using the default hourly rate`,
+          detail: 'This is fine for normal hourly tutors, but should be checked if a salaried tutor name variant appears.',
+          href: '/admin/finance/payroll',
+        }
+      : null,
+    calibration.estimateBasis === 'current_estimate'
+      ? {
+          title: 'No frozen monthly finance snapshot for the Stripe comparison yet',
+          detail: `The ${calibration.month} gap compares Stripe collections with today’s estimate, so treat it as early calibration rather than drift.`,
+        }
+      : null,
+    stripeActuals.staleCount
+      ? {
+          title: `${stripeActuals.staleCount} stale Stripe amount row${stripeActuals.staleCount === 1 ? '' : 's'}`,
+          detail: 'Stale Stripe cache rows are ignored and those students fall back to the price table until the refresh runs.',
+        }
+      : null,
+  ].filter(Boolean);
 
   return (
     <div className="space-y-8">
@@ -243,42 +375,76 @@ export default async function AdminFinancePage({ searchParams }) {
           Finance
         </h2>
         <p className="mt-2 max-w-3xl text-sm text-slate-600">
-          Monthly run-rate and margin, minus tutor pay and overhead.{' '}
+          A tactical planning view of current run-rate, upcoming pressure, and the trust level of the estimate.{' '}
           {revenue.bySource.stripe_actual.count > 0
             ? `${revenue.bySource.stripe_actual.count} of ${revenue.active.count} active students are priced from their real Stripe subscription; the rest use the price table.`
             : 'Priced from the price table — Stripe actuals appear once the weekly cache has run.'}{' '}
-          Not accounting.
+          This is not accounting, bank balance, or final profit.
         </p>
       </header>
 
-      <section className={`rounded-[1.6rem] border p-6 shadow-sm ${marginTone}`}>
-        <p className="text-sm text-slate-600">Estimated monthly margin</p>
-        <p className="mt-1 text-4xl font-bold text-slate-900">{formatMoney(totals.marginMonthly)}</p>
-        <p className="mt-2 text-sm text-slate-700">
-          {formatMoney(totals.netRevenueMonthly)} after VAT - {formatMoney(totals.totalCostMonthly)} costs
-          {totals.marginPct !== null ? ` · ${totals.marginPct}% of net revenue` : ''}
-        </p>
-      </section>
+      <section className="space-y-5">
+        <SectionHeader kicker="Today" title="Are we okay right now?">
+          Start here. This separates the current business position from model caveats and detailed evidence.
+        </SectionHeader>
 
-      <section className="grid gap-4 md:grid-cols-3">
-        <StatCard label="Gross revenue (monthly)" value={formatMoney(totals.grossRevenueMonthly)} helper={`${formatMoney(totals.netRevenueMonthly)} after VAT · ${revenue.active.count} active`} />
-        <StatCard label="Costs (monthly)" value={formatMoney(totals.totalCostMonthly)} helper="Tutor pay + salaries + overhead" tone="border-amber-100 bg-amber-50/60" />
-        <StatCard label="Paused (not billing)" value={formatMoney(revenue.paused.weekly)} helper={`${revenue.paused.count} students · per week`} tone="border-violet-100 bg-violet-50/60" />
-      </section>
-
-      <section className="rounded-[1.6rem] border border-slate-200 bg-white/90 p-5 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-base font-semibold text-slate-900">Payroll review</h2>
-            <p className="mt-1 text-sm text-slate-600">
-              Wednesday tutor-pay preview from MMS attendance. Compare against MMS while trust builds, then mark tutors reviewed or paid.
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)]">
+          <section className={`rounded-[1.6rem] border p-6 shadow-sm ${marginTone}`}>
+            <p className="text-sm font-medium text-slate-600">Current status</p>
+            <p className="mt-1 text-4xl font-bold text-slate-900">
+              {totals.marginMonthly >= 0 ? 'Above break-even' : 'Below break-even'}
             </p>
-          </div>
-          <Link href="/admin/finance/payroll" className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm">
-            Open payroll
-          </Link>
+            <p className="mt-2 text-2xl font-semibold text-slate-900">{formatMoney(totals.marginMonthly)}/mo margin</p>
+            <p className="mt-2 text-sm text-slate-700">
+              {formatMoney(totals.netRevenueMonthly)} after VAT - {formatMoney(totals.totalCostMonthly)} costs
+              {totals.marginPct !== null ? ` · ${totals.marginPct}% of net revenue` : ''}
+            </p>
+
+            <div className="mt-5 grid gap-3 md:grid-cols-3">
+              <div className={`rounded-2xl border p-4 ${breakEvenTone}`}>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Active vs break-even</p>
+                <p className="mt-1 text-xl font-semibold text-slate-900">{activeNow} / {scenario.breakEvenActiveCount || '—'}</p>
+                <p className="mt-1 text-sm text-slate-700">{breakEvenText}</p>
+              </div>
+              <div className="rounded-2xl border border-violet-100 bg-violet-50/70 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Main driver</p>
+                <p className="mt-1 text-sm font-medium text-slate-900">{mainDriver}</p>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-white/80 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Next 12 weeks</p>
+                <p className="mt-1 text-sm font-medium text-slate-900">{outlookText}</p>
+              </div>
+            </div>
+          </section>
+
+          <AttentionList items={attentionItems} />
         </div>
+
+        <section className="grid gap-4 md:grid-cols-3">
+          <StatCard label="Gross revenue" value={formatMoney(totals.grossRevenueMonthly)} helper={`${formatMoney(totals.netRevenueMonthly)} after VAT · ${revenue.active.count} active`} />
+          <StatCard label="Monthly costs" value={formatMoney(totals.totalCostMonthly)} helper="Tutor pay + salaries + overhead" tone="border-amber-100 bg-amber-50/60" />
+          <StatCard label="Paused roster" value={`${revenue.paused.count}`} helper={`${formatMoney(revenue.paused.weekly)}/wk not billing`} tone="border-violet-100 bg-violet-50/60" />
+        </section>
+
+        <section className="rounded-[1.6rem] border border-slate-200 bg-white/90 p-5 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-semibold text-slate-900">Payroll review</h2>
+              <p className="mt-1 text-sm text-slate-600">
+                Wednesday tutor-pay preview from MMS attendance. Compare against MMS while trust builds, then mark tutors reviewed or paid.
+              </p>
+            </div>
+            <Link href="/admin/finance/payroll" className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm">
+              Open payroll
+            </Link>
+          </div>
+        </section>
       </section>
+
+      <section className="space-y-5">
+        <SectionHeader kicker="Coming up" title="What is likely to happen next?">
+          Use this for seasonal dips, planned pauses, waiting-list upside, and simple what-if questions.
+        </SectionHeader>
 
       <section className="rounded-[1.6rem] border border-blue-100 bg-white/90 p-5 shadow-sm">
         <h2 className="text-base font-semibold text-slate-900">What-if &amp; break-even</h2>
@@ -294,11 +460,12 @@ export default async function AdminFinancePage({ searchParams }) {
           ) : (
             <>
               Break-even needs <strong>{scenario.breakEvenActiveCount} actively billing</strong> students. You have{' '}
-              <strong>{activeNow} active</strong> now ({revenue.paused.count} paused, not billing). Buffer:{' '}
-              <strong className={scenario.bufferStudents > 0 ? 'text-emerald-700' : 'text-rose-700'}>
-                {scenario.bufferStudents} more student{scenario.bufferStudents === 1 ? '' : 's'} can pause
-              </strong>{' '}
-              ({Math.round(scenario.bufferPct)}% of active) before you hit break-even. Each active student contributes
+              <strong>{activeNow} active</strong> now ({revenue.paused.count} paused, not billing). Position:{' '}
+              <strong className={breakEvenDelta >= 0 ? 'text-emerald-700' : 'text-rose-700'}>
+                {breakEvenText}
+              </strong>
+              {breakEvenDelta >= 0 && scenario.bufferPct !== null ? ` (${Math.round(scenario.bufferPct)}% of active).` : '.'}{' '}
+              Each active student contributes
               ~{formatMoney(scenario.avgContributionPerStudent)}/mo toward fixed costs.
             </>
           )}
@@ -351,7 +518,17 @@ export default async function AdminFinancePage({ searchParams }) {
         ) : null}
       </section>
 
-      <section className="rounded-[1.6rem] border border-blue-100 bg-white/90 p-5 shadow-sm">
+      </section>
+
+      <section className="space-y-5">
+        <SectionHeader kicker="Trend" title="What is changing over time?">
+          Snapshot movement is useful, but it should not be mistaken for the current decision surface.
+        </SectionHeader>
+
+      <EvidenceSection
+        title="Trend snapshots"
+        summary={`Direction over time from the ${trendPeriod} snapshot series — ${trend.summary.count} point${trend.summary.count === 1 ? '' : 's'}${trend.summary.gapCount ? ` · ${trend.summary.gapCount} missing ${trendPeriod === 'monthly' ? 'month(s)' : 'week(s)'}` : ''}.`}
+      >
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold text-slate-900">Trend</h2>
@@ -391,13 +568,25 @@ export default async function AdminFinancePage({ searchParams }) {
         <p className="mt-3 text-xs text-slate-500">
           Range {trend.summary.firstPeriod || '—'} → {trend.summary.lastPeriod || '—'}. Estimate series; missing periods are shown as gaps, not zeros.
         </p>
+      </EvidenceSection>
       </section>
+
+      <section className="space-y-5">
+        <SectionHeader kicker="Confidence" title="Can we trust the estimate?">
+          Confidence is separate from business position. A weak input should trigger cleanup, not panic.
+        </SectionHeader>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          <StatCard label="Confidence" value={modelConfidenceLabel} helper={`${coverage.pricedCount}/${coverage.activeCount} active students priced`} tone={modelConfidenceLabel === 'Good' ? 'border-emerald-100 bg-emerald-50/70' : 'border-amber-100 bg-amber-50/70'} />
+          <StatCard label="Stripe actual pricing" value={`${revenue.bySource.stripe_actual.count}/${revenue.active.count}`} helper="active students priced from live Stripe cache" />
+          <StatCard label="Forecast exclusions" value={`${pauseForecast.summary.unparsedCount}`} helper="unreadable pause plans excluded from the 12-week view" tone={pauseForecast.summary.unparsedCount ? 'border-amber-100 bg-amber-50/70' : 'border-emerald-100 bg-emerald-50/70'} />
+        </div>
 
       <section className="rounded-[1.6rem] border border-blue-100 bg-white/90 p-5 shadow-sm">
         <h2 className="text-base font-semibold text-slate-900">Estimate vs reality — {calibration.month}</h2>
         <p className="mt-1 max-w-2xl text-sm text-slate-600">
           What Stripe actually collected last month against what the estimate said Stripe-managed students should bill.
-          A growing gap means the model is drifting from reality — check coverage and pauses.
+          A growing gap can mean the model is drifting from reality, but this is early while snapshot history is still building.
         </p>
         {Number.isFinite(calibration.collectedTotal) ? (
           <div className="mt-3 grid gap-4 md:grid-cols-3">
@@ -429,6 +618,12 @@ export default async function AdminFinancePage({ searchParams }) {
           naturally ~15% higher than four-day months — judge the trend, not one month.
         </p>
       </section>
+      </section>
+
+      <section className="space-y-5">
+        <SectionHeader kicker="Coming up" title="Pauses and pipeline">
+          Dated pauses show short-term pressure; the waiting list shows undated upside.
+        </SectionHeader>
 
       <section className="rounded-[1.6rem] border border-blue-100 bg-white/90 p-5 shadow-sm">
         <h2 className="text-base font-semibold text-slate-900">What&apos;s coming — pauses &amp; pipeline</h2>
@@ -503,8 +698,17 @@ export default async function AdminFinancePage({ searchParams }) {
           </Link>
         </p>
       </section>
+      </section>
 
-      <section className="rounded-[1.6rem] border border-blue-100 bg-white/90 p-5 shadow-sm">
+      <section className="space-y-5">
+        <SectionHeader kicker="Detail" title="Where can we inspect the numbers?">
+          The evidence is still here, but tucked behind the questions it supports.
+        </SectionHeader>
+
+      <EvidenceSection
+        title="Roster movement"
+        summary="Students onboarded vs left, last 6 months. Counts movements made through the dashboard."
+      >
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold text-slate-900">Roster movement</h2>
@@ -543,8 +747,12 @@ export default async function AdminFinancePage({ searchParams }) {
             </tbody>
           </table>
         </div>
-      </section>
+      </EvidenceSection>
 
+      <EvidenceSection
+        title="Revenue and cost breakdown"
+        summary="Gross revenue, VAT deduction, tutor pay, salaries, and fixed overhead."
+      >
       <section className="grid gap-6 md:grid-cols-2">
         <div className="rounded-[1.6rem] border border-blue-100 bg-white/90 p-5">
           <h2 className="px-4 text-base font-semibold text-slate-900">Revenue (monthly)</h2>
@@ -571,7 +779,12 @@ export default async function AdminFinancePage({ searchParams }) {
           ) : null}
         </div>
       </section>
+      </EvidenceSection>
 
+      <EvidenceSection
+        title="Overhead lines"
+        summary="Recurring assumptions that affect the run-rate margin."
+      >
       <section className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
         <h2 className="text-sm font-semibold text-slate-900">Overhead lines</h2>
         <p className="mt-1 text-xs text-slate-500">Recurring assumptions that affect the run-rate margin.</p>
@@ -588,7 +801,12 @@ export default async function AdminFinancePage({ searchParams }) {
           </p>
         ) : null}
       </section>
+      </EvidenceSection>
 
+      <EvidenceSection
+        title="Actual spend log"
+        summary="One-off bank spend for the current month. This is cash context, not run-rate."
+      >
       <section className="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <form action={addExpenseLogAction} className="rounded-[1.6rem] border border-blue-100 bg-white/90 p-5 shadow-sm">
           <h2 className="text-base font-semibold text-slate-900">Add actual spend</h2>
@@ -703,7 +921,12 @@ export default async function AdminFinancePage({ searchParams }) {
           </div>
         </div>
       </section>
+      </EvidenceSection>
 
+      <EvidenceSection
+        title="Estimate coverage and data gaps"
+        summary={`${coverage.pricedCount}/${coverage.activeCount} active students priced. Gaps here quietly distort revenue, cost, margin, and snapshots.`}
+      >
       <section className="rounded-[1.6rem] border border-slate-200 bg-white/90 p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -780,6 +1003,8 @@ export default async function AdminFinancePage({ searchParams }) {
             </details>
           </>
         )}
+      </section>
+      </EvidenceSection>
       </section>
 
       <p className="text-xs text-slate-500">
