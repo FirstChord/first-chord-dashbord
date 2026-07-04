@@ -33,7 +33,7 @@ export default async function AdminPlanningPage({ searchParams }) {
   ]);
   const scheduleByMmsId = enrichScheduleContextsWithSharedSlots(scheduleRows);
   const requestedFilter = `${resolvedSearchParams?.filter || ''}`.trim();
-  const initialFilter = ALLOWED_INITIAL_FILTERS.has(requestedFilter) ? requestedFilter : 'all';
+  const initialFilter = ALLOWED_INITIAL_FILTERS.has(requestedFilter) ? requestedFilter : 'due_now';
   const studentOptions = students.map((student) => ({
     mmsId: student.mmsId,
     fullName: student.fullName,
