@@ -43,6 +43,9 @@ test('classifyIssue maps current review flag types into actionable admin metadat
   assert.deepEqual(classifyIssue('SUBSCRIPTION_STATE_MISMATCH').systemsAffected, ['Sheets', 'Stripe']);
   assert.deepEqual(classifyIssue('PAUSE EXPECTATION MISMATCH').systemsAffected, ['Sheets', 'Pause', 'Stripe']);
   assert.deepEqual(classifyIssue('PAUSE EXPECTATION STALE').severity, 'Warning');
+  assert.deepEqual(classifyIssue('FINANCE DATA GAP').severity, 'Warning');
+  assert.deepEqual(classifyIssue('FINANCE DATA GAP').systemsAffected, ['Finance']);
+  assert.equal(classifyIssue('FINANCE DATA GAP').messageable, false);
 });
 
 test('buildIssueRecord enriches live review flag rows with linked-system state', () => {

@@ -3,14 +3,15 @@ import { randomUUID } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
 import { getServerSession } from 'next-auth';
 import { getOperationalAdminStudents } from '@/lib/admin/students';
-import { appendExpenseLogRow, deleteExpenseLogRow, getScheduleContextRows, getTutorPayRows, getExpenseRows, getExpenseLogRows, getFinanceSnapshotRows } from '@/lib/admin/sheets';
+import { appendExpenseLogRow, deleteExpenseLogRow, getScheduleContextRows, getTutorPayRows, getExpenseRows, getExpenseLogRows, getFinanceSnapshotRows, getStripeAmountsCacheRows, getStripeCollectedMonthlyRows } from '@/lib/admin/sheets';
 import { enrichScheduleContextsWithSharedSlots } from '@/lib/admin/schedule-context-helpers.mjs';
 import { buildFinanceOverview, formatMoney } from '@/lib/admin/finance-helpers.mjs';
 import { buildExpenseLogSummary, EXPENSE_LOG_CATEGORIES, parseTutorPay } from '@/lib/admin/cost-helpers.mjs';
 import { buildFinanceCoverage, FLAG_LABELS as FINANCE_FLAG_LABELS } from '@/lib/admin/finance-coverage.mjs';
 import { buildFinanceTrend } from '@/lib/admin/finance-trend.mjs';
 import { buildFinanceScenario } from '@/lib/admin/finance-scenario.mjs';
-import { buildPauseForecast } from '@/lib/admin/pause-forecast.mjs';
+import { buildForwardOutlook } from '@/lib/admin/forward-outlook.mjs';
+import { buildCalibration, buildStripeAmountsMap } from '@/lib/admin/stripe-amounts-helpers.mjs';
 import { getPlanningItemRows, getWaitingListStateRows, getStudentsArchiveRows } from '@/lib/admin/sheets';
 import { buildRosterMovement, onboardedDatesFromWaitingState, leftDatesFromArchive } from '@/lib/admin/roster-movement.mjs';
 import { authOptions } from '@/lib/admin/auth';
@@ -173,7 +174,12 @@ export default async function AdminFinancePage({ searchParams }) {
     getFinanceSnapshotRows(),
     getPlanningItemRows(),
   ]);
-  const [waitingStateRows, archiveRows] = await Promise.all([getWaitingListStateRows(), getStudentsArchiveRows()]);
+  const [waitingStateRows, archiveRows, stripeCacheRows, collectedRows] = await Promise.all([
+    getWaitingListStateRows(),
+    getStudentsArchiveRows(),
+    getStripeAmountsCacheRows(),
+    getStripeCollectedMonthlyRows(),
+  ]);
   const roster = buildRosterMovement({
     onboardedDates: onboardedDatesFromWaitingState(waitingStateRows),
     leftDates: leftDatesFromArchive(archiveRows),
@@ -186,7 +192,10 @@ export default async function AdminFinancePage({ searchParams }) {
     scheduleContext: scheduleByMmsId.get(student.mmsId) || student.scheduleContext || null,
   }));
   const tutorPay = parseTutorPay(tutorPayRows);
-  const o = buildFinanceOverview(enriched, { tutorPay, expenseRows, expenseLogRows });
+  // Stripe actuals where the weekly cache is fresh (14-day guard); stale/missing
+  // rows fall back to the estimate per student.
+  const stripeActuals = buildStripeAmountsMap(stripeCacheRows);
+  const o = buildFinanceOverview(enriched, { tutorPay, expenseRows, expenseLogRows, stripeAmounts: stripeActuals.amounts });
   const { revenue, cost, expenses, totals } = o;
   const spend = o.actualSpend || buildExpenseLogSummary(expenseLogRows);
   const coverage = buildFinanceCoverage(enriched, { tutorPay });
@@ -204,12 +213,20 @@ export default async function AdminFinancePage({ searchParams }) {
     .filter((s) => `${s.lifecycleStatus || ''}`.trim() === 'active')
     .map((s) => s.mmsId)
     .filter(Boolean);
-  const pauseForecast = buildPauseForecast({
+  const outlook = buildForwardOutlook({
     totals,
     activeCount: activeNow,
     activeMmsIds,
     pauseItems: planningRows,
+    waitingRows: waitingStateRows,
     weeks: 12,
+  });
+  const pauseForecast = outlook.pauses;
+
+  const calibration = buildCalibration({
+    collectedRows,
+    snapshotRows,
+    currentStripeWeekly: revenue.byPaymentMode.stripe.weekly,
   });
 
   const marginTone = totals.marginMonthly >= 0 ? 'border-emerald-200 bg-emerald-50' : 'border-rose-200 bg-rose-50';
@@ -226,8 +243,11 @@ export default async function AdminFinancePage({ searchParams }) {
           Finance
         </h2>
         <p className="mt-2 max-w-3xl text-sm text-slate-600">
-          Estimated monthly run-rate and margin from active students × the price table, minus tutor pay and overhead.
-          Not Stripe actuals, not accounting.
+          Monthly run-rate and margin, minus tutor pay and overhead.{' '}
+          {revenue.bySource.stripe_actual.count > 0
+            ? `${revenue.bySource.stripe_actual.count} of ${revenue.active.count} active students are priced from their real Stripe subscription; the rest use the price table.`
+            : 'Priced from the price table — Stripe actuals appear once the weekly cache has run.'}{' '}
+          Not accounting.
         </p>
       </header>
 
@@ -374,7 +394,44 @@ export default async function AdminFinancePage({ searchParams }) {
       </section>
 
       <section className="rounded-[1.6rem] border border-blue-100 bg-white/90 p-5 shadow-sm">
-        <h2 className="text-base font-semibold text-slate-900">What&apos;s coming — planned pauses</h2>
+        <h2 className="text-base font-semibold text-slate-900">Estimate vs reality — {calibration.month}</h2>
+        <p className="mt-1 max-w-2xl text-sm text-slate-600">
+          What Stripe actually collected last month against what the estimate said Stripe-managed students should bill.
+          A growing gap means the model is drifting from reality — check coverage and pauses.
+        </p>
+        {Number.isFinite(calibration.collectedTotal) ? (
+          <div className="mt-3 grid gap-4 md:grid-cols-3">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Stripe collected</p>
+              <p className="mt-1 text-2xl font-semibold text-slate-900">{formatMoney(calibration.collectedTotal)}</p>
+              <p className="mt-1 text-xs text-slate-600">{calibration.invoiceCount} paid invoice(s)</p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Estimated Stripe billing</p>
+              <p className="mt-1 text-2xl font-semibold text-slate-900">{calibration.estimatedStripeMonthly === null ? '—' : formatMoney(calibration.estimatedStripeMonthly)}</p>
+              <p className="mt-1 text-xs text-slate-600">{calibration.estimateBasis === 'monthly_snapshot' ? `from the ${calibration.month} monthly snapshot` : "no snapshot for that month — using today's estimate"}</p>
+            </div>
+            <div className={`rounded-2xl border p-4 ${calibration.deltaPct !== null && Math.abs(calibration.deltaPct) > 10 ? 'border-amber-200 bg-amber-50' : 'border-emerald-200 bg-emerald-50'}`}>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Gap</p>
+              <p className="mt-1 text-2xl font-semibold text-slate-900">
+                {calibration.deltaPct === null ? '—' : `${calibration.deltaPct > 0 ? '+' : ''}${calibration.deltaPct}%`}
+              </p>
+              <p className="mt-1 text-xs text-slate-600">collected vs estimated</p>
+            </div>
+          </div>
+        ) : (
+          <p className="mt-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+            No collected figure for {calibration.month} yet — it appears after the Monday Stripe refresh runs.
+          </p>
+        )}
+        <p className="mt-3 text-xs text-slate-500">
+          Collected = paid Stripe invoices created in the month. Weekly billing means months with five billing days run
+          naturally ~15% higher than four-day months — judge the trend, not one month.
+        </p>
+      </section>
+
+      <section className="rounded-[1.6rem] border border-blue-100 bg-white/90 p-5 shadow-sm">
+        <h2 className="text-base font-semibold text-slate-900">What&apos;s coming — pauses &amp; pipeline</h2>
         <p className="mt-1 max-w-2xl text-sm text-slate-600">
           Projected margin over the next {pauseForecast.summary.horizonWeeks} weeks from pauses already in Planning
           ({pauseForecast.summary.windowCount} window{pauseForecast.summary.windowCount === 1 ? '' : 's'}). Grounded forecast, not a guess.
@@ -419,6 +476,23 @@ export default async function AdminFinancePage({ searchParams }) {
             <Sparkline values={pauseForecast.weeks.map((w) => w.marginMonthly)} stroke={pauseForecast.summary.belowBreakEvenWeeks ? '#e11d48' : '#059669'} />
           </>
         )}
+        <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Waiting-list pipeline</p>
+          {outlook.pipeline.waitingCount ? (
+            <>
+              <p className="mt-1 text-lg font-semibold text-slate-900">
+                +{formatMoney(outlook.pipeline.potentialMonthly)}/mo potential
+              </p>
+              <p className="mt-1 text-xs text-slate-600">
+                {outlook.pipeline.waitingCount} student{outlook.pipeline.waitingCount === 1 ? '' : 's'} waiting ×
+                ~{formatMoney(outlook.pipeline.avgContributionPerStudent)}/mo contribution each. {outlook.pipeline.note}
+              </p>
+            </>
+          ) : (
+            <p className="mt-1 text-sm text-slate-600">No students on the waiting list right now.</p>
+          )}
+        </div>
+
         <p className="mt-3 text-xs text-slate-500">
           From structured pause plans (start + return dates). {pauseForecast.summary.unparsedCount
             ? `${pauseForecast.summary.unparsedCount} pause item(s) couldn't be read (freehand) and aren't included. `

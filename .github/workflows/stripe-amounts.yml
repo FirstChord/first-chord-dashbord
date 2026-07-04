@@ -1,0 +1,41 @@
+name: Stripe Amounts Cache
+
+# Refreshes the Stripe_Amounts_Cache tab (per-student subscription actuals) and the
+# Stripe_Collected_Monthly calibration row so the finance estimate reports real
+# billing amounts where Stripe knows them. Runs Mondays 05:30 UTC — before the
+# 06:00 finance snapshot, so the weekly snapshot reads a fresh cache. Read-only
+# against Stripe; a failed run just leaves the cache stale, and the finance layer
+# degrades back to the estimate after 14 days.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 5 * * 1" # Mondays 05:30 UTC, ahead of the 06:00 finance snapshot
+
+concurrency:
+  group: stripe-amounts
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Refresh Stripe amounts cache
+        env:
+          ENDPOINT: https://first-chord-dashbord-production.up.railway.app/api/cron/stripe-amounts
+          SECRET: ${{ secrets.FINANCE_SNAPSHOT_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SECRET}" ]; then
+            echo "FINANCE_SNAPSHOT_SECRET is not set in repo secrets"; exit 1
+          fi
+          resp=$(curl -sS -X POST "${ENDPOINT}" \
+            -H "x-firstchord-finance-secret: ${SECRET}" \
+            -H "content-type: application/json" \
+            --max-time 300)
+          echo "Response: ${resp}"
+          ok=$(echo "${resp}" | jq -r '.success // false')
+          if [ "${ok}" != "true" ]; then
+            echo "Endpoint returned an error"; exit 1
+          fi

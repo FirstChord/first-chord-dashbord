@@ -6,8 +6,10 @@ import {
   getExpenseLogRows,
   getWaitingListStateRows,
   getStudentsArchiveRows,
+  getStripeAmountsCacheRows,
   appendFinanceSnapshotRow,
 } from '@/lib/admin/sheets';
+import { buildStripeAmountsMap } from '@/lib/admin/stripe-amounts-helpers.mjs';
 import { enrichScheduleContextsWithSharedSlots } from '@/lib/admin/schedule-context-helpers.mjs';
 import { parseTutorPay } from '@/lib/admin/cost-helpers.mjs';
 import { countDatesInRange, onboardedDatesFromWaitingState, leftDatesFromArchive } from '@/lib/admin/roster-movement.mjs';
@@ -47,7 +49,7 @@ export async function POST(request) {
   const periodType = clean(url.searchParams.get('period')).toLowerCase() === 'monthly' ? 'monthly' : 'weekly';
 
   try {
-    const [students, scheduleRows, tutorPayRows, expenseRows, expenseLogRows, waitingStateRows, archiveRows] = await Promise.all([
+    const [students, scheduleRows, tutorPayRows, expenseRows, expenseLogRows, waitingStateRows, archiveRows, stripeCacheRows] = await Promise.all([
       getOperationalAdminStudents(),
       getScheduleContextRows(),
       getTutorPayRows(),
@@ -55,6 +57,7 @@ export async function POST(request) {
       getExpenseLogRows(),
       getWaitingListStateRows(),
       getStudentsArchiveRows(),
+      getStripeAmountsCacheRows(),
     ]);
     const scheduleByMmsId = enrichScheduleContextsWithSharedSlots(scheduleRows);
     const enriched = students.map((student) => ({
@@ -62,7 +65,10 @@ export async function POST(request) {
       scheduleContext: scheduleByMmsId.get(student.mmsId) || student.scheduleContext || null,
     }));
     const tutorPay = parseTutorPay(tutorPayRows);
-    const overview = buildFinanceOverview(enriched, { tutorPay, expenseRows, expenseLogRows });
+    // Stripe actuals where fresh (14-day guard) — the snapshot's source column flips
+    // to 'mixed' once any student is priced from the cache.
+    const stripeActuals = buildStripeAmountsMap(stripeCacheRows);
+    const overview = buildFinanceOverview(enriched, { tutorPay, expenseRows, expenseLogRows, stripeAmounts: stripeActuals.amounts });
 
     // Gross roster flows during this period (weekly = trailing 7 days, monthly = trailing month).
     const now = new Date();

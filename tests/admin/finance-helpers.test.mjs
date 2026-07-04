@@ -199,6 +199,15 @@ test('buildFinanceSnapshotRow keeps estimate quality counters flat and visible',
   assert.equal(row.source, 'estimate');
 });
 
+test('buildFinanceSnapshotRow stamps the assumptions version so series basis changes are traceable', async () => {
+  const { PRICE_ASSUMPTIONS_VERSION } = await import('../../lib/admin/finance-assumptions.mjs');
+  const overview = buildFinanceOverview([oneToOne30({ mmsId: 'priced' })]);
+  const row = buildFinanceSnapshotRow(overview, { periodType: 'weekly', at: new Date('2026-06-24T12:00:00Z') });
+
+  assert.equal(row.notes, PRICE_ASSUMPTIONS_VERSION);
+  assert.match(PRICE_ASSUMPTIONS_VERSION, /^\d{4}-\d{2}\.\d+ \|/);
+});
+
 test('formatMoney trims trailing pence-zeros and handles non-numbers', () => {
   assert.equal(formatMoney(25), '£25');
   assert.equal(formatMoney(108.33), '£108.33');

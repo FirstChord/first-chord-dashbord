@@ -34,3 +34,11 @@ A page rendered on the server (fetching its data there) before sending HTML to t
 ## Prefetch
 
 The browser loading a linked route before the user clicks (on hover/in-viewport), making the click feel instant. Next.js `<Link>` prefetches in production builds (not local dev), which is one reason the live dashboard feels snappier than `npm run dev`.
+
+## Actuals (finance)
+
+Real billing amounts read from Stripe subscriptions, as opposed to the price-table estimate. Cached weekly in `Stripe_Amounts_Cache`; a student priced from actuals shows `source: stripe_actual` in the finance figures.
+
+## Calibration (finance)
+
+Comparing what Stripe actually collected in a month (`Stripe_Collected_Monthly`) against what the estimate said Stripe-managed students should bill. A growing gap means the model is drifting from reality — the "Estimate vs reality" panel on `/admin/finance`.
