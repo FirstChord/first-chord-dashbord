@@ -438,7 +438,10 @@ export default async function AdminPayrollPage({ searchParams }) {
     overrides,
     payDate,
   });
-  const activeRows = preview.rows.filter((row) => row.payModel !== 'salary' || row.lessonCount || row.reviewLessonCount || row.status !== 'draft');
+  // Salaried tutors (Finn/Tom/Fennella) are paid a fixed wage, not per-lesson via
+  // this Wise reconciliation — keep them off the payroll page entirely. Totals and
+  // the Wise batch already exclude salary, so this is display-only.
+  const activeRows = preview.rows.filter((row) => row.payModel !== 'salary');
   // Wise batch comes straight from saved reviewed rows (window-independent), so
   // a tutor reviewed under an adjusted window still lands in the CSV.
   const { rows: payableRows, amountConflicts, disputed } = selectPayableReviewedRuns(savedRuns);
