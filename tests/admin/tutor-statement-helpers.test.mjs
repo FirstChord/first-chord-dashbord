@@ -39,6 +39,16 @@ test('buildTutorStatement uses the frozen total from the saved row and lines fro
   assert.equal(statement.hasUnrecorded, false);
 });
 
+test('buildTutorStatement carries the tutor response through for the public view', () => {
+  const statement = buildTutorStatement({
+    savedRow: { ...savedRow, tutorResponse: 'disputed', tutorRespondedAt: '2026-07-05T09:00:00.000Z', tutorNote: 'wrong amount' },
+    previewRow,
+  });
+  assert.equal(statement.tutorResponse, 'disputed');
+  assert.equal(statement.tutorNote, 'wrong amount');
+  assert.equal(statement.tutorRespondedAt, '2026-07-05T09:00:00.000Z');
+});
+
 test('buildTutorStatement flags unrecorded lessons in the window', () => {
   const statement = buildTutorStatement({ savedRow, previewRow: { ...previewRow, reviewPastCount: 1 } });
   assert.equal(statement.hasUnrecorded, true);

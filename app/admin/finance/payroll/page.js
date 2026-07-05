@@ -309,6 +309,15 @@ function PayrollTutorCard({ row, payDate }) {
           {reviewUpcoming.length ? ` (${reviewUpcoming.length} more upcoming — those resolve themselves.)` : ''}
         </div>
       ) : null}
+      {row.tutorResponse === 'confirmed' ? (
+        <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800">
+          Confirmed ✓ by tutor{row.tutorRespondedAt ? ` · ${formatPayrollDate(row.tutorRespondedAt)}` : ''}.
+        </div>
+      ) : row.tutorResponse === 'disputed' ? (
+        <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+          <strong>Tutor flagged this statement</strong>{row.tutorNote ? `: “${row.tutorNote}”` : '.'} Held out of the Wise batch until you resolve it.
+        </div>
+      ) : null}
 
       <div className="mt-4 space-y-3">
         {/* Lead with the genuine open loop: taught but not yet recorded in MMS. */}
@@ -432,8 +441,15 @@ export default async function AdminPayrollPage({ searchParams }) {
   const activeRows = preview.rows.filter((row) => row.payModel !== 'salary' || row.lessonCount || row.reviewLessonCount || row.status !== 'draft');
   // Wise batch comes straight from saved reviewed rows (window-independent), so
   // a tutor reviewed under an adjusted window still lands in the CSV.
-  const { rows: payableRows, amountConflicts } = selectPayableReviewedRuns(savedRuns);
+  const { rows: payableRows, amountConflicts, disputed } = selectPayableReviewedRuns(savedRuns);
   const wiseBatch = buildWiseBatch({ rows: payableRows, wiseByKey: parseTutorWise(tutorWiseRows) });
+  // Tutor confirmation tally across reviewed (unpaid) rows — the "am I informed" surface.
+  const reviewedRows = preview.rows.filter((row) => row.status === 'reviewed');
+  const confirmations = {
+    confirmed: reviewedRows.filter((row) => row.tutorResponse === 'confirmed').length,
+    disputed: reviewedRows.filter((row) => row.tutorResponse === 'disputed').length,
+    awaiting: reviewedRows.filter((row) => !row.tutorResponse).length,
+  };
 
   return (
     <div className="space-y-8">
@@ -495,6 +511,8 @@ export default async function AdminPayrollPage({ searchParams }) {
         downloadHref={`/admin/finance/payroll/wise-csv?payDate=${payDate}`}
         payrollIds={wiseBatch.includedPayrollIds}
         amountConflicts={amountConflicts}
+        disputed={disputed}
+        confirmations={confirmations}
         markBatchPaidAction={markBatchPaidAction}
       />
 

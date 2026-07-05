@@ -1,6 +1,7 @@
 import { verifyStatementToken } from '@/lib/admin/tutor-statement-helpers.mjs';
 import { loadTutorStatement } from '@/lib/admin/tutor-statement';
 import TutorStatementView from '@/components/finance/TutorStatementView';
+import StatementConfirm from '@/components/finance/StatementConfirm';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,8 +21,13 @@ export default async function PublicStatementPage({ params }) {
       {ok ? (
         <>
           <TutorStatementView statement={result.statement} />
+          <StatementConfirm
+            token={token}
+            initialResponse={result.statement.tutorResponse}
+            initialNote={result.statement.tutorNote}
+          />
           <p className="text-center text-xs text-slate-400">
-            Read-only statement from First Chord Music School. Payment is processed separately.
+            Statement from First Chord Music School. Payment is processed separately.
           </p>
         </>
       ) : (

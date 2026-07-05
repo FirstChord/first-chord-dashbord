@@ -19,6 +19,24 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-07-05 — Tutor pay statement Phase 2: confirm / dispute (no login)
+
+**Feature/change:** The public statement link (`/pay/statement/<token>`) gains **Confirm — looks right** / **Something's off** (with a note) controls. The response writes back to the tutor's `Payroll_Runs` row (`tutor_response`/`tutor_responded_at`/`tutor_note`) and surfaces on the payroll board: a per-card banner (Confirmed ✓ / flagged) and a confirmations tally + disputed list in the payout panel. A **disputed** reviewed row is **held out of the Wise batch** until resolved.
+
+**Why it exists:** Closes the loop Finn described — work out pay → send statement → tutor confirms or flags → you're informed before paying. It replaces chasing/assuming with a two-sided agreement and catches disagreements *before* money moves.
+
+**Design decisions:**
+- **No tutor login needed** — the signed token already proves "this tutor, this reviewed row", so a Confirm button on the link is a magic-link identity. This is why Phase 2 shipped without the tutor-auth layer the roadmap thought it needed. (Bearer-link caveat: anyone with the URL could click; acceptable because confirm never moves money — it's HMAC-signed + 30-day expiry, and confirm is reversible.)
+- **Disputed → held out of the Wise batch** (`selectPayableReviewedRuns` skips `disputed` and returns them for surfacing). Silently including a contested amount in the pay file is the exact failure mode confirm/dispute exists to prevent. Re-reviewing clears the response (the figure/statement changed → stale) and re-includes them.
+- **"Informed" = the dashboard surfaces it** (no push infra): per-card banner + panel tally. A dispute→Issue-Queue card was considered and left as an optional later add.
+- Confirmation **never moves money** — admin still downloads + approves the Wise batch. Same approval-first stance.
+
+**Source-of-truth impact:** `Payroll_Runs` gains `tutor_response`/`tutor_responded_at`/`tutor_note` (appended columns). New public POST endpoint `/api/pay/statement/confirm` (outside the middleware matcher, token-authed).
+
+**Files/functions involved:** `recordTutorStatementResponse` (`lib/admin/tutor-statement.js`); `/api/pay/statement/confirm/route.js`; `StatementConfirm.js` + public statement page; `buildTutorStatement` (response passthrough); `selectPayableReviewedRuns` (dispute skip, `disputed` return); `normalisePayrollRunRow` + preview row; `upsertPayrollRunRow` (new columns); payroll page card banner + tally; `wise-payout-panel` disputed/confirmations UI.
+
+**What to watch out for:** Marking a row reviewed/paid via the admin buttons does **not** carry the tutor response through `savePayrollRunAction` (it re-derives the row) — that's intentional for re-review (clears a stale response) but means a manual re-review of a *confirmed* row also clears the tick. Phase 3 (tutor self-select cadence + scheduled/emailed delivery) still needs the real tutor-auth layer + a `Tutor_Pay.contact_email`; see `TUTOR_FACING_PAYROLL_ROADMAP.md`.
+
 ### 2026-07-05 — Planning: assignable owners (Fennella) + same-day vs ongoing plans
 
 **Feature/change:** (1) `Fennella` added to `PLANNING_OWNERS`, so plans can be assigned to her; a single **"Fennella"** primary filter surfaces her open items. (2) New **`plan_mode`** field on `Planning_Items` — `task` (same-day, ticked done) vs `ongoing` (worked across sessions: log what you did + set the next meeting day). Editor gets a **Mode** selector; ongoing cards show an "Ongoing" badge.

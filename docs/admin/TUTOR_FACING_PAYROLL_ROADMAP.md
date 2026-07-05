@@ -1,7 +1,13 @@
 # Tutor-facing payroll — Phase 2 & 3 roadmap
 
 Design home for the "tutors confirm what they're owed, then get paid" loop.
-**Not yet built** — this is the plan to return to. Phase 1 shipped 2026-07-02.
+Phase 1 shipped 2026-07-02; **Phase 2 shipped 2026-07-05** (see below). **Phase 3
+is the remaining unbuilt work.**
+
+**Key correction (2026-07-05):** Phase 2 did **not** need the tutor-auth layer
+after all — the signed statement link already proves identity ("this tutor, this
+reviewed row"), so a Confirm button on the link works with no login (option 1
+below). Only **Phase 3** genuinely needs a persistent tutor login.
 
 Read first: the Phase 1 Learning Log entry (why + the frozen-statement design) and
 the code — `lib/admin/tutor-statement-helpers.mjs`, `lib/admin/tutor-statement.js`,
@@ -42,7 +48,16 @@ option 2 only when Phase 3 needs a persistent tutor portal.
 
 ---
 
-## Phase 2 — tutor confirms (or disputes) their statement
+## Phase 2 — tutor confirms (or disputes) their statement — ✅ SHIPPED 2026-07-05
+
+*Built as described below, on the magic-link (no login). Confirm/"Something's off"
+on `/pay/statement/<token>` → `recordTutorStatementResponse` writes
+`tutor_response`/`tutor_responded_at`/`tutor_note`; the payroll board shows a
+per-card banner + confirmations tally; disputed rows are held out of the Wise
+batch until re-reviewed. Details in the 2026-07-05 Learning Log entry.*
+
+Original design (kept for reference):
+
 
 **Goal:** replace "chase the invoice" with the tutor actively agreeing the figure,
 and surface disagreements *before* payment.

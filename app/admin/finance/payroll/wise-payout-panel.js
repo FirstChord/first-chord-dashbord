@@ -10,6 +10,8 @@ export default function WisePayoutPanel({
   totalLabel = '',
   missingNames = [],
   amountConflicts = [],
+  disputed = [],
+  confirmations = null,
   payDate,
   downloadHref,
   payrollIds = [],
@@ -75,6 +77,26 @@ export default function WisePayoutPanel({
         <p className="mt-3 text-xs text-slate-500">
           Download the CSV and pay the tutors in Wise first — then “Mark batch paid” unlocks.
         </p>
+      ) : null}
+
+      {confirmations && (confirmations.confirmed || confirmations.disputed || confirmations.awaiting) ? (
+        <p className="mt-3 text-xs text-slate-500">
+          Tutor confirmations: <span className="font-semibold text-emerald-700">{confirmations.confirmed} confirmed</span>
+          {' · '}<span className="font-semibold text-slate-600">{confirmations.awaiting} awaiting</span>
+          {confirmations.disputed ? <> · <span className="font-semibold text-rose-700">{confirmations.disputed} disputed</span></> : null}
+        </p>
+      ) : null}
+
+      {disputed.length ? (
+        <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+          <p className="font-semibold">Held out of this batch — a tutor flagged their statement:</p>
+          <ul className="mt-1 list-disc pl-5">
+            {disputed.map((entry) => (
+              <li key={entry.tutor}>{entry.tutor}{entry.note ? `: “${entry.note}”` : ''}</li>
+            ))}
+          </ul>
+          Resolve it with them, then re-review to include them.
+        </div>
       ) : null}
 
       {missingNames.length ? (

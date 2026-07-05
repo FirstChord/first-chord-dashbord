@@ -143,6 +143,18 @@ test('selectPayableReviewedRuns warns when duplicate reviewed rows disagree on a
   assert.deepEqual(amountConflicts[0].amounts, [211.42, 250]);
 });
 
+test('selectPayableReviewedRuns holds a disputed row out of the batch and surfaces it', () => {
+  const { rows, disputed } = selectPayableReviewedRuns([
+    savedRun({ payroll_id: 'ok', tutor: 'Kenny Bates', tutor_short_name: 'Kenny', final_amount: 280 }),
+    savedRun({ payroll_id: 'nope', tutor_response: 'disputed', tutor_note: 'missing a lesson' }),
+  ]);
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].tutorShortName, 'Kenny');
+  assert.equal(disputed.length, 1);
+  assert.equal(disputed[0].tutor, 'David Husz');
+  assert.equal(disputed[0].note, 'missing a lesson');
+});
+
 test('selectPayableReviewedRuns ignores non-reviewed and non-positive rows', () => {
   const { rows } = selectPayableReviewedRuns([
     savedRun({ status: 'draft' }),
