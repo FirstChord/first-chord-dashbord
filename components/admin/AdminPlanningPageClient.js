@@ -57,6 +57,7 @@ const STATUS_GROUPS = [
 const PRIMARY_REVIEW_FILTERS = [
   { value: 'due_now', label: 'Due today' },
   { value: 'all', label: 'All' },
+  { value: 'owner_fennella', label: 'Fennella' },
 ];
 
 const ADVANCED_REVIEW_FILTERS = [
@@ -164,6 +165,9 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
       }
       if (filter === 'unassigned') {
         return isOpenPlanningItem(item) && item.owner === 'Unassigned';
+      }
+      if (filter === 'owner_fennella') {
+        return isOpenPlanningItem(item) && item.owner === 'Fennella';
       }
       if (filter === 'waiting_status') {
         return isOpenPlanningItem(item) && item.status === 'waiting';
@@ -412,6 +416,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
       title: item.title,
       notes: item.notes,
       itemType: item.itemType,
+      planMode: item.planMode,
       owner: item.owner,
       status: item.status,
       area: item.area,
@@ -497,14 +502,16 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
     }
   }
 
-  async function handleProgress(item, { progressNote, nextAction }) {
+  async function handleProgress(item, { progressNote, nextAction, targetDate, progressType = 'note', status }) {
     try {
       await postPlanning({
         mode: 'progress',
         planningId: item.planningId,
         progressNote,
-        progressType: 'note',
+        progressType,
         nextAction,
+        targetDate,
+        status,
       }, item.planningId);
     } catch (error) {
       setSaveState({ pending: false, error: error.message, savedAt: '' });

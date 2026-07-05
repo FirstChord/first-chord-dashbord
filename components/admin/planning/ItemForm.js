@@ -6,9 +6,11 @@ import {
   PLANNING_STATUSES,
   PLANNING_OWNERS,
   PLANNING_AREAS,
+  PLANNING_MODES,
   labelPlanningType,
   labelPlanningStatus,
   labelPlanningArea,
+  labelPlanningMode,
 } from '@/lib/admin/planning-helpers.mjs';
 import { applySmartDefaults } from '@/lib/admin/planning-client-helpers.mjs';
 import { SelectField, TextField, TextAreaField, DateField, StudentSearchField } from './fields';
@@ -35,12 +37,18 @@ export default function ItemForm({
         placeholder="Write the thought, initiative, or next action"
       />
 
-      <div className="grid gap-3 md:grid-cols-4">
+      <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-5">
         <SelectField
           label="Type"
           value={form.itemType}
           onChange={(value) => onChange(applySmartDefaults({ ...form, itemType: value }))}
           options={PLANNING_ITEM_TYPES.map((value) => ({ value, label: labelPlanningType(value) }))}
+        />
+        <SelectField
+          label="Mode"
+          value={form.planMode}
+          onChange={(value) => setValue('planMode', value)}
+          options={PLANNING_MODES.map((value) => ({ value, label: labelPlanningMode(value) }))}
         />
         <SelectField
           label="Status"

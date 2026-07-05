@@ -37,6 +37,7 @@ import { SelectField, TextField, DateField, StudentSearchField, ExpandableText, 
 export default function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides = {}, onStatus, onArchive, onEdit, onProgress, onPauseCompleted, onRepairPauseDetails, onOpenPauseTool, onOpenWorkflowPanel, onCreateLinkedAction, pendingId, compact = false, nearbyPause = null }) {
   const [progressNote, setProgressNote] = useState('');
   const [nextAction, setNextAction] = useState(item.nextAction || '');
+  const [nextSessionDate, setNextSessionDate] = useState('');
   const [pauseToolRan, setPauseToolRan] = useState(false);
   const [pauseMessageConfirmed, setPauseMessageConfirmed] = useState(false);
   const [copyState, setCopyState] = useState('');
@@ -56,6 +57,9 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
   const isPauseReminder = isPausePlanningItem(item);
   const isSchoolNote = isSchoolNotePlanningItem(item);
   const isSchoolForwardReview = item.planningId === SCHOOL_FORWARD_PLANNING_ID;
+  // Ongoing plans are worked across sessions: log what you did + set the next
+  // meeting day in one step. (School-forward review keeps its own reflection UI.)
+  const isOngoing = item.planMode === 'ongoing' && !isSchoolForwardReview;
   const isSystemPlanningItem = item.planningId === SCHOOL_FORWARD_PLANNING_ID || item.planningId === MONDAY_SCHEDULE_PLANNING_ID;
   const pausePaymentConfirmed = hasPausePaymentConfirmation(item);
   const isTutorAbsenceCard = item.linkedWorkflowId === 'tutor-absence' && Boolean(item.linkedTutorId);
@@ -154,6 +158,11 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
                 <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-600">
                   {item.itemTypeLabel}
                 </span>
+                {item.planMode === 'ongoing' ? (
+                  <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700">
+                    Ongoing
+                  </span>
+                ) : null}
                 <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${momentumClasses(item.momentum)}`}>
                   {item.momentumLabel}
                 </span>
@@ -597,11 +606,22 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
       ) : null}
 
       <form
-        className={`mt-4 grid gap-2 ${isSchoolForwardReview ? 'md:grid-cols-[1fr_auto]' : 'md:grid-cols-[1fr_1fr_auto]'}`}
+        className={`mt-4 grid gap-2 ${isSchoolForwardReview ? 'md:grid-cols-[1fr_auto]' : isOngoing ? 'md:grid-cols-[1fr_auto_auto]' : 'md:grid-cols-[1fr_1fr_auto]'}`}
         onSubmit={(event) => {
           event.preventDefault();
-          onProgress(item, { progressNote, nextAction });
-          setProgressNote('');
+          if (isOngoing) {
+            onProgress(item, {
+              progressNote,
+              targetDate: nextSessionDate || undefined,
+              progressType: 'session_logged',
+              status: 'active',
+            });
+            setProgressNote('');
+            setNextSessionDate('');
+          } else {
+            onProgress(item, { progressNote, nextAction });
+            setProgressNote('');
+          }
         }}
       >
         {isSchoolForwardReview ? (
@@ -623,6 +643,22 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
               Saved as dated progress history for later monthly or quarterly summaries.
             </p>
           </div>
+        ) : isOngoing ? (
+          <>
+            <input
+              value={progressNote}
+              onChange={(event) => setProgressNote(event.target.value)}
+              placeholder="What did you do this session?"
+              className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400"
+            />
+            <input
+              type="date"
+              value={nextSessionDate}
+              onChange={(event) => setNextSessionDate(event.target.value)}
+              title="Next session / meeting day"
+              className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800"
+            />
+          </>
         ) : (
           <>
             <input
@@ -645,7 +681,7 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-          {isSchoolForwardReview ? 'Add Friday reflection' : 'Add note'}
+          {isSchoolForwardReview ? 'Add Friday reflection' : isOngoing ? 'Log session & set next date' : 'Add note'}
         </button>
       </form>
     </article>

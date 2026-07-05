@@ -19,6 +19,25 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-07-05 — Planning: assignable owners (Fennella) + same-day vs ongoing plans
+
+**Feature/change:** (1) `Fennella` added to `PLANNING_OWNERS`, so plans can be assigned to her; a single **"Fennella"** primary filter surfaces her open items. (2) New **`plan_mode`** field on `Planning_Items` — `task` (same-day, ticked done) vs `ongoing` (worked across sessions: log what you did + set the next meeting day). Editor gets a **Mode** selector; ongoing cards show an "Ongoing" badge.
+
+**Why it exists:** Two real needs. Fennella needs her own assigned view. And plans split into two shapes — quick same-day tasks vs longer things you chip away at over multiple meetings. The good news on investigation: the substrate already existed (`owner`, `item_type`, append-only `Planning_Progress_Log`, `next_action`, `target_date`), so this is mostly *activating* fields, not new plumbing. The ongoing "log progress then reschedule" flow is already served by the card's progress note + `target_date` ("Do by").
+
+**Design decisions:**
+- **`plan_mode` is a new field, orthogonal to `item_type`.** `item_type` is *category* (idea/initiative/action/note); mode is *cadence* (same-day vs multi-session). Overloading item_type would conflate two axes. Default `task`; existing rows read as `task`.
+- **Fennella logs in via the shared admin identity for now** (`ADMIN_ALLOWED_EMAILS`), not a scoped role — deliberate interim so we can ship assignment + her filter without building tutor auth. Own scoped login is deferred to the shared tutor-auth layer (same one payroll Phase 2/3 needs). See `TUTOR_FACING_PAYROLL_ROADMAP.md`.
+- **Filters kept minimal** (user preference: "no more filters than needed") — one "Fennella" chip, not a full owner-filter matrix.
+
+**Source-of-truth impact:** `Planning_Items` gains `plan_mode` (appended column; reads/writes are by header name so column order is irrelevant). `PLANNING_OWNERS` gains `Fennella`. No new tab.
+
+**Files/functions involved:** `PLANNING_OWNERS`/`PLANNING_MODES`/`normalisePlanningMode`/`labelPlanningMode`/`normalisePlanningItem` (`planning-helpers.mjs`); `PLANNING_ITEMS_HEADERS` (`core.mjs`); read/build row (`sheets/planning.mjs`); `mergePlanningItem` (`planning.js`); `EMPTY_FORM` (`planning-client-helpers.mjs`); `ItemForm` Mode select; `AdminPlanningPageClient` filter + `startEdit`; `PlanningCard` Ongoing badge.
+
+**What to watch out for:** The "Fennella" filter is a plain owner match — it's not access control (she can still see everything once logged into the shared admin account). When tutor auth lands, swap Fennella onto her own scoped login and the filter can become her default view.
+
+**Follow-up (same session) — combined "Log session & set next date":** ongoing cards now render a single action (progress note + a "next session" date) instead of log-progress + edit-"Do by" separately. `addPlanningProgress` gained a `targetDate` param (reschedules the item as part of logging), the `progress` route mode forwards it, and a `session_logged` progress type distinguishes worked sessions in `Planning_Progress_Log`. Same-day (`task`) cards keep the plain progress-note + next-action form. Empty date = just log and stay active (no reschedule).
+
 ### 2026-07-03 — Operations recovery matrix and backup coverage
 
 **Feature/change:** Added a component recovery matrix to `OPERATIONS_RUNBOOK.md`, tightened the documentation maintenance rule in `DOCUMENTATION_MAP.md`, and expanded `scripts/backup-sheets-tabs.mjs` to include communication, WhatsApp, and payroll support tabs. The backup script now keeps only the latest 8 dated backup sets.

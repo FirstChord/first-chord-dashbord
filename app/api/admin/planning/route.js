@@ -39,6 +39,7 @@ export async function POST(request) {
         progressNote: body?.progressNote || '',
         progressType: body?.progressType || 'note',
         nextAction: body?.nextAction,
+        targetDate: body?.targetDate,
         status: body?.status,
         actorEmail,
       });

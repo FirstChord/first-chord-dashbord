@@ -37,7 +37,9 @@ import {
   normalisePlanningArea,
   normalisePlanningItemType,
   normalisePlanningItem,
+  normalisePlanningMode,
   normalisePlanningOwner,
+  normalisePlanningProgressType,
   normalisePlanningStatus,
   parseLinkedStudentIds,
   serializeLinkedStudentIds,
@@ -69,7 +71,19 @@ test('normalises planning defaults conservatively', () => {
   assert.equal(normalisePlanningArea('student_experience'), 'student_experience');
   assert.equal(normalisePlanningArea('random'), 'other');
   assert.equal(normalisePlanningOwner('Tom'), 'Tom');
+  assert.equal(normalisePlanningOwner('Fennella'), 'Fennella');
   assert.equal(normalisePlanningOwner('Fenella'), 'Unassigned');
+  assert.equal(normalisePlanningMode('ongoing'), 'ongoing');
+  assert.equal(normalisePlanningMode('Task'), 'task');
+  assert.equal(normalisePlanningMode(''), 'task');
+  assert.equal(normalisePlanningMode('bad'), 'task');
+  assert.equal(normalisePlanningProgressType('session_logged'), 'session_logged');
+  assert.equal(normalisePlanningProgressType('bad'), 'note');
+});
+
+test('normalisePlanningItem defaults plan mode to task and keeps ongoing', () => {
+  assert.equal(normalisePlanningItem({}).planMode, 'task');
+  assert.equal(normalisePlanningItem({ planMode: 'ongoing' }).planMode, 'ongoing');
 });
 
 test('parses and serializes multi-student links from the single column', () => {
