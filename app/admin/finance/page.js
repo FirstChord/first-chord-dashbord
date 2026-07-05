@@ -185,7 +185,7 @@ function AttentionList({ items = [] }) {
 
   return (
     <div className="rounded-[1.4rem] border border-amber-100 bg-amber-50/70 p-5">
-      <p className="text-sm font-semibold text-amber-950">Finance attention</p>
+      <p className="text-sm font-semibold text-amber-950">Checks that affect confidence</p>
       <div className="mt-3 space-y-3">
         {items.map((item) => (
           <div key={item.title} className="rounded-2xl bg-white/80 px-4 py-3">
@@ -203,9 +203,22 @@ function AttentionList({ items = [] }) {
   );
 }
 
-function EvidenceSection({ title, summary, children, defaultOpen = false }) {
+function OwnerAction({ title, detail, href, tone = 'dark' }) {
+  const classes = tone === 'dark'
+    ? 'border-slate-900 bg-slate-900 text-white'
+    : 'border-slate-200 bg-white/85 text-slate-900 hover:border-blue-200 hover:bg-blue-50';
+  const detailClasses = tone === 'dark' ? 'text-slate-200' : 'text-slate-600';
   return (
-    <details open={defaultOpen} className="group rounded-[1.6rem] border border-slate-200 bg-white/90 p-5 shadow-sm">
+    <Link href={href} className={`block rounded-2xl border p-4 shadow-sm transition ${classes}`}>
+      <p className="text-sm font-semibold">{title}</p>
+      <p className={`mt-1 text-sm ${detailClasses}`}>{detail}</p>
+    </Link>
+  );
+}
+
+function EvidenceSection({ id = '', title, summary, children, defaultOpen = false }) {
+  return (
+    <details id={id || undefined} open={defaultOpen} className="group rounded-[1.6rem] border border-slate-200 bg-white/90 p-5 shadow-sm">
       <summary className="cursor-pointer list-none">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -384,41 +397,37 @@ export default async function AdminFinancePage({ searchParams }) {
       </header>
 
       <section className="space-y-5">
-        <SectionHeader kicker="Today" title="Are we okay right now?">
-          Start here. This separates the current business position from model caveats and detailed evidence.
+        <SectionHeader kicker="Today" title="Current position">
+          A short owner view: run-rate, distance from break-even, and the few actions worth doing.
         </SectionHeader>
 
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)]">
-          <section className={`rounded-[1.6rem] border p-6 shadow-sm ${marginTone}`}>
-            <p className="text-sm font-medium text-slate-600">Current status</p>
-            <p className="mt-1 text-4xl font-bold text-slate-900">
-              {totals.marginMonthly >= 0 ? 'Above break-even' : 'Below break-even'}
-            </p>
-            <p className="mt-2 text-2xl font-semibold text-slate-900">{formatMoney(totals.marginMonthly)}/mo margin</p>
-            <p className="mt-2 text-sm text-slate-700">
-              {formatMoney(totals.netRevenueMonthly)} after VAT - {formatMoney(totals.totalCostMonthly)} costs
-              {totals.marginPct !== null ? ` · ${totals.marginPct}% of net revenue` : ''}
-            </p>
+        <section className={`rounded-[1.6rem] border p-6 shadow-sm ${marginTone}`}>
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.75fr)]">
+            <div>
+              <p className="text-sm font-medium text-slate-600">Run-rate margin</p>
+              <p className="mt-1 text-4xl font-bold text-slate-900">{formatMoney(totals.marginMonthly)}/mo</p>
+              <p className="mt-2 text-sm text-slate-700">
+                {formatMoney(totals.netRevenueMonthly)} after VAT - {formatMoney(totals.totalCostMonthly)} costs
+                {totals.marginPct !== null ? ` · ${totals.marginPct}% of net revenue` : ''}
+              </p>
+              <p className="mt-3 max-w-2xl text-sm text-slate-700">
+                {mainDriver}
+              </p>
+            </div>
 
-            <div className="mt-5 grid gap-3 md:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
               <div className={`rounded-2xl border p-4 ${breakEvenTone}`}>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Active vs break-even</p>
                 <p className="mt-1 text-xl font-semibold text-slate-900">{activeNow} / {scenario.breakEvenActiveCount || '—'}</p>
                 <p className="mt-1 text-sm text-slate-700">{breakEvenText}</p>
-              </div>
-              <div className="rounded-2xl border border-violet-100 bg-violet-50/70 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Main driver</p>
-                <p className="mt-1 text-sm font-medium text-slate-900">{mainDriver}</p>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-white/80 p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Next 12 weeks</p>
                 <p className="mt-1 text-sm font-medium text-slate-900">{outlookText}</p>
               </div>
             </div>
-          </section>
-
-          <AttentionList items={attentionItems} />
-        </div>
+          </div>
+        </section>
 
         <section className="grid gap-4 md:grid-cols-3">
           <StatCard label="Gross revenue" value={formatMoney(totals.grossRevenueMonthly)} helper={`${formatMoney(totals.netRevenueMonthly)} after VAT · ${revenue.active.count} active`} />
@@ -427,23 +436,32 @@ export default async function AdminFinancePage({ searchParams }) {
         </section>
 
         <section className="rounded-[1.6rem] border border-slate-200 bg-white/90 p-5 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-base font-semibold text-slate-900">Payroll review</h2>
-              <p className="mt-1 text-sm text-slate-600">
-                Wednesday tutor-pay preview from MMS attendance. Compare against MMS while trust builds, then mark tutors reviewed or paid.
-              </p>
-            </div>
-            <Link href="/admin/finance/payroll" className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm">
-              Open payroll
-            </Link>
+          <h2 className="text-base font-semibold text-slate-900">Useful actions</h2>
+          <p className="mt-1 text-sm text-slate-600">Only the finance work that can actually move or close a loop.</p>
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            <OwnerAction
+              title="Review payroll"
+              detail="Check tutor pay, then mark reviewed or paid."
+              href="/admin/finance/payroll"
+              tone="dark"
+            />
+            <OwnerAction
+              title="Check absence pauses"
+              detail="Make sure cancelled lessons are structured for finance."
+              href="/admin/finance/reconciliation"
+            />
+            <OwnerAction
+              title="Log actual spend"
+              detail="Add bank-account extras like repairs, paint, coffees, or lunches."
+              href="#actual-spend-log"
+            />
           </div>
         </section>
       </section>
 
       <section className="space-y-5">
-        <SectionHeader kicker="Coming up" title="What is likely to happen next?">
-          Use this for seasonal dips, planned pauses, waiting-list upside, and simple what-if questions.
+        <SectionHeader kicker="Planning levers" title="What can we model?">
+          Use this for simple questions like summer dips, active-student changes, and price changes.
         </SectionHeader>
 
       <section className="rounded-[1.6rem] border border-blue-100 bg-white/90 p-5 shadow-sm">
@@ -581,6 +599,8 @@ export default async function AdminFinancePage({ searchParams }) {
           <StatCard label="Stripe actual pricing" value={`${revenue.bySource.stripe_actual.count}/${revenue.active.count}`} helper="active students priced from live Stripe cache" />
           <StatCard label="Forecast exclusions" value={`${pauseForecast.summary.unparsedCount}`} helper="unreadable pause plans excluded from the 12-week view" tone={pauseForecast.summary.unparsedCount ? 'border-amber-100 bg-amber-50/70' : 'border-emerald-100 bg-emerald-50/70'} />
         </div>
+
+        <AttentionList items={attentionItems} />
 
       <section className="rounded-[1.6rem] border border-blue-100 bg-white/90 p-5 shadow-sm">
         <h2 className="text-base font-semibold text-slate-900">Estimate vs reality — {calibration.month}</h2>
@@ -804,6 +824,7 @@ export default async function AdminFinancePage({ searchParams }) {
       </EvidenceSection>
 
       <EvidenceSection
+        id="actual-spend-log"
         title="Actual spend log"
         summary="One-off bank spend for the current month. This is cash context, not run-rate."
       >
