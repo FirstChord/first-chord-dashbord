@@ -1,19 +1,28 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
+import { parsePauseWindowsFromPlanning } from '../../lib/admin/pause-forecast.mjs';
 import {
+  applyIncomingMessageTextUpdate,
   buildGroupSyncPlan,
+  extractIncomingMessageDates,
+  buildIncomingMessageId,
   buildIncomingMessageRecord,
   buildIncomingPlanningDraft,
   buildIncomingReplyTemplate,
   buildWhatsappGroupMapRecord,
   classifyIncomingMessage,
+  decideAutoCaptureStatus,
   decideSyncedGroupStatus,
   detectInstrumentInName,
   groupIncomingMessages,
+  isIncomingPlaceholderText,
+  isOneTapConvertEligible,
+  isSchoolStaffMessage,
   isWhatsappGroupChatId,
   matchGroupToStudent,
   matchIncomingMessageToStudent,
+  mergeIncomingCapture,
   normaliseIncomingMessagePayload,
   normalisePhone,
 } from '../../lib/admin/incoming-message-helpers.mjs';
@@ -216,6 +225,7 @@ test('buildIncomingPlanningDraft maps a reviewed message into a planning item', 
     replyTemplate: 'Hi Mina! Thanks for letting us know.',
   });
 
+  // Duration but no anchor date → stays a generic action, with the duration noted.
   assert.equal(draft.title, 'Extended absence: Alex Chang');
   assert.equal(draft.itemType, 'action');
   assert.equal(draft.status, 'active');
@@ -223,6 +233,124 @@ test('buildIncomingPlanningDraft maps a reviewed message into a planning item', 
   assert.deepEqual(draft.linkedStudentIds, ['sdt_alex']);
   assert.match(draft.notes, /Alex is away for two weeks/u);
   assert.match(draft.notes, /Suggested reply/u);
+  assert.match(draft.notes, /Dates spotted in message: 2 week/u);
+});
+
+test('an extended absence with dates converts to a structured pause plan the forecast can read', () => {
+  const draft = buildIncomingPlanningDraft({
+    record: {
+      suspectedCategory: 'extended_absence',
+      matchedMmsId: 'sdt_alex',
+      matchedStudentName: 'Alex Chang',
+      senderName: 'Mina Chang',
+      messageText: 'Alex will be away for holiday from the 24th of June till the 21st of July',
+      messageAt: '2026-06-19T10:00:00.000Z',
+      source: 'whatsapp_starred',
+    },
+    student: { parentFirstName: 'Mina' },
+    replyTemplate: 'Hi Mina! Thanks for letting us know.',
+    now: new Date('2026-06-19T10:00:00Z'),
+  });
+
+  assert.match(draft.title, /^Pause Alex Chang from/u);
+  assert.equal(draft.area, 'admin');
+  assert.deepEqual(draft.linkedStudentIds, ['sdt_alex']);
+  assert.match(draft.notes, /First lesson to pause date: 2026-06-24/u);
+  assert.match(draft.notes, /Returning from date: 2026-07-21/u);
+  // The original message and reply still travel with the plan.
+  assert.match(draft.notes, /Alex will be away for holiday/u);
+  assert.match(draft.notes, /Suggested reply/u);
+
+  // Round-trip: the pause forecast parses the window from this exact item.
+  const { windows, unparsed } = parsePauseWindowsFromPlanning([{
+    planningId: 'planning_incoming_1',
+    title: draft.title,
+    notes: draft.notes,
+    status: draft.status,
+    linkedStudentId: draft.linkedStudentIds.join(','),
+  }]);
+  assert.equal(unparsed.length, 0);
+  assert.equal(windows.length, 1);
+  assert.equal(windows[0].mmsId, 'sdt_alex');
+  assert.equal(windows[0].type, 'away');
+  assert.equal(windows[0].start.toISOString().slice(0, 10), '2026-06-24');
+  assert.equal(windows[0].end.toISOString().slice(0, 10), '2026-07-21');
+});
+
+test('a one-off absence with a date converts to a single-lesson pause plan', () => {
+  const draft = buildIncomingPlanningDraft({
+    record: {
+      suspectedCategory: 'one_off_absence',
+      matchedMmsId: 'sdt_alex',
+      matchedStudentName: 'Alex Chang',
+      senderName: 'Mina Chang',
+      messageText: 'Alex cannot make his lesson next Friday',
+      messageAt: '2026-06-29T08:00:00.000Z',
+      source: 'whatsapp_starred',
+    },
+    now: new Date('2026-06-29T10:00:00Z'),
+  });
+
+  assert.match(draft.title, /^Pause Alex Chang lesson on/u);
+  assert.match(draft.notes, /Lesson date: 2026-07-03/u);
+
+  const { windows } = parsePauseWindowsFromPlanning([{
+    planningId: 'planning_incoming_2',
+    title: draft.title,
+    notes: draft.notes,
+    linkedStudentId: 'sdt_alex',
+  }]);
+  assert.equal(windows.length, 1);
+  assert.equal(windows[0].type, 'single');
+});
+
+test('the structured pause path needs a matched student', () => {
+  const draft = buildIncomingPlanningDraft({
+    record: {
+      suspectedCategory: 'extended_absence',
+      senderName: 'Mina Chang',
+      messageText: 'We are away from the 24th of June till the 21st of July',
+      messageAt: '2026-06-19T10:00:00.000Z',
+      source: 'whatsapp_starred',
+    },
+  });
+
+  assert.match(draft.title, /^Extended absence/u);
+  assert.match(draft.notes, /Dates spotted in message: from 2026-06-24 · back 2026-07-21/u);
+});
+
+test('buildIncomingReplyTemplate confirms extracted dates back to the parent', () => {
+  const dated = buildIncomingReplyTemplate({
+    category: 'extended_absence',
+    senderName: 'Mina Chang',
+    studentName: 'Alex Chang',
+    tutorName: 'Dean Louden',
+    startDate: '2026-06-24',
+    returnDate: '2026-07-21',
+  });
+  assert.match(dated, /away from Wednesday 24 June/u);
+  assert.match(dated, /pick back up from Tuesday 21 July/u);
+
+  const oneOff = buildIncomingReplyTemplate({
+    category: 'one_off_absence',
+    senderName: 'Mina',
+    studentName: 'Alex',
+    startDate: '2026-07-03',
+  });
+  assert.match(oneOff, /can’t make it on Friday 3 July/u);
+
+  // No dates → the original ask-for-return-date wording still applies.
+  const undated = buildIncomingReplyTemplate({ category: 'extended_absence', senderName: 'Mina', studentName: 'Alex' });
+  assert.match(undated, /Whenever you have the return date/u);
+});
+
+test('extractIncomingMessageDates resolves relative dates against the message time', () => {
+  const result = extractIncomingMessageDates({
+    messageText: 'Sam is off sick today',
+    messageAt: '2026-07-01T08:00:00.000Z',
+    capturedAt: '2026-07-06T16:00:00.000Z',
+  });
+  assert.equal(result.startDate, '2026-07-01');
 });
 
 test('detectInstrumentInName spots FC instruments by whole token, not substring', () => {
@@ -325,6 +453,175 @@ test('buildWhatsappGroupMapRecord carries additional_mms_ids for sibling groups'
   }, { chatId: '120363400087109552@g.us', matchedMmsId: 'sdt_alex', status: 'confirmed' });
   assert.equal(record.additionalMmsIds, 'sdt_sam');
   assert.equal(record.matchedMmsId, 'sdt_alex');
+});
+
+test('buildIncomingMessageId is stable across star replays when an external id exists', () => {
+  const base = { source: 'whatsapp_starred', externalMessageId: '3A5D3041', chatId: '111@g.us' };
+  const placeholderCapture = buildIncomingMessageId({
+    ...base,
+    messageText: '[Message content unavailable - star update arrived before cache]',
+    messageAt: '2026-07-06T15:29:00.000Z',
+  });
+  const healedCapture = buildIncomingMessageId({
+    ...base,
+    messageText: 'Alex is away next Friday',
+    messageAt: '2026-07-01T09:00:00.000Z',
+  });
+  assert.equal(placeholderCapture, healedCapture);
+
+  // Same message id in a different chat is a different row.
+  assert.notEqual(placeholderCapture, buildIncomingMessageId({ ...base, chatId: '222@g.us' }));
+
+  // Manual pastes have no external id — text still distinguishes them.
+  const pasteA = buildIncomingMessageId({ source: 'manual_paste', messageText: 'Alex is away' });
+  const pasteB = buildIncomingMessageId({ source: 'manual_paste', messageText: 'Sam is away' });
+  assert.notEqual(pasteA, pasteB);
+});
+
+test('isIncomingPlaceholderText spots bridge placeholder bodies only', () => {
+  assert.equal(isIncomingPlaceholderText('[Message content unavailable - star update arrived before cache]'), true);
+  assert.equal(isIncomingPlaceholderText('[Media or unsupported message]'), true);
+  assert.equal(isIncomingPlaceholderText('Alex is away next Friday'), false);
+  assert.equal(isIncomingPlaceholderText(''), false);
+});
+
+test('placeholder captures land as needs_review with a paste hint', () => {
+  const record = buildIncomingMessageRecord({
+    source: 'whatsapp_starred',
+    external_message_id: '3A5D3041',
+    chat_id: '111@g.us',
+    message_text: '[Message content unavailable - star update arrived before cache]',
+  }, { students });
+
+  assert.equal(record.status, 'needs_review');
+  assert.equal(record.suspectedCategory, 'general');
+  assert.match(record.matchReasons, /paste the original message/iu);
+});
+
+test('mergeIncomingCapture skips replays and heals placeholders without losing review state', () => {
+  const fresh = buildIncomingMessageRecord({
+    source: 'whatsapp_starred',
+    external_message_id: '3A5D3041',
+    chat_id: '111@g.us',
+    message_text: 'Alex Chang is on holiday for two weeks',
+  }, { students });
+
+  // New capture inserts.
+  assert.equal(mergeIncomingCapture(null, fresh).action, 'insert');
+
+  // Replay over a row that already has text is a no-op.
+  const stored = { ...fresh, status: 'converted', reviewNote: 'handled' };
+  const replay = mergeIncomingCapture(stored, fresh);
+  assert.equal(replay.action, 'skip');
+  assert.equal(replay.record, stored);
+
+  // Replay with recovered text heals a placeholder but keeps human decisions.
+  const placeholderRow = {
+    ...fresh,
+    messageText: '[Message content unavailable - star update arrived before cache]',
+    suspectedCategory: 'general',
+    status: 'converted',
+    reviewNote: 'chased on WhatsApp',
+    createdPlanningId: 'planning_incoming_1',
+    capturedAt: '2026-07-06T15:29:00.000Z',
+  };
+  const healed = mergeIncomingCapture(placeholderRow, fresh);
+  assert.equal(healed.action, 'heal');
+  assert.equal(healed.record.messageText, 'Alex Chang is on holiday for two weeks');
+  assert.equal(healed.record.suspectedCategory, 'extended_absence');
+  assert.equal(healed.record.status, 'converted');
+  assert.equal(healed.record.reviewNote, 'chased on WhatsApp');
+  assert.equal(healed.record.createdPlanningId, 'planning_incoming_1');
+  assert.equal(healed.record.capturedAt, '2026-07-06T15:29:00.000Z');
+  assert.match(healed.record.matchReasons, /healed an earlier placeholder/u);
+
+  // A second placeholder replay never overwrites the placeholder row.
+  const placeholderReplay = mergeIncomingCapture(placeholderRow, { ...placeholderRow });
+  assert.equal(placeholderReplay.action, 'skip');
+});
+
+test('applyIncomingMessageTextUpdate re-classifies pasted text and reopens the row', () => {
+  const row = {
+    incomingId: 'incoming_1',
+    chatId: '111@g.us',
+    messageText: '[Message content unavailable - star update arrived before cache]',
+    suspectedCategory: 'general',
+    status: 'needs_review',
+  };
+
+  const next = applyIncomingMessageTextUpdate(row, {
+    messageText: 'Alex Chang is on holiday for two weeks',
+    students,
+    actorEmail: 'finn@example.com',
+    now: new Date('2026-07-06T17:00:00Z'),
+  });
+
+  assert.equal(next.messageText, 'Alex Chang is on holiday for two weeks');
+  assert.equal(next.suspectedCategory, 'extended_absence');
+  assert.equal(next.matchedMmsId, 'sdt_alex');
+  assert.equal(next.status, 'inbox');
+  assert.equal(next.reviewedBy, 'finn@example.com');
+  assert.match(next.matchReasons, /reviewer supplied the message text/u);
+
+  // Archived rows keep their archive decision.
+  assert.equal(applyIncomingMessageTextUpdate({ ...row, status: 'ignored' }, {
+    messageText: 'noise',
+    students,
+  }).status, 'ignored');
+
+  assert.throws(() => applyIncomingMessageTextUpdate(row, { messageText: '   ', students }), /required/u);
+});
+
+test('isSchoolStaffMessage spots our own account and staff personal numbers', () => {
+  // Bridge marks our own account's messages.
+  assert.equal(isSchoolStaffMessage({ from_me: true }), true);
+  assert.equal(isSchoolStaffMessage({ fromMe: 'true' }), true);
+
+  // Tom messages from his own number — matched against INCOMING_STAFF_PHONES
+  // in any UK format.
+  const staff = '+44 7900 111222, 07811 333444';
+  assert.equal(isSchoolStaffMessage({ sender_phone: '+447900111222' }, staff), true);
+  assert.equal(isSchoolStaffMessage({ senderPhone: '07900 111222' }, staff), true);
+  assert.equal(isSchoolStaffMessage({ senderPhone: '07811333444' }, staff), true);
+
+  // Parents are not staff.
+  assert.equal(isSchoolStaffMessage({ senderPhone: '07788 626616' }, staff), false);
+  assert.equal(isSchoolStaffMessage({ senderPhone: '07788 626616' }, ''), false);
+  assert.equal(isSchoolStaffMessage({}, staff), false);
+});
+
+test('decideAutoCaptureStatus archives no-signal chatter and keeps work open', () => {
+  assert.equal(decideAutoCaptureStatus({ suspectedCategory: 'general', messageText: 'Thanks! See you then' }), 'ignored');
+  assert.equal(decideAutoCaptureStatus({ suspectedCategory: 'one_off_absence', messageText: 'Alex is off sick today' }), 'inbox');
+  // General wording but a concrete date → keep it open for a human look.
+  assert.equal(decideAutoCaptureStatus({
+    suspectedCategory: 'general',
+    messageText: 'Just to note the 24th of June',
+    messageAt: '2026-06-19T10:00:00.000Z',
+  }), 'inbox');
+});
+
+test('one-tap convert needs a high-confidence match and a specific category', () => {
+  const eligible = {
+    matchedMmsId: 'sdt_alex',
+    matchConfidence: 'high',
+    suspectedCategory: 'extended_absence',
+    messageText: 'Alex is away for two weeks',
+    status: 'inbox',
+  };
+  assert.equal(isOneTapConvertEligible(eligible), true);
+  assert.equal(isOneTapConvertEligible({ ...eligible, status: 'needs_review' }), true);
+
+  // Weak signals keep the full review panel as the only path.
+  assert.equal(isOneTapConvertEligible({ ...eligible, matchConfidence: 'medium' }), false);
+  assert.equal(isOneTapConvertEligible({ ...eligible, matchedMmsId: '' }), false);
+  assert.equal(isOneTapConvertEligible({ ...eligible, suspectedCategory: 'general' }), false);
+  assert.equal(isOneTapConvertEligible({ ...eligible, suspectedCategory: 'absence_pause' }), false);
+  assert.equal(isOneTapConvertEligible({
+    ...eligible,
+    messageText: '[Message content unavailable - star update arrived before cache]',
+  }), false);
+  assert.equal(isOneTapConvertEligible({ ...eligible, status: 'converted' }), false);
 });
 
 test('groupIncomingMessages sorts newest first and normalises status/category', () => {

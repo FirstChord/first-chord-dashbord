@@ -6,11 +6,13 @@ import {
   convertIncomingMessageToPlanning,
   correctIncomingMessage,
   deleteIncomingMessage,
+  getConfirmedGroupChatIds,
   getIncomingMessageInbox,
   getWhatsappGroupMap,
   reviewWhatsappGroup,
   syncWhatsappGroups,
   updateIncomingMessageReview,
+  updateIncomingMessageText,
 } from '@/lib/admin/incoming-messages';
 
 function hasValidIngestSecret(request) {
@@ -20,7 +22,25 @@ function hasValidIngestSecret(request) {
   return supplied && supplied === configured;
 }
 
-export async function GET() {
+export async function GET(request) {
+  // The bridge polls this (secret-authenticated) to learn which chats it may
+  // auto-capture from — confirmed FC lesson groups only, ids only.
+  const mode = new URL(request.url).searchParams.get('mode') || '';
+  if (mode === 'confirmed_groups') {
+    if (!hasValidIngestSecret(request)) {
+      const session = await getServerSession(authOptions);
+      if (!session?.user?.isAdmin) {
+        return Response.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+    }
+    try {
+      const chatIds = await getConfirmedGroupChatIds();
+      return Response.json({ success: true, chatIds });
+    } catch (error) {
+      return Response.json({ error: error.message || 'Confirmed group list failed' }, { status: 500 });
+    }
+  }
+
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.isAdmin) {
@@ -75,6 +95,15 @@ export async function POST(request) {
         confirmGroupMap: Boolean(body?.confirmGroupMap),
         actorEmail: session.user.email || '',
         status: body?.status || 'needs_review',
+      });
+    } else if (mode === 'update_text') {
+      if (!isAdmin) {
+        return Response.json({ error: 'Admin session required to edit message text' }, { status: 401 });
+      }
+      await updateIncomingMessageText({
+        incomingId: `${body?.incomingId || ''}`.trim(),
+        messageText: body?.messageText || '',
+        actorEmail: session.user.email || '',
       });
     } else if (mode === 'sync_groups') {
       // Bridge (secret) or admin can push the group dump.

@@ -1,6 +1,6 @@
 # WhatsApp Incoming Bridge
 
-Last updated: 2026-07-01
+Last updated: 2026-07-06
 
 ## Purpose
 
@@ -12,6 +12,17 @@ This is for messages such as:
 - parent asks for a pause/holiday period
 - parent raises a payment or schedule question
 - tutor/parent message should not disappear in WhatsApp memory
+
+## Capture Modes
+
+Two capture paths, one boundary:
+
+1. **Auto-capture (primary since 2026-07-06):** every live text message in a **dashboard-confirmed FC lesson group** posts to the dashboard automatically — no starring. The bridge asks the dashboard which chats qualify (`GET ?mode=confirmed_groups`, secret-authenticated, refreshed on connect + every 6h) and the dashboard re-checks the confirmed group map server-side, so the human-confirmed map is the single gate. Messages from the school side (our own account via `from_me`, or staff personal numbers listed in the dashboard env `INCOMING_STAFF_PHONES` — Tom is in every group under his own number) never become inbox rows; they stamp open items from that chat as **"Replied in WhatsApp"** evidence. Parent messages with no operational signal (category `general`, no dates) land pre-archived (`ignored`, reason noted) so the inbox only shows work. Direct (non-group) chats are deliberately not auto-captured.
+2. **Starring** still works for anything else: DMs, unconfirmed groups, or emphasis. The bridge shares its dedupe set across both paths and the dashboard's capture ids are source-inclusive but replay-safe, so starring an already-captured message never duplicates it.
+
+Env for auto-capture: `AUTO_CAPTURE_CONFIRMED_GROUPS` (default on; set `false` to fall back to starred-only) and `CONFIRMED_GROUPS_REFRESH_MS` on the bridge; `INCOMING_STAFF_PHONES` (comma list, any UK format) on the dashboard.
+
+Because capture is now automatic, **silence is a failure signal**: the admin overview shows a "WhatsApp capture quiet" card when no auto-captured message has arrived for 3+ days (a dead/unlinked bridge otherwise looks like a calm inbox).
 
 ## Boundary
 
@@ -101,7 +112,13 @@ Local folder:
 
 That folder is not part of this repo. It currently sits under the old home-directory git clone, so do not commit from there. Treat it as reference/history only.
 
-The local Baileys prototype should cache incoming message bodies from `messages.upsert`. A later `messages.update` star event often contains only the message key, not the message text. If the cache misses, the dashboard should still receive a placeholder, but those rows need manual review.
+The local Baileys prototype should cache incoming message bodies from `messages.upsert`. A later `messages.update` star event often contains only the message key, not the message text. If the cache misses, the dashboard still receives a placeholder row.
+
+**Capture semantics (dashboard side).** A star event only works fully for messages the bridge saw arrive live — star messages **promptly**; anything older than the bridge cache arrives textless. The dashboard makes those failures reviewable instead of junk:
+
+- Bridge captures are identified by `source + chat_id + external_message_id` only, so WhatsApp's star replays (it re-announces star state on reconnect/restart) upsert the same inbox row instead of duplicating it (`buildIncomingMessageId`).
+- A replay that adds nothing is skipped; a replay that *recovers* real text for a stored placeholder row heals it — fresh classification and student match, but human decisions (archive status, review note, planning link) are preserved (`mergeIncomingCapture`).
+- Placeholder captures land as `needs_review`, and the inbox card shows a paste box: paste the original message from WhatsApp and it is re-classified, re-matched, and reopened (`mode: update_text`).
 
 The repo bridge keeps this cache on local disk by default:
 
@@ -186,7 +203,7 @@ Triage happens in the inbox's **WhatsApp groups** panel: each `review` group sho
 
 Inbox status buttons:
 
-- `Convert to plan + draft reply`: saves the reviewed category/student/group-map training, creates a linked `Planning_Items` action, archives the message (`converted`), and returns a suggested WhatsApp reply. See "From message to action" below.
+- `Convert to plan + draft reply`: saves the reviewed category/student/group-map training, creates a linked `Planning_Items` action, archives the message (`converted`), and returns a suggested WhatsApp reply. See "From message to action" below. When both guesses are measured-strong (`isOneTapConvertEligible`: high-confidence student match + a specific category, not `general`/`absence_pause`), the same button also appears directly on the card — one tap, no correction panel. That shortcut is justified by the classifier eval harness (`npm run eval:incoming`; accuracy floors pinned in `incoming-classifier-eval.test.mjs` against the real-message fixture `tests/admin/fixtures/incoming-eval-set.json`).
 - `Save correction`: saves the reviewed category/student/group-map training and keeps the message open for action.
 - `Save + archive`: saves the correction and archives the message because the relevant action has been handled or logged elsewhere.
 - `Archive handled`: archives a message without changing the correction fields.
@@ -200,9 +217,10 @@ Archived/ignored rows are hidden by default so the inbox stays focused on messag
 Once a message is read correctly, `Convert to plan + draft reply` closes the loop:
 
 1. Applies any category/student/group-map correction from the panel.
-2. Creates a `Planning_Items` action (via `savePlanningItem`) linked to the matched student. The planning id is derived from the incoming id (`planning_<incomingId>`), so re-converting the same message upserts the same task instead of duplicating. Category maps to a planning `area` (absence/schedule → `workflow`, payment/leaving → `finance`, concern/general → `parent`). The original message, sender, and the suggested reply travel in the item notes.
-3. Writes `created_planning_id` back onto the inbox row and marks it `converted`.
-4. Returns a suggested WhatsApp reply, shown in an editable box with a Copy button.
+2. Extracts dates/durations from the message text (`extractDatesFromMessage`, resolved against the message timestamp; the card previews the same guess as "Dates spotted"). When an absence-category message has usable dates **and** a matched student, the plan is built with `buildStructuredPausePlanningDraft` — the same pause note format the pause forecast and finance outlook parse — so the message joins the pause loop with no re-typing. Otherwise it stays a generic action (category maps to a planning `area`: absence/schedule → `workflow`, payment/leaving → `finance`, concern/general → `parent`) with any spotted dates noted.
+3. Creates the `Planning_Items` action (via `savePlanningItem`) linked to the matched student. The planning id is derived from the incoming id (`planning_<incomingId>`), so re-converting the same message upserts the same task instead of duplicating. The original message, sender, and the suggested reply travel in the item notes.
+4. Writes `created_planning_id` back onto the inbox row and marks it `converted`.
+5. Returns a suggested WhatsApp reply — with the extracted dates confirmed back to the parent when they were read — shown in an editable box with a Copy button.
 
 The reply is a **copy-paste draft only** — consistent with the transport-only boundary above, nothing is sent to WhatsApp automatically. The human edits it and sends it themselves. Reply wording is per-category and lives in `buildIncomingReplyTemplate` (`lib/admin/incoming-message-helpers.mjs`); the planning mapping lives in `buildIncomingPlanningDraft`.
 

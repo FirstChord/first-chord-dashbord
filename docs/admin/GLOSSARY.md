@@ -42,3 +42,15 @@ Real billing amounts read from Stripe subscriptions, as opposed to the price-tab
 ## Calibration (finance)
 
 Comparing what Stripe actually collected in a month (`Stripe_Collected_Monthly`) against what the estimate said Stripe-managed students should bill. A growing gap means the model is drifting from reality — the "Estimate vs reality" panel on `/admin/finance`.
+
+## Placeholder healing (incoming inbox)
+
+A starred WhatsApp message captured without its text (older than the bridge cache) lands as a `needs_review` placeholder row. "Healing" replaces the placeholder with the real text — via a later bridge replay that recovered it, or the paste box on the inbox card — re-running classification/matching while keeping every human review decision.
+
+## Eval fixture (incoming classifier)
+
+The hand-labelled set of real anonymised parent messages (`tests/admin/fixtures/incoming-eval-set.json`) that `classifyIncomingMessage` is measured against. `npm run eval:incoming` prints accuracy + misses; the test suite pins minimum floors so rule changes can't silently regress on real traffic. Labels are the operationally correct category, not the old prototype's labels.
+
+## Auto-capture (incoming inbox)
+
+The bridge posts every live text message from a dashboard-confirmed FC lesson group automatically (`source: whatsapp_group_auto`) — starring is no longer required for capture. Confirming/ignoring a group in the inbox UI is also its capture switch. School-side messages (own account or `INCOMING_STAFF_PHONES`) stamp open items as "Replied in WhatsApp" instead of creating rows; no-signal messages land pre-archived.

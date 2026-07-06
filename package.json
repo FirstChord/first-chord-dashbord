@@ -17,6 +17,7 @@
     "backup:sheets": "node scripts/backup-sheets-tabs.mjs",
     "ensure:state-tabs": "node scripts/ensure-state-tabs.mjs",
     "hygiene:check": "node scripts/hygiene-check.mjs",
+    "eval:incoming": "node scripts/eval-incoming-classifier.mjs",
     "install:backup-schedule": "node scripts/install-sheets-backup-launch-agent.mjs",
     "lint": "next lint",
     "analyze": "ANALYZE=true npm run build",

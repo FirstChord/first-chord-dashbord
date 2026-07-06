@@ -1,24 +1,38 @@
 # First Chord WhatsApp Incoming Bridge
 
-Local helper for capturing deliberately starred WhatsApp messages into the dashboard `Incoming_Message_Inbox`.
+Local helper that captures WhatsApp messages into the dashboard `Incoming_Message_Inbox`.
 
-This is optional tooling. It is not part of the Railway dashboard build.
+This is optional tooling. It is not part of the Railway dashboard build. Full semantics live in `docs/admin/WHATSAPP_INCOMING_BRIDGE.md` (the authoritative doc); this README is setup/ops only.
 
 ## What It Does
 
 - connects to WhatsApp Web using Baileys
 - caches recent incoming message text locally
-- when a message is starred, posts the cached message text + metadata to the dashboard
+- **auto-captures every live text message from dashboard-confirmed FC lesson groups** (since 2026-07-06 — no starring needed; it fetches the confirmed chat list from the dashboard on connect and 6-hourly)
+- still posts **starred** messages from anywhere (DMs, unconfirmed groups, emphasis)
 - uses `INCOMING_MESSAGE_INGEST_SECRET` to authenticate with the dashboard endpoint
 
 ## What It Must Not Do
 
-- read all WhatsApp messages into the dashboard by default
+- ingest chats outside the human-confirmed group map (no DMs, no personal groups — the dashboard re-checks the map on every capture)
 - auto-create pause/payment actions
 - auto-send replies
 - treat WhatsApp as source truth
 
 The dashboard inbox is review-only.
+
+## Auto-Capture Env
+
+```bash
+export AUTO_CAPTURE_CONFIRMED_GROUPS=true   # default on; false = starred-only
+export CONFIRMED_GROUPS_REFRESH_MS=21600000 # optional, default 6h
+```
+
+Staff numbers (Tom's personal number, so school replies stamp items instead of creating rows) are configured on the **dashboard** side: Railway env `INCOMING_STAFF_PHONES`.
+
+## Sleep / Offline Behaviour
+
+The bridge only captures while this Mac is awake. WhatsApp queues messages for offline linked devices, so after the Mac wakes the bridge reconnects and the queued messages are delivered and captured — the loop is **delayed, not broken**. Backstops: the dashboard shows a "WhatsApp capture quiet" card after 3 silent days, and manual Quick capture on `/admin/incoming-messages` works from any device at any time. If the device stays offline ~14 days, WhatsApp unlinks it — re-scan the QR (`npm start` shows it).
 
 ## Setup
 

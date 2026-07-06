@@ -10,6 +10,7 @@ import { getTutorAbsenceOverviewSummary } from '@/lib/admin/tutor-absence';
 import { getPlanningDashboard } from '@/lib/admin/planning';
 import { getAdminIssues } from '@/lib/admin/issues';
 import { getWaitingWorkflowStudents } from '@/lib/admin/waiting-workflow';
+import { getIncomingMessageInbox } from '@/lib/admin/incoming-messages';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,8 +48,10 @@ function buildPrioritySentence({
   waitingWork,
   unknownPaymentMode,
   planningNeedsAttention,
+  openIncomingMessages = 0,
 }) {
   const priorities = [];
+  if (openIncomingMessages > 0) priorities.push('parent messages in the inbox');
   if (tutorAbsences > 0) priorities.push('tutor absences');
   if (waitingWork > 0) priorities.push('waiting-list work');
   if (openIssues > 0) priorities.push('open flags');
@@ -103,6 +106,15 @@ async function getSafeWaitingWorkflowStudents() {
     return await getWaitingWorkflowStudents();
   } catch (error) {
     console.warn('Admin overview waiting-list summary failed:', error);
+    return [];
+  }
+}
+
+async function getSafeIncomingMessageInbox() {
+  try {
+    return await getIncomingMessageInbox();
+  } catch (error) {
+    console.warn('Admin overview incoming-inbox summary failed:', error);
     return [];
   }
 }
@@ -235,13 +247,14 @@ export default async function AdminHomePage() {
   // Health is intentionally NOT in this blocking fetch — it makes 3 uncached
   // external calls (MMS + 2 GitHub), so it's streamed separately (see OverviewHealth)
   // and the rest of the page renders immediately.
-  const [students, issuesResult, tutorAbsenceSummary, parentUnderstandingRows, planningDashboard, waitingStudents] = await Promise.all([
+  const [students, issuesResult, tutorAbsenceSummary, parentUnderstandingRows, planningDashboard, waitingStudents, incomingInbox] = await Promise.all([
     getOperationalAdminStudents(),
     getAdminIssues(),
     getTutorAbsenceOverviewSummary(),
     getParentUnderstandingStateRows(),
     getPlanningDashboard(),
     getSafeWaitingWorkflowStudents(),
+    getSafeIncomingMessageInbox(),
   ]);
   const issues = issuesResult.issues || [];
   const activeIssues = issues.filter((issue) => ['open', 'acknowledged'].includes(issue.status));
@@ -251,12 +264,23 @@ export default async function AdminHomePage() {
   const parentUnderstandingSummary = buildParentUnderstandingOverview(parentUnderstandingRows);
   const planningSummary = planningDashboard.summary || {};
   const planningDueNow = planningSummary.dueNow || 0;
+  const openIncomingMessages = incomingInbox.filter((entry) => ['inbox', 'needs_review'].includes(entry.status)).length;
+  // Auto-ingest makes a dead bridge look like a calm inbox — surface the
+  // silence. Only meaningful once auto-captured rows exist at all.
+  const latestAutoCaptureMs = incomingInbox
+    .filter((entry) => entry.source === 'whatsapp_group_auto')
+    .reduce((max, entry) => Math.max(max, new Date(entry.capturedAt || 0).getTime() || 0), 0);
+  const captureQuietDays = latestAutoCaptureMs
+    ? Math.floor((Date.now() - latestAutoCaptureMs) / (24 * 60 * 60 * 1000))
+    : 0;
+  const captureLooksQuiet = latestAutoCaptureMs > 0 && captureQuietDays >= 3;
   const prioritySentence = buildPrioritySentence({
     openIssues: activeIssues.length,
     tutorAbsences: tutorAbsenceSummary.openAbsences,
     waitingWork: waitingSummary.waiting + waitingSummary.onboardingReady + waitingSummary.noResponse,
     unknownPaymentMode: paymentSummary.unknownPaymentMode,
     planningNeedsAttention: planningSummary.needsAttention || 0,
+    openIncomingMessages,
   });
   const tutorAbsenceHref = tutorAbsenceSummary.firstOpenAbsence
     ? `/admin/workflows/tutor-absence?tutor=${encodeURIComponent(tutorAbsenceSummary.firstOpenAbsence.tutorShortName)}&date=${encodeURIComponent(tutorAbsenceSummary.firstOpenAbsence.absenceDate)}`
@@ -273,6 +297,20 @@ export default async function AdminHomePage() {
     } : null,
   ].filter(Boolean);
   const attentionItems = [
+    openIncomingMessages > 0 ? {
+      label: 'Message inbox',
+      value: openIncomingMessages,
+      href: '/admin/incoming-messages',
+      helper: openIncomingMessages === 1 ? 'One parent message to review' : 'Parent messages to review',
+      tone: 'border-blue-100 bg-blue-50/60',
+    } : null,
+    captureLooksQuiet ? {
+      label: 'WhatsApp capture quiet',
+      value: `${captureQuietDays}d`,
+      href: '/admin/incoming-messages',
+      helper: 'No group messages auto-captured — check the bridge is running and linked',
+      tone: 'border-amber-100 bg-amber-50/60',
+    } : null,
     activeIssues.length > 0 ? {
       label: 'Review Issues',
       value: activeIssues.length,

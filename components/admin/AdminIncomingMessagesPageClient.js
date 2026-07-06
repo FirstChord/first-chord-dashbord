@@ -3,10 +3,14 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import {
+  extractIncomingMessageDates,
   INCOMING_MESSAGE_CATEGORIES,
+  isIncomingPlaceholderText,
+  isOneTapConvertEligible,
   labelIncomingCategory,
   labelIncomingStatus,
 } from '@/lib/admin/incoming-message-helpers.mjs';
+import { formatFriendlyDate } from '@/lib/admin/incoming-date-helpers.mjs';
 
 function formatDateTime(value) {
   if (!value) return '—';
@@ -402,8 +406,54 @@ function ReplyPanel({ conversion }) {
   );
 }
 
-function MessageCard({ entry, studentOptions, onReview, onDelete, onCorrect, onConvert, conversion, pendingId }) {
+// Shown when the bridge captured a star without the original text (the message
+// predates its cache): paste the message from WhatsApp and it re-classifies.
+function PlaceholderFixPanel({ entry, onUpdateText, isPending }) {
+  const [text, setText] = useState('');
+
+  return (
+    <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50/60 px-3 py-2">
+      <p className="text-xs font-semibold leading-5 text-amber-900">
+        WhatsApp only sent the star — the message text is missing. Paste the original message here and it will be classified and matched.
+      </p>
+      <textarea
+        value={text}
+        onChange={(event) => setText(event.target.value)}
+        rows={3}
+        className="mt-2 w-full rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm leading-6 text-slate-800 outline-none focus:border-amber-300"
+        placeholder="Paste the original WhatsApp message..."
+      />
+      <button
+        type="button"
+        disabled={isPending || !text.trim()}
+        onClick={() => onUpdateText(entry, text)}
+        className="mt-2 rounded-full bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm disabled:opacity-60"
+      >
+        Save message text
+      </button>
+    </div>
+  );
+}
+
+// "Dates spotted: from Wednesday 24 June · back Monday 21 July" — the same
+// extraction the convert action uses, shown up front so the guess can be
+// sanity-checked against the message before creating a pause plan.
+function describeSpottedDates(entry) {
+  const dates = extractIncomingMessageDates(entry);
+  const parts = [
+    dates.startDate ? `from ${formatFriendlyDate(dates.startDate)}` : '',
+    dates.returnDate ? `back ${formatFriendlyDate(dates.returnDate)}` : '',
+    dates.durationWeeks ? `${dates.durationWeeks} week${dates.durationWeeks === 1 ? '' : 's'}` : '',
+  ].filter(Boolean);
+  if (!parts.length && dates.dates.length) {
+    parts.push(dates.dates.map((iso) => formatFriendlyDate(iso)).join(', '));
+  }
+  return parts.join(' · ');
+}
+
+function MessageCard({ entry, studentOptions, onReview, onDelete, onCorrect, onConvert, onUpdateText, conversion, pendingId }) {
   const isPending = pendingId === entry.incomingId;
+  const spottedDates = describeSpottedDates(entry);
   return (
     <article className="rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-[0_12px_36px_rgba(15,23,42,0.05)]">
       <div className="flex flex-wrap items-center gap-2">
@@ -441,6 +491,14 @@ function MessageCard({ entry, studentOptions, onReview, onDelete, onCorrect, onC
 
       <p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700">{entry.messageText}</p>
 
+      {spottedDates ? (
+        <p className="mt-2 text-xs font-semibold text-blue-800">Dates spotted: {spottedDates}</p>
+      ) : null}
+
+      {isIncomingPlaceholderText(entry.messageText) ? (
+        <PlaceholderFixPanel entry={entry} onUpdateText={onUpdateText} isPending={isPending} />
+      ) : null}
+
       {entry.matchReasons ? (
         <p className="mt-3 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-600">
           {entry.matchReasons}
@@ -451,6 +509,12 @@ function MessageCard({ entry, studentOptions, onReview, onDelete, onCorrect, onC
         <p className="mt-3 text-xs leading-5 text-slate-500">Review note: {entry.reviewNote}</p>
       ) : null}
 
+      {entry.schoolRepliedAt ? (
+        <p className="mt-2 text-xs font-semibold text-emerald-700">
+          ✓ Replied in WhatsApp{entry.schoolRepliedBy && entry.schoolRepliedBy !== 'me' ? ` by ${entry.schoolRepliedBy}` : ''} · {formatDateTime(entry.schoolRepliedAt)}
+        </p>
+      ) : null}
+
       {entry.reviewedBy || entry.reviewedAt ? (
         <p className="mt-1 text-[11px] text-slate-400">
           Last actioned{entry.reviewedBy ? ` by ${entry.reviewedBy}` : ''}{entry.reviewedAt ? ` · ${formatDateTime(entry.reviewedAt)}` : ''}
@@ -458,6 +522,16 @@ function MessageCard({ entry, studentOptions, onReview, onDelete, onCorrect, onC
       ) : null}
 
       <div className="mt-4 flex flex-wrap gap-2">
+        {isOneTapConvertEligible(entry) && !conversion ? (
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={() => onConvert(entry, { category: '', matchedMmsId: '', reviewNote: '', confirmGroupMap: false })}
+            className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm disabled:opacity-60"
+          >
+            Convert to plan + draft reply
+          </button>
+        ) : null}
         <button
           type="button"
           disabled={isPending}
@@ -646,6 +720,22 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
     }
   }
 
+  async function handleUpdateText(entry, messageText) {
+    setSubmitError('');
+    setPendingId(entry.incomingId);
+    try {
+      await postPayload({
+        mode: 'update_text',
+        incomingId: entry.incomingId,
+        messageText,
+      });
+    } catch (caught) {
+      setSubmitError(caught.message || 'Message text update failed');
+    } finally {
+      setPendingId('');
+    }
+  }
+
   async function handleConvert(entry, correction) {
     setSubmitError('');
     setPendingId(entry.incomingId);
@@ -793,6 +883,7 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
                 onDelete={handleDelete}
                 onCorrect={handleCorrect}
                 onConvert={handleConvert}
+                onUpdateText={handleUpdateText}
               />
             ))}
           </div>

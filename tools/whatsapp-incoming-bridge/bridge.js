@@ -125,6 +125,15 @@ class WhatsAppIncomingBridge {
     this.writeStarredLog = parseBoolean(process.env.WRITE_STARRED_LOG);
     this.dryRun = parseBoolean(process.env.DRY_RUN);
     this.syncGroupsOnStart = parseBoolean(process.env.SYNC_GROUPS_ON_START);
+    // Auto-capture every live text message from dashboard-confirmed FC lesson
+    // groups (no starring needed). On by default; the dashboard still filters
+    // to confirmed groups server-side, so this is belt-and-braces scoping.
+    this.autoCaptureEnabled = typeof process.env.AUTO_CAPTURE_CONFIRMED_GROUPS === 'undefined'
+      ? true
+      : parseBoolean(process.env.AUTO_CAPTURE_CONFIRMED_GROUPS);
+    this.confirmedChatIds = new Set();
+    this.confirmedGroupsRefreshMs = Math.max(10 * 60 * 1000, Number(process.env.CONFIRMED_GROUPS_REFRESH_MS || 6 * 60 * 60 * 1000) || 6 * 60 * 60 * 1000);
+    this.confirmedGroupsTimer = null;
     this.groupSyncWaitMs = Number(process.env.GROUP_SYNC_WAIT_MS || 25000) || 25000;
     this.logger = P({ level: process.env.LOG_LEVEL || 'info' });
     this.sock = null;
@@ -367,6 +376,56 @@ class WhatsAppIncomingBridge {
     });
   }
 
+  // Which chats may be auto-captured — asked of the dashboard so the
+  // human-confirmed group map stays the single source of that decision.
+  async refreshConfirmedGroups() {
+    if (!this.autoCaptureEnabled || this.dryRun) return;
+    try {
+      const response = await axios.get(this.webhookUrl, {
+        params: { mode: 'confirmed_groups' },
+        timeout: 15000,
+        headers: { 'x-firstchord-incoming-secret': this.webhookSecret },
+      });
+      const chatIds = Array.isArray(response.data?.chatIds) ? response.data.chatIds : [];
+      this.confirmedChatIds = new Set(chatIds);
+      this.logInfo('Refreshed confirmed group list for auto-capture', { confirmedGroups: chatIds.length });
+    } catch (error) {
+      this.logWarn('Could not refresh confirmed group list — auto-capture keeps the previous list', { error: error.message });
+    }
+  }
+
+  scheduleConfirmedGroupsRefresh() {
+    if (!this.autoCaptureEnabled || this.confirmedGroupsTimer) return;
+    this.confirmedGroupsTimer = setInterval(() => {
+      this.refreshConfirmedGroups().catch(() => {});
+    }, this.confirmedGroupsRefreshMs);
+    this.confirmedGroupsTimer.unref?.();
+  }
+
+  // Live messages (upsert type "notify") in confirmed FC groups post to the
+  // dashboard automatically — including our own replies (from_me), which the
+  // dashboard uses as "school replied" evidence rather than inbox rows.
+  // Sharing sentMessageIds with the starred path means starring an already
+  // auto-captured message never posts it twice under a second source.
+  async maybeAutoCapture(message) {
+    if (!this.autoCaptureEnabled || !this.confirmedChatIds.size) return;
+    const chatId = message.key?.remoteJid || '';
+    const messageId = message.key?.id || '';
+    if (!chatId || !messageId || !this.confirmedChatIds.has(chatId)) return;
+    if (this.sentMessageIds.has(messageId)) return;
+
+    const { text } = extractMessageContent(message);
+    if (!text) return; // media without a caption carries nothing to classify
+
+    const cached = this.cacheMessage(message) || {};
+    const payload = await this.buildPayload({ ...cached, cacheHit: true });
+    payload.source = 'whatsapp_group_auto';
+    payload.from_me = Boolean(message.key?.fromMe);
+
+    await this.sendPayload(payload);
+    this.sentMessageIds.add(messageId);
+  }
+
   // `kill -USR1 <pid>` on the running bridge triggers a group sync on the live
   // socket. Bound once, even across reconnects.
   bindGroupSyncSignal() {
@@ -418,6 +477,8 @@ class WhatsAppIncomingBridge {
       if (connection === 'open') {
         this.connected = true;
         this.logInfo('WhatsApp bridge connected');
+        this.refreshConfirmedGroups().catch(() => {});
+        this.scheduleConfirmedGroupsRefresh();
         if (this.syncGroupsOnStart && !this.startupSyncDone) {
           this.startupSyncDone = true;
           this.logInfo('Scheduling startup group sync', { waitMs: this.groupSyncWaitMs });
@@ -438,11 +499,15 @@ class WhatsAppIncomingBridge {
       }
     });
 
-    this.sock.ev.on('messages.upsert', async ({ messages = [] }) => {
+    this.sock.ev.on('messages.upsert', async ({ messages = [], type }) => {
       for (const message of messages) {
         this.cacheMessage(message);
         if (message.starred) {
           await this.handleStarredMessage(message);
+        } else if (type === 'notify') {
+          // Only live deliveries — history/append batches on reconnect would
+          // replay old traffic (the dashboard would dedupe, but why post it).
+          await this.maybeAutoCapture(message).catch((error) => this.logWarn('Auto-capture failed', { error: error.message }));
         }
       }
     });
