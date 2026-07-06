@@ -94,7 +94,7 @@ const EMPTY_SCHOOL_NOTE_FORM = {
 const PAUSE_EXPECTATION_SET_NOTE = 'Set Stripe paused expected from linked pause planning item.';
 const PAUSE_COMPLETED_NOTE = 'Pause completed from Planning: pause tool run, parent confirmation sent, and payment expectation aligned.';
 
-export default function AdminPlanningPageClient({ initialPlanning, initialFilter = 'all', studentOptions = [] }) {
+export default function AdminPlanningPageClient({ initialPlanning, initialFilter = 'all', initialFocusId = '', studentOptions = [] }) {
   const [planning, setPlanning] = useState(initialPlanning || { items: [], summary: {} });
   const [quickNote, setQuickNote] = useState('');
   const [quickOptions, setQuickOptions] = useState({});
@@ -132,6 +132,20 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
       editPanelRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }, [editingItem]);
+
+  // Deep link (?focus=<planningId>, e.g. "Open plan" from the incoming inbox):
+  // open that item's edit panel directly instead of landing on the default list.
+  const focusHandledRef = useRef(false);
+  useEffect(() => {
+    if (focusHandledRef.current || !initialFocusId) return;
+    focusHandledRef.current = true;
+    const item = (planning.items || []).find((entry) => entry.planningId === initialFocusId);
+    if (item) {
+      setFilter('all');
+      startEdit(item);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Passive "noticing" aid: which open pause cards sit next to another pause for the
   // same student (so they might be one longer break). Read-only — no merging.

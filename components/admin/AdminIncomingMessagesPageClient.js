@@ -551,6 +551,14 @@ function MessageCard({ entry, studentOptions, onReview, onDelete, onCorrect, onC
       ) : null}
 
       <div className="mt-4 flex flex-wrap gap-2">
+        {entry.createdPlanningId && !conversion ? (
+          <Link
+            href={`/admin/planning?focus=${encodeURIComponent(entry.createdPlanningId)}`}
+            className="rounded-full border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-800 shadow-sm"
+          >
+            Open plan
+          </Link>
+        ) : null}
         {isOneTapConvertEligible(entry) && !conversion ? (
           <button
             type="button"

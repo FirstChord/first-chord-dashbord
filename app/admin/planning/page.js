@@ -34,6 +34,7 @@ export default async function AdminPlanningPage({ searchParams }) {
   const scheduleByMmsId = enrichScheduleContextsWithSharedSlots(scheduleRows);
   const requestedFilter = `${resolvedSearchParams?.filter || ''}`.trim();
   const initialFilter = ALLOWED_INITIAL_FILTERS.has(requestedFilter) ? requestedFilter : 'due_now';
+  const initialFocusId = `${resolvedSearchParams?.focus || ''}`.trim();
   const studentOptions = students.map((student) => ({
     mmsId: student.mmsId,
     fullName: student.fullName,
@@ -48,5 +49,12 @@ export default async function AdminPlanningPage({ searchParams }) {
     scheduleContext: scheduleByMmsId.get(student.mmsId) || null,
   }));
 
-  return <AdminPlanningPageClient initialPlanning={planning} initialFilter={initialFilter} studentOptions={studentOptions} />;
+  return (
+    <AdminPlanningPageClient
+      initialPlanning={planning}
+      initialFilter={initialFilter}
+      initialFocusId={initialFocusId}
+      studentOptions={studentOptions}
+    />
+  );
 }
