@@ -9,6 +9,7 @@ import {
   getConfirmedGroupChatIds,
   getIncomingMessageInbox,
   getWhatsappGroupMap,
+  recordBridgeStatus,
   reviewWhatsappGroup,
   syncWhatsappGroups,
   updateIncomingMessageReview,
@@ -70,6 +71,17 @@ export async function POST(request) {
   const body = await request.json().catch(() => ({}));
   const mode = `${body?.mode || 'capture'}`.trim();
   let extra = {};
+
+  // Heartbeats are frequent and tiny — record and return without the full
+  // inbox reload the interactive modes need.
+  if (mode === 'bridge_status') {
+    try {
+      await recordBridgeStatus(body || {});
+      return Response.json({ success: true });
+    } catch (error) {
+      return Response.json({ error: error.message || 'Bridge status save failed' }, { status: 500 });
+    }
+  }
 
   try {
     if (mode === 'review') {

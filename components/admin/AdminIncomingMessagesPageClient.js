@@ -3,8 +3,10 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import {
+  assessBridgeHealth,
   extractIncomingMessageDates,
   INCOMING_MESSAGE_CATEGORIES,
+  isAutoArchivedMessage,
   isIncomingPlaceholderText,
   isOneTapConvertEligible,
   labelIncomingCategory,
@@ -451,6 +453,33 @@ function describeSpottedDates(entry) {
   return parts.join(' · ');
 }
 
+// One-line bridge health: slate when fine, amber with the reasons when not.
+// The heavy diagnostics stay in the bridge's local logs — this is just enough
+// to tell "down", "connected but capturing nothing", and "quiet" apart.
+function BridgeStatusStrip({ bridgeStatus, inbox = [] }) {
+  const lastAutoCaptureAt = inbox
+    .filter((entry) => entry.source === 'whatsapp_group_auto')
+    .reduce((latest, entry) => ((entry.capturedAt || '') > latest ? entry.capturedAt : latest), '');
+  const health = assessBridgeHealth(bridgeStatus, { lastAutoCaptureAt });
+
+  if (health.state === 'none') return null;
+
+  if (health.state === 'warn') {
+    return (
+      <div className="rounded-2xl border border-amber-200 bg-amber-50/70 px-4 py-2 text-xs leading-5 text-amber-900">
+        <span className="font-semibold">WhatsApp bridge needs a look:</span> {health.problems.join(' · ')}
+      </div>
+    );
+  }
+
+  return (
+    <p className="px-1 text-[11px] text-slate-400">
+      Bridge ✓ connected · {bridgeStatus.confirmedGroups} groups on the capture list · heartbeat {formatDateTime(bridgeStatus.lastHeartbeatAt)}
+      {lastAutoCaptureAt ? ` · last capture ${formatDateTime(lastAutoCaptureAt)}` : ' · no auto-captures yet'}
+    </p>
+  );
+}
+
 function MessageCard({ entry, studentOptions, onReview, onDelete, onCorrect, onConvert, onUpdateText, conversion, pendingId }) {
   const isPending = pendingId === entry.incomingId;
   const spottedDates = describeSpottedDates(entry);
@@ -571,7 +600,7 @@ function MessageCard({ entry, studentOptions, onReview, onDelete, onCorrect, onC
   );
 }
 
-export default function AdminIncomingMessagesPageClient({ initialInbox = [], initialGroupMap = [], studentOptions = [], error = '' }) {
+export default function AdminIncomingMessagesPageClient({ initialInbox = [], initialGroupMap = [], studentOptions = [], bridgeStatus = null, error = '' }) {
   const [inbox, setInbox] = useState(initialInbox);
   const [groupMap, setGroupMap] = useState(initialGroupMap);
   const [messageText, setMessageText] = useState('');
@@ -583,16 +612,18 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
   const [pendingChatId, setPendingChatId] = useState('');
   const [submitError, setSubmitError] = useState(error);
   const [showArchived, setShowArchived] = useState(false);
+  const [showAutoArchived, setShowAutoArchived] = useState(false);
   const [conversions, setConversions] = useState({});
 
   const openCount = useMemo(() => inbox.filter((entry) => ['inbox', 'needs_review'].includes(entry.status)).length, [inbox]);
   const absenceCount = useMemo(() => inbox.filter((entry) => ABSENCE_CATEGORIES.has(entry.suspectedCategory) && ['inbox', 'needs_review'].includes(entry.status)).length, [inbox]);
   const archivedCount = useMemo(() => inbox.filter((entry) => ['converted', 'ignored'].includes(entry.status)).length, [inbox]);
-  const visibleInbox = useMemo(() => (
-    showArchived
-      ? inbox
-      : inbox.filter((entry) => ['inbox', 'needs_review'].includes(entry.status) || conversions[entry.incomingId])
-  ), [inbox, showArchived, conversions]);
+  const autoArchivedCount = useMemo(() => inbox.filter(isAutoArchivedMessage).length, [inbox]);
+  const visibleInbox = useMemo(() => {
+    if (showAutoArchived) return inbox.filter(isAutoArchivedMessage);
+    if (showArchived) return inbox;
+    return inbox.filter((entry) => ['inbox', 'needs_review'].includes(entry.status) || conversions[entry.incomingId]);
+  }, [inbox, showArchived, showAutoArchived, conversions]);
 
   async function postPayload(payload) {
     const response = await fetch('/api/admin/incoming-messages', {
@@ -779,6 +810,8 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
         <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{submitError}</div>
       ) : null}
 
+      <BridgeStatusStrip bridgeStatus={bridgeStatus} inbox={inbox} />
+
       <section className="grid gap-4 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
         <form onSubmit={handleCapture} className="space-y-4 rounded-2xl border border-blue-100 bg-white/90 p-5 shadow-[0_12px_36px_rgba(15,23,42,0.05)]">
           <div>
@@ -859,15 +892,26 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
             </div>
           ) : null}
 
-          {archivedCount ? (
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={() => setShowArchived((current) => !current)}
-                className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm"
-              >
-                {showArchived ? 'Hide archived' : `Show archived (${archivedCount})`}
-              </button>
+          {archivedCount || autoArchivedCount ? (
+            <div className="flex justify-end gap-2">
+              {autoArchivedCount ? (
+                <button
+                  type="button"
+                  onClick={() => { setShowAutoArchived((current) => !current); setShowArchived(false); }}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm ${showAutoArchived ? 'border-amber-300 bg-amber-50 text-amber-900' : 'border-slate-200 bg-white text-slate-600'}`}
+                >
+                  {showAutoArchived ? 'Hide auto-archived' : `Auto-archived (${autoArchivedCount})`}
+                </button>
+              ) : null}
+              {archivedCount ? (
+                <button
+                  type="button"
+                  onClick={() => { setShowArchived((current) => !current); setShowAutoArchived(false); }}
+                  className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm"
+                >
+                  {showArchived ? 'Hide archived' : `Show archived (${archivedCount})`}
+                </button>
+              ) : null}
             </div>
           ) : null}
 

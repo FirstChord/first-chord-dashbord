@@ -22,7 +22,9 @@ Two capture paths, one boundary:
 
 Env for auto-capture: `AUTO_CAPTURE_CONFIRMED_GROUPS` (default on; set `false` to fall back to starred-only) and `CONFIRMED_GROUPS_REFRESH_MS` on the bridge; `INCOMING_STAFF_PHONES` (comma list, any UK format) on the dashboard.
 
-Because capture is now automatic, **silence is a failure signal**: the admin overview shows a "WhatsApp capture quiet" card when no auto-captured message has arrived for 3+ days (a dead/unlinked bridge otherwise looks like a calm inbox).
+Because capture is now automatic, **silence is a failure signal**. The bridge posts a heartbeat (`mode: bridge_status` → single-row `Bridge_Status` tab) on connect and every ~30 min (`BRIDGE_HEARTBEAT_MS`), carrying connected-since, confirmed-group count, cache size, and version. `assessBridgeHealth` warns when the heartbeat is more than 2h old (**down/unlinked**), the confirmed-group list is empty (**alive but capturing nothing** — the 2026-07-06 rollout failure), or no auto-capture has landed for 3+ days (**suspiciously quiet**). Healthy state shows as a one-line strip on the inbox page; problems become an amber "WhatsApp bridge" card on `/admin`. Heartbeats are fail-silent on the bridge side — a Sheets/network hiccup never affects capture.
+
+For auditing the noise policy, the inbox has an **"Auto-archived (N)"** filter showing only rows the rules archived (auto-captured, `ignored`, no `reviewed_by`) — skim it weekly during the trust-building period; any mistake found is an eval-fixture addition.
 
 ## Boundary
 

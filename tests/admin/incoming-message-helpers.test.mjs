@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { parsePauseWindowsFromPlanning } from '../../lib/admin/pause-forecast.mjs';
 import {
   applyIncomingMessageTextUpdate,
+  assessBridgeHealth,
   buildGroupSyncPlan,
   extractIncomingMessageDates,
   buildIncomingMessageId,
@@ -16,6 +17,7 @@ import {
   decideSyncedGroupStatus,
   detectInstrumentInName,
   groupIncomingMessages,
+  isAutoArchivedMessage,
   isIncomingPlaceholderText,
   isOneTapConvertEligible,
   isSchoolStaffMessage,
@@ -599,6 +601,47 @@ test('decideAutoCaptureStatus archives no-signal chatter and keeps work open', (
     messageText: 'Just to note the 24th of June',
     messageAt: '2026-06-19T10:00:00.000Z',
   }), 'inbox');
+});
+
+test('isAutoArchivedMessage separates rule-archived rows from human decisions', () => {
+  const autoArchived = { source: 'whatsapp_group_auto', status: 'ignored', reviewedBy: '' };
+  assert.equal(isAutoArchivedMessage(autoArchived), true);
+  // A human ignore stamps reviewedBy — that's a decision, not the rule.
+  assert.equal(isAutoArchivedMessage({ ...autoArchived, reviewedBy: 'finn@example.com' }), false);
+  // Starred/manual rows are never rule-archived.
+  assert.equal(isAutoArchivedMessage({ ...autoArchived, source: 'whatsapp_starred' }), false);
+  assert.equal(isAutoArchivedMessage({ ...autoArchived, status: 'inbox' }), false);
+});
+
+test('assessBridgeHealth tells down, capturing-nothing, and quiet apart', () => {
+  const now = new Date('2026-07-07T12:00:00Z');
+  const healthy = {
+    lastHeartbeatAt: '2026-07-07T11:45:00Z',
+    confirmedGroups: 170,
+  };
+
+  const ok = assessBridgeHealth(healthy, { now, lastAutoCaptureAt: '2026-07-07T09:00:00Z' });
+  assert.equal(ok.state, 'ok');
+  assert.equal(ok.problems.length, 0);
+
+  // Stale heartbeat → the bridge is down/unlinked.
+  const down = assessBridgeHealth({ ...healthy, lastHeartbeatAt: '2026-07-07T02:00:00Z' }, { now });
+  assert.equal(down.state, 'warn');
+  assert.match(down.problems.join(' '), /No heartbeat for 10h/u);
+
+  // Fresh heartbeat but empty group list — the 2026-07-06 rollout failure.
+  const empty = assessBridgeHealth({ ...healthy, confirmedGroups: 0 }, { now });
+  assert.equal(empty.state, 'warn');
+  assert.match(empty.problems.join(' '), /empty confirmed-group list/u);
+
+  // Healthy bridge, but no captured message for days.
+  const quiet = assessBridgeHealth(healthy, { now, lastAutoCaptureAt: '2026-07-03T09:00:00Z' });
+  assert.equal(quiet.state, 'warn');
+  assert.match(quiet.problems.join(' '), /No group message captured for 4 days/u);
+
+  // No heartbeat row yet (pre-heartbeat bridge): quiet unless captures are stale.
+  assert.equal(assessBridgeHealth(null, { now }).state, 'none');
+  assert.equal(assessBridgeHealth(null, { now, lastAutoCaptureAt: '2026-07-01T09:00:00Z' }).state, 'warn');
 });
 
 test('one-tap convert needs a high-confidence match and a specific category', () => {

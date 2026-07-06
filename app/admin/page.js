@@ -10,7 +10,8 @@ import { getTutorAbsenceOverviewSummary } from '@/lib/admin/tutor-absence';
 import { getPlanningDashboard } from '@/lib/admin/planning';
 import { getAdminIssues } from '@/lib/admin/issues';
 import { getWaitingWorkflowStudents } from '@/lib/admin/waiting-workflow';
-import { getIncomingMessageInbox } from '@/lib/admin/incoming-messages';
+import { getBridgeStatus, getIncomingMessageInbox } from '@/lib/admin/incoming-messages';
+import { assessBridgeHealth } from '@/lib/admin/incoming-message-helpers.mjs';
 
 export const dynamic = 'force-dynamic';
 
@@ -247,7 +248,7 @@ export default async function AdminHomePage() {
   // Health is intentionally NOT in this blocking fetch — it makes 3 uncached
   // external calls (MMS + 2 GitHub), so it's streamed separately (see OverviewHealth)
   // and the rest of the page renders immediately.
-  const [students, issuesResult, tutorAbsenceSummary, parentUnderstandingRows, planningDashboard, waitingStudents, incomingInbox] = await Promise.all([
+  const [students, issuesResult, tutorAbsenceSummary, parentUnderstandingRows, planningDashboard, waitingStudents, incomingInbox, bridgeStatus] = await Promise.all([
     getOperationalAdminStudents(),
     getAdminIssues(),
     getTutorAbsenceOverviewSummary(),
@@ -255,6 +256,7 @@ export default async function AdminHomePage() {
     getPlanningDashboard(),
     getSafeWaitingWorkflowStudents(),
     getSafeIncomingMessageInbox(),
+    getBridgeStatus().catch(() => null),
   ]);
   const issues = issuesResult.issues || [];
   const activeIssues = issues.filter((issue) => ['open', 'acknowledged'].includes(issue.status));
@@ -265,15 +267,12 @@ export default async function AdminHomePage() {
   const planningSummary = planningDashboard.summary || {};
   const planningDueNow = planningSummary.dueNow || 0;
   const openIncomingMessages = incomingInbox.filter((entry) => ['inbox', 'needs_review'].includes(entry.status)).length;
-  // Auto-ingest makes a dead bridge look like a calm inbox — surface the
-  // silence. Only meaningful once auto-captured rows exist at all.
-  const latestAutoCaptureMs = incomingInbox
+  // Auto-ingest makes a dead bridge look like a calm inbox — the heartbeat
+  // tells "down" and "connected but capturing nothing" apart from quiet.
+  const lastAutoCaptureAt = incomingInbox
     .filter((entry) => entry.source === 'whatsapp_group_auto')
-    .reduce((max, entry) => Math.max(max, new Date(entry.capturedAt || 0).getTime() || 0), 0);
-  const captureQuietDays = latestAutoCaptureMs
-    ? Math.floor((Date.now() - latestAutoCaptureMs) / (24 * 60 * 60 * 1000))
-    : 0;
-  const captureLooksQuiet = latestAutoCaptureMs > 0 && captureQuietDays >= 3;
+    .reduce((latest, entry) => ((entry.capturedAt || '') > latest ? entry.capturedAt : latest), '');
+  const bridgeHealth = assessBridgeHealth(bridgeStatus, { lastAutoCaptureAt });
   const prioritySentence = buildPrioritySentence({
     openIssues: activeIssues.length,
     tutorAbsences: tutorAbsenceSummary.openAbsences,
@@ -304,11 +303,11 @@ export default async function AdminHomePage() {
       helper: openIncomingMessages === 1 ? 'One parent message to review' : 'Parent messages to review',
       tone: 'border-blue-100 bg-blue-50/60',
     } : null,
-    captureLooksQuiet ? {
-      label: 'WhatsApp capture quiet',
-      value: `${captureQuietDays}d`,
+    bridgeHealth.state === 'warn' ? {
+      label: 'WhatsApp bridge',
+      value: '!',
       href: '/admin/incoming-messages',
-      helper: 'No group messages auto-captured — check the bridge is running and linked',
+      helper: bridgeHealth.problems[0] || 'Bridge needs a look',
       tone: 'border-amber-100 bg-amber-50/60',
     } : null,
     activeIssues.length > 0 ? {

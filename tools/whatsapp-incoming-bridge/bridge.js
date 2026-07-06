@@ -134,6 +134,15 @@ class WhatsAppIncomingBridge {
     this.confirmedChatIds = new Set();
     this.confirmedGroupsRefreshMs = Math.max(10 * 60 * 1000, Number(process.env.CONFIRMED_GROUPS_REFRESH_MS || 6 * 60 * 60 * 1000) || 6 * 60 * 60 * 1000);
     this.confirmedGroupsTimer = null;
+    this.heartbeatMs = Math.max(5 * 60 * 1000, Number(process.env.BRIDGE_HEARTBEAT_MS || 30 * 60 * 1000) || 30 * 60 * 1000);
+    this.heartbeatTimer = null;
+    this.startedAt = nowIso();
+    this.connectedAt = '';
+    try {
+      this.bridgeVersion = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8')).version || '';
+    } catch {
+      this.bridgeVersion = '';
+    }
     this.groupSyncWaitMs = Number(process.env.GROUP_SYNC_WAIT_MS || 25000) || 25000;
     this.logger = P({ level: process.env.LOG_LEVEL || 'info' });
     this.sock = null;
@@ -413,6 +422,38 @@ class WhatsAppIncomingBridge {
     this.confirmedGroupsTimer.unref?.();
   }
 
+  // Heartbeat so the dashboard can tell a down/unlinked bridge (stale
+  // heartbeat) and an "alive but capturing nothing" bridge (empty group list)
+  // apart from an ordinary quiet day. Fail-silent: a Sheets/network hiccup
+  // must never affect capture.
+  async sendBridgeStatus() {
+    if (this.dryRun) return;
+    try {
+      await axios.post(this.webhookUrl, {
+        mode: 'bridge_status',
+        bridge_id: 'primary',
+        connected_at: this.connectedAt,
+        started_at: this.startedAt,
+        confirmed_groups: this.confirmedChatIds.size,
+        cached_messages: this.recentMessages.size,
+        bridge_version: this.bridgeVersion,
+      }, {
+        timeout: 15000,
+        headers: { 'x-firstchord-incoming-secret': this.webhookSecret },
+      });
+    } catch (error) {
+      this.logWarn('Could not post bridge heartbeat', { error: error.message });
+    }
+  }
+
+  scheduleHeartbeat() {
+    if (this.heartbeatTimer) return;
+    this.heartbeatTimer = setInterval(() => {
+      this.sendBridgeStatus().catch(() => {});
+    }, this.heartbeatMs);
+    this.heartbeatTimer.unref?.();
+  }
+
   // Live messages (upsert type "notify") in confirmed FC groups post to the
   // dashboard automatically — including our own replies (from_me), which the
   // dashboard uses as "school replied" evidence rather than inbox rows.
@@ -487,9 +528,15 @@ class WhatsAppIncomingBridge {
 
       if (connection === 'open') {
         this.connected = true;
+        this.connectedAt = nowIso();
         this.logInfo('WhatsApp bridge connected');
-        this.refreshConfirmedGroups().catch(() => {});
+        // Heartbeat straight after the group refresh so the first status row
+        // carries the real list size, not zero.
+        this.refreshConfirmedGroups()
+          .then(() => this.sendBridgeStatus())
+          .catch(() => {});
         this.scheduleConfirmedGroupsRefresh();
+        this.scheduleHeartbeat();
         if (this.syncGroupsOnStart && !this.startupSyncDone) {
           this.startupSyncDone = true;
           this.logInfo('Scheduling startup group sync', { waitMs: this.groupSyncWaitMs });
