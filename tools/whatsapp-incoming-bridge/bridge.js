@@ -391,6 +391,17 @@ class WhatsAppIncomingBridge {
       this.logInfo('Refreshed confirmed group list for auto-capture', { confirmedGroups: chatIds.length });
     } catch (error) {
       this.logWarn('Could not refresh confirmed group list — auto-capture keeps the previous list', { error: error.message });
+      // A failed fetch with no previous list means auto-capture is dead until
+      // the next scheduled refresh (6h) — e.g. restarting mid-deploy gets a
+      // 401 from the old server code. Retry soon instead.
+      if (!this.confirmedChatIds.size && !this.confirmedGroupsRetryTimer) {
+        this.confirmedGroupsRetryTimer = setTimeout(() => {
+          this.confirmedGroupsRetryTimer = null;
+          this.refreshConfirmedGroups().catch(() => {});
+        }, 10 * 60 * 1000);
+        this.confirmedGroupsRetryTimer.unref?.();
+        this.logInfo('Auto-capture list is empty — retrying in 10 minutes');
+      }
     }
   }
 
