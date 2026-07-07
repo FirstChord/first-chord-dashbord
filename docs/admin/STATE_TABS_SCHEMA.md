@@ -8,6 +8,8 @@ This note is the canonical map for dashboard-owned state lanes. It documents the
 
 External systems own external truth. The dashboard stores workflow state, action history, cached snapshots, and derived context that helps humans close loops.
 
+**Sheets-vs-database boundary (see `SHEETS_VS_DB_AUDIT.md`):** Sheets is for data humans maintain, inspect, and correct at human-paced volume — that is a strength, and for the sensitive finance tabs (`Tutor_Pay`, `Tutor_Wise`) it is deliberately the not-in-git security boundary. A future app database is for machine-generated, high-volume, event-heavy lanes. There is no database today; the `Future store dispositions` section below records where each lane is expected to end up so the migration triggers on measured growth (the fortnightly **sheet census**, `lib/admin/sheet-census.mjs`), not a hunch. **Do not add a new event-heavy or machine-generated lane to Sheets** — those wait for the database. Do not introduce that database until a watched tab shows sustained census growth or a real concurrency problem; premature migration loses the in-sheet correction path and destabilises working loops.
+
 Lane meanings:
 
 - `truth` = primary operational truth owned by a source system, usually outside this table
@@ -45,6 +47,15 @@ Lane meanings:
 | `Stripe_Amounts_Cache` | cache | Per-student Stripe subscription billing amounts (the finance estimate's "actuals" feed) | `mms_id` | full replace each refresh | `replaceStripeAmountsCacheRows`, `/api/cron/stripe-amounts` | Rewritten wholesale by the Monday cron (row set follows the roster; per-row upserts would crawl). Consumers apply a 14-day staleness guard (`buildStripeAmountsMap`): a dead cron degrades students back to the price-table estimate, never blocks the page. Live Stripe truth stays in Stripe. |
 | `Stripe_Collected_Monthly` | cache | One row per calendar month: total Stripe paid-invoice collections, for estimate-vs-reality calibration | `month` (`YYYY-MM`) | keyed upsert | `upsertStripeCollectedMonthlyRow`, `/api/cron/stripe-amounts` | Feeds the finance page "Estimate vs reality" panel and the `/api/admin/finance/overview` JSON. Collected = paid invoices *created* in the month; weekly billing means five-Monday months run naturally ~15% high. |
 
+## Future store dispositions
+
+Where each lane is expected to live long-term (rationale + plan in `SHEETS_VS_DB_AUDIT.md`). No move happens until the sheet census shows sustained growth on a watched tab.
+
+- **Stay in Sheets** (human-maintained / sensitive / human-paced): `Students`, `Tutor_Pay`, `Tutor_Wise`, `Expenses`, `Expense_Log`, `Waiting_List_State`, `Planning_Items`, `Planning_Progress_Log`, `Showcase_Task_State`, `Holiday_Workflow_State`, `Parent_Understanding_State`, `Tutor_Absence_State`, `Communication_Log`, `Students_Archive`, `Finance_Snapshot`, `Schedule_Context`, `Stripe_Amounts_Cache`, `Stripe_Collected_Monthly`, `Bridge_Status`, `WhatsApp_Group_Map`.
+- **Move soon** (trigger-based): `Incoming_Message_Inbox` — machine-generated, unbounded auto-capture, bridge/admin write races, most PII.
+- **Move eventually:** `Event_Log`, `Issue_Queue`, `Payroll_Runs`, and `Practice_Notes_Log` delivery records (gated: move before Practice Chat Level 2 widens — duplicate-send needs a DB `delivery_key` constraint).
+- **Derived / cache only** (never store as truth): student lifecycle status, finance run-rate, break-even, pause forecast, open attention items, reconciliation outcomes, `source_present`.
+
 ## Format Contracts
 
 Some source formats are fragile because they come from human-edited external systems. Do not change these without updating the relevant parser/tests:
@@ -76,7 +87,7 @@ Run this to back up `Students` plus dashboard-owned state tabs to ignored local 
 npm run backup:sheets
 ```
 
-`npm run backup:sheets` also updates the Planning item `planning_operational_sheets_backup` so the next fortnightly backup appears in the existing dated planning/overview flow.
+`npm run backup:sheets` also updates the Planning item `planning_operational_sheets_backup` so the next fortnightly backup appears in the existing dated planning/overview flow. Each run additionally writes a **sheet census** (`census.json` beside the manifest) and folds a one-line growth summary into that planning card's progress note — see `SHEETS_VS_DB_AUDIT.md`. The census is the measured-growth trigger for the eventual Sheets→database migration; read it when a watched event-heavy tab grows fortnight-on-fortnight.
 
 ## Shared Upsert Helper
 

@@ -54,3 +54,7 @@ The hand-labelled set of real anonymised parent messages (`tests/admin/fixtures/
 ## Auto-capture (incoming inbox)
 
 The bridge posts every live text message from a dashboard-confirmed FC lesson group automatically (`source: whatsapp_group_auto`) — starring is no longer required for capture. Confirming/ignoring a group in the inbox UI is also its capture switch. School-side messages (own account or `INCOMING_STAFF_PHONES`) stamp open items as "Replied in WhatsApp" instead of creating rows; no-signal messages land pre-archived.
+
+## Sheet census (data governance)
+
+A per-tab row-count reading taken during the fortnightly `npm run backup:sheets` run (`lib/admin/sheet-census.mjs` → `census.json` beside the manifest). It reports total rows, deltas since the last backup, and ranks the *watched* event-heavy tabs (`Incoming_Message_Inbox`, `Event_Log`, `Issue_Queue`, `Practice_Notes_Log`, `Payroll_Runs`, `WhatsApp_Group_Map`) by growth. Its purpose is to make the eventual Sheets→database migration an evidence-triggered decision: sustained growth on a watched tab is the signal to move that lane off Sheets. See `SHEETS_VS_DB_AUDIT.md`.
