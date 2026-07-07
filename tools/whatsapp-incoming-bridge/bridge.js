@@ -558,13 +558,22 @@ class WhatsAppIncomingBridge {
     });
 
     this.sock.ev.on('messages.upsert', async ({ messages = [], type }) => {
+      // History/append batches on reconnect replay old traffic — WhatsApp
+      // resends the starred backlog and recent messages. Cache them so a later
+      // live star toggle can recover their text, but never post them: the
+      // starred and auto-capture dedupes are both in-memory and reset on
+      // restart, so a reconnect would otherwise re-post already-handled
+      // messages as new inbox rows (and pre-stable-id-scheme rows won't even
+      // dedupe on the dashboard). Only 'notify' is a live delivery.
+      if (type !== 'notify') {
+        for (const message of messages) this.cacheMessage(message);
+        return;
+      }
       for (const message of messages) {
         this.cacheMessage(message);
         if (message.starred) {
           await this.handleStarredMessage(message);
-        } else if (type === 'notify') {
-          // Only live deliveries — history/append batches on reconnect would
-          // replay old traffic (the dashboard would dedupe, but why post it).
+        } else {
           await this.maybeAutoCapture(message).catch((error) => this.logWarn('Auto-capture failed', { error: error.message }));
         }
       }
