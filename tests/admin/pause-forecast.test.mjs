@@ -36,6 +36,17 @@ test('parses away-period and single pause windows, flags unparseable ones', () =
   assert.equal(away.end.toISOString().slice(0, 10), '2026-08-17');
 });
 
+test('explicit is_pause flag overrides content: converted-to-general drops out, flagged-pause stays', () => {
+  const { windows } = parsePauseWindowsFromPlanning([
+    // Looks like a pause by content, but was converted to a general card.
+    { ...awayItem('a', '2026-07-06', '2026-08-17'), isPause: 'false' },
+    // Explicitly a pause and has parseable dates.
+    { ...awayItem('b', '2026-07-06', '2026-08-17'), isPause: 'true' },
+  ]);
+
+  assert.deepEqual(windows.map((window) => window.mmsId), ['b']);
+});
+
 test('parked pause planning items are ignored but done items still forecast', () => {
   const { windows } = parsePauseWindowsFromPlanning([
     { ...awayItem('a', '2026-07-06', '2026-08-17'), status: 'parked' },

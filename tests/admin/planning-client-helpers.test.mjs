@@ -115,6 +115,12 @@ test('buildPauseConfirmationMessage addresses adults directly and parents in thi
 test('isPausePlanningItem / isOpenPlanningItem / isDueNowPlanningItem classify items', () => {
   assert.equal(isPausePlanningItem({ title: 'Pause Ada' }), true);
   assert.equal(isPausePlanningItem({ title: 'Email parent' }), false);
+  // Explicit is_pause flag overrides the wording (the panel's Structured pause /
+  // General toggle): a flagged-general card with "pause" in the title is not a
+  // pause, and a flagged-pause card without the word is.
+  assert.equal(isPausePlanningItem({ title: 'Pause Ada', isPause: 'false' }), false);
+  assert.equal(isPausePlanningItem({ title: 'Away weeks for Ada', isPause: 'true' }), true);
+  assert.equal(isPausePlanningItem({ title: 'Pause Ada', isPause: '' }), true); // unset = infer
   assert.equal(isOpenPlanningItem({ status: 'active' }), true);
   assert.equal(isOpenPlanningItem({ status: 'done' }), false);
   const now = new Date('2026-07-10T12:00:00Z');

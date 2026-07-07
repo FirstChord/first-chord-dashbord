@@ -4,6 +4,7 @@ import {
   attachPlanningProgress,
   buildDateInputRange,
   flagNearbyPauses,
+  normalisePauseFlag,
   buildFirstLessonCheckinPlanningId,
   buildFirstLessonCheckinPlanningItem,
   buildSchoolForwardReflections,
@@ -689,4 +690,13 @@ test('flagNearbyPauses does not flag pauses that are far apart', () => {
     { planningId: 'b', studentId: 'sdt_em', start: '2026-09-01', end: '2026-09-15' },
   ]);
   assert.equal(flags.size, 0);
+});
+
+test('normalisePauseFlag constrains to true / false / empty', () => {
+  assert.equal(normalisePauseFlag('true'), 'true');
+  assert.equal(normalisePauseFlag('TRUE'), 'true');
+  assert.equal(normalisePauseFlag('false'), 'false');
+  assert.equal(normalisePauseFlag(''), '');
+  assert.equal(normalisePauseFlag(undefined), '');
+  assert.equal(normalisePauseFlag('yes'), ''); // junk falls back to unset (infer)
 });

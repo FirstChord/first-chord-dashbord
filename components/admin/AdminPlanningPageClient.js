@@ -44,6 +44,7 @@ import SchoolNoteCapture from './planning/SchoolNoteCapture';
 import ItemForm from './planning/ItemForm';
 import QuickBrainCapture from './planning/QuickBrainCapture';
 import PlanningCard from './planning/PlanningCard';
+import PauseDatesEditor from './planning/PauseDatesEditor';
 import DueTodayCard from './planning/DueTodayCard';
 
 const STATUS_GROUPS = [
@@ -103,9 +104,11 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
   const [schoolNotesOpen, setSchoolNotesOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [editForm, setEditForm] = useState(EMPTY_FORM);
-  // Planning ID whose structured pause date editor should auto-open (set by the
-  // ?focus= deep link when the target is a pause item — see the deep-link effect).
-  const [focusPauseEditorId, setFocusPauseEditorId] = useState('');
+  // Which editor the plan side-panel shows: 'structured' = the pause date editor,
+  // 'general' = the full title/notes form. Defaults from the item type on open;
+  // the panel header lets you switch (a pause card can be edited as general, and
+  // a general card can be given structured pause dates).
+  const [editorMode, setEditorMode] = useState('general');
   const [saveState, setSaveState] = useState({ pending: false, error: '', savedAt: '' });
   const [pendingId, setPendingId] = useState('');
   const [paymentExpectationOverrides, setPaymentExpectationOverrides] = useState({});
@@ -118,29 +121,23 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
   const [workflowPanel, setWorkflowPanel] = useState(null);
 
   useEffect(() => {
-    if (!pauseToolPanel && !workflowPanel) return undefined;
+    if (!pauseToolPanel && !workflowPanel && !editingItem) return undefined;
     function onKey(event) {
       if (event.key === 'Escape') {
         setPauseToolPanel(null);
         setWorkflowPanel(null);
+        setEditingItem(null);
+        setEditForm(EMPTY_FORM);
       }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [pauseToolPanel, workflowPanel]);
-  const editPanelRef = useRef(null);
+  }, [pauseToolPanel, workflowPanel, editingItem]);
 
-  useEffect(() => {
-    if (editingItem && editPanelRef.current) {
-      editPanelRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }, [editingItem]);
-
-  // Deep link (?focus=<planningId>, e.g. "Open plan" from the incoming inbox).
-  // For a pause item, land on that card's structured pause date editor (dates
-  // pre-filled) instead of the generic title/notes form — a pause converted from
-  // an incoming message should open as a structured pause card. Non-pause items
-  // still open the generic edit panel.
+  // Deep link (?focus=<planningId>, e.g. "Open plan" from the incoming inbox):
+  // open that plan in the side panel. startEdit picks the structured pause editor
+  // for pause items and the general form otherwise, so a pause converted from an
+  // incoming message opens ready to edit its dates.
   const focusHandledRef = useRef(false);
   useEffect(() => {
     if (focusHandledRef.current || !initialFocusId) return;
@@ -148,11 +145,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
     const item = (planning.items || []).find((entry) => entry.planningId === initialFocusId);
     if (item) {
       setFilter('all');
-      if (isPausePlanningItem(item)) {
-        setFocusPauseEditorId(item.planningId);
-      } else {
-        startEdit(item);
-      }
+      startEdit(item);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -435,6 +428,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
 
   function startEdit(item) {
     setEditingItem(item);
+    setEditorMode(isPausePlanningItem(item) ? 'structured' : 'general');
     setEditForm({
       ...EMPTY_FORM,
       title: item.title,
@@ -452,6 +446,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
       outcome: item.outcome,
       nextAction: item.nextAction,
       targetDate: item.targetDate,
+      isPause: item.isPause || '',
     });
   }
 
@@ -563,6 +558,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
           linkedStudentId: linkedStudentId || item.linkedStudentId,
           targetDate: draft.targetDate || item.targetDate,
           nextAction: draft.nextAction,
+          isPause: 'true',
         },
         progressNote: draft.progressNote || 'Added structured pause dates to existing planning item.',
       }, item.planningId);
@@ -1017,7 +1013,6 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
                         onCreateLinkedAction={handleCreateLinkedAction}
                         pendingId={pendingId}
                         nearbyPause={nearbyPauseFlags.get(item.planningId)}
-                        autoOpenPauseEditor={focusPauseEditorId === item.planningId}
                       />
                     ))}
                   </div>
@@ -1082,12 +1077,47 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
             </Link>
           </div>
 
-          {editingItem && (
-            <div ref={editPanelRef} className={cardClasses('sticky top-4 ring-2 ring-blue-100')}>
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-base font-semibold text-slate-900">Edit item</h3>
-                  <p className="mt-1 text-sm text-slate-600">{editingItem.title}</p>
+        </aside>
+      </section>
+
+      {editingItem ? (
+        <div className="fixed inset-0 z-50 flex">
+          <div
+            className="flex-1 bg-slate-900/30 backdrop-blur-[1px]"
+            onClick={() => {
+              setEditingItem(null);
+              setEditForm(EMPTY_FORM);
+            }}
+            aria-hidden
+          />
+          <aside className="flex h-full w-full max-w-2xl flex-col border-l border-slate-200 bg-white shadow-2xl">
+            <header className="flex items-start justify-between gap-3 border-b border-slate-200 px-5 py-3">
+              <div className="min-w-0">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Edit plan</p>
+                <p className="truncate text-sm font-semibold text-slate-900">{editingItem.title}</p>
+              </div>
+              <div className="flex flex-shrink-0 items-center gap-2">
+                <div className="flex rounded-lg border border-slate-200 p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditorMode('structured');
+                      setEditForm((current) => ({ ...current, isPause: 'true' }));
+                    }}
+                    className={`rounded-md px-2.5 py-1 text-xs font-semibold ${editorMode === 'structured' ? 'bg-violet-100 text-violet-900' : 'text-slate-600 hover:bg-slate-50'}`}
+                  >
+                    Structured pause
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditorMode('general');
+                      setEditForm((current) => ({ ...current, isPause: 'false' }));
+                    }}
+                    className={`rounded-md px-2.5 py-1 text-xs font-semibold ${editorMode === 'general' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'}`}
+                  >
+                    General
+                  </button>
                 </div>
                 <button
                   type="button"
@@ -1095,12 +1125,26 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
                     setEditingItem(null);
                     setEditForm(EMPTY_FORM);
                   }}
-                  className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700"
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
                 >
-                  Close
+                  Close ✕
                 </button>
               </div>
-              <div className="mt-4">
+            </header>
+            <div className="flex-1 overflow-y-auto p-5">
+              {editorMode === 'structured' ? (
+                <PauseDatesEditor
+                  item={editingItem}
+                  studentOptions={studentOptions}
+                  isPending={pendingId === editingItem.planningId}
+                  onSave={async (item, payload) => {
+                    await handleRepairPauseDetails(item, payload);
+                    setEditingItem(null);
+                  }}
+                  startOpen
+                  hasPrefillUrl={isPausePlanningItem(editingItem)}
+                />
+              ) : (
                 <ItemForm
                   form={editForm}
                   onChange={setEditForm}
@@ -1109,11 +1153,11 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
                   submitLabel="Save changes"
                   pending={pendingId === editingItem.planningId}
                 />
-              </div>
+              )}
             </div>
-          )}
-        </aside>
-      </section>
+          </aside>
+        </div>
+      ) : null}
 
       {pauseToolPanel ? (
         <div className="fixed inset-0 z-50 flex">
