@@ -199,11 +199,13 @@ test('buildIncomingReplyTemplate produces a per-category parent draft', () => {
     category: 'one_off_absence',
     senderName: 'Mina Chang',
     studentName: 'Alex Chang',
-    tutorName: 'Dean Louden',
+    startDate: '2026-07-10',
   });
   assert.match(absence, /^Hi Mina/u);
   assert.match(absence, /Alex/u);
-  assert.match(absence, /Dean/u);
+  assert.match(absence, /no worries at all/u);
+  // House style: parent drafts never use em-dashes.
+  assert.doesNotMatch(absence, /—/u);
 
   const leaving = buildIncomingReplyTemplate({ category: 'leaving', senderName: 'Laura', studentName: 'Sam Reid' });
   assert.match(leaving, /sorry to see Sam go/u);
@@ -326,12 +328,12 @@ test('buildIncomingReplyTemplate confirms extracted dates back to the parent', (
     category: 'extended_absence',
     senderName: 'Mina Chang',
     studentName: 'Alex Chang',
-    tutorName: 'Dean Louden',
     startDate: '2026-06-24',
     returnDate: '2026-07-21',
   });
   assert.match(dated, /away from Wednesday 24 June/u);
   assert.match(dated, /pick back up from Tuesday 21 July/u);
+  assert.doesNotMatch(dated, /—/u);
 
   const oneOff = buildIncomingReplyTemplate({
     category: 'one_off_absence',
@@ -339,9 +341,9 @@ test('buildIncomingReplyTemplate confirms extracted dates back to the parent', (
     studentName: 'Alex',
     startDate: '2026-07-03',
   });
-  assert.match(oneOff, /can’t make it on Friday 3 July/u);
+  assert.match(oneOff, /Alex will miss Friday 3 July/u);
 
-  // No dates → the original ask-for-return-date wording still applies.
+  // No dates → the ask-for-return-date wording still applies.
   const undated = buildIncomingReplyTemplate({ category: 'extended_absence', senderName: 'Mina', studentName: 'Alex' });
   assert.match(undated, /Whenever you have the return date/u);
 });
