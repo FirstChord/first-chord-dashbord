@@ -621,6 +621,7 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
   const [submitError, setSubmitError] = useState(error);
   const [showArchived, setShowArchived] = useState(false);
   const [showAutoArchived, setShowAutoArchived] = useState(false);
+  const [showCapture, setShowCapture] = useState(false);
   const [conversions, setConversions] = useState({});
 
   const openCount = useMemo(() => inbox.filter((entry) => ['inbox', 'needs_review'].includes(entry.status)).length, [inbox]);
@@ -820,125 +821,139 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
 
       <BridgeStatusStrip bridgeStatus={bridgeStatus} inbox={inbox} />
 
-      <section className="grid gap-4 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
-        <form onSubmit={handleCapture} className="space-y-4 rounded-2xl border border-blue-100 bg-white/90 p-5 shadow-[0_12px_36px_rgba(15,23,42,0.05)]">
-          <div>
-            <h3 className="text-lg font-semibold text-slate-900">Quick capture</h3>
-            <p className="mt-1 text-sm leading-6 text-slate-600">Use this for a starred WhatsApp message or anything copied from a parent chat.</p>
+      <section className="space-y-4">
+        <div className="grid max-w-md gap-3 sm:grid-cols-2">
+          <div className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-[0_12px_36px_rgba(15,23,42,0.04)]">
+            <p className="text-sm text-slate-500">Open messages</p>
+            <p className="mt-1 text-3xl font-semibold text-slate-900">{openCount}</p>
           </div>
-          <label className="block">
-            <span className="text-sm font-medium text-slate-700">Message</span>
-            <textarea
-              value={messageText}
-              onChange={(event) => setMessageText(event.target.value)}
-              required
-              rows={8}
-              className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-800 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-              placeholder="Paste the parent message here..."
-            />
-          </label>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block">
-              <span className="text-sm font-medium text-slate-700">Sender name</span>
-              <input
-                value={senderName}
-                onChange={(event) => setSenderName(event.target.value)}
-                className="mt-2 w-full rounded-full border border-slate-200 bg-white px-4 py-2 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-              />
-            </label>
-            <label className="block">
-              <span className="text-sm font-medium text-slate-700">Phone</span>
-              <input
-                value={senderPhone}
-                onChange={(event) => setSenderPhone(event.target.value)}
-                className="mt-2 w-full rounded-full border border-slate-200 bg-white px-4 py-2 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-              />
-            </label>
+          <div className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-[0_12px_36px_rgba(15,23,42,0.04)]">
+            <p className="text-sm text-slate-500">Likely absence / pause</p>
+            <p className="mt-1 text-3xl font-semibold text-slate-900">{absenceCount}</p>
           </div>
-          <label className="block">
-            <span className="text-sm font-medium text-slate-700">Chat / group name</span>
-            <input
-              value={chatName}
-              onChange={(event) => setChatName(event.target.value)}
-              className="mt-2 w-full rounded-full border border-slate-200 bg-white px-4 py-2 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-            />
-          </label>
-          <div className="flex items-center gap-3">
-            <button
-              type="submit"
-              className="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
-            >
-              Save to inbox
-            </button>
-            {status ? <span className="text-sm text-slate-500">{status}</span> : null}
-          </div>
-        </form>
+        </div>
 
-        <div className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-[0_12px_36px_rgba(15,23,42,0.04)]">
-              <p className="text-sm text-slate-500">Open messages</p>
-              <p className="mt-1 text-3xl font-semibold text-slate-900">{openCount}</p>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-[0_12px_36px_rgba(15,23,42,0.04)]">
-              <p className="text-sm text-slate-500">Likely absence / pause</p>
-              <p className="mt-1 text-3xl font-semibold text-slate-900">{absenceCount}</p>
-            </div>
-          </div>
-
-          <GroupMapPanel
-            groups={groupMap}
-            studentOptions={studentOptions}
-            onReviewGroup={handleReviewGroup}
-            onAddGroupStudent={handleAddGroupStudent}
-            pendingChatId={pendingChatId}
-          />
-
-          {!visibleInbox.length ? (
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-              {inbox.length ? 'No open incoming messages.' : 'No incoming messages yet.'}
-            </div>
-          ) : null}
-
-          {archivedCount || autoArchivedCount ? (
-            <div className="flex justify-end gap-2">
-              {autoArchivedCount ? (
+        {/* Manual paste is the fallback now that auto-capture handles confirmed
+            groups, so it stays collapsed until needed. */}
+        <div className="rounded-2xl border border-slate-200 bg-white/90 shadow-[0_12px_36px_rgba(15,23,42,0.04)]">
+          <button
+            type="button"
+            onClick={() => setShowCapture((current) => !current)}
+            aria-expanded={showCapture}
+            className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+          >
+            <span className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+              <span className="text-lg leading-none text-slate-400">{showCapture ? '−' : '+'}</span>
+              Paste a message manually
+            </span>
+            <span className="hidden text-xs text-slate-400 sm:block">
+              {showCapture ? 'Close' : 'Auto-capture handles confirmed groups — use this for anything else'}
+            </span>
+          </button>
+          {showCapture ? (
+            <form onSubmit={handleCapture} className="space-y-4 border-t border-slate-100 px-4 pb-5 pt-4">
+              <label className="block">
+                <span className="text-sm font-medium text-slate-700">Message</span>
+                <textarea
+                  value={messageText}
+                  onChange={(event) => setMessageText(event.target.value)}
+                  required
+                  rows={5}
+                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-800 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                  placeholder="Paste the parent message here..."
+                />
+              </label>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <label className="block">
+                  <span className="text-sm font-medium text-slate-700">Sender name</span>
+                  <input
+                    value={senderName}
+                    onChange={(event) => setSenderName(event.target.value)}
+                    className="mt-2 w-full rounded-full border border-slate-200 bg-white px-4 py-2 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-sm font-medium text-slate-700">Phone</span>
+                  <input
+                    value={senderPhone}
+                    onChange={(event) => setSenderPhone(event.target.value)}
+                    className="mt-2 w-full rounded-full border border-slate-200 bg-white px-4 py-2 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-sm font-medium text-slate-700">Chat / group name</span>
+                  <input
+                    value={chatName}
+                    onChange={(event) => setChatName(event.target.value)}
+                    className="mt-2 w-full rounded-full border border-slate-200 bg-white px-4 py-2 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                  />
+                </label>
+              </div>
+              <div className="flex items-center gap-3">
                 <button
-                  type="button"
-                  onClick={() => { setShowAutoArchived((current) => !current); setShowArchived(false); }}
-                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm ${showAutoArchived ? 'border-amber-300 bg-amber-50 text-amber-900' : 'border-slate-200 bg-white text-slate-600'}`}
+                  type="submit"
+                  className="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
                 >
-                  {showAutoArchived ? 'Hide auto-archived' : `Auto-archived (${autoArchivedCount})`}
+                  Save to inbox
                 </button>
-              ) : null}
-              {archivedCount ? (
-                <button
-                  type="button"
-                  onClick={() => { setShowArchived((current) => !current); setShowAutoArchived(false); }}
-                  className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm"
-                >
-                  {showArchived ? 'Hide archived' : `Show archived (${archivedCount})`}
-                </button>
-              ) : null}
-            </div>
+                {status ? <span className="text-sm text-slate-500">{status}</span> : null}
+              </div>
+            </form>
           ) : null}
+        </div>
 
-          <div className="space-y-3">
-            {visibleInbox.map((entry) => (
-              <MessageCard
-                key={entry.incomingId}
-                entry={entry}
-                studentOptions={studentOptions}
-                pendingId={pendingId}
-                conversion={conversions[entry.incomingId]}
-                onReview={handleReview}
-                onDelete={handleDelete}
-                onCorrect={handleCorrect}
-                onConvert={handleConvert}
-                onUpdateText={handleUpdateText}
-              />
-            ))}
+        <GroupMapPanel
+          groups={groupMap}
+          studentOptions={studentOptions}
+          onReviewGroup={handleReviewGroup}
+          onAddGroupStudent={handleAddGroupStudent}
+          pendingChatId={pendingChatId}
+        />
+
+        {!visibleInbox.length ? (
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+            {inbox.length ? 'No open incoming messages.' : 'No incoming messages yet.'}
           </div>
+        ) : null}
+
+        {archivedCount || autoArchivedCount ? (
+          <div className="flex justify-end gap-2">
+            {autoArchivedCount ? (
+              <button
+                type="button"
+                onClick={() => { setShowAutoArchived((current) => !current); setShowArchived(false); }}
+                className={`rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm ${showAutoArchived ? 'border-amber-300 bg-amber-50 text-amber-900' : 'border-slate-200 bg-white text-slate-600'}`}
+              >
+                {showAutoArchived ? 'Hide auto-archived' : `Auto-archived (${autoArchivedCount})`}
+              </button>
+            ) : null}
+            {archivedCount ? (
+              <button
+                type="button"
+                onClick={() => { setShowArchived((current) => !current); setShowAutoArchived(false); }}
+                className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm"
+              >
+                {showArchived ? 'Hide archived' : `Show archived (${archivedCount})`}
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className="space-y-3">
+          {visibleInbox.map((entry) => (
+            <MessageCard
+              key={entry.incomingId}
+              entry={entry}
+              studentOptions={studentOptions}
+              pendingId={pendingId}
+              conversion={conversions[entry.incomingId]}
+              onReview={handleReview}
+              onDelete={handleDelete}
+              onCorrect={handleCorrect}
+              onConvert={handleConvert}
+              onUpdateText={handleUpdateText}
+            />
+          ))}
         </div>
       </section>
     </div>
