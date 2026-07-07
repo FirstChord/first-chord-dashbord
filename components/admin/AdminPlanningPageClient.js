@@ -103,6 +103,9 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
   const [schoolNotesOpen, setSchoolNotesOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [editForm, setEditForm] = useState(EMPTY_FORM);
+  // Planning ID whose structured pause date editor should auto-open (set by the
+  // ?focus= deep link when the target is a pause item — see the deep-link effect).
+  const [focusPauseEditorId, setFocusPauseEditorId] = useState('');
   const [saveState, setSaveState] = useState({ pending: false, error: '', savedAt: '' });
   const [pendingId, setPendingId] = useState('');
   const [paymentExpectationOverrides, setPaymentExpectationOverrides] = useState({});
@@ -133,8 +136,11 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
     }
   }, [editingItem]);
 
-  // Deep link (?focus=<planningId>, e.g. "Open plan" from the incoming inbox):
-  // open that item's edit panel directly instead of landing on the default list.
+  // Deep link (?focus=<planningId>, e.g. "Open plan" from the incoming inbox).
+  // For a pause item, land on that card's structured pause date editor (dates
+  // pre-filled) instead of the generic title/notes form — a pause converted from
+  // an incoming message should open as a structured pause card. Non-pause items
+  // still open the generic edit panel.
   const focusHandledRef = useRef(false);
   useEffect(() => {
     if (focusHandledRef.current || !initialFocusId) return;
@@ -142,7 +148,11 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
     const item = (planning.items || []).find((entry) => entry.planningId === initialFocusId);
     if (item) {
       setFilter('all');
-      startEdit(item);
+      if (isPausePlanningItem(item)) {
+        setFocusPauseEditorId(item.planningId);
+      } else {
+        startEdit(item);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -1007,6 +1017,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
                         onCreateLinkedAction={handleCreateLinkedAction}
                         pendingId={pendingId}
                         nearbyPause={nearbyPauseFlags.get(item.planningId)}
+                        autoOpenPauseEditor={focusPauseEditorId === item.planningId}
                       />
                     ))}
                   </div>

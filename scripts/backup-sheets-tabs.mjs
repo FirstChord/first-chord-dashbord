@@ -32,9 +32,10 @@ const BACKUP_TABS = [
   'Finance_Snapshot',
   'Payroll_Runs',
   'Tutor_Wise',
+  'Tutor_Phones',
   'Students_Archive',
 ];
-const OPTIONAL_MISSING_TABS = new Set(['Students_Archive']);
+const OPTIONAL_MISSING_TABS = new Set(['Students_Archive', 'Tutor_Phones']);
 const BACKUP_SET_RETENTION_COUNT = 8;
 
 function timestampForFolder(date = new Date()) {

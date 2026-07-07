@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Check, Loader2, Pencil, Trash2 } from 'lucide-react';
 import {
   SCHOOL_FORWARD_PLANNING_ID,
@@ -34,7 +34,7 @@ import { SelectField, TextField, DateField, StudentSearchField, ExpandableText, 
 // pause items — the full pause toolkit (open the pause tool, copy the parent message,
 // the "Edit dates" repair builder, and the two-checkbox "Mark pause completed" gate).
 // Pure props in (item + studentOptions + handlers); also used inside DueTodayCard.
-export default function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides = {}, onStatus, onArchive, onEdit, onProgress, onPauseCompleted, onRepairPauseDetails, onOpenPauseTool, onOpenWorkflowPanel, onCreateLinkedAction, pendingId, compact = false, nearbyPause = null }) {
+export default function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides = {}, onStatus, onArchive, onEdit, onProgress, onPauseCompleted, onRepairPauseDetails, onOpenPauseTool, onOpenWorkflowPanel, onCreateLinkedAction, pendingId, compact = false, nearbyPause = null, autoOpenPauseEditor = false }) {
   const [progressNote, setProgressNote] = useState('');
   const [nextAction, setNextAction] = useState(item.nextAction || '');
   const [nextSessionDate, setNextSessionDate] = useState('');
@@ -55,6 +55,18 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
   });
   const isPending = pendingId === item.planningId;
   const isPauseReminder = isPausePlanningItem(item);
+  const cardRef = useRef(null);
+
+  // Deep link from the incoming inbox ("Open plan" on a converted pause message):
+  // land on the structured pause date editor with the message's dates already
+  // filled in, rather than the generic title/notes form. Runs once when the
+  // parent flags this card as the focus target.
+  useEffect(() => {
+    if (autoOpenPauseEditor && isPauseReminder) {
+      setRepairOpen(true);
+      cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [autoOpenPauseEditor, isPauseReminder]);
   const isSchoolNote = isSchoolNotePlanningItem(item);
   const isSchoolForwardReview = item.planningId === SCHOOL_FORWARD_PLANNING_ID;
   // Ongoing plans are worked across sessions: log what you did + set the next
@@ -135,7 +147,7 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
   }
 
   return (
-    <article className={compact ? '' : 'rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_22px_rgba(15,23,42,0.04)]'}>
+    <article ref={cardRef} className={compact ? '' : 'rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_22px_rgba(15,23,42,0.04)]'}>
       {nearbyPause ? (
         <p className="mb-3 rounded-xl bg-blue-50/70 px-3 py-2 text-xs leading-5 text-slate-600">
           This student also has a pause around {formatTargetDate(nearbyPause.otherStart)}

@@ -11,6 +11,7 @@ import {
   buildIncomingMessageRecord,
   buildIncomingPlanningDraft,
   buildIncomingReplyTemplate,
+  buildTutorPhoneLookup,
   buildWhatsappGroupMapRecord,
   classifyIncomingMessage,
   decideAutoCaptureStatus,
@@ -23,11 +24,13 @@ import {
   isSchoolStaffMessage,
   isWhatsappGroupChatId,
   matchGroupToStudent,
+  matchTutorPhone,
   matchIncomingMessageToStudent,
   mergeIncomingCapture,
   normaliseIncomingMessagePayload,
   normalisePhone,
 } from '../../lib/admin/incoming-message-helpers.mjs';
+import { isPausePlanningItem } from '../../lib/admin/planning-client-helpers.mjs';
 
 const students = [
   {
@@ -306,6 +309,36 @@ test('a one-off absence with a date converts to a single-lesson pause plan', () 
   }]);
   assert.equal(windows.length, 1);
   assert.equal(windows[0].type, 'single');
+});
+
+test('a converted pause draft is recognised as a pause item so the deep link opens the structured editor', () => {
+  // The inbox "Open plan" deep link routes pause items to the structured pause
+  // date editor via isPausePlanningItem. This locks that a pause conversion
+  // actually produces something that predicate recognises.
+  const pauseDraft = buildIncomingPlanningDraft({
+    record: {
+      suspectedCategory: 'extended_absence',
+      matchedMmsId: 'sdt_alex',
+      matchedStudentName: 'Alex Chang',
+      messageText: 'Alex will be away from the 24th of June till the 21st of July',
+      source: 'whatsapp_starred',
+    },
+    now: new Date('2026-06-19T10:00:00Z'),
+  });
+  assert.equal(isPausePlanningItem(pauseDraft), true);
+
+  // A non-pause conversion (payment query) must NOT route to the pause editor.
+  const paymentDraft = buildIncomingPlanningDraft({
+    record: {
+      suspectedCategory: 'payment',
+      matchedMmsId: 'sdt_alex',
+      matchedStudentName: 'Alex Chang',
+      messageText: 'Can you check the invoice for this month?',
+      source: 'whatsapp_starred',
+    },
+    now: new Date('2026-06-19T10:00:00Z'),
+  });
+  assert.equal(isPausePlanningItem(paymentDraft), false);
 });
 
 test('the structured pause path needs a matched student', () => {
@@ -592,6 +625,27 @@ test('isSchoolStaffMessage spots our own account and staff personal numbers', ()
   assert.equal(isSchoolStaffMessage({ senderPhone: '07788 626616' }, staff), false);
   assert.equal(isSchoolStaffMessage({ senderPhone: '07788 626616' }, ''), false);
   assert.equal(isSchoolStaffMessage({}, staff), false);
+});
+
+test('matchTutorPhone recognises a tutor by their number so their reply is not a new parent row', () => {
+  // Tolerant read of the human-maintained Tutor_Phones sheet: name + phone
+  // columns, blanks ignored, UK format differences normalised.
+  const lookup = buildTutorPhoneLookup([
+    { tutorName: 'Kenny', phone: '+44 7900 555111' },
+    { tutorName: 'Calum', phone: '07900555222' },
+    { tutorName: '', phone: '07900555333' }, // no name — ignored
+    { tutorName: 'Blank', phone: '' }, // no phone — ignored
+  ]);
+
+  // Any UK format of a known tutor number resolves to the tutor's name.
+  assert.equal(matchTutorPhone({ senderPhone: '07900 555111' }, lookup), 'Kenny');
+  assert.equal(matchTutorPhone({ sender_phone: '+447900555222' }, lookup), 'Calum');
+
+  // A parent number (not a tutor) and a nameless/phoneless row do not match.
+  assert.equal(matchTutorPhone({ senderPhone: '07788 626616' }, lookup), '');
+  assert.equal(matchTutorPhone({ senderPhone: '07900555333' }, lookup), '');
+  assert.equal(matchTutorPhone({}, lookup), '');
+  assert.equal(matchTutorPhone({ senderPhone: '07900 555111' }, new Map()), '');
 });
 
 test('decideAutoCaptureStatus archives no-signal chatter and keeps work open', () => {
