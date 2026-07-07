@@ -348,43 +348,6 @@ class WhatsAppIncomingBridge {
     return response.data;
   }
 
-  async handleStarredKey(key = {}) {
-    const messageId = key.id || '';
-    if (!messageId) return;
-    if (this.sentMessageIds.has(messageId)) {
-      this.logInfo('Ignoring duplicate starred event', { messageId });
-      return;
-    }
-
-    const cached = this.recentMessages.get(messageCacheKey(key));
-    const fallbackSenderJid = key.fromMe ? 'me' : key.participant || key.remoteJid || '';
-    const payload = await this.buildPayload({
-      messageId,
-      chatId: key.remoteJid || '',
-      senderJid: cached?.senderJid || fallbackSenderJid,
-      senderName: cached?.senderName || '',
-      senderPhone: cached?.senderPhone || phoneFromJid(fallbackSenderJid),
-      messageText: cached?.messageText || '[Message content unavailable - star update arrived before cache]',
-      messageType: cached?.messageType || 'starred_update',
-      messageAt: cached?.messageAt || nowIso(),
-      fromMe: Boolean(key.fromMe),
-      cacheHit: Boolean(cached?.messageText),
-    });
-
-    await this.sendPayload(payload);
-    this.sentMessageIds.add(messageId);
-  }
-
-  async handleStarredMessage(message) {
-    const cached = this.cacheMessage(message) || {};
-    await this.handleStarredKey({
-      id: cached.messageId || message.key?.id,
-      remoteJid: cached.chatId || message.key?.remoteJid,
-      participant: cached.senderJid || message.key?.participant,
-      fromMe: cached.fromMe || message.key?.fromMe,
-    });
-  }
-
   // Which chats may be auto-captured — asked of the dashboard so the
   // human-confirmed group map stays the single source of that decision.
   async refreshConfirmedGroups() {
@@ -457,8 +420,8 @@ class WhatsAppIncomingBridge {
   // Live messages (upsert type "notify") in confirmed FC groups post to the
   // dashboard automatically — including our own replies (from_me), which the
   // dashboard uses as "school replied" evidence rather than inbox rows.
-  // Sharing sentMessageIds with the starred path means starring an already
-  // auto-captured message never posts it twice under a second source.
+  // sentMessageIds dedupes within a session so a re-delivered message id is
+  // only posted once.
   async maybeAutoCapture(message) {
     if (!this.autoCaptureEnabled || !this.confirmedChatIds.size) return;
     const chatId = message.key?.remoteJid || '';
@@ -558,33 +521,17 @@ class WhatsAppIncomingBridge {
     });
 
     this.sock.ev.on('messages.upsert', async ({ messages = [], type }) => {
-      // History/append batches on reconnect replay old traffic — WhatsApp
-      // resends the starred backlog and recent messages. Cache them so a later
-      // live star toggle can recover their text, but never post them: the
-      // starred and auto-capture dedupes are both in-memory and reset on
-      // restart, so a reconnect would otherwise re-post already-handled
-      // messages as new inbox rows (and pre-stable-id-scheme rows won't even
-      // dedupe on the dashboard). Only 'notify' is a live delivery.
+      // Only live deliveries ('notify') are captured. History/append batches on
+      // reconnect replay old traffic — cache them so context is warm, but never
+      // post them (the auto-capture dedupe is in-memory and resets on restart,
+      // so a reconnect would otherwise re-post already-handled messages).
       if (type !== 'notify') {
         for (const message of messages) this.cacheMessage(message);
         return;
       }
       for (const message of messages) {
         this.cacheMessage(message);
-        if (message.starred) {
-          await this.handleStarredMessage(message);
-        } else {
-          await this.maybeAutoCapture(message).catch((error) => this.logWarn('Auto-capture failed', { error: error.message }));
-        }
-      }
-    });
-
-    this.sock.ev.on('messages.update', async (updates = []) => {
-      for (const update of updates) {
-        if (update.update?.starred === true) {
-          this.logInfo('Starred message detected', { messageId: update.key?.id, chatId: update.key?.remoteJid });
-          await this.handleStarredKey(update.key || {});
-        }
+        await this.maybeAutoCapture(message).catch((error) => this.logWarn('Auto-capture failed', { error: error.message }));
       }
     });
   }
