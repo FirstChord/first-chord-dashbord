@@ -19,6 +19,25 @@ Use this alongside `docs/admin/ADMIN_IMPLEMENTATION_LOG.md`: the implementation 
 
 ## Entries
 
+### 2026-07-08 — Payroll: an exclusive EndDate, and caching the lane that doesn't change
+
+**Feature/change:** Two fixes to the payroll attendance read. (1) `searchAttendanceForPayroll` now shifts MMS's `EndDate` one day forward, because MMS compares it against `EventStartDate` at **midnight** — so it is exclusive. (2) Its cache gains a 10-minute TTL, a 20-minute stale-while-revalidate window, in-flight coalescing, and a `forceRefresh` escape hatch behind a **Refresh from MMS** button.
+
+**Why it exists:** The pay date is always Wednesday, so the default `periodEnd` is always Tuesday — and every Tuesday lesson was silently missing from every tutor's payroll and from tutor pay statements (whose line items then failed to reconcile against their own frozen total). Live 26 Jun–8 Jul 2026. Found because two of Chloe's students "weren't showing up"; the students taught on other days were fine, which made it look like a per-student problem.
+
+**Design lessons:**
+- **A boundary bug produces a plausible number, not an error.** Nothing crashed, no row was flagged, the total just came out short. That is the same failure shape as the still-open `limit: 1000` truncation in the same function (947 rows today). Both under-report by construction. When an integration silently drops data, prefer a loud failure — the payroll page already has a `loadError` banner to throw into.
+- **Fix at the boundary, not the call sites.** Both callers (payroll page, `loadTutorStatement`) passed an inclusive end date and both were wrong. The adapter now owns the translation; callers pass, and the cache keys on, the inclusive date they mean.
+- **Cache lifetime should follow the data's change rate, not a round number.** The old 60s TTL was a wall-clock timer firing at random points in a review session — and 60s is roughly one "read the invoice, click next" cycle, so it fired *precisely* mid-deliberation. That is why saves felt intermittently stuck: `revalidatePath` rebuilds the whole `force-dynamic` page, re-running a ~950-row MMS query (measured 3.6s) to redraw a preview a status write cannot have changed. Attendance for a closed window is immutable.
+- **A freshness *timer* is a bad proxy for a freshness *intent*.** The 60s TTL existed so a lesson just recorded in MMS appeared quickly. A button expresses that intent deliberately and lets the TTL be generous. The page redirects to a clean URL after `?refresh=1`, or the flag persists and every later save refetches — reintroducing the cost the cache removes.
+- **The pattern already existed.** TTL + SWR + in-flight coalescing was ported from the Sheets read cache (see *Bounded SWR Sheets Cache*, 2026-07-03), not invented. Two lanes with different change rates — the MMS preview and the saved `Payroll_Runs` state — are still recomputed together on every save; splitting them is the real fix and is deferred to the tutor-invoice-confirmation refactor.
+
+**Source-of-truth impact:** None. MMS remains the attendance source; `Payroll_Runs` still holds workflow state. Reviewed/paid rows read `final_amount` from the saved row, so **no historical figure was restated** by the fix — draft rows corrected themselves, frozen rows did not. Only Dean's 22–26 Jun run had lost lessons (£60); settled outside the dashboard against his invoice.
+
+**Files/functions involved:** `searchAttendanceForPayroll`, `exclusiveEndDate`, `refreshPayrollAttendance` (`lib/admin/mms.js`); `AdminPayrollPage` + `buildPayrollQuery` + refresh link (`app/admin/finance/payroll/page.js`); `tests/admin/mms-payroll-attendance.test.mjs`; format contracts in `docs/admin/STATE_TABS_SCHEMA.md`.
+
+**What to watch out for:** Do not "simplify" the `EndDate` shift away, and do not shorten the TTL to keep things fresh — use the refresh button. Accepted trade: a lesson recorded in MMS can show one render stale for up to 10 minutes. Past TTL + SWR the caller waits for fresh rows rather than see old attendance, and a failed background refresh is logged, never thrown into the render. `limit: 1000` still has no pagination and no warning.
+
 ### 2026-07-05 — Tutor pay statement Phase 2: confirm / dispute (no login)
 
 **Feature/change:** The public statement link (`/pay/statement/<token>`) gains **Confirm — looks right** / **Something's off** (with a note) controls. The response writes back to the tutor's `Payroll_Runs` row (`tutor_response`/`tutor_responded_at`/`tutor_note`) and surfaces on the payroll board: a per-card banner (Confirmed ✓ / flagged) and a confirmations tally + disputed list in the payout panel. A **disputed** reviewed row is **held out of the Wise batch** until resolved.
