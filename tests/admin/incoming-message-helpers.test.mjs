@@ -25,6 +25,7 @@ import {
   isWhatsappGroupChatId,
   matchGroupToStudent,
   matchTutorPhone,
+  matchTutorSenderName,
   matchIncomingMessageToStudent,
   mergeIncomingCapture,
   normaliseIncomingMessagePayload,
@@ -646,6 +647,28 @@ test('matchTutorPhone recognises a tutor by their number so their reply is not a
   assert.equal(matchTutorPhone({ senderPhone: '07900555333' }, lookup), '');
   assert.equal(matchTutorPhone({}, lookup), '');
   assert.equal(matchTutorPhone({ senderPhone: '07900 555111' }, new Map()), '');
+});
+
+test('matchTutorSenderName recognises the group tutor by push name, never a bare first name', () => {
+  // LID-addressed groups can hide the sender's number entirely — the push name
+  // against this group's own tutor is the fallback (real 2026-07-08 case: Dean's
+  // replies landing as parent inbox rows).
+  assert.equal(matchTutorSenderName('Dean Louden', 'Dean Louden'), 'Dean Louden');
+  assert.equal(matchTutorSenderName('dean louden', 'Dean Louden'), 'Dean Louden');
+  assert.equal(matchTutorSenderName('Eléna Esposito', 'Elena Esposito'), 'Elena Esposito');
+  // Prefix match: a longer push name still resolves to the group tutor.
+  assert.equal(matchTutorSenderName('Dean Louden Music', 'Dean Louden'), 'Dean Louden');
+
+  // Single-word names never match — a parent whose push name is just the
+  // tutor's first name must land in the inbox, not be silently absorbed.
+  assert.equal(matchTutorSenderName('Dean', 'Dean Louden'), '');
+  assert.equal(matchTutorSenderName('Tom', 'Tom Walters'), '');
+
+  // Different people, partial-word overlaps, and missing data do not match.
+  assert.equal(matchTutorSenderName('Dean L', 'Dean Louden'), '');
+  assert.equal(matchTutorSenderName('Rose Drew', 'Dean Louden'), '');
+  assert.equal(matchTutorSenderName('', 'Dean Louden'), '');
+  assert.equal(matchTutorSenderName('Dean Louden', ''), '');
 });
 
 test('decideAutoCaptureStatus archives no-signal chatter and keeps work open', () => {

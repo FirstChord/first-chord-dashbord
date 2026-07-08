@@ -53,7 +53,14 @@ function nowIso() {
 }
 
 function phoneFromJid(jid = '') {
-  const id = clean(jid).split('@')[0].split(':')[0];
+  const value = clean(jid);
+  // Only phone-format JIDs (@s.whatsapp.net) carry a real number. WhatsApp's
+  // LID migration means group senders often arrive as <id>@lid — an anonymised
+  // id that looks numeric but is not a phone. Turning one into "+<id>" poisons
+  // every downstream phone match (Tutor_Phones, staff numbers, group map), so
+  // any other server yields blank: an honest "no phone known".
+  if (value.includes('@') && !value.endsWith('@s.whatsapp.net')) return '';
+  const id = value.split('@')[0].split(':')[0];
   return id && /^\d+$/u.test(id) ? `+${id}` : '';
 }
 
@@ -295,6 +302,11 @@ class WhatsAppIncomingBridge {
 
     const { text, type } = extractMessageContent(message);
     const senderJid = message.key.fromMe ? 'me' : message.key.participant || message.key.remoteJid;
+    // In LID-addressed groups the participant JID is anonymised; Baileys carries
+    // the real number alongside it in participantPn (groups) / senderPn (DMs).
+    const senderPhoneJid = message.key.fromMe
+      ? ''
+      : message.key.participantPn || message.key.senderPn || senderJid;
     const timestamp = Number(message.messageTimestamp || Date.now() / 1000);
     const cacheKey = messageCacheKey(message.key);
     const cached = {
@@ -303,7 +315,7 @@ class WhatsAppIncomingBridge {
       chatId: message.key.remoteJid,
       senderName: message.pushName || '',
       senderJid,
-      senderPhone: phoneFromJid(senderJid),
+      senderPhone: phoneFromJid(senderPhoneJid),
       messageText: text || '[Media or unsupported message]',
       messageType: type,
       messageAt: new Date(timestamp * 1000).toISOString(),
@@ -660,9 +672,10 @@ class WhatsAppIncomingBridge {
       .filter((meta) => titleLooksLikeFcGroup(meta.subject || ''))
       .map((meta) => {
         const ts = chatTimestamps.get(meta.id);
+        // LID-addressed groups list participants under an anonymised id with the
+        // phone-format JID (when known) in participant.jid; phoneFromJid rejects lids.
         const participantPhones = (meta.participants || [])
-          .filter((participant) => `${participant.id || ''}`.endsWith('@s.whatsapp.net'))
-          .map((participant) => phoneFromJid(participant.id))
+          .map((participant) => phoneFromJid(participant.jid || participant.id))
           .filter(Boolean)
           .slice(0, 50);
         return {
