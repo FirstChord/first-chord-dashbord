@@ -10,6 +10,7 @@ import {
   shouldRefreshStripeFirst,
   issueMatchesView,
   paymentQuickActionResolvesIssue,
+  getPaymentQuickActions,
   getPrimaryPaymentQuickAction,
   getIssueCategoryLabel,
   getStudentLabel,
@@ -97,4 +98,22 @@ test('summariseStripeSnapshot composes a readable line', () => {
   assert.match(line, /Not actively billing/);
   assert.match(line, /Invoice: paid/);
   assert.match(line, /Issues: PAUSE EXPECTATION STALE/);
+});
+
+test('getPaymentQuickActions offers per-type expectation corrections, none for manual payers', () => {
+  // Manual payer with a non-setup issue type: no quick actions.
+  assert.deepEqual(getPaymentQuickActions({ paymentMode: 'manual', type: 'PAYMENT_FAILED' }), []);
+
+  // Setup-pending types offer actions regardless of payment mode.
+  const setup = getPaymentQuickActions({ paymentMode: 'manual', type: 'PAYMENT SETUP PENDING' });
+  assert.deepEqual(setup.map((a) => a.payload.paymentExpectation), ['stripe_active_expected', '']);
+
+  // The pause pair route to opposite primary expectations.
+  const mismatch = getPaymentQuickActions({ paymentMode: 'stripe', type: 'PAUSE EXPECTATION MISMATCH' });
+  assert.equal(mismatch[0].payload.paymentExpectation, 'stripe_paused_expected');
+  const stale = getPaymentQuickActions({ paymentMode: 'stripe', type: 'PAUSE EXPECTATION STALE' });
+  assert.equal(stale[0].payload.paymentExpectation, 'stripe_active_expected');
+
+  // Unknown stripe-mode types fall through to no actions.
+  assert.deepEqual(getPaymentQuickActions({ paymentMode: 'stripe', type: 'TUTOR CONFLICT' }), []);
 });
