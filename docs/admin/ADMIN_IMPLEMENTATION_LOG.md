@@ -1,6 +1,11 @@
 # Admin Dashboard Implementation Log
 
-This file tracks the admin dashboard build so work can be handed between agents cleanly.
+> **FROZEN (2026-07-08) — do not append.** Per-change history lives in `git log`
+> (commit messages are the changelog) and the Obsidian `06 Learning Log/`;
+> current state lives in `CURRENT_STATUS.md`. This file predates that rule and
+> stays only as history for its inbound links.
+
+This file tracked the admin dashboard build so work could be handed between agents cleanly.
 
 ## 2026-06-15 — Loop Closing, Tutor-Absence Capture, Issue-Queue Friction
 

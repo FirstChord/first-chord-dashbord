@@ -1,6 +1,10 @@
 # Learning Log
 
-## Rule
+> **FROZEN (2026-07-08) — do not append.** The Learning Log's one home is the
+> Obsidian vault `06 Learning Log/` (the *why*); the *what* is `git log`.
+> This file predates that rule and stays only as history for its inbound links.
+
+## Rule (historical)
 
 For meaningful architectural changes, suggest a short entry for this file.
 
