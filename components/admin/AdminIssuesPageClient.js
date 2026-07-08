@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AgeChip } from '@/components/admin/ui/AgeChip';
 import { SelectField } from '@/components/admin/ui/fields';
+import { SlideOverPanel, panelActionClass } from '@/components/admin/ui/SlideOverPanel';
 import { buildIssueEvidenceSummary, formatDateTime } from '@/lib/admin/health-helpers.mjs';
 import { buildPauseWorkflowSummary } from '@/lib/admin/pause-workflow-helpers.mjs';
 import {
@@ -1312,44 +1313,23 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
       </section>
 
       {recordPanel ? (
-        <div className="fixed inset-0 z-50 flex">
-          <div
-            className="flex-1 bg-slate-900/30 backdrop-blur-[1px]"
-            onClick={() => setRecordPanel(null)}
-            aria-hidden
+        <SlideOverPanel
+          eyebrow="Student record"
+          title={recordPanel.name}
+          onClose={() => setRecordPanel(null)}
+          actions={(
+            <a href={recordPanel.path} target="_blank" rel="noreferrer" className={panelActionClass}>
+              Open in full page ↗
+            </a>
+          )}
+        >
+          <iframe
+            key={recordPanel.path}
+            src={recordPanel.path}
+            title={`Student record: ${recordPanel.name}`}
+            className="h-full w-full flex-1 border-0"
           />
-          <aside className="flex h-full w-full max-w-3xl flex-col border-l border-slate-200 bg-white shadow-2xl">
-            <header className="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-3">
-              <div>
-                <p className="text-xs uppercase tracking-wide text-slate-500">Student record</p>
-                <p className="text-sm font-semibold text-slate-900">{recordPanel.name}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <a
-                  href={recordPanel.path}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
-                >
-                  Open in full page ↗
-                </a>
-                <button
-                  type="button"
-                  onClick={() => setRecordPanel(null)}
-                  className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
-                >
-                  Close ✕
-                </button>
-              </div>
-            </header>
-            <iframe
-              key={recordPanel.path}
-              src={recordPanel.path}
-              title={`Student record: ${recordPanel.name}`}
-              className="h-full w-full flex-1 border-0"
-            />
-          </aside>
-        </div>
+        </SlideOverPanel>
       ) : null}
     </div>
   );

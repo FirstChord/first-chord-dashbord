@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Search } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { SlideOverPanel, panelActionClass } from '@/components/admin/ui/SlideOverPanel';
 import {
   PLANNING_ITEM_TYPES,
   SCHOOL_FORWARD_PLANNING_ID,
@@ -14,7 +15,6 @@ import {
   extractDismissedReflectionIntentions,
   extractReflectionIntentions,
   getLatestSchoolForwardReflectionNote,
-  buildPauseLessonDateSuggestions,
   flagNearbyPauses,
   isMeetingPlanningItem,
   labelPlanningType,
@@ -1081,57 +1081,40 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
       </section>
 
       {editingItem ? (
-        <div className="fixed inset-0 z-50 flex">
-          <div
-            className="flex-1 bg-slate-900/30 backdrop-blur-[1px]"
-            onClick={() => {
-              setEditingItem(null);
-              setEditForm(EMPTY_FORM);
-            }}
-            aria-hidden
-          />
-          <aside className="flex h-full w-full max-w-2xl flex-col border-l border-slate-200 bg-white shadow-2xl">
-            <header className="flex items-start justify-between gap-3 border-b border-slate-200 px-5 py-3">
-              <div className="min-w-0">
-                <p className="text-xs uppercase tracking-wide text-slate-500">Edit plan</p>
-                <p className="truncate text-sm font-semibold text-slate-900">{editingItem.title}</p>
-              </div>
-              <div className="flex flex-shrink-0 items-center gap-2">
-                <div className="flex rounded-lg border border-slate-200 p-0.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditorMode('structured');
-                      setEditForm((current) => ({ ...current, isPause: 'true' }));
-                    }}
-                    className={`rounded-md px-2.5 py-1 text-xs font-semibold ${editorMode === 'structured' ? 'bg-violet-100 text-violet-900' : 'text-slate-600 hover:bg-slate-50'}`}
-                  >
-                    Structured pause
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditorMode('general');
-                      setEditForm((current) => ({ ...current, isPause: 'false' }));
-                    }}
-                    className={`rounded-md px-2.5 py-1 text-xs font-semibold ${editorMode === 'general' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'}`}
-                  >
-                    General
-                  </button>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingItem(null);
-                    setEditForm(EMPTY_FORM);
-                  }}
-                  className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
-                >
-                  Close ✕
-                </button>
-              </div>
-            </header>
-            <div className="flex-1 overflow-y-auto p-5">
+        <SlideOverPanel
+          eyebrow="Edit plan"
+          title={editingItem.title}
+          maxWidth="max-w-2xl"
+          onClose={() => {
+            setEditingItem(null);
+            setEditForm(EMPTY_FORM);
+          }}
+          actions={(
+            <div className="flex rounded-lg border border-slate-200 p-0.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setEditorMode('structured');
+                  setEditForm((current) => ({ ...current, isPause: 'true' }));
+                }}
+                className={`rounded-md px-2.5 py-1 text-xs font-semibold ${editorMode === 'structured' ? 'bg-violet-100 text-violet-900' : 'text-slate-600 hover:bg-slate-50'}`}
+              >
+                Structured pause
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditorMode('general');
+                  setEditForm((current) => ({ ...current, isPause: 'false' }));
+                }}
+                className={`rounded-md px-2.5 py-1 text-xs font-semibold ${editorMode === 'general' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'}`}
+              >
+                General
+              </button>
+            </div>
+          )}
+        >
+          <div className="flex-1 overflow-y-auto p-5">
               {editorMode === 'structured' ? (
                 <PauseDatesEditor
                   item={editingItem}
@@ -1154,89 +1137,49 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
                   pending={pendingId === editingItem.planningId}
                 />
               )}
-            </div>
-          </aside>
-        </div>
+          </div>
+        </SlideOverPanel>
       ) : null}
 
       {pauseToolPanel ? (
-        <div className="fixed inset-0 z-50 flex">
-          <div
-            className="flex-1 bg-slate-900/30 backdrop-blur-[1px]"
-            onClick={() => setPauseToolPanel(null)}
-            aria-hidden
+        <SlideOverPanel
+          eyebrow="Payment pause tool"
+          title={pauseToolPanel.name}
+          onClose={() => setPauseToolPanel(null)}
+          actions={(
+            <a href={pauseToolPanel.url} target="_blank" rel="noreferrer" className={panelActionClass}>
+              Open in full page ↗
+            </a>
+          )}
+        >
+          <iframe
+            key={pauseToolPanel.url}
+            src={pauseToolPanel.url}
+            title={`Payment pause tool: ${pauseToolPanel.name}`}
+            className="h-full w-full flex-1 border-0"
           />
-          <aside className="flex h-full w-full max-w-3xl flex-col border-l border-slate-200 bg-white shadow-2xl">
-            <header className="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-3">
-              <div>
-                <p className="text-xs uppercase tracking-wide text-slate-500">Payment pause tool</p>
-                <p className="text-sm font-semibold text-slate-900">{pauseToolPanel.name}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <a
-                  href={pauseToolPanel.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
-                >
-                  Open in full page ↗
-                </a>
-                <button
-                  type="button"
-                  onClick={() => setPauseToolPanel(null)}
-                  className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
-                >
-                  Close ✕
-                </button>
-              </div>
-            </header>
-            <iframe
-              key={pauseToolPanel.url}
-              src={pauseToolPanel.url}
-              title={`Payment pause tool: ${pauseToolPanel.name}`}
-              className="h-full w-full flex-1 border-0"
-            />
-          </aside>
-        </div>
+        </SlideOverPanel>
       ) : null}
 
       {workflowPanel ? (
-        <div className="fixed inset-0 z-50 flex">
-          <div
-            className="flex-1 bg-slate-900/30 backdrop-blur-[1px]"
-            onClick={() => setWorkflowPanel(null)}
-            aria-hidden
+        <SlideOverPanel
+          eyebrow={workflowPanel.eyebrow || 'Workflow'}
+          title={workflowPanel.title || 'Workflow'}
+          maxWidth="max-w-5xl"
+          onClose={() => setWorkflowPanel(null)}
+          actions={(
+            <Link href={workflowPanel.url} className={panelActionClass}>
+              Open full page
+            </Link>
+          )}
+        >
+          <iframe
+            key={workflowPanel.url}
+            src={workflowPanel.url}
+            title={`${workflowPanel.eyebrow || 'Workflow'}: ${workflowPanel.title || 'Workflow'}`}
+            className="h-full w-full flex-1 border-0"
           />
-          <aside className="flex h-full w-full max-w-5xl flex-col border-l border-slate-200 bg-white shadow-2xl">
-            <header className="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-3">
-              <div>
-                <p className="text-xs uppercase tracking-wide text-slate-500">{workflowPanel.eyebrow || 'Workflow'}</p>
-                <p className="text-sm font-semibold text-slate-900">{workflowPanel.title || 'Workflow'}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Link
-                  href={workflowPanel.url}
-                  className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
-                >
-                  Open full page
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => setWorkflowPanel(null)}
-                  className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
-                >
-                  Close ✕
-                </button>
-              </div>
-            </header>
-            <iframe
-              key={workflowPanel.url}
-              src={workflowPanel.url}
-              title={`${workflowPanel.eyebrow || 'Workflow'}: ${workflowPanel.title || 'Workflow'}`}
-              className="h-full w-full flex-1 border-0"
-            />
-          </aside>
-        </div>
+        </SlideOverPanel>
       ) : null}
     </div>
   );
