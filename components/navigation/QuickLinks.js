@@ -18,7 +18,7 @@ function getPracticeChatDashboardBaseUrl() {
   return CANONICAL_PRACTICE_CHAT_DASHBOARD_BASE_URL.replace(/\/+$/u, '');
 }
 
-function buildPracticeChatUrl(student) {
+function buildPracticeChatUrl(student, activeTutor = '') {
   const params = new URLSearchParams();
   const dashboardBaseUrl = getPracticeChatDashboardBaseUrl();
   const practiceChatBaseUrl = typeof window !== 'undefined' && isLocalDashboardHost(window.location.hostname)
@@ -27,7 +27,7 @@ function buildPracticeChatUrl(student) {
 
   if (student?.mms_id) params.set('studentId', student.mms_id);
   if (student?.name) params.set('studentName', student.name);
-  const tutorName = student?.current_tutor || student?.currentTutor || student?.tutor || student?.Tutor || '';
+  const tutorName = activeTutor || student?.current_tutor || student?.currentTutor || student?.tutor || student?.Tutor || '';
   if (tutorName) params.set('tutor', tutorName);
   params.set('dashboardBaseUrl', dashboardBaseUrl);
   if (process.env.NEXT_PUBLIC_PRACTICE_CHAT_API_SECRET) {
@@ -37,7 +37,7 @@ function buildPracticeChatUrl(student) {
   return `${practiceChatBaseUrl}/?${params.toString()}`;
 }
 
-export default function QuickLinks({ student, onOpenPracticeChat }) {
+export default function QuickLinks({ student, activeTutor = '', onOpenPracticeChat }) {
   const [showCredentials, setShowCredentials] = useState(false);
   const [currentCredentials, setCurrentCredentials] = useState(null);
   const [copySuccess, setCopySuccess] = useState(false);
@@ -70,7 +70,7 @@ export default function QuickLinks({ student, onOpenPracticeChat }) {
     {
       name: "Practice Chat!",
       icon: <FileText className="w-5 h-5" />,
-      url: buildPracticeChatUrl(student),
+      url: buildPracticeChatUrl(student, activeTutor),
       instruction: "For taking homework notes",
       requiresAuth: false,
       color: "bg-orange-500"

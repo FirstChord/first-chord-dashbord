@@ -420,6 +420,7 @@ export default function DashboardClient() {
                 <div>
                   <QuickLinks
                     student={selectedStudent}
+                    activeTutor={tutor}
                     onOpenPracticeChat={(url, name) => setPracticeChatPanel({ url, name, completed: false })}
                   />
                 </div>
