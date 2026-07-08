@@ -136,6 +136,19 @@ class WhatsAppIncomingBridge {
     this.confirmedGroupsTimer = null;
     this.heartbeatMs = Math.max(5 * 60 * 1000, Number(process.env.BRIDGE_HEARTBEAT_MS || 30 * 60 * 1000) || 30 * 60 * 1000);
     this.heartbeatTimer = null;
+    // Watchdog: launchd's KeepAlive only relaunches on process *exit*, so a
+    // hung-but-alive process (e.g. the Mac slept and the socket died without a
+    // clean close) never self-heals. We track a "last healthy" moment (a
+    // connect, a heartbeat-while-connected, or a live capture) and force-exit
+    // if it goes stale — turning a hang into an exit so launchd restarts fresh.
+    // Disable with BRIDGE_WATCHDOG=false.
+    this.watchdogEnabled = typeof process.env.BRIDGE_WATCHDOG === 'undefined'
+      ? true
+      : parseBoolean(process.env.BRIDGE_WATCHDOG);
+    this.watchdogCheckMs = Math.max(30 * 1000, Number(process.env.BRIDGE_WATCHDOG_CHECK_MS || 2 * 60 * 1000) || 2 * 60 * 1000);
+    this.watchdogStaleMs = Math.max(5 * 60 * 1000, Number(process.env.BRIDGE_WATCHDOG_STALE_MS || 15 * 60 * 1000) || 15 * 60 * 1000);
+    this.watchdogTimer = null;
+    this.lastHealthyAt = Date.now();
     this.startedAt = nowIso();
     this.connectedAt = '';
     try {
@@ -404,6 +417,10 @@ class WhatsAppIncomingBridge {
         timeout: 15000,
         headers: { 'x-firstchord-incoming-secret': this.webhookSecret },
       });
+      // A heartbeat that posts while the socket is live is proof of health.
+      // Posting while disconnected doesn't count — that must stay stale so the
+      // watchdog can act if reconnects aren't succeeding.
+      if (this.connected) this.markHealthy();
     } catch (error) {
       this.logWarn('Could not post bridge heartbeat', { error: error.message });
     }
@@ -415,6 +432,31 @@ class WhatsAppIncomingBridge {
       this.sendBridgeStatus().catch(() => {});
     }, this.heartbeatMs);
     this.heartbeatTimer.unref?.();
+  }
+
+  // A moment of proven life: a live socket or successful work happened.
+  markHealthy() {
+    this.lastHealthyAt = Date.now();
+  }
+
+  // Force-exit when nothing healthy has happened for watchdogStaleMs so
+  // launchd (KeepAlive) restarts a fresh process. Deliberately NOT unref'd:
+  // this timer must keep firing even if every other handle has gone quiet,
+  // and it's what fires on wake after the Mac has slept through everything.
+  startWatchdog() {
+    if (!this.watchdogEnabled || this.watchdogTimer) return;
+    this.watchdogTimer = setInterval(() => {
+      const staleMs = Date.now() - this.lastHealthyAt;
+      if (staleMs > this.watchdogStaleMs) {
+        this.logError('Watchdog: no healthy activity — exiting for a clean relaunch', {
+          staleSeconds: Math.round(staleMs / 1000),
+          thresholdSeconds: Math.round(this.watchdogStaleMs / 1000),
+          connected: this.connected,
+        });
+        this.saveMessageCache();
+        process.exit(1);
+      }
+    }, this.watchdogCheckMs);
   }
 
   // Live messages (upsert type "notify") in confirmed FC groups post to the
@@ -439,6 +481,7 @@ class WhatsAppIncomingBridge {
 
     await this.sendPayload(payload);
     this.sentMessageIds.add(messageId);
+    this.markHealthy(); // a live message flowed through — definitively alive
   }
 
   // `kill -USR1 <pid>` on the running bridge triggers a group sync on the live
@@ -455,6 +498,7 @@ class WhatsAppIncomingBridge {
   async connect() {
     this.validateConfig();
     this.bindGroupSyncSignal();
+    this.startWatchdog(); // also covers a never-opens startup, not just a mid-life hang
     const { state, saveCreds } = await useMultiFileAuthState(this.authDir);
     const { version, isLatest } = await fetchLatestBaileysVersion();
     this.logInfo('Starting WhatsApp incoming bridge', {
@@ -492,6 +536,8 @@ class WhatsAppIncomingBridge {
       if (connection === 'open') {
         this.connected = true;
         this.connectedAt = nowIso();
+        this.markHealthy();
+        this.startWatchdog();
         this.logInfo('WhatsApp bridge connected');
         // Heartbeat straight after the group refresh so the first status row
         // carries the real list size, not zero.

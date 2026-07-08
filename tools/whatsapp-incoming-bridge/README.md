@@ -8,8 +8,7 @@ This is optional tooling. It is not part of the Railway dashboard build. Full se
 
 - connects to WhatsApp Web using Baileys
 - caches recent incoming message text locally
-- **auto-captures every live text message from dashboard-confirmed FC lesson groups** (since 2026-07-06 — no starring needed; it fetches the confirmed chat list from the dashboard on connect and 6-hourly)
-- still posts **starred** messages from anywhere (DMs, unconfirmed groups, emphasis)
+- **auto-captures every live text message from dashboard-confirmed FC lesson groups** (since 2026-07-06 — no starring needed; it fetches the confirmed chat list from the dashboard on connect and 6-hourly). This is now the **only** capture channel — the starred-message path was removed 2026-07-07 (see `git log`); anything outside a confirmed group is handled via Quick capture on the dashboard.
 - uses `INCOMING_MESSAGE_INGEST_SECRET` to authenticate with the dashboard endpoint
 
 ## What It Must Not Do
@@ -33,6 +32,20 @@ Staff numbers (Tom's personal number, so school replies stamp items instead of c
 ## Sleep / Offline Behaviour
 
 The bridge only captures while this Mac is awake. WhatsApp queues messages for offline linked devices, so after the Mac wakes the bridge reconnects and the queued messages are delivered and captured — the loop is **delayed, not broken**. Backstops: the dashboard shows a "WhatsApp capture quiet" card after 3 silent days, and manual Quick capture on `/admin/incoming-messages` works from any device at any time. If the device stays offline ~14 days, WhatsApp unlinks it — re-scan the QR (`npm start` shows it).
+
+## Resilience (watchdog + relaunch)
+
+launchd's `KeepAlive` only relaunches on process **exit**. The failure mode this misses is a process that's alive-but-hung — e.g. the Mac slept, the WhatsApp socket died without a clean `close`, and every timer (heartbeat, reconnect) froze. Observed 2026-07-08: 11h with no heartbeat while the process was still "running".
+
+The in-process **watchdog** closes that gap. It tracks a "last healthy" moment — a connect, a heartbeat posted while connected, or a live capture — and if nothing healthy happens for `BRIDGE_WATCHDOG_STALE_MS` it force-exits (`process.exit(1)`), turning the hang into an exit so launchd starts a **fresh** process. The watchdog timer is deliberately not `unref`'d, so it keeps firing (and fires on wake after sleep). The plist has a `ThrottleInterval` of 30s so a fast-exiting process can't spin.
+
+```bash
+export BRIDGE_WATCHDOG=true              # default on; false disables the watchdog
+export BRIDGE_WATCHDOG_STALE_MS=900000   # optional, default 15m, floor 5m
+export BRIDGE_WATCHDOG_CHECK_MS=120000   # optional, default 2m, floor 30s
+```
+
+The watchdog makes recovery automatic, but it does **not** remove the single point of failure that the bridge runs on one Mac. The durable fix is hosting it somewhere always-on (e.g. a Raspberry Pi / always-on box). For the group-chat use case, a linked-device library (Baileys) is required — the official WhatsApp Cloud API cannot read arbitrary group chats.
 
 ## Setup
 
@@ -133,4 +146,6 @@ That writes to `logs/starred-payloads.ndjson`, which is gitignored and contains 
 
 ## Known Fragility
 
-Starred-message updates may arrive without message text. The bridge keeps a recent local cache from `messages.upsert`; if the message arrived before the bridge saw it, or is outside the cache window, the dashboard receives a placeholder and the row needs manual review.
+- **Single-host dependency.** The bridge runs on one Mac; if it's asleep/off, capture is delayed until it wakes (messages queue, then deliver). The watchdog (above) makes a *hung* process self-heal, but the Mac still has to be on. Always-on hosting is the real fix.
+- **WhatsApp closes the socket routinely** (status 428/503/440). Normal — the bridge reconnects on any non-logout close. Only a `loggedOut` close (device unlinked) needs a QR re-scan.
+- **One live connection per linked device.** Don't run `--sync-groups` while the always-on bridge is up (status 440 clash) — use `kill -USR1` instead.
