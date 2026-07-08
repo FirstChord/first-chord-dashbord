@@ -3,6 +3,7 @@ import {
   previewPracticeNoteMmsTestWrite,
 } from '@/lib/admin/mms';
 import {
+  PRACTICE_NOTES_LEVEL_2_PILOT_TUTORS,
   isPracticeNotesLevel2PilotStudent,
   normalisePracticeNoteAttendanceStatus,
 } from '@/lib/admin/practice-notes-mms-helpers.mjs';
@@ -57,8 +58,8 @@ export async function POST(request) {
 
     if (!isPilotStudent) {
       return Response.json({
-        error: 'Practice Chat Level 2 is currently limited to Finn, Tom, and Fennella pilot students.',
-        pilotTutors: ['Finn', 'Tom', 'Fennella'],
+        error: `Practice Chat Level 2 is currently limited to ${PRACTICE_NOTES_LEVEL_2_PILOT_TUTORS.join(', ')} pilot students.`,
+        pilotTutors: PRACTICE_NOTES_LEVEL_2_PILOT_TUTORS,
       }, { status: 403, headers });
     }
 

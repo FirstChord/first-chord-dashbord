@@ -218,9 +218,10 @@ test('Practice Chat Level 2 pilot gate allows only pilot tutors or Test Studenty
   assert.equal(isPracticeNotesLevel2PilotTutor('Finn Le Marinel'), true);
   assert.equal(isPracticeNotesLevel2PilotTutor('Tom'), true);
   assert.equal(isPracticeNotesLevel2PilotTutor('Fennella McCallum'), true);
-  assert.equal(isPracticeNotesLevel2PilotTutor('Dean'), false);
+  assert.equal(isPracticeNotesLevel2PilotTutor('Dean'), true);
+  assert.equal(isPracticeNotesLevel2PilotTutor('Dean Louden'), true);
 
   assert.equal(isPracticeNotesLevel2PilotStudent({ mmsId: 'sdt_real', tutor: 'Finn' }), true);
-  assert.equal(isPracticeNotesLevel2PilotStudent({ mmsId: 'sdt_real', registryTutor: 'Dean' }), false);
+  assert.equal(isPracticeNotesLevel2PilotStudent({ mmsId: 'sdt_real', registryTutor: 'Dean' }), true);
   assert.equal(isPracticeNotesLevel2PilotStudent({ mmsId: 'sdt_fBg9JN', registryTutor: 'Dean' }), true);
 });
