@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useTransition } from 'react';
+import { Field, Input, Select } from '@/components/admin/ui/fields';
 import { buildPauseWorkflowSummary } from '@/lib/admin/pause-workflow-helpers.mjs';
 import { labelCommunicationCategory } from '@/lib/admin/communications-helpers.mjs';
 import {
@@ -21,34 +22,6 @@ const PAYMENT_MODE_OPTIONS = [
   { value: 'manual', label: 'Manual' },
   { value: 'unknown', label: 'Unknown' },
 ];
-function Field({ label, children, hint }) {
-  return (
-    <label className="block">
-      <span className="text-xs uppercase tracking-wide text-slate-500">{label}</span>
-      {children}
-      {hint ? <span className="mt-1 block text-xs text-slate-500">{hint}</span> : null}
-    </label>
-  );
-}
-
-function Input(props) {
-  return (
-    <input
-      {...props}
-      className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
-    />
-  );
-}
-
-function Select(props) {
-  return (
-    <select
-      {...props}
-      className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
-    />
-  );
-}
-
 function ReadOnlyField({ label, value }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4">

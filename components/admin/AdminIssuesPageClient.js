@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { AgeChip } from '@/components/admin/ui/AgeChip';
+import { SelectField } from '@/components/admin/ui/fields';
 import { buildIssueEvidenceSummary, formatDateTime } from '@/lib/admin/health-helpers.mjs';
 import { buildPauseWorkflowSummary } from '@/lib/admin/pause-workflow-helpers.mjs';
 import {
@@ -33,25 +34,6 @@ import {
 } from '@/lib/admin/issues-client-helpers.mjs';
 
 const STRIPE_DASHBOARD_BASE = process.env.NEXT_PUBLIC_STRIPE_DASHBOARD_BASE_URL || 'https://dashboard.stripe.com';
-
-function Select({ label, value, onChange, options }) {
-  return (
-    <label className="block">
-      <span className="text-xs uppercase tracking-wide text-slate-500">{label}</span>
-      <select
-        value={value}
-        onChange={onChange}
-        className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
 
 export default function AdminIssuesPageClient({ issues, freshness }) {
   const [issueList, setIssueList] = useState(issues);
@@ -834,13 +816,13 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
             Advanced filters
           </summary>
           <div className="mt-4 grid gap-4 md:grid-cols-4">
-            <Select
+            <SelectField
               label="Exact issue type"
               value={typeFilter}
               onChange={(event) => setTypeFilter(event.target.value)}
               options={ISSUE_TYPE_OPTIONS}
             />
-            <Select
+            <SelectField
               label="Severity"
               value={severityFilter}
               onChange={(event) => setSeverityFilter(event.target.value)}
@@ -851,7 +833,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                 { value: 'Info', label: 'Info' },
               ]}
             />
-            <Select
+            <SelectField
               label="System"
               value={systemFilter}
               onChange={(event) => setSystemFilter(event.target.value)}
@@ -863,7 +845,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
                 { value: 'Pause', label: 'Pause' },
               ]}
             />
-            <Select
+            <SelectField
               label="Queue status"
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
