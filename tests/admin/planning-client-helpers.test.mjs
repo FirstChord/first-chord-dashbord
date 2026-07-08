@@ -34,8 +34,40 @@ import {
   isTutorAbsenceCaptureText,
   inferQuickCapture,
   buildQuickCaptureItem,
+  filterPlanningItems,
   EMPTY_FORM,
 } from '../../lib/admin/planning-client-helpers.mjs';
+
+test('filterPlanningItems routes every chip: done/parked veil, search, owners, types, momentum', () => {
+  const items = [
+    { planningId: 'a', title: 'Fix billing', status: 'active', owner: 'Fennella', itemType: 'action', momentum: 'moving' },
+    { planningId: 'b', title: 'Showcase idea', status: 'inbox', owner: 'Unassigned', itemType: 'idea', momentum: 'stalled' },
+    { planningId: 'c', title: 'Shipped thing', status: 'done', owner: 'Finn', itemType: 'action', momentum: '' },
+    { planningId: 'd', title: 'Parked initiative', status: 'parked', owner: 'Finn', itemType: 'initiative', momentum: '' },
+    { planningId: 'e', title: 'Due plan', status: 'active', owner: 'Finn', itemType: 'action', momentum: 'moving', targetDate: '2020-01-01' },
+  ];
+  const ids = (opts) => filterPlanningItems(items, opts).map((item) => item.planningId);
+
+  // Done/parked stay hidden unless showDone or their own chip is active.
+  assert.deepEqual(ids({ filter: 'all' }), ['a', 'b', 'e']);
+  assert.deepEqual(ids({ filter: 'all', showDone: true }), ['a', 'b', 'c', 'd', 'e']);
+  assert.deepEqual(ids({ filter: 'done' }), ['c']);
+  assert.deepEqual(ids({ filter: 'parked' }), ['d']);
+
+  // Free-text search runs before chip routing, case-insensitively.
+  assert.deepEqual(ids({ filter: 'all', query: '  ShowCase ' }), ['b']);
+
+  // Owner chips only surface open items; a past target date is due now.
+  assert.deepEqual(ids({ filter: 'owner_fennella' }), ['a']);
+  assert.deepEqual(ids({ filter: 'unassigned' }), ['b']);
+  assert.deepEqual(ids({ filter: 'due_now' }), ['e']);
+
+  // Item-type chips, and unknown filters fall through to a momentum match.
+  assert.deepEqual(ids({ filter: 'idea' }), ['b']);
+  assert.deepEqual(ids({ filter: 'stalled' }), ['b']);
+  assert.deepEqual(ids({ filter: 'no-such-momentum' }), []);
+  assert.deepEqual(filterPlanningItems(undefined, { filter: 'all' }), []);
+});
 
 test('shortPreview truncates with an ellipsis past the max', () => {
   assert.equal(shortPreview('short', 50), 'short');

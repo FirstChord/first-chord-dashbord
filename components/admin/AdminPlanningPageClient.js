@@ -5,7 +5,6 @@ import { Search } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { SlideOverPanel, panelActionClass } from '@/components/admin/ui/SlideOverPanel';
 import {
-  PLANNING_ITEM_TYPES,
   SCHOOL_FORWARD_PLANNING_ID,
   MONDAY_SCHEDULE_PLANNING_ID,
   buildReflectionIntentionDismissalNote,
@@ -16,7 +15,6 @@ import {
   extractReflectionIntentions,
   getLatestSchoolForwardReflectionNote,
   flagNearbyPauses,
-  isMeetingPlanningItem,
   labelPlanningType,
   normaliseReflectionIntentionKey,
   parseLinkedStudentIds,
@@ -26,14 +24,11 @@ import {
   formatDateTime,
   extractPauseDatesFromPlanningItem,
   isPausePlanningItem,
-  isDueNowPlanningItem,
   isOpenPlanningItem,
-  hasPlanningLink,
   findStudentById,
-  buildSearchText,
   hasPausePaymentConfirmation,
+  filterPlanningItems,
   buildSchoolNoteItem,
-  SCHOOL_NOTE_TYPES,
   PAUSE_PAYMENT_CONFIRMATION_NOTE,
   EMPTY_FORM,
   buildQuickCaptureItem,
@@ -162,51 +157,10 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
     return flagNearbyPauses(entries);
   }, [planning.items]);
 
-  const filteredItems = useMemo(() => {
-    const search = query.trim().toLowerCase();
-    return (planning.items || []).filter((item) => {
-      if (!showDone && !['done', 'parked'].includes(filter) && ['done', 'parked'].includes(item.status)) {
-        return false;
-      }
-      if (search && !buildSearchText(item).includes(search)) {
-        return false;
-      }
-      if (filter === 'due_now') {
-        return isDueNowPlanningItem(item);
-      }
-      if (filter === 'meeting') {
-        return isMeetingPlanningItem(item);
-      }
-      if (filter === 'school_notes') {
-        return SCHOOL_NOTE_TYPES.has(item.itemType);
-      }
-      if (filter === 'unassigned') {
-        return isOpenPlanningItem(item) && item.owner === 'Unassigned';
-      }
-      if (filter === 'owner_fennella') {
-        return isOpenPlanningItem(item) && item.owner === 'Fennella';
-      }
-      if (filter === 'waiting_status') {
-        return isOpenPlanningItem(item) && item.status === 'waiting';
-      }
-      if (filter === 'linked') {
-        return isOpenPlanningItem(item) && hasPlanningLink(item);
-      }
-      if (filter === 'all') {
-        return true;
-      }
-      if (filter === 'done') {
-        return item.status === 'done';
-      }
-      if (filter === 'parked') {
-        return item.status === 'parked';
-      }
-      if (PLANNING_ITEM_TYPES.includes(filter)) {
-        return item.itemType === filter;
-      }
-      return item.momentum === filter;
-    });
-  }, [planning.items, query, filter, showDone]);
+  const filteredItems = useMemo(
+    () => filterPlanningItems(planning.items, { filter, query, showDone }),
+    [planning.items, query, filter, showDone],
+  );
 
   // `silent` skips the pending/savedAt/pendingId bookkeeping so a multi-step
   // action (e.g. completing a pause) can own that state across several calls
