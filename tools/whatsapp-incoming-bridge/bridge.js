@@ -146,7 +146,18 @@ class WhatsAppIncomingBridge {
       ? true
       : parseBoolean(process.env.BRIDGE_WATCHDOG);
     this.watchdogCheckMs = Math.max(30 * 1000, Number(process.env.BRIDGE_WATCHDOG_CHECK_MS || 2 * 60 * 1000) || 2 * 60 * 1000);
-    this.watchdogStaleMs = Math.max(5 * 60 * 1000, Number(process.env.BRIDGE_WATCHDOG_STALE_MS || 15 * 60 * 1000) || 15 * 60 * 1000);
+    // The stale window MUST sit above the heartbeat interval. A healthy-but-quiet
+    // bridge (no incoming messages) only refreshes lastHealthyAt via the
+    // connected heartbeat, so a window shorter than the heartbeat would recycle a
+    // perfectly live bridge. Default to two heartbeats + slack; floor above one.
+    const staleDefault = 2 * this.heartbeatMs + 5 * 60 * 1000;
+    const staleFloor = this.heartbeatMs + 5 * 60 * 1000;
+    this.watchdogStaleMs = Math.max(staleFloor, Number(process.env.BRIDGE_WATCHDOG_STALE_MS) || staleDefault);
+    // A bridge that dropped and can't get back on is dead even though the process
+    // and its timers are fine — catch that specific case faster than the stale
+    // window (which is tuned for the total-freeze/sleep case).
+    this.watchdogDisconnectGraceMs = Math.max(2 * 60 * 1000, Number(process.env.BRIDGE_WATCHDOG_DISCONNECT_GRACE_MS) || 10 * 60 * 1000);
+    this.disconnectedSince = null;
     this.watchdogTimer = null;
     this.lastHealthyAt = Date.now();
     this.startedAt = nowIso();
@@ -446,17 +457,33 @@ class WhatsAppIncomingBridge {
   startWatchdog() {
     if (!this.watchdogEnabled || this.watchdogTimer) return;
     this.watchdogTimer = setInterval(() => {
-      const staleMs = Date.now() - this.lastHealthyAt;
+      const now = Date.now();
+      // Dropped and not reconnecting — reconnect normally succeeds in seconds.
+      if (this.disconnectedSince && now - this.disconnectedSince > this.watchdogDisconnectGraceMs) {
+        this.exitForRelaunch('disconnected too long', {
+          disconnectedSeconds: Math.round((now - this.disconnectedSince) / 1000),
+          thresholdSeconds: Math.round(this.watchdogDisconnectGraceMs / 1000),
+        });
+        return;
+      }
+      // Total stall: no proof of life at all (process/timers frozen, e.g. the
+      // Mac slept and the socket died without a clean close). On wake the
+      // accumulated staleness is huge, so this fires within one check.
+      const staleMs = now - this.lastHealthyAt;
       if (staleMs > this.watchdogStaleMs) {
-        this.logError('Watchdog: no healthy activity — exiting for a clean relaunch', {
+        this.exitForRelaunch('no healthy activity', {
           staleSeconds: Math.round(staleMs / 1000),
           thresholdSeconds: Math.round(this.watchdogStaleMs / 1000),
           connected: this.connected,
         });
-        this.saveMessageCache();
-        process.exit(1);
       }
     }, this.watchdogCheckMs);
+  }
+
+  exitForRelaunch(reason, details = {}) {
+    this.logError(`Watchdog: ${reason} — exiting for a clean relaunch`, details);
+    this.saveMessageCache();
+    process.exit(1);
   }
 
   // Live messages (upsert type "notify") in confirmed FC groups post to the
@@ -536,6 +563,7 @@ class WhatsAppIncomingBridge {
       if (connection === 'open') {
         this.connected = true;
         this.connectedAt = nowIso();
+        this.disconnectedSince = null;
         this.markHealthy();
         this.startWatchdog();
         this.logInfo('WhatsApp bridge connected');
@@ -557,6 +585,7 @@ class WhatsAppIncomingBridge {
 
       if (connection === 'close') {
         this.connected = false;
+        if (!this.disconnectedSince) this.disconnectedSince = Date.now();
         const statusCode = lastDisconnect?.error?.output?.statusCode;
         const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
         this.logWarn('WhatsApp bridge connection closed', { statusCode, shouldReconnect });
