@@ -273,9 +273,20 @@ The strongest future classification/matching evidence is sender phone, message t
 3. Confirm rows include real message text, sender phone, and useful match hints.
 4. Only then decide whether this replaces the WhatsApp Brain group habit.
 
+## Ban-Risk Posture
+
+Baileys is an **unofficial** WhatsApp client, so using it is against WhatsApp's ToS by definition. The goal is not "never get flagged" — it's to keep risk low *and* make a ban not matter. What actually drives enforcement, and where we sit:
+
+- **Sending is the dominant ban signal** (spam volume, messaging non-contacts, bulk identical messages, recipient reports). The bridge **never sends** — this is the biggest lever and we're at the floor. It's now *structurally enforced*: `outbound-guard.js` neutralises `sock.sendMessage`/`relayMessage` right after socket creation, so any code path (or dependency behaviour) that tries to message a parent throws instead. A test (`tests/admin/whatsapp-bridge-outbound-guard.test.mjs`) keeps it from regressing.
+- **Passive footprint is minimal:** `markOnlineOnConnect: false`; the only active WhatsApp reads are group-metadata fetches (weekly re-sync + on start), which are infrequent by design. No presence broadcasts, no read-receipt calls.
+- **Narrowing capture to confirmed FC groups is for privacy/blast-radius, not ban-avoidance.** That filtering happens client-side after delivery, so it's invisible to WhatsApp — worth doing to minimise parent data leaving WhatsApp, but it does not lower detection risk.
+- **Blast-radius is the real mitigation, and it's a decision not code:** (1) the bridge must link the **business** number (it's the one in the parent groups); (2) keep personal identity on a *separate* number so a ban/unlink doesn't take out personal comms — **open action for Finn** (currently the business number doubles as personal); (3) the fallback stays real — manual paste-to-classify works from any device and **MMS + Sheets are source of truth**, so losing the bridge loses automation, not data.
+
+Future sending (reminders, approved replies) must go through the **official WhatsApp API** as a separate approve-before-send path — never this bridge.
+
 ## Risks
 
 - Starred update may arrive after the original message has fallen out of cache.
-- WhatsApp/Baileys is unofficial and can break.
+- WhatsApp/Baileys is unofficial and can break — see Ban-Risk Posture above for how that risk is bounded.
 - Logs contain personal data; do not commit or upload them publicly.
 - Phone/name matching can be wrong. Keep review manual.

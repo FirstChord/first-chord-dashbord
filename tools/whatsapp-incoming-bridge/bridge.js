@@ -7,6 +7,7 @@ const os = require('node:os');
 const path = require('node:path');
 const P = require('pino');
 const qrcode = require('qrcode-terminal');
+const { guardOutbound } = require('./outbound-guard');
 
 const DEFAULT_DASHBOARD_URL = 'https://first-chord-dashbord-production.up.railway.app';
 
@@ -547,6 +548,7 @@ class WhatsAppIncomingBridge {
       keepAliveIntervalMs: 25000,
       markOnlineOnConnect: false,
     });
+    guardOutbound(this.sock); // receive-only: block any WhatsApp send
 
     this.sock.ev.on('creds.update', saveCreds);
     this.sock.ev.on('messaging-history.set', ({ chats = [] }) => this.recordChatTimestamps(chats));
@@ -743,6 +745,7 @@ class WhatsAppIncomingBridge {
           connectTimeoutMs: 60000,
           defaultQueryTimeoutMs: 60000,
         });
+        guardOutbound(sock); // receive-only: block any WhatsApp send
         this.sock = sock;
         sock.ev.on('creds.update', saveCreds);
         sock.ev.on('messaging-history.set', ({ chats = [] }) => recordChats(chats));

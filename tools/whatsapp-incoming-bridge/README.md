@@ -13,9 +13,9 @@ This is optional tooling. It is not part of the Railway dashboard build. Full se
 
 ## What It Must Not Do
 
+- **send any WhatsApp message** — the bridge is receive-only. This is enforced in code, not just by convention: `outbound-guard.js` blocks `sock.sendMessage`/`relayMessage` on every socket, so a send throws loudly instead of messaging a parent (`tests/admin/whatsapp-bridge-outbound-guard.test.mjs` locks it in). Never sending is also the biggest lever for staying off WhatsApp's ban radar — see `docs/admin/WHATSAPP_INCOMING_BRIDGE.md` → Ban-Risk Posture.
 - ingest chats outside the human-confirmed group map (no DMs, no personal groups — the dashboard re-checks the map on every capture)
 - auto-create pause/payment actions
-- auto-send replies
 - treat WhatsApp as source truth
 
 The dashboard inbox is review-only.
