@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
@@ -399,6 +400,17 @@ function PayrollTutorCard({ row, payDate }) {
   );
 }
 
+// Preserve the pay date and any window override across a refresh round-trip;
+// `refresh` itself is deliberately dropped.
+function buildPayrollQuery(params = {}) {
+  const query = new URLSearchParams();
+  for (const key of ['payDate', 'tutor', 'start', 'end']) {
+    const value = `${params[key] || ''}`.trim();
+    if (value) query.set(key, value);
+  }
+  return query.toString();
+}
+
 export default async function AdminPayrollPage({ searchParams }) {
   const params = (await searchParams) || {};
   const payDate = `${params.payDate || nextWednesday()}`.slice(0, 10);
@@ -418,6 +430,11 @@ export default async function AdminPayrollPage({ searchParams }) {
     getTutorWiseRows(),
   ]);
 
+  // Attendance is cached with stale-while-revalidate, so saves and window tweaks
+  // never block on MMS. `?refresh=1` is the deliberate "I just recorded a lesson
+  // in MMS" escape hatch — it bypasses the cache and waits for fresh rows.
+  const forceRefresh = `${params.refresh || ''}` === '1';
+
   let attendanceRows = [];
   let loadError = '';
   try {
@@ -426,9 +443,18 @@ export default async function AdminPayrollPage({ searchParams }) {
       endDate: fetchEnd,
       teacherIds,
       limit: 1000,
+      forceRefresh,
     });
   } catch (error) {
     loadError = error.message || 'Could not load MMS attendance for payroll.';
+  }
+
+  // Drop `refresh` from the URL once it has done its job, otherwise every later
+  // save re-renders this page with refresh=1 still set and refetches MMS every
+  // time — exactly the cost the cache exists to avoid. Must sit outside the try:
+  // redirect() signals by throwing, and the catch above would swallow it.
+  if (forceRefresh && !loadError) {
+    redirect(`/admin/finance/payroll?${buildPayrollQuery(params)}`);
   }
 
   const preview = buildPayrollPreview({
@@ -473,6 +499,14 @@ export default async function AdminPayrollPage({ searchParams }) {
             <input type="date" name="payDate" defaultValue={payDate} className="mt-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" />
           </label>
           <button className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Load payroll</button>
+          <Link
+            href={`/admin/finance/payroll?${[buildPayrollQuery(params), 'refresh=1'].filter(Boolean).join('&')}`}
+            prefetch={false}
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+            title="Attendance is cached for 10 minutes. Use this after recording a lesson in MMS."
+          >
+            Refresh from MMS
+          </Link>
           <p className="text-sm text-slate-500">
             Weekly tutors: {formatPayrollDate(buildPayrollPeriod({ payDate, cadence: 'weekly' }).periodStart)} - {formatPayrollDate(buildPayrollPeriod({ payDate, cadence: 'weekly' }).periodEnd)}.
             {' '}Each tutor&apos;s window comes from their `Tutor_Pay` cadence (weekly / biweekly / three-weekly, up to 21 days back: {formatPayrollDate(fetchStart)}).
