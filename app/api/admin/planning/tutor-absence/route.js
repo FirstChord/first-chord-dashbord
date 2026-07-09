@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import { getPlanningDashboard, savePlanningItem } from '@/lib/admin/planning';
-import { getTutorAbsenceWorkflow } from '@/lib/admin/tutor-absence';
+import { getTutorAbsenceWorkflow, saveTutorAbsenceWorkflow } from '@/lib/admin/tutor-absence';
 import {
   buildDateInputRange,
   buildTutorAbsencePlanningId,
@@ -11,6 +11,19 @@ import {
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/u;
 const MAX_DATES = 21;
 const MAX_PREVIEW_DAYS = 35;
+
+function tutorAbsenceDetailsFromCard(item = {}) {
+  const notes = `${item.notes || ''}`;
+  const tutorShortName = notes.match(/^Tutor:\s*(.+)$/mu)?.[1]?.trim() || `${item.linkedTutorId || ''}`.trim();
+  const absenceDate = notes.match(/^Tutor absence date:\s*(\d{4}-\d{2}-\d{2})$/mu)?.[1] || '';
+  return { tutorShortName, absenceDate };
+}
+
+function withTutorAbsenceDecision(notes = '', decision = '') {
+  const lines = `${notes || ''}`.split('\n').filter((line) => !/^Tutor absence decision:/iu.test(line));
+  lines.push(`Tutor absence decision: ${decision}`);
+  return lines.filter(Boolean).join('\n');
+}
 
 export async function POST(request) {
   const session = await getServerSession(authOptions);
@@ -25,6 +38,77 @@ export async function POST(request) {
   const dates = Array.isArray(body?.dates)
     ? [...new Set(body.dates.map((value) => `${value || ''}`.trim()).filter(Boolean))]
     : [];
+
+  if (mode === 'decide') {
+    const planningId = `${body?.planningId || ''}`.trim();
+    const decision = `${body?.decision || ''}`.trim();
+    if (!planningId || !['cancel_day', 'cover'].includes(decision)) {
+      return Response.json({ error: 'A tutor absence card and a cancel or cover decision are required' }, { status: 400 });
+    }
+
+    try {
+      const planning = await getPlanningDashboard();
+      const card = planning.items.find((item) => item.planningId === planningId);
+      if (!card || card.linkedWorkflowId !== 'tutor-absence' || !card.linkedTutorId) {
+        return Response.json({ error: 'Tutor absence planning card was not found' }, { status: 404 });
+      }
+
+      const details = tutorAbsenceDetailsFromCard(card);
+      if (!details.tutorShortName || !details.absenceDate) {
+        return Response.json({ error: 'Tutor absence date details are missing from this planning card' }, { status: 400 });
+      }
+
+      const workflow = await getTutorAbsenceWorkflow(details);
+      if (!workflow.selectedTutor) {
+        return Response.json({ error: 'Tutor was not found for this absence card' }, { status: 400 });
+      }
+
+      const noAffectedLessons = workflow.lessons.length === 0;
+      await saveTutorAbsenceWorkflow({
+        absenceId: workflow.absenceId,
+        tutorShortName: workflow.selectedTutor.shortName,
+        tutorName: workflow.selectedTutor.fullName,
+        absenceDate: workflow.selectedDate,
+        status: decision === 'cancel_day' ? (noAffectedLessons ? 'resolved' : 'pause_handoff') : 'in_progress',
+        decision,
+        coverTutorShortName: workflow.state.coverTutorShortName || '',
+        coverTutorName: workflow.state.coverTutorName || '',
+        affectedLessons: workflow.lessons,
+        messageState: workflow.state.messageState || {},
+        note: workflow.state.note || '',
+        updatedBy: session.user.email || '',
+      });
+
+      await savePlanningItem({
+        planningId,
+        item: {
+          ...card,
+          notes: withTutorAbsenceDecision(card.notes, decision),
+          status: decision === 'cancel_day' && noAffectedLessons ? 'done' : 'waiting',
+          outcome: decision === 'cancel_day'
+            ? noAffectedLessons
+              ? 'Cancelled — no affected lessons were found, so no further action is needed.'
+              : 'Cancelled — linked structured pause cards now own parent and payment follow-through.'
+            : 'Cover selected — finish the short cover checklist in the tutor absence workflow.',
+          nextAction: decision === 'cancel_day'
+            ? noAffectedLessons
+              ? 'Completed automatically: no MMS lessons were affected.'
+              : 'Waiting for linked pause cards to complete; this absence closes automatically.'
+            : 'Open the tutor absence workflow to confirm the cover tutor, briefing, calendar and parent message.',
+        },
+        actorEmail: session.user.email || '',
+        progressNote: decision === 'cancel_day'
+          ? noAffectedLessons
+            ? 'Cancelled in Planning; no MMS lessons were affected.'
+            : 'Cancelled in Planning and handed to grouped structured pause cards.'
+          : 'Cover selected in Planning; direct cover checklist remains.',
+      });
+
+      return Response.json({ success: true, planning: await getPlanningDashboard() });
+    } catch (error) {
+      return Response.json({ error: error.message || 'Tutor absence decision failed' }, { status: 500 });
+    }
+  }
 
   if (!tutorShortName) {
     return Response.json({ error: 'tutorShortName is required' }, { status: 400 });

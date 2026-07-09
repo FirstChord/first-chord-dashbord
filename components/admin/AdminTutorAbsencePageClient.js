@@ -437,19 +437,16 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
           ) : null}
           {decision === 'cancel_day' ? (
             <div className="mt-5 rounded-2xl border border-amber-100 bg-amber-50/70 p-4">
-              <p className="text-sm font-semibold text-amber-950">Cancel-day payment handling</p>
+              <p className="text-sm font-semibold text-amber-950">Hand this cancellation to Planning</p>
               <p className="mt-1 text-xs leading-5 text-amber-800">
-                Each affected student needs the pause tool run and payment expectation aligned, unless payment handling is not needed.
-              </p>
-              <p className="mt-3 text-sm font-semibold text-amber-950">
-                {summary.paymentHandledCount} / {summary.totalLessons} payment action{summary.totalLessons === 1 ? '' : 's'} handled
+                Save the decision, then use the grouped structured pause cards in Planning for the parent message and payment action. This dated absence will close automatically when those are complete.
               </p>
             </div>
           ) : null}
         </section>
       ) : null}
 
-      {decision === 'cancel_day' && cancellationMessageGroups.length ? (
+      {false && decision === 'cancel_day' && cancellationMessageGroups.length ? (
         <section className={cardClasses('border-indigo-100 bg-indigo-50/50')}>
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -506,7 +503,7 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
         </section>
       ) : null}
 
-      {workflow.selectedTutor ? (
+      {workflow.selectedTutor && decision !== 'cancel_day' ? (
         <section className={cardClasses()}>
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -671,13 +668,17 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <ActionButton
               type="button"
-              onClick={() => saveAbsence(summary.remainingMessages ? 'parents_to_message' : 'in_progress')}
+              onClick={() => saveAbsence(
+                decision === 'cancel_day'
+                  ? 'pause_handoff'
+                  : summary.remainingMessages ? 'parents_to_message' : 'in_progress',
+              )}
               pending={saveState.pending && saveState.action !== 'resolved' && saveState.action !== 'delete'}
               disabled={saveState.pending}
               variant="blue"
               pendingLabel="Saving…"
             >
-              Save progress
+              {decision === 'cancel_day' ? 'Save & hand to pause cards' : 'Save progress'}
             </ActionButton>
             <ActionButton
               type="button"

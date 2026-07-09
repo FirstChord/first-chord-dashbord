@@ -37,17 +37,17 @@ Tutor away period
   -> writes one tutor-absence Planning card per teaching date
 
 Tutor-absence card
-  -> open workflow
-  -> choose cover or cancel
+  -> choose cover or cancel directly in Planning
 
 If cover
-  -> no pause Planning card should be created
-  -> parent message is about cover
+  -> no pause Planning card is created
+  -> the dated absence stays in the short cover checklist for tutor/calendar/parent confirmation
 
 If cancel
   -> writes/updates one Tutor_Absence_State row for that tutor/date
   -> bridge scans that tutor's cancelled rows
   -> creates structured pause Planning for affected students
+  -> dated absence leaves the direct-attention list
 
 One cancelled lesson for a student
   -> single-date pause card
@@ -61,6 +61,8 @@ Grouped pause card completed
   -> human confirms parent message was sent/copied
   -> dashboard aligns payment_expectation if needed
   -> Event_Log + Planning_Progress_Log record the completion
+  -> every linked dated tutor absence is marked resolved automatically
+  -> its original tutor-absence Planning capture card is marked done automatically
 ```
 
 ## Superseding Rule
@@ -105,6 +107,8 @@ This prevents old single cards and old shorter-period cards from double-counting
 - Parent messages can group by period, but the stored workflow state remains per date.
 - Cover decisions must not create pause cards.
 - Cancellation decisions can create pause cards.
+- Cancelled dates are a hand-off to grouped pause cards, not a second payment/message checklist in the Tutor Absence workflow.
+- A cancelled date resolves only when every current linked pause card is done; a missing card is never treated as completion.
 - A student already marked `stripe_paused_expected` or explicitly marked payment-not-needed is skipped.
 - Parked cards are retained for audit; they are not active work and should not drive finance.
 - `Returning from date` means the first lesson/date back, not the last date to pause.
@@ -156,10 +160,10 @@ That is the intended behaviour.
 For a multi-week tutor absence:
 
 1. Capture the tutor absence period from Planning.
-2. Open each dated tutor-absence workflow.
-3. Choose cover or cancel for that date.
-4. Let the dashboard build/park pause cards as dates are saved.
-5. Complete the final grouped pause card for each affected student, not the early single-date card.
+2. On each actual teaching-date card, choose **Cover lessons** or **Cancel lessons → pause cards**.
+3. For cover, finish the short cover checklist in Tutor Absence.
+4. For cancellation, let the dashboard build/park pause cards automatically.
+5. Complete the final grouped pause card for each affected student, not the early single-date card. The dated absence cards then close themselves.
 
 If a cancellation later changes to cover, manually park/remove the related pause card until a reconciliation tool exists.
 
@@ -176,4 +180,3 @@ The reconciliation maths is unaffected (it recomputes from live state, order-ind
 - Do not hard-delete superseded planning cards.
 - Do not make grouped parent messages the only source of truth.
 - Do not auto-run Stripe from this bridge.
-

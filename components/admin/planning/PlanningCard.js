@@ -32,7 +32,7 @@ import PauseDatesEditor from './PauseDatesEditor';
 // pause items — the full pause toolkit (open the pause tool, copy the parent message,
 // the "Edit dates" repair builder, and the two-checkbox "Mark pause completed" gate).
 // Pure props in (item + studentOptions + handlers); also used inside DueTodayCard.
-export default function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides = {}, onStatus, onArchive, onEdit, onProgress, onPauseCompleted, onRepairPauseDetails, onOpenPauseTool, onOpenWorkflowPanel, onCreateLinkedAction, pendingId, compact = false, nearbyPause = null }) {
+export default function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides = {}, onStatus, onArchive, onEdit, onProgress, onPauseCompleted, onRepairPauseDetails, onOpenPauseTool, onOpenWorkflowPanel, onCreateLinkedAction, onTutorAbsenceDecision, pendingId, compact = false, nearbyPause = null }) {
   const [progressNote, setProgressNote] = useState('');
   const [nextAction, setNextAction] = useState(item.nextAction || '');
   const [nextSessionDate, setNextSessionDate] = useState('');
@@ -49,6 +49,8 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
   const isSystemPlanningItem = item.planningId === SCHOOL_FORWARD_PLANNING_ID || item.planningId === MONDAY_SCHEDULE_PLANNING_ID;
   const pausePaymentConfirmed = hasPausePaymentConfirmation(item);
   const isTutorAbsenceCard = item.linkedWorkflowId === 'tutor-absence' && Boolean(item.linkedTutorId);
+  const isTutorAbsenceCapture = isTutorAbsenceCard && !isPauseReminder;
+  const tutorAbsenceDecision = `${item.notes || ''}`.match(/^Tutor absence decision:\s*(cancel_day|cover)$/mu)?.[1] || '';
   const linkedWorkflowHref = isTutorAbsenceCard
     ? buildTutorAbsenceWorkflowHref(item)
     : workflowHref(item.linkedWorkflowId);
@@ -201,6 +203,33 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
         )
       ) : null}
 
+      {isTutorAbsenceCapture && !tutorAbsenceDecision ? (
+        <div className="mt-4 rounded-xl border border-indigo-100 bg-indigo-50/60 p-3">
+          <p className="text-sm font-semibold text-slate-900">How is this teaching day handled?</p>
+          <p className="mt-1 text-xs leading-5 text-slate-700">
+            Cancel creates or updates the grouped student pause cards. Cover keeps this date in the short cover checklist.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={() => onTutorAbsenceDecision?.(item, 'cancel_day')}
+              className="rounded-lg border border-amber-200 bg-white px-3 py-1.5 text-xs font-semibold text-amber-950 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Cancel lessons → pause cards
+            </button>
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={() => onTutorAbsenceDecision?.(item, 'cover')}
+              className="rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-950 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Cover lessons
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {item.latestProgress && !isPauseReminder && (
         <div className="mt-4 border-l-2 border-slate-200 pl-3 text-sm text-slate-600">
           <p className="font-semibold text-slate-800">{isSchoolForwardReview ? 'Latest reflection' : 'Latest progress'}</p>
@@ -232,7 +261,7 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
             <button
               key={status}
               type="button"
-              disabled={isPending || item.status === status || (status === 'done' && isPauseReminder && !pausePaymentConfirmed)}
+              disabled={isPending || item.status === status || (status === 'done' && (isTutorAbsenceCapture || (isPauseReminder && !pausePaymentConfirmed)))}
               onClick={() => onStatus(item, status)}
               className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
