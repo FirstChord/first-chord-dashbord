@@ -4,12 +4,21 @@ import assert from 'node:assert/strict';
 import {
   buildOnboardedWaitingNote,
   buildWelcomeGroupMessage,
+  isActiveWaitingStatus,
   normaliseWaitingStatus,
 } from '../../lib/admin/waiting-workflow.js';
 
 test('normaliseWaitingStatus falls back to new for unknown values', () => {
   assert.equal(normaliseWaitingStatus('contacted'), 'contacted');
   assert.equal(normaliseWaitingStatus('bad-value'), 'new');
+});
+
+test('isActiveWaitingStatus excludes parked and completed waiting states', () => {
+  assert.equal(isActiveWaitingStatus('new'), true);
+  assert.equal(isActiveWaitingStatus('onboarding_ready'), true);
+  assert.equal(isActiveWaitingStatus('closed'), false);
+  assert.equal(isActiveWaitingStatus('no_response'), false);
+  assert.equal(isActiveWaitingStatus('onboarded'), false);
 });
 
 test('buildWelcomeGroupMessage injects the parent first name', () => {

@@ -16,9 +16,23 @@ function ValueStat({ label, value, helper = '', tone = 'border-blue-100 bg-white
 function CapacityValuePanel({ value }) {
   const reasonLabel = { not_taught: 'need a tutor', no_free_slots: 'taught but full — need hours' };
   return (
-    <section className="rounded-[1.6rem] border border-blue-100 bg-white/90 p-5 shadow-[0_12px_36px_rgba(15,23,42,0.06)]">
-      <h2 className="text-base font-semibold text-slate-900">Waiting list value</h2>
-      <p className="mt-1 max-w-3xl text-sm text-slate-600">
+    <details className="group rounded-[1.6rem] border border-blue-100 bg-white/90 p-5 shadow-[0_12px_36px_rgba(15,23,42,0.06)]">
+      <summary className="flex cursor-pointer list-none flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-base font-semibold text-slate-900">Waiting list value</h2>
+          <p className="mt-1 max-w-3xl text-sm text-slate-600">
+            Collapsed by default. {value.freshTotal} recent / {value.waitingTotal} active waiting ·
+            {' '}bookable now {formatMoney(value.bookableNow.contributionMonthly)}/mo ·
+            {' '}blocked {formatMoney(value.blocked.contributionMonthly)}/mo.
+          </p>
+        </div>
+        <span className="inline-flex items-center justify-center rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-800">
+          <span className="group-open:hidden">Show finance detail</span>
+          <span className="hidden group-open:inline">Hide finance detail</span>
+        </span>
+      </summary>
+
+      <p className="mt-4 max-w-3xl text-sm text-slate-600">
         What the waiting list is worth and what&apos;s blocking it. £ is the estimated monthly margin contribution from
         recent entries only (≤{value.freshDays} days), valued as a standard 30-min lesson — a conservative, honest figure.
       </p>
@@ -67,7 +81,7 @@ function CapacityValuePanel({ value }) {
         Estimate (standard 30-min lesson, fresh entries only), not a forecast. Use the list below to place bookable
         students and to steer tutor recruiting.
       </p>
-    </section>
+    </details>
   );
 }
 

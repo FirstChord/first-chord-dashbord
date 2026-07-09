@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Check, Copy, Loader2 } from 'lucide-react';
+import { Archive, Check, Copy, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { AgeChip } from '@/components/admin/ui/AgeChip';
 import { logCommunicationCopy } from '@/lib/admin/log-communication-copy.js';
@@ -17,6 +17,8 @@ const WAITING_STATUS_OPTIONS = [
   { value: 'no_response', label: 'No response' },
   { value: 'closed', label: 'Closed' },
 ];
+
+const INACTIVE_WAITING_STATUSES = new Set(['closed', 'no_response', 'onboarded']);
 
 function getAgeBadge(ageInDays) {
   if (ageInDays == null) {
@@ -69,6 +71,14 @@ function buildMmsNoteFacts(student) {
     parsed.genres ? { label: 'Genres', value: parsed.genres } : null,
     parsed.songs ? { label: 'Songs', value: parsed.songs } : null,
   ].filter(Boolean);
+}
+
+function buildParkedWaitingNote(existingNote = '', now = new Date()) {
+  const line = `Parked from active waiting list on ${now.toISOString().slice(0, 10)}`;
+  const trimmed = `${existingNote || ''}`.trim();
+  if (!trimmed) return line;
+  if (trimmed.includes(line)) return trimmed;
+  return `${trimmed}\n${line}`;
 }
 
 function mergeRefreshedStudents(currentStudents, refreshedStudents) {
@@ -178,11 +188,23 @@ export default function AdminWaitingPageClient({ initialStudents, initialCapacit
             waitingUpdatedAt: payload.state.updatedAt,
           }
           : entry
-      )));
+      )).filter((entry) => !INACTIVE_WAITING_STATUSES.has(entry.waitingStatus)));
       setActionState({ pendingId: '', error: '' });
     } catch (error) {
       setActionState({ pendingId: '', error: error.message || 'Waiting update failed' });
     }
+  }
+
+  async function handlePark(student) {
+    const confirmed = window.confirm(
+      `Park ${student.fullName || student.mmsId} from the active waiting list? This saves a closed waiting state; it does not delete anything from MMS.`,
+    );
+    if (!confirmed) return;
+
+    await handleSave(student, {
+      status: 'closed',
+      note: buildParkedWaitingNote(student.waitingNote),
+    });
   }
 
   async function handleRefreshCapacity() {
@@ -320,6 +342,15 @@ export default function AdminWaitingPageClient({ initialStudents, initialCapacit
                   >
                     Onboard
                   </Link>
+                  <button
+                    type="button"
+                    onClick={() => handlePark(student)}
+                    disabled={pending}
+                    className="inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-900 transition hover:border-amber-300 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Archive className="h-4 w-4" />}
+                    Park
+                  </button>
                 </div>
               </div>
 
