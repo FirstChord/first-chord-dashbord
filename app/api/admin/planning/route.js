@@ -6,6 +6,7 @@ import {
   savePlanningItem,
   updatePlanningStatus,
 } from '@/lib/admin/planning';
+import { syncTutorAbsenceHandoffsFromPlanning } from '@/lib/admin/tutor-absence';
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -50,6 +51,9 @@ export async function POST(request) {
         progressNote: body?.progressNote || '',
         actorEmail,
       });
+      if (`${body?.status || ''}`.trim() === 'done') {
+        await syncTutorAbsenceHandoffsFromPlanning({ actorEmail });
+      }
     } else {
       await savePlanningItem({
         planningId: `${body?.planningId || ''}`.trim(),

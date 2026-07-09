@@ -20,9 +20,9 @@ function LoggedAbsences({ absences = [], selectedTutor = '', selectedDate = '' }
 
   return (
     <section className="rounded-[1.2rem] border border-blue-100 bg-white/90 p-5 shadow-[0_12px_36px_rgba(15,23,42,0.06)]">
-      <h3 className="text-lg font-semibold text-slate-900">Logged absences</h3>
+      <h3 className="text-lg font-semibold text-slate-900">Absences needing direct attention</h3>
       <p className="mt-1 text-sm text-slate-600">
-        Every saved tutor absence. Click one to open its workflow.
+        Cover decisions stay here. Cancelled dates are handled through their grouped pause cards in Planning and close automatically when those cards are complete.
       </p>
       <ul className="mt-4 space-y-2">
         {absences.map((absence) => {

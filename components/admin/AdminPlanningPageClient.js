@@ -380,6 +380,36 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
     }
   }
 
+  async function handleTutorAbsenceDecision(item, decision) {
+    const cancelling = decision === 'cancel_day';
+    const message = cancelling
+      ? 'Cancel these lessons? This creates or updates the grouped pause cards that will own the parent and payment follow-through.'
+      : 'Mark these lessons as covered? You will then finish the short cover checklist.';
+    if (!window.confirm(message)) return;
+
+    setSaveState({ pending: true, error: '', savedAt: '' });
+    setPendingId(item.planningId);
+    try {
+      const response = await fetch('/api/admin/planning/tutor-absence', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'decide', planningId: item.planningId, decision }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Tutor absence decision failed');
+      setPlanning(data.planning);
+      setSaveState({
+        pending: false,
+        error: '',
+        savedAt: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+      });
+      setPendingId('');
+    } catch (error) {
+      setSaveState({ pending: false, error: error.message || 'Tutor absence decision failed', savedAt: '' });
+      setPendingId('');
+    }
+  }
+
   function startEdit(item) {
     setEditingItem(item);
     setEditorMode(isPausePlanningItem(item) ? 'structured' : 'general');
@@ -926,6 +956,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
                       onOpenPauseTool={(url, name) => setPauseToolPanel({ url, name })}
                       onOpenWorkflowPanel={setWorkflowPanel}
                       onCreateLinkedAction={handleCreateLinkedAction}
+                      onTutorAbsenceDecision={handleTutorAbsenceDecision}
                       onDefer={handleDefer}
                       pendingId={pendingId}
                       nearbyPause={nearbyPauseFlags.get(item.planningId)}
@@ -965,6 +996,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
                         onOpenPauseTool={(url, name) => setPauseToolPanel({ url, name })}
                         onOpenWorkflowPanel={setWorkflowPanel}
                         onCreateLinkedAction={handleCreateLinkedAction}
+                        onTutorAbsenceDecision={handleTutorAbsenceDecision}
                         pendingId={pendingId}
                         nearbyPause={nearbyPauseFlags.get(item.planningId)}
                       />

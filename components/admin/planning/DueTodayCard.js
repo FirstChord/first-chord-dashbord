@@ -22,11 +22,13 @@ export default function DueTodayCard({
   onOpenPauseTool,
   onOpenWorkflowPanel,
   onCreateLinkedAction,
+  onTutorAbsenceDecision,
   onDefer,
   pendingId,
   nearbyPause = null,
 }) {
   const isPause = isPausePlanningItem(item);
+  const isTutorAbsenceCapture = !isPause && item.linkedWorkflowId === 'tutor-absence' && Boolean(item.linkedTutorId);
   const [expanded, setExpanded] = useState(false);
   const story = getPlanningStory(item, studentOptions);
   const whatToDo = getPlanningWhatToDo(item);
@@ -70,7 +72,7 @@ export default function DueTodayCard({
       {!isPause && whatToDo ? <p className="mt-1 text-sm leading-6 text-slate-600">{whatToDo}</p> : null}
 
       <div className="mt-4 flex flex-wrap gap-2">
-        {!isPause && (
+        {!isPause && !isTutorAbsenceCapture && (
           <button
             type="button"
             onClick={() => onStatus(item, 'done')}
@@ -95,7 +97,7 @@ export default function DueTodayCard({
             onClick={() => setExpanded((value) => !value)}
             className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
           >
-            {expanded ? 'Hide details' : 'Details'}
+            {expanded ? 'Hide details' : isTutorAbsenceCapture ? 'Choose cancel or cover' : 'Details'}
           </button>
         )}
       </div>
@@ -117,6 +119,7 @@ export default function DueTodayCard({
             onOpenPauseTool={onOpenPauseTool}
             onOpenWorkflowPanel={onOpenWorkflowPanel}
             onCreateLinkedAction={onCreateLinkedAction}
+            onTutorAbsenceDecision={onTutorAbsenceDecision}
             pendingId={pendingId}
             nearbyPause={nearbyPause}
             compact
