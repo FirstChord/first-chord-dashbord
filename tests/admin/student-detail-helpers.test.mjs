@@ -36,11 +36,13 @@ test('paymentExpectationLabel resolves known values and falls back', () => {
   assert.equal(paymentExpectationLabel('weird_value'), 'weird_value');
 });
 
-test('noteStatusLabel reflects send/save state', () => {
+test('noteStatusLabel distinguishes delivery evidence from a logged note', () => {
   assert.equal(noteStatusLabel({ emailSendStatus: 'sent' }), 'Sent');
   assert.equal(noteStatusLabel({ emailSendStatus: 'failed' }), 'Email follow-up needed');
-  assert.equal(noteStatusLabel({ mmsAttendanceSaved: true }), 'Saved to MMS');
-  assert.equal(noteStatusLabel({}), 'Draft/snapshot');
+  assert.equal(noteStatusLabel({ emailSendStatus: 'not_sent_absent' }), 'Attendance-only (no email)');
+  assert.equal(noteStatusLabel({ operationStatus: 'in_progress' }), 'Delivery in progress');
+  assert.equal(noteStatusLabel({ mmsAttendanceSaved: true }), 'Saved to MMS — delivery untracked');
+  assert.equal(noteStatusLabel({}), 'Logged — delivery not tracked');
 });
 
 test('noteStatusClasses colours by state', () => {

@@ -16,6 +16,7 @@ import {
   classifyIncomingMessage,
   decideAutoCaptureStatus,
   decideSyncedGroupStatus,
+  deriveIncomingMessageResolutionType,
   detectInstrumentInName,
   groupIncomingMessages,
   isAutoArchivedMessage,
@@ -28,6 +29,7 @@ import {
   matchTutorSenderName,
   matchIncomingMessageToStudent,
   mergeIncomingCapture,
+  labelIncomingResolutionType,
   normaliseIncomingMessagePayload,
   normalisePhone,
 } from '../../lib/admin/incoming-message-helpers.mjs';
@@ -78,6 +80,14 @@ test('normaliseIncomingMessagePayload accepts bridge and manual field names', ()
   assert.equal(row.senderPhone, '+44 7788 626616');
   assert.equal(row.capturedAt, '2026-06-30T10:00:00.000Z');
   assert.match(row.incomingId, /^incoming_/u);
+});
+
+test('incoming resolution types make handled, ignored, and planned messages distinct', () => {
+  assert.equal(deriveIncomingMessageResolutionType({ status: 'converted' }), 'handled_no_plan');
+  assert.equal(deriveIncomingMessageResolutionType({ status: 'converted', createdPlanningId: 'planning_123' }), 'planning_task');
+  assert.equal(deriveIncomingMessageResolutionType({ status: 'ignored' }), 'ignored_no_action');
+  assert.equal(deriveIncomingMessageResolutionType({ resolutionType: 'planning_task', status: 'ignored' }), 'planning_task');
+  assert.equal(labelIncomingResolutionType('handled_no_plan'), 'Handled — no plan needed');
 });
 
 test('classifyIncomingMessage detects absence/pause before general', () => {

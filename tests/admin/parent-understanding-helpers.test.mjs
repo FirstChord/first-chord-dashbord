@@ -28,6 +28,29 @@ test('calculateUnderstandingScore scores four core understanding areas', () => {
     practiceNotes: 0,
     showcases: 2,
   });
+  assert.equal(score.assessedAreas, 4);
+  assert.equal(score.isComplete, true);
+});
+
+test('unanswered understanding areas remain unknown rather than becoming risk signals', () => {
+  const score = calculateUnderstandingScore({ understanding: {} });
+  const signals = deriveParentUnderstandingRiskSignals({ understanding: {} });
+
+  assert.equal(score.label, 'not_assessed');
+  assert.equal(score.labelText, 'Not assessed');
+  assert.equal(score.assessedAreas, 0);
+  assert.equal(score.isComplete, false);
+  assert.deepEqual(signals, []);
+});
+
+test('partially checked calls are labelled as incomplete, not a low understanding score', () => {
+  const score = calculateUnderstandingScore({
+    understanding: { cancellations: { understands: 'yes' } },
+  });
+
+  assert.equal(score.total, 2);
+  assert.equal(score.label, 'partially_assessed');
+  assert.equal(score.labelText, '1 of 4 areas checked');
 });
 
 test('deriveParentUnderstandingRiskSignals flags practical follow-up gaps', () => {

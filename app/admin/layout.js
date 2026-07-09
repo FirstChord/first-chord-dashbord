@@ -9,6 +9,7 @@ const navItems = [
   { href: '/admin/flags', label: 'Issues' },
   { href: '/admin/workflows', label: 'Workflows' },
   { href: '/admin/planning', label: 'Planning' },
+  { href: '/admin/insights', label: 'Signals' },
 ];
 
 function NavLink({ href, label }) {

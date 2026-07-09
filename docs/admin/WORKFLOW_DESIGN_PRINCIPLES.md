@@ -103,6 +103,15 @@ Front-page cards should earn attention by answering one of these:
 
 Background context, health checks, and useful-but-passive numbers should stay lower on the page or inside their own workflow pages unless something is wrong. Big numbers should be used sparingly; prefer human labels and smaller count pills when the number is supporting detail.
 
+## Signals Are for System Learning, Not Another Inbox
+
+`/admin/insights` is intentionally a read-only, rolling view of existing practice-note, parent-understanding, incoming-message, and communication records. It is useful only when it closes one of two different loops:
+
+- **Individual loop:** a particular family needs help. Close it in the student record, inbox, Parent Understanding, or a linked Planning task.
+- **System loop:** a pattern recurs across families. Turn it into one small Planning experiment: name the observation, choose an owner, make a bounded change, and set a review date.
+
+The Signals page must not become a list that someone feels obliged to clear. It does not add alerts, score tutors, infer delivery from a copy action, or claim causality. Use it for a short weekly/fortnightly review, choose at most one or two worthwhile improvements, then compare the same signal after the intervention and keep, revise, or stop it.
+
 ## Source-Of-Truth Boundaries
 
 Workflows should be explicit about what they read and write:

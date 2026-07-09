@@ -48,11 +48,11 @@ export default function AdminCommunicationsPageClient({ log = [], error = '' }) 
           className="mt-2 text-3xl font-bold uppercase tracking-wide text-slate-800"
           style={{ fontFamily: '"Cooper Hewitt", "Nimbus Sans L", "Arial", sans-serif' }}
         >
-          Messages Sent
+          Messages copied to send
         </h2>
         <p className="mt-2 max-w-3xl text-sm text-slate-600">
           A read-only record of parent messages copied to send from the dashboard (e.g. pause confirmations, parent check-ins).
-          This is a logbook for looking back — the dashboard does not send anything itself.
+          It confirms the copy action, not delivery, reading, or a parent response.
         </p>
       </section>
 

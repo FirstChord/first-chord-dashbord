@@ -93,6 +93,7 @@ export async function POST(request) {
         status: body?.status || '',
         reviewNote: body?.reviewNote || '',
         createdPlanningId: body?.createdPlanningId || '',
+        resolutionType: body?.resolutionType || '',
         actorEmail: session.user.email || '',
       });
     } else if (mode === 'correct') {

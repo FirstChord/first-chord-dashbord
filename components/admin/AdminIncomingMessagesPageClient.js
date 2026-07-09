@@ -10,6 +10,7 @@ import {
   isIncomingPlaceholderText,
   isOneTapConvertEligible,
   labelIncomingCategory,
+  labelIncomingResolutionType,
   labelIncomingStatus,
 } from '@/lib/admin/incoming-message-helpers.mjs';
 import { formatFriendlyDate } from '@/lib/admin/incoming-date-helpers.mjs';
@@ -492,6 +493,11 @@ function MessageCard({ entry, studentOptions, onReview, onDelete, onCorrect, onC
         <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${statusTone(entry.status)}`}>
           {labelIncomingStatus(entry.status)}
         </span>
+        {entry.resolutionType ? (
+          <span className="rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800">
+            {labelIncomingResolutionType(entry.resolutionType)}
+          </span>
+        ) : null}
         <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${confidenceTone(entry.matchConfidence)}`}>
           Match: {entry.matchConfidence || 'none'}
         </span>

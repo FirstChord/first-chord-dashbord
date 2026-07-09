@@ -27,6 +27,9 @@ test('mergeIssuesWithQueueState creates queue rows for newly detected issues', (
   assert.equal(result.mergedCurrentIssues[0].sourcePresent, true);
   assert.equal(result.queueUpserts.length, 1);
   assert.equal(result.queueUpserts[0].issueId, 'payment_static:STRIPE_SUBSCRIPTION_MISSING:sdt_123');
+  assert.equal(result.eventRows.length, 1);
+  assert.equal(result.eventRows[0].eventType, 'issue_detected');
+  assert.equal(result.eventRows[0].eventDedupKey, 'issue:payment_static:STRIPE_SUBSCRIPTION_MISSING:sdt_123:detected');
 });
 
 test('mergeIssuesWithQueueState marks previously missing issues as reappeared', () => {
@@ -75,6 +78,7 @@ test('mergeIssuesWithQueueState marks previously missing issues as reappeared', 
   assert.equal(result.mergedCurrentIssues[0].reappeared, true);
   assert.equal(result.queueUpserts[0].sourcePresent, 'true');
   assert.equal(result.eventRows[0].eventType, 'issue_reopened');
+  assert.equal(result.eventRows[0].eventDedupKey, 'issue:review_flags:TUTOR_CONFLICT:sdt_123:registry_vs_sheets:reopened:2026-05-02T10:00:00.000Z');
 });
 
 test('mergeIssuesWithQueueState flips missing managed issues to source_present false', () => {
@@ -164,6 +168,33 @@ test('mergeIssuesWithQueueState reopens resolved issues that are still currently
   assert.equal(result.queueUpserts[0].resolvedAt, '');
   assert.equal(result.queueUpserts[0].sourcePresent, 'true');
   assert.equal(result.eventRows[0].eventType, 'issue_reopened');
+  assert.equal(result.eventRows[0].eventDedupKey, 'issue:stripe_live:PAYMENT_FAILED:sdt_BDHJJF:sub_123:reopened:2026-06-03T19:07:00.000Z');
+});
+
+test('mergeIssuesWithQueueState does not write another event while a normal open issue remains detected', () => {
+  const now = '2026-06-03T19:20:00.000Z';
+  const currentIssues = [prepareIssue({
+    source: 'payment_static',
+    type: 'STRIPE SUBSCRIPTION MISSING',
+    mmsId: 'sdt_123',
+    studentName: 'Owen Example',
+    severity: 'Warning',
+    systemsAffected: ['Sheets', 'Stripe'],
+    summary: 'Subscription missing',
+    recommendedAction: 'Fix it',
+  })];
+  const queueRows = [{
+    issueId: 'payment_static:STRIPE_SUBSCRIPTION_MISSING:sdt_123',
+    source: 'payment_static', issueType: 'STRIPE SUBSCRIPTION MISSING', mmsId: 'sdt_123', contextKey: '',
+    studentName: 'Owen Example', severity: 'Warning', status: 'open', owner: '',
+    createdAt: '2026-06-01T10:00:00.000Z', updatedAt: '2026-06-02T10:00:00.000Z', resolvedAt: '', ignoredAt: '', acknowledgedAt: '',
+    lastSeenAt: '2026-06-01T10:00:00.000Z', sourcePresent: 'true', summary: 'Subscription missing', detail: '',
+    recommendedAction: 'Fix it', systemsAffected: 'Sheets, Stripe', resolutionNote: '',
+  }];
+
+  const result = mergeIssuesWithQueueState({ currentIssues, queueRows, now, managedSources: ['payment_static'] });
+
+  assert.equal(result.eventRows.length, 0);
 });
 
 test('mergeIssuesWithQueueState treats uppercase TRUE as source-present when marking missing issues cleared', () => {
