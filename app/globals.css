@@ -38,3 +38,11 @@ body {
 .text-white {
   color: white !important;
 }
+
+/* Hidden when the app runs installed from a home-screen icon (PWA),
+   so single-purpose apps (Planning, Messages) open without the admin chrome */
+@media (display-mode: standalone) {
+  .standalone-hide {
+    display: none !important;
+  }
+}

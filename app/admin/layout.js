@@ -36,7 +36,7 @@ export default async function AdminLayout({ children }) {
           className="absolute top-24 right-6 opacity-80 -rotate-12"
         />
       </div>
-      <header className="sticky top-0 z-20 border-b border-blue-100/40 bg-blue-100/90 backdrop-blur-sm shadow-sm">
+      <header className="standalone-hide sticky top-0 z-20 border-b border-blue-100/40 bg-blue-100/90 backdrop-blur-sm shadow-sm">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
           <div>
             <p className="text-xs uppercase tracking-[0.25em] text-slate-500">FirstChord Admin</p>

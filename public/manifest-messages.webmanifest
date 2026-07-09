@@ -1,0 +1,17 @@
+{
+  "name": "FC Messages",
+  "short_name": "Messages",
+  "description": "First Chord incoming message inbox",
+  "start_url": "/admin/incoming-messages",
+  "scope": "/admin",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#f8fafc",
+  "icons": [
+    {
+      "src": "/fc-logo-square.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
