@@ -1,6 +1,11 @@
 import Image from 'next/image';
 import StudentNotes from './StudentNotes';
 import StudentLinks from './StudentLinks';
+import HeaderGreenery from '@/components/tutor-dashboard/HeaderGreenery';
+
+function possessive(name = '') {
+  return name.endsWith('s') ? `${name}’` : `${name}’s`;
+}
 
 export default function StudentDashboard({ student }) {
   if (!student) {
@@ -55,14 +60,13 @@ export default function StudentDashboard({ student }) {
       </div>
       
       {/* Header */}
-      <header className="bg-blue-100 shadow-sm border-b border-blue-100/30">
-        <div className="px-4 sm:px-6 py-4 sm:py-6">
-          <div>
-            <h1 className="text-lg sm:text-2xl font-bold text-gray-800 uppercase tracking-wide" style={{ fontFamily: '"Cooper Hewitt", "Nimbus Sans L", "Arial", sans-serif' }}>
-              {student.name}'S MUSIC DASHBOARD
-            </h1>
-            <p className="text-sm sm:text-base text-gray-600">Keep practicing and have fun! 🎵</p>
-          </div>
+      <header className="relative bg-blue-100 shadow-sm border-b border-blue-100/30">
+        <HeaderGreenery />
+        <div className="relative px-4 sm:px-6 py-4 sm:py-5 text-center">
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-gray-900">
+            {possessive(student.name.split(' ')[0])} Dashboard
+          </h1>
+          <p className="mt-1 text-sm sm:text-base text-gray-600">Welcome back! 🎵</p>
         </div>
       </header>
 
@@ -70,9 +74,10 @@ export default function StudentDashboard({ student }) {
         <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
           {/* Notes Panel - Left Side (wider) */}
           <div className="lg:col-span-2">
-            <StudentNotes 
-              notes={student.notes} 
-              notesSuccess={student.notesSuccess} 
+            <StudentNotes
+              notes={student.notes}
+              notesSuccess={student.notesSuccess}
+              studentName={student.name}
             />
           </div>
           
@@ -82,14 +87,6 @@ export default function StudentDashboard({ student }) {
           </div>
         </div>
 
-        {/* Encouraging Message */}
-        <div className="mt-6 sm:mt-8 text-center">
-          <div className="bg-white/80 backdrop-blur rounded-xl p-3 sm:p-4 shadow-sm">
-            <p className="text-sm sm:text-base text-gray-700 font-medium">
-              🌟 Remember: Every great musician started with practice! Keep going! 🌟
-            </p>
-          </div>
-        </div>
       </div>
 
       {/* First Chord Logo - Bottom Right Corner */}
