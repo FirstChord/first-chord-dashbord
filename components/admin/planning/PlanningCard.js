@@ -11,6 +11,10 @@ import {
 } from '@/lib/admin/planning-helpers.mjs';
 import {
   isPausePlanningItem,
+  isTutorAbsenceNoticePlanningItem,
+  extractTutorAbsenceNoticeMessage,
+  isTutorAbsenceFinalConfirmationPlanningItem,
+  extractTutorAbsenceFinalConfirmationMessage,
   isSchoolNotePlanningItem,
   hasPausePaymentConfirmation,
   buildTutorAbsenceWorkflowHref,
@@ -32,7 +36,7 @@ import PauseDatesEditor from './PauseDatesEditor';
 // pause items — the full pause toolkit (open the pause tool, copy the parent message,
 // the "Edit dates" repair builder, and the two-checkbox "Mark pause completed" gate).
 // Pure props in (item + studentOptions + handlers); also used inside DueTodayCard.
-export default function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides = {}, onStatus, onArchive, onEdit, onProgress, onPauseCompleted, onRepairPauseDetails, onOpenPauseTool, onOpenWorkflowPanel, onCreateLinkedAction, onTutorAbsenceDecision, pendingId, compact = false, nearbyPause = null }) {
+export default function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides = {}, onStatus, onArchive, onEdit, onProgress, onPauseCompleted, onRepairPauseDetails, onOpenPauseTool, onOpenWorkflowPanel, onCreateLinkedAction, onTutorAbsenceDecision, onTutorAbsenceNoticeSent, onTutorAbsenceFinalConfirmationSent, onTutorAbsenceManualResolved, pendingId, compact = false, nearbyPause = null }) {
   const [progressNote, setProgressNote] = useState('');
   const [nextAction, setNextAction] = useState(item.nextAction || '');
   const [nextSessionDate, setNextSessionDate] = useState('');
@@ -50,7 +54,12 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
   const pausePaymentConfirmed = hasPausePaymentConfirmation(item);
   const isTutorAbsenceCard = item.linkedWorkflowId === 'tutor-absence' && Boolean(item.linkedTutorId);
   const isTutorAbsenceCapture = isTutorAbsenceCard && !isPauseReminder;
+  const isTutorAbsenceNotice = isTutorAbsenceNoticePlanningItem(item);
+  const tutorAbsenceNoticeMessage = isTutorAbsenceNotice ? extractTutorAbsenceNoticeMessage(item) : '';
+  const isTutorAbsenceFinalConfirmation = isTutorAbsenceFinalConfirmationPlanningItem(item);
+  const tutorAbsenceFinalMessage = isTutorAbsenceFinalConfirmation ? extractTutorAbsenceFinalConfirmationMessage(item) : '';
   const tutorAbsenceDecision = `${item.notes || ''}`.match(/^Tutor absence decision:\s*(cancel_day|cover)$/mu)?.[1] || '';
+  const hasTutorAbsenceManualException = isTutorAbsenceCapture && `${item.notes || ''}`.includes('Tutor absence exception: multi-student MMS event');
   const linkedWorkflowHref = isTutorAbsenceCard
     ? buildTutorAbsenceWorkflowHref(item)
     : workflowHref(item.linkedWorkflowId);
@@ -203,7 +212,22 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
         )
       ) : null}
 
-      {isTutorAbsenceCapture && !tutorAbsenceDecision ? (
+      {hasTutorAbsenceManualException ? (
+        <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3">
+          <p className="text-sm font-semibold text-red-950">Manual household check required</p>
+          <p className="mt-1 text-xs leading-5 text-red-900">
+            MMS reports more than one student on this event. Automatic cover/cancel is blocked so no household is missed.
+          </p>
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={() => onTutorAbsenceManualResolved?.(item)}
+            className="mt-3 rounded-lg bg-red-950 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Mark manual household handling complete
+          </button>
+        </div>
+      ) : isTutorAbsenceCapture && !tutorAbsenceDecision ? (
         <div className="mt-4 rounded-xl border border-indigo-100 bg-indigo-50/60 p-3">
           <p className="text-sm font-semibold text-slate-900">How is this teaching day handled?</p>
           <p className="mt-1 text-xs leading-5 text-slate-700">
@@ -261,7 +285,7 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
             <button
               key={status}
               type="button"
-              disabled={isPending || item.status === status || (status === 'done' && (isTutorAbsenceCapture || (isPauseReminder && !pausePaymentConfirmed)))}
+              disabled={isPending || item.status === status || (status === 'done' && (isTutorAbsenceCapture || isTutorAbsenceNotice || isTutorAbsenceFinalConfirmation || (isPauseReminder && !pausePaymentConfirmed)))}
               onClick={() => onStatus(item, status)}
               className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -392,6 +416,98 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
               ) : null}
             </div>
           )}
+        </div>
+      ) : null}
+
+      {isTutorAbsenceNotice ? (
+        <div className="mt-4 rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-3">
+          <p className="text-sm font-semibold text-indigo-950">Initial absence notice</p>
+          <p className="mt-1 text-xs leading-5 text-indigo-900">
+            Send this early notice now. The final payment confirmation remains on the linked pause card closer to the missed lesson.
+          </p>
+          {tutorAbsenceNoticeMessage ? (
+            <>
+              <pre className="mt-3 whitespace-pre-wrap rounded-lg border border-indigo-100 bg-white p-3 text-sm leading-6 text-slate-800">{tutorAbsenceNoticeMessage}</pre>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(tutorAbsenceNoticeMessage);
+                      setCopyState('Copied');
+                      logCommunicationCopy({
+                        category: 'tutor_absence_notice',
+                        mmsId: item.linkedStudentId,
+                        studentName: linkedStudent?.fullName || '',
+                        body: tutorAbsenceNoticeMessage,
+                        source: 'tutor_absence_early_notice',
+                      });
+                    } catch {
+                      setCopyState('Copy failed');
+                    }
+                  }}
+                  className="rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-950 hover:bg-indigo-100"
+                >
+                  Copy early notice
+                </button>
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => onTutorAbsenceNoticeSent?.(item)}
+                  className="rounded-lg bg-indigo-950 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-800 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Mark initial notice sent
+                </button>
+                {copyState ? <span className="text-xs font-semibold text-indigo-800">{copyState}</span> : null}
+              </div>
+            </>
+          ) : null}
+        </div>
+      ) : null}
+
+      {isTutorAbsenceFinalConfirmation ? (
+        <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-3">
+          <p className="text-sm font-semibold text-emerald-950">Final payment outcome confirmation</p>
+          <p className="mt-1 text-xs leading-5 text-emerald-900">
+            No payment-tool action is needed here. Send this only after checking the recorded outcome is still correct.
+          </p>
+          {tutorAbsenceFinalMessage ? (
+            <>
+              <pre className="mt-3 whitespace-pre-wrap rounded-lg border border-emerald-100 bg-white p-3 text-sm leading-6 text-slate-800">{tutorAbsenceFinalMessage}</pre>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(tutorAbsenceFinalMessage);
+                      setCopyState('Copied');
+                      logCommunicationCopy({
+                        category: 'tutor_absence_final_confirmation',
+                        mmsId: item.linkedStudentId,
+                        studentName: linkedStudent?.fullName || '',
+                        body: tutorAbsenceFinalMessage,
+                        source: 'tutor_absence_final_confirmation',
+                      });
+                    } catch {
+                      setCopyState('Copy failed');
+                    }
+                  }}
+                  className="rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-950 hover:bg-emerald-100"
+                >
+                  Copy final confirmation
+                </button>
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => onTutorAbsenceFinalConfirmationSent?.(item)}
+                  className="rounded-lg bg-emerald-950 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Mark final confirmation sent
+                </button>
+                {copyState ? <span className="text-xs font-semibold text-emerald-800">{copyState}</span> : null}
+              </div>
+            </>
+          ) : null}
         </div>
       ) : null}
 

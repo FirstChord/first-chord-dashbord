@@ -2,6 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   buildTutorAbsenceCancellationMessageGroups,
+  buildTutorAbsenceEarlyNoticePlanningBundle,
+  buildTutorAbsenceFinalConfirmationPlanningItems,
+  compareTutorAbsenceLessonSnapshots,
   buildCoverTutorOptions,
   buildTutorAbsenceMessage,
   buildTutorAbsencePausePlanningBundle,
@@ -245,6 +248,73 @@ test('buildTutorAbsencePausePlanningItems skips already paused or not-needed les
 
   assert.deepEqual(plans.map((plan) => plan.item.linkedStudentId), ['sdt_active', 'sdt_aligned']);
   assert.deepEqual(plans.map((plan) => plan.item.status), ['active', 'done']);
+});
+
+test('buildTutorAbsenceEarlyNoticePlanningBundle creates an additive notice plan without pause semantics', () => {
+  const bundle = buildTutorAbsenceEarlyNoticePlanningBundle({
+    rows: [
+      {
+        absenceId: 'tutor_absence:Chloe:2026-08-04',
+        tutorShortName: 'Chloe',
+        tutorName: 'Chloe Mak',
+        absenceDate: '2026-08-04',
+        decision: 'cancel_day',
+        affectedLessons: [{
+          eventId: 'evt_1',
+          studentMmsId: 'sdt_ada',
+          studentName: 'Ada Neocleous',
+          parentName: 'Rachel Neocleous',
+          lessonDate: '2026-08-04',
+        }],
+        messageState: {},
+      },
+    ],
+  });
+
+  assert.equal(bundle.plans.length, 1);
+  const plan = bundle.plans[0];
+  assert.equal(plan.item.linkedWorkflowId, 'tutor-absence-notice');
+  assert.equal(plan.item.isPause, false);
+  assert.equal(plan.item.targetDate, '2026-07-21');
+  assert.match(plan.item.notes, /Tutor absence early notice plan: v1/u);
+  assert.match(plan.item.notes, /confirm the payment adjustment closer to the time/u);
+  assert.doesNotMatch(plan.item.notes, /payment pause already handled/u);
+});
+
+test('schedule snapshot comparison fails loud for changed lessons and multi-student events', () => {
+  const expected = [{ eventId: 'evt_1', studentMmsId: 'sdt_1', lessonDate: '2026-08-04', lessonTime: '16:00' }];
+  assert.equal(compareTutorAbsenceLessonSnapshots({ expectedLessons: expected, liveLessons: expected }).ready, true);
+  assert.equal(compareTutorAbsenceLessonSnapshots({ expectedLessons: expected, liveLessons: [] }).reason, 'schedule_changed');
+  assert.equal(compareTutorAbsenceLessonSnapshots({
+    expectedLessons: [{ ...expected[0], studentCount: 2 }],
+    liveLessons: expected,
+  }).reason, 'group_lesson');
+});
+
+test('already-paused tutor-absence lessons get a final confirmation card, not a finance pause card', () => {
+  const plans = buildTutorAbsenceFinalConfirmationPlanningItems({
+    rows: [{
+      absenceId: 'tutor_absence:Chloe:2026-08-04',
+      tutorShortName: 'Chloe',
+      tutorName: 'Chloe Mak',
+      absenceDate: '2026-08-04',
+      decision: 'cancel_day',
+      affectedLessons: [{
+        eventId: 'evt_1',
+        studentMmsId: 'sdt_ada',
+        studentName: 'Ada Neocleous',
+        parentName: 'Rachel Neocleous',
+        lessonDate: '2026-08-04',
+        paymentExpectation: 'stripe_paused_expected',
+      }],
+      messageState: {},
+    }],
+  });
+
+  assert.equal(plans.length, 1);
+  assert.equal(plans[0].item.linkedWorkflowId, 'tutor-absence-final-confirmation');
+  assert.equal(plans[0].item.isPause, false);
+  assert.match(plans[0].item.notes, /Payment already paused before this absence/u);
 });
 
 test('buildTutorAbsencePausePlanningBundle groups repeated cancelled lessons into an away period', () => {

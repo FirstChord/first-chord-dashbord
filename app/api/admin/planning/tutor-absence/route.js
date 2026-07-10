@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import { getPlanningDashboard, savePlanningItem } from '@/lib/admin/planning';
-import { getTutorAbsenceWorkflow, saveTutorAbsenceWorkflow } from '@/lib/admin/tutor-absence';
+import { getTutorAbsenceScheduleReview, getTutorAbsenceWorkflow, saveTutorAbsenceWorkflow } from '@/lib/admin/tutor-absence';
 import {
   buildDateInputRange,
   buildTutorAbsencePlanningId,
@@ -25,6 +25,12 @@ function withTutorAbsenceDecision(notes = '', decision = '') {
   return lines.filter(Boolean).join('\n');
 }
 
+function absenceIdsFromCard(item = {}) {
+  const notes = `${item.notes || ''}`;
+  const matches = [...notes.matchAll(/^Tutor absence IDs?:\s*(.+?)\.?$/gmu)];
+  return [...new Set(matches.flatMap((match) => match[1].split(',').map((value) => value.trim()).filter(Boolean)))];
+}
+
 export async function POST(request) {
   const session = await getServerSession(authOptions);
 
@@ -38,6 +44,23 @@ export async function POST(request) {
   const dates = Array.isArray(body?.dates)
     ? [...new Set(body.dates.map((value) => `${value || ''}`.trim()).filter(Boolean))]
     : [];
+
+  if (mode === 'verify_schedule') {
+    const planningId = `${body?.planningId || ''}`.trim();
+    if (!planningId) return Response.json({ error: 'planningId is required' }, { status: 400 });
+    try {
+      const planning = await getPlanningDashboard();
+      const card = planning.items.find((item) => item.planningId === planningId);
+      if (!card) return Response.json({ error: 'Planning card was not found' }, { status: 404 });
+      const absenceIds = absenceIdsFromCard(card);
+      if (!absenceIds.length) return Response.json({ ready: true, reviews: [] });
+      const reviews = await Promise.all(absenceIds.map((absenceId) => getTutorAbsenceScheduleReview({ absenceId })));
+      const blocked = reviews.find((review) => !review.ready);
+      return Response.json({ ready: !blocked, reviews, error: blocked?.message || '' }, { status: blocked ? 409 : 200 });
+    } catch (error) {
+      return Response.json({ error: error.message || 'Could not verify the MMS schedule' }, { status: 500 });
+    }
+  }
 
   if (mode === 'decide') {
     const planningId = `${body?.planningId || ''}`.trim();
@@ -61,6 +84,12 @@ export async function POST(request) {
       const workflow = await getTutorAbsenceWorkflow(details);
       if (!workflow.selectedTutor) {
         return Response.json({ error: 'Tutor was not found for this absence card' }, { status: 400 });
+      }
+      if (workflow.loadError) {
+        return Response.json({ error: `MMS could not load this date: ${workflow.loadError}` }, { status: 503 });
+      }
+      if (workflow.lessons.some((lesson) => Number(lesson.studentCount || 1) > 1)) {
+        return Response.json({ error: 'This date contains a multi-student MMS event. Handle every household manually; automatic cover/cancel is blocked.' }, { status: 409 });
       }
 
       const noAffectedLessons = workflow.lessons.length === 0;
@@ -134,6 +163,9 @@ export async function POST(request) {
         if (!workflow.selectedTutor) {
           return Response.json({ error: `Unknown tutor: ${tutorShortName}` }, { status: 400 });
         }
+        if (workflow.loadError) {
+          return Response.json({ error: `MMS could not load ${absenceDate}: ${workflow.loadError}` }, { status: 503 });
+        }
         selectedTutor = workflow.selectedTutor;
         preview.push({
           date: absenceDate,
@@ -186,11 +218,15 @@ export async function POST(request) {
       if (!workflow.selectedTutor) {
         return Response.json({ error: `Unknown tutor: ${tutorShortName}` }, { status: 400 });
       }
+      if (workflow.loadError) {
+        return Response.json({ error: `MMS could not load ${absenceDate}: ${workflow.loadError}` }, { status: 503 });
+      }
 
       const item = buildTutorAbsencePlanningItem({
         tutor: workflow.selectedTutor,
         absenceDate,
         lessons: workflow.lessons,
+        enableEarlyNotice: true,
       });
 
       const saved = await savePlanningItem({
