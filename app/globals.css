@@ -12,9 +12,10 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* The app is designed light-only; keep it light even when the OS prefers dark. */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    --background: #ffffff;
     --foreground: #000000;
   }
 }
@@ -25,18 +26,29 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Make all text black for better visibility */
+/* Slim, translucent scrollbars so scroll areas never paint a white track
+   frame when the OS shows scrollbars permanently */
 * {
-  color: #000000 !important;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.35) transparent;
 }
 
-/* Exception for white text on colored backgrounds */
-.bg-blue-500 *, .bg-purple-500 *, .bg-green-500 *, .bg-gray-200 * {
-  color: white !important;
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
 
-.text-white {
-  color: white !important;
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.35);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.55);
 }
 
 /* Hidden when the app runs installed from a home-screen icon (PWA),
