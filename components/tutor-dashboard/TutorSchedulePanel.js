@@ -61,6 +61,7 @@ export default function TutorSchedulePanel({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
+  const [, setNowTick] = useState(0);
   const dateInputRef = useRef(null);
 
   const studentByMmsId = useMemo(() => (
@@ -97,6 +98,25 @@ export default function TutorSchedulePanel({
       setIsCollapsed(true);
     }
   }, [collapseKey, compact, defaultCollapsed]);
+
+  // Keep the "now" marker moving: re-render once a minute while viewing today
+  useEffect(() => {
+    if (date !== todayInputValue()) return undefined;
+    const timer = setInterval(() => setNowTick((tick) => tick + 1), 60_000);
+    return () => clearInterval(timer);
+  }, [date]);
+
+  // Tutors leave the tab open all afternoon — quietly refetch when they return
+  // so attendance marked elsewhere (e.g. Practice Chat) shows up
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === 'visible') {
+        loadSchedule();
+      }
+    }
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [tutor, date]);
 
   const lessons = schedule?.lessons || [];
 
