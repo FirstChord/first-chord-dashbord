@@ -1,12 +1,10 @@
-import { Calendar } from 'lucide-react';
 import { formatNotesText, speakerNamesFor } from '@/components/shared/notes-formatting';
 
 export default function StudentNotes({ notes, notesSuccess, studentName = '' }) {
   if (!notesSuccess || !notes) {
     return (
       <div className="bg-white rounded-xl p-6 shadow-md">
-        <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-          <Calendar className="w-5 h-5" />
+        <h2 className="text-xl font-bold text-gray-800 mb-4">
           Your Recent Lesson Notes
         </h2>
         <p className="text-gray-600">
@@ -32,12 +30,11 @@ export default function StudentNotes({ notes, notesSuccess, studentName = '' }) 
 
   return (
     <div className="bg-white rounded-xl p-6 shadow-md">
-      <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-        <Calendar className="w-5 h-5" />
+      <h2 className="text-xl font-bold text-gray-800 mb-4">
         Your Recent Lesson Notes
       </h2>
 
-      <div className="border-l-4 border-blue-500 pl-4">
+      <div className="border-l-4 border-[#2F6B3D] pl-4">
         <div className="text-sm text-gray-500 mb-2">
           {formatDate(notes.lesson_date)}
         </div>
@@ -55,7 +52,7 @@ export default function StudentNotes({ notes, notesSuccess, studentName = '' }) 
         {notes.attendance && (
           <div className="mt-3 text-sm">
             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-              ✓ {notes.attendance}
+              {notes.attendance}
             </span>
           </div>
         )}

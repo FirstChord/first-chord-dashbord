@@ -479,10 +479,10 @@ export default function DashboardClient() {
                 <input
                   ref={searchInputRef}
                   type="text"
-                  placeholder="Find your student...  ( / )"
+                  placeholder="Find your student"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-10 pr-4 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#2F6B3D]"
                 />
               </div>
             </div>
@@ -512,9 +512,9 @@ export default function DashboardClient() {
                   <button
                     type="button"
                     onClick={() => setSidebarOpen(true)}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-white/70 bg-blue-50/80 px-4 py-2 text-sm font-bold text-blue-900 shadow-sm backdrop-blur transition-colors hover:bg-white/90"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-white/70 bg-green-50/80 px-4 py-2 text-sm font-bold text-[#2F6B3D] shadow-sm backdrop-blur transition-colors hover:bg-white/90"
                   >
-                    <ChevronLeft className="h-4 w-4 text-blue-700" />
+                    <ChevronLeft className="h-4 w-4 text-[#2F6B3D]" />
                     Students
                   </button>
                 )}
@@ -609,10 +609,10 @@ export default function DashboardClient() {
             onClick={() => setPracticeChatPanel(null)}
             aria-hidden
           />
-          <aside className="practice-chat-panel flex h-full w-full max-w-3xl flex-col border-l border-blue-100 bg-white shadow-2xl">
-            <header className="flex items-center justify-between gap-3 border-b border-blue-100 bg-gradient-to-r from-blue-50 to-green-50 px-5 py-3">
+          <aside className="practice-chat-panel flex h-full w-full max-w-3xl flex-col border-l border-green-100 bg-white shadow-2xl">
+            <header className="flex items-center justify-between gap-3 border-b border-green-100 bg-gradient-to-r from-green-50 to-blue-50 px-5 py-3">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-blue-700">Practice Chat</p>
+                <p className="text-xs font-bold uppercase tracking-wide text-[#2F6B3D]">Practice Chat</p>
                 <p className="text-sm font-bold text-slate-900">{practiceChatPanel.name}</p>
               </div>
               <div className="flex items-center gap-2">
@@ -625,14 +625,14 @@ export default function DashboardClient() {
                   href={practiceChatPanel.url}
                   target="_blank"
                   rel="noreferrer"
-                  className="rounded-lg border border-blue-200 bg-white/90 px-3 py-1.5 text-xs font-bold text-blue-900 transition hover:bg-white"
+                  className="rounded-lg border border-green-200 bg-white/90 px-3 py-1.5 text-xs font-bold text-[#2F6B3D] transition hover:bg-white"
                 >
                   Open full page
                 </a>
                 <button
                   type="button"
                   onClick={() => setPracticeChatPanel(null)}
-                  className="rounded-lg border border-blue-200 bg-white/90 px-3 py-1.5 text-xs font-bold text-blue-900 transition hover:bg-white"
+                  className="rounded-lg border border-green-200 bg-white/90 px-3 py-1.5 text-xs font-bold text-[#2F6B3D] transition hover:bg-white"
                 >
                   Close
                 </button>

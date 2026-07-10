@@ -7,8 +7,8 @@ export default function StudentCard({ student, onClick, isSelected, showTutor = 
       aria-pressed={isSelected}
       className={`w-full p-4 rounded-lg border-2 text-left transition-all duration-150 relative ${
         isSelected
-          ? 'border-blue-500 bg-blue-50 shadow-sm'
-          : 'border-gray-200 bg-white/60 hover:border-blue-200 hover:bg-white hover:shadow-md'
+          ? 'border-[#2F6B3D] bg-green-50 shadow-sm'
+          : 'border-gray-200 bg-white/60 hover:border-[#2F6B3D]/40 hover:bg-white hover:shadow-md'
       }`}
     >
       {showCheckbox && (
@@ -33,7 +33,7 @@ export default function StudentCard({ student, onClick, isSelected, showTutor = 
       </div>
       {todayTime && (
         <p className="mt-1">
-          <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700">
+          <span className="inline-flex items-center rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-xs font-semibold text-[#2F6B3D]">
             {todayTime} today
           </span>
         </p>

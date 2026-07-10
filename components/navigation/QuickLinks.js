@@ -1,6 +1,13 @@
-import { ExternalLink, Music, Gamepad2, FileText, Copy, ExternalLink as LinkIcon, Check, Star } from 'lucide-react';
+import { ExternalLink, Copy, ExternalLink as LinkIcon, Check } from 'lucide-react';
 import { generateSmartUrls } from '@/lib/config';
 import { useState } from 'react';
+import {
+  SheetMusicIcon,
+  SpeechNoteIcon,
+  ShootingStarIcon,
+  MountainFlagIcon,
+  PianoStairsIcon,
+} from '@/components/shared/FCIcons';
 
 const CANONICAL_PRACTICE_CHAT_DASHBOARD_BASE_URL =
   process.env.NEXT_PUBLIC_PRACTICE_CHAT_DASHBOARD_BASE_URL
@@ -61,45 +68,40 @@ export default function QuickLinks({ student, activeTutor = '', onOpenPracticeCh
   const links = [
     {
       name: "Soundslice Folder",
-      icon: <Music className="w-5 h-5" />,
+      icon: <SheetMusicIcon className="h-10 w-10" />,
       url: smartUrls.soundslice.url,
       instruction: smartUrls.soundslice.instruction,
       requiresAuth: smartUrls.soundslice.requiresAuth,
-      color: "bg-purple-500"
     },
     {
       name: "Practice Chat!",
-      icon: <FileText className="w-5 h-5" />,
+      icon: <SpeechNoteIcon className="h-10 w-10" />,
       url: buildPracticeChatUrl(student, activeTutor),
       instruction: "For taking homework notes",
       requiresAuth: false,
-      color: "bg-orange-500"
     },
     {
       name: "Theta Music Games",
-      icon: <Gamepad2 className="w-5 h-5" />,
+      icon: <ShootingStarIcon className="h-10 w-10" />,
       url: smartUrls.thetaMusic.url,
       instruction: smartUrls.thetaMusic.instruction,
       requiresAuth: smartUrls.thetaMusic.requiresAuth,
       credentials: smartUrls.thetaMusic.credentials,
       autoLogin: smartUrls.thetaMusic.autoLogin,
-      color: "bg-green-500"
     },
     {
       name: "MyMusicStaff Profile",
-      icon: <FileText className="w-5 h-5" />,
+      icon: <MountainFlagIcon className="h-10 w-10" />,
       url: smartUrls.myMusicStaff.url,
       instruction: smartUrls.myMusicStaff.instruction,
       requiresAuth: smartUrls.myMusicStaff.requiresAuth,
-      color: "bg-blue-500"
     },
     ...(student.instrument === 'Piano' ? [{
       name: "Piano Handbook",
-      icon: <FileText className="w-5 h-5" />,
+      icon: <PianoStairsIcon className="h-10 w-10" />,
       url: "https://canva.link/fkczhbdl8kv75d7",
       instruction: "Tutor resource for piano lessons",
       requiresAuth: false,
-      color: "bg-pink-500"
     }] : [])
     // Seasonal show link. Keep hidden until the next show; update copy/form URL before re-enabling.
     /*
@@ -191,20 +193,20 @@ export default function QuickLinks({ student, activeTutor = '', onOpenPracticeCh
             }
             className="flex items-center gap-3 p-4 bg-white rounded-lg border hover:shadow-md transition-shadow group"
           >
-            <div className={`${link.color} text-white p-2 rounded-lg`}>
+            <div className="shrink-0">
               {link.icon}
             </div>
             <div className="flex-1">
               <div className="font-medium">{link.name}</div>
               <div className="text-sm text-gray-500">{link.instruction}</div>
               {link.requiresAuth && link.credentials && !link.autoLogin && (
-                <div className="text-xs text-yellow-600 mt-1">
-                  🔑 {link.credentials.passwordHint}
+                <div className="text-xs text-yellow-700 mt-1">
+                  {link.credentials.passwordHint}
                 </div>
               )}
               {link.autoLogin && (
-                <div className="text-xs text-green-600 mt-1">
-                  ⚡ Auto-fill: {link.credentials.username}
+                <div className="text-xs text-[#2F6B3D] mt-1">
+                  Auto-fill: {link.credentials.username}
                 </div>
               )}
             </div>
@@ -219,7 +221,7 @@ export default function QuickLinks({ student, activeTutor = '', onOpenPracticeCh
         <div className="fixed inset-0 backdrop-blur-sm bg-white bg-opacity-10 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl border">
             <div className="text-center mb-4">
-              <Gamepad2 className="w-12 h-12 text-green-500 mx-auto mb-2" />
+              <ShootingStarIcon className="w-12 h-12 mx-auto mb-2" />
               <h3 className="text-lg font-semibold text-gray-800">
                 {currentCredentials.serviceName} Login
               </h3>

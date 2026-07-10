@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CalendarDays, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
+import { ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 
 function todayInputValue() {
   return new Date().toISOString().slice(0, 10);
@@ -125,14 +125,13 @@ export default function TutorSchedulePanel({
         <button
           type="button"
           onClick={() => setIsCollapsed(false)}
-          className="inline-flex items-center gap-2 rounded-full border border-white/70 bg-blue-50/80 px-4 py-2 text-sm font-bold text-blue-900 shadow-sm backdrop-blur hover:bg-white/90"
+          className="inline-flex items-center gap-2 rounded-full border border-white/70 bg-green-50/80 px-4 py-2 text-sm font-bold text-[#2F6B3D] shadow-sm backdrop-blur hover:bg-white/90"
         >
-          <CalendarDays className="h-4 w-4 text-blue-700" />
           Today’s lessons
-          <span className="rounded-full bg-white/80 px-2 py-0.5 text-xs font-bold text-blue-800">
+          <span className="rounded-full bg-white/80 px-2 py-0.5 text-xs font-bold text-[#2F6B3D]">
             {schedule?.summary?.lessonCount ?? lessons.length}
           </span>
-          <ChevronDown className="h-4 w-4 text-blue-700" />
+          <ChevronDown className="h-4 w-4 text-[#2F6B3D]" />
         </button>
       </div>
     );
@@ -142,15 +141,8 @@ export default function TutorSchedulePanel({
     <section className={`rounded-xl border border-white/70 bg-gradient-to-br from-white/75 via-blue-50/75 to-green-50/55 p-4 shadow-sm shadow-blue-200/30 backdrop-blur ${compact ? 'mb-5 ml-auto max-w-xl' : 'w-full max-w-2xl'}`}>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2 text-blue-950">
-            <CalendarDays className="h-5 w-5 text-blue-700" />
-            <h2 className="text-lg font-bold">Today’s lessons</h2>
-          </div>
-          <p className="mt-0.5 text-sm font-semibold text-blue-800/70">{formatDisplayDate(date)}</p>
-        </div>
-
-        <div className="flex items-center gap-1">
-          <div className="relative">
+          <h2 className="text-lg font-bold text-[#24422B]">Today’s lessons</h2>
+          <div className="relative mt-0.5 inline-block">
             <button
               type="button"
               onClick={() => {
@@ -162,11 +154,10 @@ export default function TutorSchedulePanel({
                   input.focus();
                 }
               }}
-              aria-label="Pick a date"
               title="Pick a date"
-              className="rounded-lg p-2 text-blue-900/60 transition-colors hover:bg-white/80 hover:text-blue-900"
+              className="text-sm font-semibold text-[#2F6B3D]/80 underline decoration-transparent underline-offset-2 transition-colors hover:text-[#2F6B3D] hover:decoration-[#2F6B3D]/50"
             >
-              <CalendarDays className="h-4 w-4" />
+              {formatDisplayDate(date)}
             </button>
             <input
               ref={dateInputRef}
@@ -178,13 +169,16 @@ export default function TutorSchedulePanel({
               aria-hidden
             />
           </div>
+        </div>
+
+        <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={() => loadSchedule({ refresh: true })}
             disabled={isLoading}
             aria-label="Refresh lessons"
             title="Refresh lessons"
-            className="rounded-lg p-2 text-blue-900/60 transition-colors hover:bg-white/80 hover:text-blue-900 disabled:opacity-50"
+            className="rounded-lg p-2 text-[#2F6B3D]/70 transition-colors hover:bg-white/80 hover:text-[#2F6B3D] disabled:opacity-50"
           >
             <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
           </button>
@@ -194,7 +188,7 @@ export default function TutorSchedulePanel({
               onClick={() => setIsCollapsed(true)}
               aria-label="Collapse today’s lessons"
               title="Collapse"
-              className="rounded-lg p-2 text-blue-900/60 transition-colors hover:bg-white/80 hover:text-blue-900"
+              className="rounded-lg p-2 text-[#2F6B3D]/70 transition-colors hover:bg-white/80 hover:text-[#2F6B3D]"
             >
               <ChevronUp className="h-4 w-4" />
             </button>
@@ -225,7 +219,7 @@ export default function TutorSchedulePanel({
       {!error && lessons.length > 0 && (
         <ol className="relative">
           {/* timeline rail: time column (56px) + gap (12px) + half dot (5px) */}
-          <div aria-hidden className="absolute bottom-3 left-[72px] top-3 w-px bg-blue-200/70" />
+          <div aria-hidden className="absolute bottom-3 left-[72px] top-3 w-px bg-[#2F6B3D]/20" />
           {lessons.map((lesson, index) => {
             const linkedStudent = lesson.studentMmsIds
               .map((studentId) => studentByMmsId.get(studentId))
@@ -244,7 +238,7 @@ export default function TutorSchedulePanel({
             const row = (
               <div
                 className={`flex w-full items-start gap-3 rounded-lg px-2 py-2 text-left transition-colors ${
-                  isInProgress ? 'bg-blue-100/60' : ''
+                  isInProgress ? 'bg-green-100/70' : ''
                 } ${canSelect ? 'hover:bg-white/80' : ''}`}
               >
                 <div className="w-12 shrink-0 pt-0.5 text-right text-sm font-semibold tabular-nums text-gray-800">
@@ -253,7 +247,7 @@ export default function TutorSchedulePanel({
                 <div className="relative z-10 mt-1.5 flex w-2.5 shrink-0 justify-center">
                   <span
                     className={`h-2.5 w-2.5 rounded-full ${DOT_CLASSES[attendance.tone] || DOT_CLASSES.mixed} ${
-                      isInProgress ? 'animate-pulse ring-4 ring-blue-200/60' : ''
+                      isInProgress ? 'animate-pulse ring-4 ring-green-200/70' : ''
                     }`}
                   />
                 </div>

@@ -23,7 +23,6 @@ export default function StudentDashboard({ student }) {
         </div>
         
         <div className="bg-white rounded-2xl p-8 text-center shadow-xl max-w-md relative z-10">
-          <div className="text-6xl mb-4">🎵</div>
           <h1 className="text-2xl font-bold text-gray-800 mb-2">Oops!</h1>
           <p className="text-gray-600">
             We couldn't find your music dashboard. 
@@ -66,7 +65,7 @@ export default function StudentDashboard({ student }) {
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-gray-900">
             {possessive(student.name.split(' ')[0])} Dashboard
           </h1>
-          <p className="mt-1 text-sm sm:text-base text-gray-600">Welcome back! 🎵</p>
+          <p className="mt-1 text-sm sm:text-base text-gray-600">Welcome back!</p>
         </div>
       </header>
 

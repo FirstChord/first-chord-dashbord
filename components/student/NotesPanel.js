@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Calendar, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
+import { ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 
 import { formatNotesText, speakerNamesFor } from '@/components/shared/notes-formatting';
 
@@ -46,12 +46,9 @@ export default function NotesPanel({ notes, source, studentName = '', onLoadHist
   return (
     <div className="bg-yellow-50 p-6 rounded-lg border-2 border-yellow-200">
       <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <Calendar className="w-5 h-5 text-yellow-600" />
-          <h3 className="font-semibold text-gray-800">
-            Previous Lesson - {formatDate(notes.lesson_date)}
-          </h3>
-        </div>
+        <h3 className="font-semibold text-gray-800">
+          Previous Lesson - {formatDate(notes.lesson_date)}
+        </h3>
         {source === 'cache' && (
           <span className="text-xs text-gray-500 flex items-center gap-1">
             <RefreshCw className="w-3 h-3" />
