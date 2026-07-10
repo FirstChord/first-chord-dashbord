@@ -115,7 +115,9 @@ test('firstName takes the first whitespace-delimited token', () => {
 test('isStudentOwnContact treats no-parent / parent==student as the student being their own contact', () => {
   assert.equal(isStudentOwnContact({ fullName: 'Sian Malyin' }), true); // no parent
   assert.equal(isStudentOwnContact({ fullName: 'Sian Malyin', parentFirstName: 'Sian', parentLastName: 'Malyin' }), true);
+  assert.equal(isStudentOwnContact({ fullName: 'Craig Mcaulay', parentFirstName: 'Craig', parentLastName: 'Mcauley' }), true); // one-character contact typo
   assert.equal(isStudentOwnContact({ fullName: 'Ada Smith', parentFirstName: 'Rachel', parentLastName: 'Smith' }), false);
+  assert.equal(isStudentOwnContact({ fullName: 'Ada Smith', parentFirstName: 'Ada', parentLastName: 'Jones' }), false); // same first name, actual parent
 });
 
 test('date input helpers round-trip and shift correctly', () => {
@@ -161,6 +163,13 @@ test('buildPauseConfirmationMessage addresses adults directly and parents in thi
   const adult = buildPauseConfirmationMessage({ item, student: { fullName: 'Sian Malyin', tutor: 'Kenny Bates' } });
   assert.match(adult, /paused your payment/);
   assert.match(adult, /will next see you on/);
+
+  const adultWithContactTypo = buildPauseConfirmationMessage({
+    item: { notes: 'Lesson date: 2026-07-13' },
+    student: { fullName: 'Craig Mcaulay', parentFirstName: 'Craig', parentLastName: 'Mcauley' },
+  });
+  assert.match(adultWithContactTypo, /paused payment for your lesson/);
+  assert.doesNotMatch(adultWithContactTypo, /Craig's lesson/);
 
   const parent = buildPauseConfirmationMessage({ item, student: { fullName: 'Ada Smith', parentFirstName: 'Rachel', parentLastName: 'Smith', tutor: 'Kenny Bates' } });
   assert.match(parent, /Hi Rachel/);
