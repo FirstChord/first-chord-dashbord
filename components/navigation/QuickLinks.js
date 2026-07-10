@@ -3,7 +3,7 @@ import { generateSmartUrls } from '@/lib/config';
 import { useState } from 'react';
 import {
   SheetMusicIcon,
-  SpeechNoteIcon,
+  ScoreReadersIcon,
   ShootingStarIcon,
   MountainFlagIcon,
   PianoStairsIcon,
@@ -75,7 +75,7 @@ export default function QuickLinks({ student, activeTutor = '', onOpenPracticeCh
     },
     {
       name: "Practice Chat!",
-      icon: <SpeechNoteIcon className="h-10 w-10" />,
+      icon: <ScoreReadersIcon className="h-10 w-10" />,
       url: buildPracticeChatUrl(student, activeTutor),
       instruction: "For taking homework notes",
       requiresAuth: false,
@@ -191,7 +191,7 @@ export default function QuickLinks({ student, activeTutor = '', onOpenPracticeCh
                   ? (e) => handleThetaMusicClick(e, link)
                   : undefined
             }
-            className="flex items-center gap-3 p-4 bg-white rounded-lg border hover:shadow-md transition-shadow group"
+            className="flex items-center gap-3 p-4 bg-white rounded-lg border border-[#2F6B3D]/25 hover:border-[#2F6B3D]/50 hover:shadow-md transition-all group"
           >
             <div className="shrink-0">
               {link.icon}

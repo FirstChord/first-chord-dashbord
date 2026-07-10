@@ -3,7 +3,7 @@ import { formatNotesText, speakerNamesFor } from '@/components/shared/notes-form
 export default function StudentNotes({ notes, notesSuccess, studentName = '' }) {
   if (!notesSuccess || !notes) {
     return (
-      <div className="bg-white rounded-xl p-6 shadow-md">
+      <div className="bg-white rounded-xl p-6 shadow-md border border-[#2F6B3D]/25">
         <h2 className="text-xl font-bold text-gray-800 mb-4">
           Your Recent Lesson Notes
         </h2>
@@ -29,7 +29,7 @@ export default function StudentNotes({ notes, notesSuccess, studentName = '' }) 
   const speakerNames = speakerNamesFor(notes.tutor_name, studentName);
 
   return (
-    <div className="bg-white rounded-xl p-6 shadow-md">
+    <div className="bg-white rounded-xl p-6 shadow-md border border-[#2F6B3D]/25">
       <h2 className="text-xl font-bold text-gray-800 mb-4">
         Your Recent Lesson Notes
       </h2>

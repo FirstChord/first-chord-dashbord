@@ -125,7 +125,7 @@ export default function TutorSchedulePanel({
         <button
           type="button"
           onClick={() => setIsCollapsed(false)}
-          className="inline-flex items-center gap-2 rounded-full border border-white/70 bg-green-50/80 px-4 py-2 text-sm font-bold text-[#2F6B3D] shadow-sm backdrop-blur hover:bg-white/90"
+          className="inline-flex items-center gap-2 rounded-full border border-[#2F6B3D]/30 bg-green-50/80 px-4 py-2 text-sm font-bold text-[#2F6B3D] shadow-sm backdrop-blur hover:bg-white/90"
         >
           Today’s lessons
           <span className="rounded-full bg-white/80 px-2 py-0.5 text-xs font-bold text-[#2F6B3D]">
@@ -138,7 +138,7 @@ export default function TutorSchedulePanel({
   }
 
   return (
-    <section className={`rounded-xl border border-white/70 bg-gradient-to-br from-white/75 via-blue-50/75 to-green-50/55 p-4 shadow-sm shadow-blue-200/30 backdrop-blur ${compact ? 'mb-5 ml-auto max-w-xl' : 'w-full max-w-2xl'}`}>
+    <section className={`rounded-xl border border-[#2F6B3D]/30 bg-gradient-to-br from-white/75 via-blue-50/75 to-green-50/55 p-4 shadow-sm shadow-green-200/30 backdrop-blur ${compact ? 'mb-5 ml-auto max-w-xl' : 'w-full max-w-2xl'}`}>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold text-[#24422B]">Today’s lessons</h2>

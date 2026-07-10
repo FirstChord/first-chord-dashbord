@@ -8,7 +8,7 @@ export default function StudentCard({ student, onClick, isSelected, showTutor = 
       className={`w-full p-4 rounded-lg border-2 text-left transition-all duration-150 relative ${
         isSelected
           ? 'border-[#2F6B3D] bg-green-50 shadow-sm'
-          : 'border-gray-200 bg-white/60 hover:border-[#2F6B3D]/40 hover:bg-white hover:shadow-md'
+          : 'border-[#2F6B3D]/20 bg-white/60 hover:border-[#2F6B3D]/45 hover:bg-white hover:shadow-md'
       }`}
     >
       {showCheckbox && (

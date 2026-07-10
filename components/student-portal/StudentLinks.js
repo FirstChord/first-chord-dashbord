@@ -54,7 +54,7 @@ export default function StudentLinks({ student }) {
   };
 
   return (
-    <div className="bg-white rounded-xl p-4 sm:p-6 shadow-md">
+    <div className="bg-white rounded-xl p-4 sm:p-6 shadow-md border border-[#2F6B3D]/25">
       <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-4">
         Your Practice Links
       </h2>

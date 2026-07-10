@@ -44,7 +44,7 @@ export default function NotesPanel({ notes, source, studentName = '', onLoadHist
 
 
   return (
-    <div className="bg-yellow-50 p-6 rounded-lg border-2 border-yellow-200">
+    <div className="bg-yellow-50 p-6 rounded-lg border-2 border-[#2F6B3D]/35">
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-semibold text-gray-800">
           Previous Lesson - {formatDate(notes.lesson_date)}

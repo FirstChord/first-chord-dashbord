@@ -16,18 +16,24 @@ export function SheetMusicIcon({ className }) {
   );
 }
 
-export function SpeechNoteIcon({ className }) {
+// Two people reading a score together — the duo from the First Chord
+// illustration (also in the bottom-right banner)
+export function ScoreReadersIcon({ className }) {
   return (
     <svg viewBox="0 0 40 40" className={className} aria-hidden="true">
-      <path
-        d="M20 5 C11 5 4.5 10.8 4.5 18.2 C4.5 25.6 11 31.4 20 31.4 C21.4 31.4 22.8 31.2 24.1 30.9 L31.5 35 L29.8 27.6 C33.3 25.2 35.5 21.9 35.5 18.2 C35.5 10.8 29 5 20 5 Z"
-        fill="#F0876E"
-      />
-      <circle cx="16" cy="22.5" r="2.7" fill="#ffffff" />
-      <circle cx="24.5" cy="21" r="2.7" fill="#ffffff" />
-      <rect x="18.2" y="11.5" width="1.7" height="11" rx="0.85" fill="#ffffff" />
-      <rect x="26.7" y="10" width="1.7" height="11" rx="0.85" fill="#ffffff" />
-      <polygon points="18.2,11.5 28.4,10 28.4,13 18.2,14.5" fill="#ffffff" />
+      {/* left figure */}
+      <circle cx="12.5" cy="8.5" r="4.6" fill="#8D5524" />
+      <path d="M6.5 38 L6.5 22 C6.5 17.6 9.2 15 13 15 C16.8 15 19 17.6 19 22 L19 38 Z" fill="#F0876E" />
+      {/* right figure */}
+      <circle cx="28" cy="8" r="4.6" fill="#5C3A21" />
+      <path d="M21.5 38 L21.5 21.5 C21.5 17.1 24.2 14.5 28 14.5 C31.8 14.5 34.5 17.1 34.5 21.5 L34.5 38 Z" fill="#8B8BE0" />
+      {/* the score held between them */}
+      <g transform="rotate(-4 20 25)">
+        <rect x="12.5" y="19.5" width="15" height="11.5" rx="1.5" fill="#ffffff" stroke="#2F6B3D" strokeWidth="1.4" />
+        <line x1="15" y1="23" x2="25" y2="23" stroke="#2F6B3D" strokeWidth="1.1" />
+        <line x1="15" y1="26" x2="25" y2="26" stroke="#2F6B3D" strokeWidth="1.1" />
+        <circle cx="22.5" cy="28.3" r="1.3" fill="#2F6B3D" />
+      </g>
     </svg>
   );
 }
