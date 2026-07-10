@@ -76,12 +76,12 @@ Grouped pause card completed
 
 ## Superseding Rule
 
-The dashboard does not mutate old cards in place.
+The dashboard only reshapes **still-active** generated cards. Completed, parked, or deliberately deferred cards are historical records and are never reopened or overwritten by a later tutor absence.
 
 When a better grouped card exists, it:
 
-1. creates or updates the grouped away-period pause card
-2. parks the smaller card(s)
+1. creates a missing grouped away-period pause card, or refreshes the existing active one
+2. parks smaller **active** card(s)
 3. writes progress log notes explaining the parking
 4. leaves all rows visible in history
 
