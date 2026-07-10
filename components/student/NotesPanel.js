@@ -3,7 +3,35 @@
 import { useState } from 'react';
 import { Calendar, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 
-export default function NotesPanel({ notes, source, onLoadHistory }) {
+function escapeRegExp(value = '') {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Bold "Name:" speaker markers for known first names only (tutor + student),
+// so transcript dialogue scans as dialogue without false-positives on times etc.
+function renderWithSpeakers(text, speakerNames = []) {
+  const names = speakerNames.filter(Boolean);
+  if (names.length === 0 || !text) return text;
+  // Boundary allows whitespace or punctuation — dictated notes often run
+  // sentences together ("...about it?Arnav: I think...")
+  const pattern = new RegExp(`(^|[\\s(?.!,)])(${names.map(escapeRegExp).join('|')})(:)`, 'gi');
+  const nodes = [];
+  let lastIndex = 0;
+  let match;
+  while ((match = pattern.exec(text)) !== null) {
+    const nameStart = match.index + match[1].length;
+    if (nameStart > lastIndex) nodes.push(text.slice(lastIndex, nameStart));
+    // Each speaker turn starts on its own line
+    if (nameStart > 0) nodes.push(<br key={`br-${nameStart}`} />);
+    nodes.push(<strong key={nameStart}>{match[2]}:</strong>);
+    lastIndex = nameStart + match[2].length + 1;
+  }
+  if (nodes.length === 0) return text;
+  nodes.push(text.slice(lastIndex));
+  return nodes;
+}
+
+export default function NotesPanel({ notes, source, studentName = '', onLoadHistory }) {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [history, setHistory] = useState(null);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -38,42 +66,48 @@ export default function NotesPanel({ notes, source, onLoadHistory }) {
     });
   };
 
+  // First names of the people in the room — used to bold speaker markers
+  const speakerNames = [
+    (notes.tutor_name || '').split(' ')[0],
+    (studentName || '').split(' ')[0],
+  ].filter((name) => name && name.length > 1);
+
   const formatNotesText = (text) => {
     if (!text) return text;
-    
-    // Split text by lines to process each line
+
     const lines = text.split('\n');
-    
+
     return lines.map((line, index) => {
-      // Check if line contains **bold** text (questions from square brackets)
+      // Section headers arrive as **bold** lines — render as quiet small-caps
+      // labels so the content stays the loudest thing on the card
       if (line.includes('**') && !line.includes('***')) {
-        // Extract the bold text and make it a proper header
         const boldText = line.replace(/\*\*(.*?)\*\*/g, '$1').trim();
         if (boldText) {
           return (
-            <div key={index} className="font-bold text-gray-800 mt-4 mb-2 text-lg border-b border-gray-200 pb-1">
-              {boldText}
+            <div key={index} className="mt-5 mb-1.5 text-xs font-bold uppercase tracking-wider text-amber-700/80 first:mt-0">
+              {boldText.replace(/:$/, '')}
             </div>
           );
         }
       }
-      
-      // Check if line contains ***name:*** text (names with colons)
+
+      // ***name:*** markers: bold the name at body size
       if (line.includes('***')) {
-        // Process the line to make names bold but keep same text size
-        const processedLine = line.replace(/\*\*\*(.*?)\*\*\*/g, '<strong>$1</strong>');
+        const parts = line.split(/\*\*\*(.*?)\*\*\*/g);
         return (
-          <div key={index} className="mb-1 mt-2" dangerouslySetInnerHTML={{ __html: processedLine }} />
+          <div key={index} className="mb-1.5 mt-2">
+            {parts.map((part, i) => (i % 2 === 1 ? <strong key={i}>{part}</strong> : renderWithSpeakers(part, speakerNames)))}
+          </div>
         );
       }
-      
+
       // Regular text line
       if (line.trim()) {
-        return <div key={index} className="mb-1">{line}</div>;
+        return <div key={index} className="mb-1.5">{renderWithSpeakers(line, speakerNames)}</div>;
       }
-      
+
       // Empty line for spacing
-      return <div key={index} className="h-2"></div>;
+      return <div key={index} className="h-3"></div>;
     });
   };
   
@@ -94,7 +128,7 @@ export default function NotesPanel({ notes, source, onLoadHistory }) {
         )}
       </div>
       
-      <div className="text-gray-700 space-y-2">
+      <div className="max-w-[68ch] text-[17px] leading-relaxed text-gray-800">
         {notes.attendance === 'Absent' ? (
           <p className="italic text-gray-500">Student was absent</p>
         ) : (
@@ -146,7 +180,7 @@ export default function NotesPanel({ notes, source, onLoadHistory }) {
                         <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">{entry.attendance}</span>
                       )}
                     </div>
-                    <div className="text-sm text-gray-600 whitespace-pre-wrap">
+                    <div className="max-w-[68ch] whitespace-pre-wrap text-[15px] leading-relaxed text-gray-700">
                       {formatNotesText(entry.notes)}
                     </div>
                   </div>

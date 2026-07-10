@@ -544,6 +544,7 @@ export default function DashboardClient() {
                         key={selectedStudent.mms_id}
                         notes={lastNotes}
                         source={notesSource}
+                        studentName={selectedStudent.name || ''}
                         onLoadHistory={async () => {
                           const res = await fetch(notesUrlForStudent(selectedStudent, { history: true }));
                           const data = await res.json();
