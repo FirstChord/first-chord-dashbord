@@ -1,15 +1,18 @@
-export default function StudentCard({ student, onClick, isSelected, showCheckbox = false, isChecked = false, onToggleCheck }) {
+import InstrumentIcon from './InstrumentIcon';
+
+export default function StudentCard({ student, onClick, isSelected, showTutor = true, todayTime = '', showCheckbox = false, isChecked = false, onToggleCheck }) {
   return (
     <button
       onClick={() => onClick(student)}
-      className={`p-4 rounded-lg border-2 transition-all relative ${
-        isSelected 
-          ? 'border-blue-500 bg-blue-50' 
-          : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
+      aria-pressed={isSelected}
+      className={`w-full p-4 rounded-lg border-2 text-left transition-all duration-150 relative ${
+        isSelected
+          ? 'border-blue-500 bg-blue-50 shadow-sm'
+          : 'border-gray-200 bg-white/60 hover:border-blue-200 hover:bg-white hover:shadow-md'
       }`}
     >
       {showCheckbox && (
-        <div 
+        <div
           className="absolute top-2 right-2"
           onClick={(e) => {
             e.stopPropagation();
@@ -24,21 +27,19 @@ export default function StudentCard({ student, onClick, isSelected, showCheckbox
           />
         </div>
       )}
-      <h3 className="font-semibold text-lg">{student.name}</h3>
-      <p className="text-sm text-gray-600">Tutor: {student.current_tutor}</p>
-      {student.instrument && (
-        <p className="text-sm text-blue-600 font-medium">{student.instrument}</p>
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="font-semibold text-lg">{student.name}</h3>
+        <InstrumentIcon instrument={student.instrument} />
+      </div>
+      {todayTime && (
+        <p className="mt-1">
+          <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700">
+            {todayTime} today
+          </span>
+        </p>
       )}
-      {student.soundslice_course && (
-        <a 
-          href={student.soundslice_course} 
-          target="_blank" 
-          rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          className="text-xs text-green-600 hover:text-green-800 underline block mt-1"
-        >
-          📚 Soundslice Course
-        </a>
+      {showTutor && (
+        <p className="text-sm text-gray-600">Tutor: {student.current_tutor}</p>
       )}
       {showCheckbox && (
         <p className="text-xs text-gray-500 mt-1">Click checkbox to mark as your student</p>

@@ -1,25 +1,40 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Image from 'next/image';
 import StudentCard from '@/components/student/StudentCard';
 import NotesPanel from '@/components/student/NotesPanel';
 import QuickLinks from '@/components/navigation/QuickLinks';
 import TutorSchedulePanel from '@/components/tutor-dashboard/TutorSchedulePanel';
-import { Users, Clock, Search } from 'lucide-react';
+import { Clock, Search, ChevronLeft } from 'lucide-react';
 import { cache } from '@/lib/cache';
 import {
+  excludeGroupOnlyStudents,
   filterTutorStudentsBySearch,
   getTutorDashboardOptionNames,
 } from '@/lib/tutor-dashboard-helpers.mjs';
 
 const TUTOR_OPTIONS = getTutorDashboardOptionNames();
+const TUTOR_STORAGE_KEY = 'fc_dashboard_tutor';
 
-function notesUrlForStudent(student = {}) {
+function lessonStartMinutes(lesson) {
+  const match = `${lesson.lessonTime || ''}`.match(/^(\d{1,2}):(\d{2})$/);
+  return match ? Number(match[1]) * 60 + Number(match[2]) : null;
+}
+
+function timeAwareGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
+function notesUrlForStudent(student = {}, { history = false } = {}) {
   const studentId = student.mms_id || student.ID || '';
   const token = student.noteAccessToken || student.note_access_token || '';
   const params = new URLSearchParams();
   if (token) params.set('token', token);
+  if (history) params.set('history', '1');
   return `/api/notes/${encodeURIComponent(studentId)}${params.toString() ? `?${params.toString()}` : ''}`;
 }
 
@@ -34,6 +49,32 @@ export default function DashboardClient() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [practiceChatPanel, setPracticeChatPanel] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [todayLessons, setTodayLessons] = useState([]);
+  const searchInputRef = useRef(null);
+
+  // Selecting a student slides the sidebar away so the view is all about them
+  const handleSelectStudent = (student) => {
+    setSelectedStudent(student);
+    if (student) setSidebarOpen(false);
+  };
+
+  const handleSelectTutor = (tutorName) => {
+    setTutor(tutorName);
+    try {
+      localStorage.setItem(TUTOR_STORAGE_KEY, tutorName);
+    } catch {}
+  };
+
+  // Restore the tutor from the last visit so a reload doesn't ask again
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(TUTOR_STORAGE_KEY);
+      if (saved && TUTOR_OPTIONS.includes(saved)) {
+        setTutor(saved);
+      }
+    } catch {}
+  }, []);
   // const [isAuthenticated, setIsAuthenticated] = useState(true); // Always authenticated with hardcoded token
 
   // Fun loading messages
@@ -111,6 +152,29 @@ export default function DashboardClient() {
     }
   };
 
+  // Today's lessons feed the sidebar time chips and the at-a-glance summary
+  useEffect(() => {
+    if (!tutor) {
+      setTodayLessons([]);
+      return;
+    }
+    const today = new Date().toISOString().slice(0, 10);
+    fetch(`/api/tutor-schedule?${new URLSearchParams({ tutor, date: today })}`)
+      .then((res) => res.json())
+      .then((data) => setTodayLessons(data.success ? (data.lessons || []) : []))
+      .catch(() => setTodayLessons([]));
+  }, [tutor]);
+
+  const todayTimeByStudent = useMemo(() => {
+    const map = new Map();
+    for (const lesson of todayLessons) {
+      for (const studentId of lesson.studentMmsIds || []) {
+        if (!map.has(studentId)) map.set(studentId, lesson.lessonTime || '');
+      }
+    }
+    return map;
+  }, [todayLessons]);
+
   // Fetch students when tutor is selected
   useEffect(() => {
     if (tutor) {
@@ -129,6 +193,29 @@ export default function DashboardClient() {
         setPracticeChatPanel(null);
       }
     }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [practiceChatPanel]);
+
+  // Keyboard shortcuts: Esc deselects the current student, "/" jumps to search
+  useEffect(() => {
+    function onKey(event) {
+      const target = event.target;
+      const isTyping = target instanceof HTMLElement
+        && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+
+      if (event.key === 'Escape' && !isTyping) {
+        setSelectedStudent((current) => (current ? null : current));
+        setSidebarOpen(true);
+      }
+
+      if (event.key === '/' && !isTyping) {
+        event.preventDefault();
+        setSidebarOpen(true);
+        setTimeout(() => searchInputRef.current?.focus(), 0);
+      }
+    }
+    if (practiceChatPanel) return undefined;
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [practiceChatPanel]);
@@ -200,8 +287,35 @@ export default function DashboardClient() {
     }
   }, [selectedStudent]);
 
-  // Filter students by search
-  const filteredStudents = filterTutorStudentsBySearch(students, searchTerm);
+  // Filter students by search (group-only students, e.g. Ukulele Orchestra, stay hidden)
+  const filteredStudents = filterTutorStudentsBySearch(excludeGroupOnlyStudents(students), searchTerm);
+
+  // Today-at-a-glance summary for the empty state
+  const todaySummary = (() => {
+    if (todayLessons.length === 0) {
+      return { headline: 'No lessons today', hint: 'Enjoy the breather — or pick a student to look something up.' };
+    }
+    const now = new Date().getHours() * 60 + new Date().getMinutes();
+    const current = todayLessons.find((lesson) => {
+      const start = lessonStartMinutes(lesson);
+      return start != null && start <= now && now < start + (lesson.durationMinutes || 30);
+    });
+    if (current) {
+      return {
+        headline: `Now: ${current.studentLabel} (${current.lessonTime})`,
+        hint: 'Click their lesson above to open their space.',
+      };
+    }
+    const next = todayLessons.find((lesson) => {
+      const start = lessonStartMinutes(lesson);
+      return start != null && start > now;
+    });
+    const count = `${todayLessons.length} lesson${todayLessons.length === 1 ? '' : 's'} today`;
+    if (next) {
+      return { headline: `${count} — next is ${next.studentLabel} at ${next.lessonTime}`, hint: 'Click a lesson above to open their space.' };
+    }
+    return { headline: `All ${todayLessons.length} lessons done for today`, hint: 'Nice work — see you next time.' };
+  })();
 
   // Debug logging (only when needed)
   // console.log('🔍 Dashboard state:', { tutor, tutorLength: tutor.length, tutorType: typeof tutor, isEmpty: !tutor });
@@ -290,14 +404,8 @@ export default function DashboardClient() {
             {TUTOR_OPTIONS.map(tutorName => (
               <button
                 key={tutorName}
-                onClick={() => setTutor(tutorName)}
-                className="px-8 py-4 text-white rounded-lg transition-colors text-center font-medium text-xl min-h-[60px] min-w-[140px] flex items-center justify-center"
-                style={{ 
-                  backgroundColor: '#2F6B3D',
-                  '&:hover': { backgroundColor: '#245230' }
-                }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#245230'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = '#2F6B3D'}
+                onClick={() => handleSelectTutor(tutorName)}
+                className="px-8 py-4 text-white rounded-lg text-center font-medium text-xl min-h-[60px] min-w-[140px] flex items-center justify-center bg-[#2F6B3D] hover:bg-[#245230] hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0 transition-all duration-150"
               >
                 {tutorName}
               </button>
@@ -309,7 +417,7 @@ export default function DashboardClient() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-t from-green-100 to-blue-100 relative overflow-hidden">
+    <div className="h-screen flex flex-col bg-gradient-to-t from-green-100 to-blue-100 relative overflow-hidden">
       {/* Cloud */}
       <div className="absolute inset-0 pointer-events-none">
         <Image
@@ -322,16 +430,16 @@ export default function DashboardClient() {
       </div>
       
       {/* Header */}
-      <header className="bg-blue-100 shadow-sm border-b border-blue-100/30">
+      <header className="shrink-0 bg-blue-100 shadow-sm border-b border-blue-100/30">
         <div className="px-6 py-6 flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold text-gray-800 uppercase tracking-wide" style={{ fontFamily: '"Cooper Hewitt", "Nimbus Sans L", "Arial", sans-serif' }}>FIRST CHORD DASHBOARD</h1>
-            <p className="text-gray-600">Welcome back, {tutor}!</p>
+            <p className="text-gray-600">{timeAwareGreeting()}, {tutor}!</p>
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-gray-600">
               <Clock className="w-5 h-5" />
-              <span>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</span>
+              <span>{new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })}</span>
             </div>
             <button
               onClick={() => {
@@ -339,11 +447,12 @@ export default function DashboardClient() {
                 setSelectedStudent(null);
                 setLastNotes(null);
                 setPracticeChatPanel(null);
+                setSidebarOpen(true);
+                try {
+                  localStorage.removeItem(TUTOR_STORAGE_KEY);
+                } catch {}
               }}
-              className="px-4 py-2 text-white rounded-lg transition-colors"
-              style={{ backgroundColor: '#2F6B3D' }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#245230'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = '#2F6B3D'}
+              className="px-4 py-2 text-white rounded-lg bg-[#2F6B3D] hover:bg-[#245230] transition-colors"
             >
               Switch Tutor
             </button>
@@ -351,39 +460,43 @@ export default function DashboardClient() {
         </div>
       </header>
 
-      <div className="flex h-[calc(100vh-73px)]">
+      <div className="flex flex-1 min-h-0">
         {/* Student List Sidebar */}
-        <aside className="w-80 bg-gradient-radial from-yellow-100 via-yellow-50 to-transparent border-r overflow-y-auto" style={{
-          background: 'radial-gradient(ellipse at center, rgba(254, 240, 138, 0.4) 0%, rgba(254, 249, 195, 0.3) 30%, rgba(255, 255, 255, 0.1) 70%, transparent 100%)'
-        }}>
-          <div className="p-4 border-b">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Search students..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-          <div className="p-4">
-            <div className="flex items-center gap-2 mb-4 text-gray-600">
-              <Users className="w-5 h-5" />
-              <span className="font-medium">
-                Your Students ({filteredStudents.length})
-              </span>
-            </div>
-            <div className="space-y-3">
-              {filteredStudents.map(student => (
-                <StudentCard
-                  key={student.mms_id}
-                  student={student}
-                  onClick={setSelectedStudent}
-                  isSelected={selectedStudent?.mms_id === student.mms_id}
+        <aside
+          className={`shrink-0 overflow-y-auto overflow-x-hidden transition-all duration-300 ease-out ${
+            sidebarOpen ? 'w-80 border-r' : 'w-0'
+          }`}
+          style={{
+            background: 'radial-gradient(ellipse at center, rgba(254, 240, 138, 0.4) 0%, rgba(254, 249, 195, 0.3) 30%, rgba(255, 255, 255, 0.1) 70%, transparent 100%)'
+          }}
+        >
+          <div className="w-80">
+            <div className="sticky top-0 z-10 p-4 border-b bg-white/70 backdrop-blur">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  placeholder="Find your student...  ( / )"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-              ))}
+              </div>
+            </div>
+            <div className="p-4">
+              <div className="space-y-3">
+                {filteredStudents.map(student => (
+                  <StudentCard
+                    key={student.mms_id}
+                    student={student}
+                    onClick={handleSelectStudent}
+                    isSelected={selectedStudent?.mms_id === student.mms_id}
+                    showTutor={false}
+                    todayTime={todayTimeByStudent.get(student.mms_id) || ''}
+                  />
+                ))}
+              </div>
             </div>
           </div>
         </aside>
@@ -392,14 +505,28 @@ export default function DashboardClient() {
         <main className="flex-1 overflow-y-auto">
           {selectedStudent ? (
             <div className="p-6 max-w-6xl mx-auto">
-              <TutorSchedulePanel
-                tutor={tutor}
-                students={students}
-                onSelectStudent={setSelectedStudent}
-                compact
-                defaultCollapsed
-                collapseKey={selectedStudent?.mms_id || ''}
-              />
+              <div className="flex items-start justify-between gap-3">
+                {!sidebarOpen && (
+                  <button
+                    type="button"
+                    onClick={() => setSidebarOpen(true)}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-white/70 bg-blue-50/80 px-4 py-2 text-sm font-bold text-blue-900 shadow-sm backdrop-blur transition-colors hover:bg-white/90"
+                  >
+                    <ChevronLeft className="h-4 w-4 text-blue-700" />
+                    Students
+                  </button>
+                )}
+                <div className="min-w-0 flex-1">
+                  <TutorSchedulePanel
+                    tutor={tutor}
+                    students={students}
+                    onSelectStudent={handleSelectStudent}
+                    compact
+                    defaultCollapsed
+                    collapseKey={selectedStudent?.mms_id || ''}
+                  />
+                </div>
+              </div>
               <h2 className="text-3xl font-bold mb-6">{selectedStudent.name}</h2>
               
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -412,7 +539,18 @@ export default function DashboardClient() {
                       <div className="h-4 bg-gray-300 rounded w-5/6"></div>
                     </div>
                   ) : (
-                    lastNotes && <NotesPanel notes={lastNotes} source={notesSource} />
+                    lastNotes && (
+                      <NotesPanel
+                        key={selectedStudent.mms_id}
+                        notes={lastNotes}
+                        source={notesSource}
+                        onLoadHistory={async () => {
+                          const res = await fetch(notesUrlForStudent(selectedStudent, { history: true }));
+                          const data = await res.json();
+                          return data.history || [];
+                        }}
+                      />
+                    )
                   )}
                 </div>
 
@@ -428,15 +566,17 @@ export default function DashboardClient() {
 
             </div>
           ) : (
-            <div className="flex min-h-full items-center justify-center p-6 text-gray-500">
+            <div className="flex min-h-full items-center justify-center p-6">
               <div className="flex w-full max-w-3xl flex-col items-center gap-6">
                 <TutorSchedulePanel
                   tutor={tutor}
                   students={students}
-                  onSelectStudent={setSelectedStudent}
+                  onSelectStudent={handleSelectStudent}
                 />
-                <Users className="w-16 h-16 mx-auto mb-4" />
-                <p className="text-xl">Select a student to begin</p>
+                <div className="text-center">
+                  <p className="text-xl font-semibold text-gray-700">{todaySummary.headline}</p>
+                  <p className="mt-1 text-sm text-gray-500">{todaySummary.hint}</p>
+                </div>
               </div>
             </div>
           )}
@@ -445,12 +585,28 @@ export default function DashboardClient() {
 
       {practiceChatPanel ? (
         <div className="fixed inset-0 z-50 flex">
+          <style jsx>{`
+            @keyframes panel-slide-in {
+              from { transform: translateX(24px); opacity: 0; }
+              to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes overlay-fade-in {
+              from { opacity: 0; }
+              to { opacity: 1; }
+            }
+            .practice-chat-overlay {
+              animation: overlay-fade-in 0.2s ease-out;
+            }
+            .practice-chat-panel {
+              animation: panel-slide-in 0.25s ease-out;
+            }
+          `}</style>
           <div
-            className="flex-1 bg-slate-900/25 backdrop-blur-[1px]"
+            className="practice-chat-overlay flex-1 bg-slate-900/25 backdrop-blur-[1px]"
             onClick={() => setPracticeChatPanel(null)}
             aria-hidden
           />
-          <aside className="flex h-full w-full max-w-3xl flex-col border-l border-blue-100 bg-white shadow-2xl">
+          <aside className="practice-chat-panel flex h-full w-full max-w-3xl flex-col border-l border-blue-100 bg-white shadow-2xl">
             <header className="flex items-center justify-between gap-3 border-b border-blue-100 bg-gradient-to-r from-blue-50 to-green-50 px-5 py-3">
               <div>
                 <p className="text-xs font-bold uppercase tracking-wide text-blue-700">Practice Chat</p>
@@ -490,14 +646,14 @@ export default function DashboardClient() {
         </div>
       ) : null}
 
-      {/* First Chord Logo - Bottom Right Corner */}
-      <div className="fixed bottom-4 right-4 z-10">
+      {/* First Chord Logo - Bottom Right Corner (decorative; never blocks content) */}
+      <div className="pointer-events-none fixed bottom-4 right-4 z-0 hidden lg:block">
         <Image
           src="/first-chord-banner.png"
           alt="First Chord Music School - Explore Music Together"
-          width={300}
-          height={169}
-          className="rounded-lg opacity-90 hover:opacity-100 transition-opacity duration-300"
+          width={220}
+          height={124}
+          className="rounded-lg opacity-80"
           priority={false}
         />
       </div>
