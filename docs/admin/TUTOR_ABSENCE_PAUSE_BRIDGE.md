@@ -39,6 +39,10 @@ Tutor away period
 Tutor-absence card
   -> choose cover or cancel directly in Planning
 
+Newly captured tutor-absence card (notice plan v1)
+  -> becomes actionable about two weeks before the teaching date
+  -> cancellation creates an early parent-notice card for each affected student/block
+
 If cover
   -> no pause Planning card is created
   -> the dated absence stays in the short cover checklist for tutor/calendar/parent confirmation
@@ -48,6 +52,11 @@ If cancel
   -> bridge scans that tutor's cancelled rows
   -> creates structured pause Planning for affected students
   -> dated absence leaves the direct-attention list
+
+Early notice card
+  -> copy/send the advance absence message manually
+  -> record that the initial notice was sent
+  -> does not change payment, the absence decision, or reconciliation
 
 One cancelled lesson for a student
   -> single-date pause card
@@ -107,6 +116,8 @@ This prevents old single cards and old shorter-period cards from double-counting
 - Parent messages can group by period, but the stored workflow state remains per date.
 - Cover decisions must not create pause cards.
 - Cancellation decisions can create pause cards.
+- The early notice and final payment confirmation are distinct messages: the former says what will happen; the latter is available only after payment handling is complete.
+- Only newly captured cards carrying `Tutor absence notice planning: v1` create early-notice cards. Existing absences are not backfilled or changed.
 - Cancelled dates are a hand-off to grouped pause cards, not a second payment/message checklist in the Tutor Absence workflow.
 - A cancelled date resolves only when every current linked pause card is done; a missing card is never treated as completion.
 - A student already marked `stripe_paused_expected` or explicitly marked payment-not-needed is skipped.
@@ -160,10 +171,21 @@ That is the intended behaviour.
 For a multi-week tutor absence:
 
 1. Capture the tutor absence period from Planning.
-2. On each actual teaching-date card, choose **Cover lessons** or **Cancel lessons → pause cards**.
-3. For cover, finish the short cover checklist in Tutor Absence.
-4. For cancellation, let the dashboard build/park pause cards automatically.
-5. Complete the final grouped pause card for each affected student, not the early single-date card. The dated absence cards then close themselves.
+2. Around two weeks before each actual teaching date, choose **Cover lessons** or **Cancel lessons → pause cards**.
+3. For cover, finish the short cover checklist and initial parent message in Tutor Absence.
+4. For cancellation, send and record the new early parent notice. It says the lesson will not run and that payment will be confirmed later.
+5. Let the dashboard build/park pause cards automatically, but complete their final payment/confirmation work closer to the missed lesson.
+6. Complete the final grouped pause card for each affected student, not the early single-date card. The dated absence cards then close themselves.
+
+## Notice Timing and Rollout
+
+- **Target:** prepare/send the initial notice 14 days before the student's first affected lesson.
+- **Escalation:** treat 10 days as the latest normal notice point; this is an operating rule, not an automated payment action.
+- **Final payment action:** stays on the existing pause card, close to the missed lesson and subject to the payment tool's safe timing.
+- **No seasonal mode:** long summer absences use the same grouped-period rules as all other absences.
+- **Safe adoption:** only future capture cards carry the v1 marker. Current absence records, existing pause cards, payment expectations, and reconciliation inputs are deliberately left alone.
+
+For the complete operating policy, fail-loud exceptions, reconciliation boundary and UI rules, see [Tutor Absence Safety and UX Contract](./TUTOR_ABSENCE_SAFETY_AND_UX.md).
 
 If a cancellation later changes to cover, manually park/remove the related pause card until a reconciliation tool exists.
 

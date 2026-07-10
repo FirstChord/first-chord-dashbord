@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Check, Loader2, Pencil, Trash2 } from 'lucide-react';
-import { isPausePlanningItem, getPlanningStory, getPlanningWhatToDo, dueChipLabel } from '@/lib/admin/planning-client-helpers.mjs';
+import { isPausePlanningItem, isTutorAbsenceNoticePlanningItem, isTutorAbsenceFinalConfirmationPlanningItem, getPlanningStory, getPlanningWhatToDo, dueChipLabel } from '@/lib/admin/planning-client-helpers.mjs';
 import PlanningCard from './PlanningCard';
 
 // Calm, focused card for the "due today" view: a plain-language headline + next step
@@ -23,11 +23,16 @@ export default function DueTodayCard({
   onOpenWorkflowPanel,
   onCreateLinkedAction,
   onTutorAbsenceDecision,
+  onTutorAbsenceNoticeSent,
+  onTutorAbsenceFinalConfirmationSent,
+  onTutorAbsenceManualResolved,
   onDefer,
   pendingId,
   nearbyPause = null,
 }) {
   const isPause = isPausePlanningItem(item);
+  const isTutorAbsenceNotice = isTutorAbsenceNoticePlanningItem(item);
+  const isTutorAbsenceFinalConfirmation = isTutorAbsenceFinalConfirmationPlanningItem(item);
   const isTutorAbsenceCapture = !isPause && item.linkedWorkflowId === 'tutor-absence' && Boolean(item.linkedTutorId);
   const [expanded, setExpanded] = useState(false);
   const story = getPlanningStory(item, studentOptions);
@@ -72,7 +77,7 @@ export default function DueTodayCard({
       {!isPause && whatToDo ? <p className="mt-1 text-sm leading-6 text-slate-600">{whatToDo}</p> : null}
 
       <div className="mt-4 flex flex-wrap gap-2">
-        {!isPause && !isTutorAbsenceCapture && (
+        {!isPause && !isTutorAbsenceCapture && !isTutorAbsenceNotice && !isTutorAbsenceFinalConfirmation && (
           <button
             type="button"
             onClick={() => onStatus(item, 'done')}
@@ -97,7 +102,7 @@ export default function DueTodayCard({
             onClick={() => setExpanded((value) => !value)}
             className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
           >
-            {expanded ? 'Hide details' : isTutorAbsenceCapture ? 'Choose cancel or cover' : 'Details'}
+            {expanded ? 'Hide details' : isTutorAbsenceCapture || isTutorAbsenceNotice || isTutorAbsenceFinalConfirmation ? 'Open absence action' : 'Details'}
           </button>
         )}
       </div>
@@ -120,6 +125,9 @@ export default function DueTodayCard({
             onOpenWorkflowPanel={onOpenWorkflowPanel}
             onCreateLinkedAction={onCreateLinkedAction}
             onTutorAbsenceDecision={onTutorAbsenceDecision}
+            onTutorAbsenceNoticeSent={onTutorAbsenceNoticeSent}
+            onTutorAbsenceFinalConfirmationSent={onTutorAbsenceFinalConfirmationSent}
+            onTutorAbsenceManualResolved={onTutorAbsenceManualResolved}
             pendingId={pendingId}
             nearbyPause={nearbyPause}
             compact

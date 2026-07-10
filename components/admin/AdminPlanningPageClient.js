@@ -410,6 +410,66 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
     }
   }
 
+  async function handleTutorAbsenceNoticeSent(item) {
+    try {
+      await verifyTutorAbsenceSchedule(item);
+      await postPlanning({
+        mode: 'status',
+        planningId: item.planningId,
+        status: 'done',
+        progressNote: 'Initial tutor-absence notice sent manually; payment and final confirmation remain on the linked pause card.',
+      }, item.planningId);
+    } catch (error) {
+      setSaveState({ pending: false, error: error.message || 'Could not mark the initial notice sent', savedAt: '' });
+      setPendingId('');
+    }
+  }
+
+  async function handleTutorAbsenceManualResolved(item) {
+    const confirmed = window.confirm('Only continue if every affected household, any cover arrangement, calendar change and parent communication have been handled manually.');
+    if (!confirmed) return;
+    try {
+      await postPlanning({
+        mode: 'status',
+        planningId: item.planningId,
+        status: 'done',
+        progressNote: 'Manual exception completed: multi-student MMS event checked; household communication and operational handling recorded outside automatic tutor-absence flow.',
+      }, item.planningId);
+    } catch (error) {
+      setSaveState({ pending: false, error: error.message || 'Could not complete the manual exception', savedAt: '' });
+      setPendingId('');
+    }
+  }
+
+  async function handleTutorAbsenceFinalConfirmationSent(item) {
+    try {
+      await verifyTutorAbsenceSchedule(item);
+      await postPlanning({
+        mode: 'status',
+        planningId: item.planningId,
+        status: 'done',
+        progressNote: 'Final tutor-absence payment outcome confirmation sent manually; no payment-tool action was required.',
+      }, item.planningId);
+    } catch (error) {
+      setSaveState({ pending: false, error: error.message || 'Could not mark the final confirmation sent', savedAt: '' });
+      setPendingId('');
+    }
+  }
+
+  async function verifyTutorAbsenceSchedule(item) {
+    const notes = `${item?.notes || ''}`;
+    if (!/Tutor absence IDs?:/u.test(notes)) return;
+    const response = await fetch('/api/admin/planning/tutor-absence', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: 'verify_schedule', planningId: item.planningId }),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.ready) {
+      throw new Error(data.error || 'MMS schedule needs review before continuing.');
+    }
+  }
+
   function startEdit(item) {
     setEditingItem(item);
     setEditorMode(isPausePlanningItem(item) ? 'structured' : 'general');
@@ -561,6 +621,8 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
     try {
       setSaveState({ pending: true, error: '', savedAt: '' });
       setPendingId(item.planningId);
+
+      await verifyTutorAbsenceSchedule(item);
 
       if (!hasPausePaymentConfirmation(item)) {
         await postPlanning({
@@ -957,6 +1019,9 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
                       onOpenWorkflowPanel={setWorkflowPanel}
                       onCreateLinkedAction={handleCreateLinkedAction}
                       onTutorAbsenceDecision={handleTutorAbsenceDecision}
+                      onTutorAbsenceNoticeSent={handleTutorAbsenceNoticeSent}
+                      onTutorAbsenceFinalConfirmationSent={handleTutorAbsenceFinalConfirmationSent}
+                      onTutorAbsenceManualResolved={handleTutorAbsenceManualResolved}
                       onDefer={handleDefer}
                       pendingId={pendingId}
                       nearbyPause={nearbyPauseFlags.get(item.planningId)}
@@ -997,6 +1062,9 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
                         onOpenWorkflowPanel={setWorkflowPanel}
                         onCreateLinkedAction={handleCreateLinkedAction}
                         onTutorAbsenceDecision={handleTutorAbsenceDecision}
+                        onTutorAbsenceNoticeSent={handleTutorAbsenceNoticeSent}
+                        onTutorAbsenceFinalConfirmationSent={handleTutorAbsenceFinalConfirmationSent}
+                        onTutorAbsenceManualResolved={handleTutorAbsenceManualResolved}
                         pendingId={pendingId}
                         nearbyPause={nearbyPauseFlags.get(item.planningId)}
                       />

@@ -660,6 +660,19 @@ test('buildTutorAbsencePlanningItem snapshots students and targets a meeting day
   assert.match(item.nextAction, /message 2 parents/);
 });
 
+test('buildTutorAbsencePlanningItem opts a newly captured absence into the early-notice timing without changing the legacy default', () => {
+  const item = buildTutorAbsencePlanningItem({
+    tutor: { shortName: 'Chloe', fullName: 'Chloe Mak' },
+    absenceDate: '2026-08-04', // Tuesday
+    lessons: [{ studentName: 'Ada Neocleous' }],
+    enableEarlyNotice: true,
+  });
+
+  assert.equal(item.targetDate, '2026-07-20'); // Monday on/before the 14-day target
+  assert.match(item.notes, /Tutor absence notice planning: v1/u);
+  assert.match(item.nextAction, /initial parent notice/u);
+});
+
 test('buildTutorAbsencePlanningItem notes a missing MMS lesson list', () => {
   const item = buildTutorAbsencePlanningItem({
     tutor: { shortName: 'Robbie', fullName: 'Robbie Tranter' },

@@ -28,6 +28,10 @@ import {
   buildTutorAbsenceWorkflowHref,
   studentHref,
   isSchoolNotePlanningItem,
+  isTutorAbsenceNoticePlanningItem,
+  extractTutorAbsenceNoticeMessage,
+  isTutorAbsenceFinalConfirmationPlanningItem,
+  extractTutorAbsenceFinalConfirmationMessage,
   hasPausePaymentConfirmation,
   buildSchoolNoteItem,
   isPauseCaptureText,
@@ -37,6 +41,25 @@ import {
   filterPlanningItems,
   EMPTY_FORM,
 } from '../../lib/admin/planning-client-helpers.mjs';
+
+test('tutor-absence early notice helpers recognise only versioned notice cards and extract their copy', () => {
+  const item = {
+    linkedWorkflowId: 'tutor-absence-notice',
+    notes: 'Tutor absence early notice plan: v1.\nParent notice message:\nHello parent',
+  };
+  assert.equal(isTutorAbsenceNoticePlanningItem(item), true);
+  assert.equal(extractTutorAbsenceNoticeMessage(item), 'Hello parent');
+  assert.equal(isTutorAbsenceNoticePlanningItem({ linkedWorkflowId: 'tutor-absence-notice', notes: '' }), false);
+});
+
+test('tutor-absence final confirmation helpers keep payment-exception copy separate from pause cards', () => {
+  const item = {
+    linkedWorkflowId: 'tutor-absence-final-confirmation',
+    notes: 'Tutor absence final confirmation: v1.\nParent final confirmation message:\nPayment is already paused.',
+  };
+  assert.equal(isTutorAbsenceFinalConfirmationPlanningItem(item), true);
+  assert.equal(extractTutorAbsenceFinalConfirmationMessage(item), 'Payment is already paused.');
+});
 
 test('filterPlanningItems routes every chip: done/parked veil, search, owners, types, momentum', () => {
   const items = [
