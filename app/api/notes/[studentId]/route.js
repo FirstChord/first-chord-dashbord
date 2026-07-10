@@ -116,7 +116,27 @@ export async function GET(request, { params }) {
   if (!auth.ok) {
     return Response.json(auth.body, { status: auth.status });
   }
-  
+
+  const { searchParams } = new URL(request.url);
+  if (searchParams.get('history')) {
+    try {
+      const result = await mmsClient.getStudentLessonHistory(studentId, 12);
+      const history = (result.lessons || [])
+        .filter((lesson) => lesson.notes && lesson.notes.trim() !== '')
+        .slice(0, 5)
+        .map((lesson) => ({
+          lesson_date: lesson.date,
+          notes: lesson.notes,
+          tutor_name: lesson.tutor,
+          attendance: lesson.status,
+        }));
+      return Response.json({ success: Boolean(result.success), history });
+    } catch (error) {
+      console.error('Notes history API error:', error);
+      return Response.json({ success: false, history: [], message: error.message }, { status: 500 });
+    }
+  }
+
   try {
     const ownedNote = await getFirstChordPortalNote(studentId);
     if (ownedNote) {
