@@ -58,3 +58,7 @@ The bridge posts every live text message from a dashboard-confirmed FC lesson gr
 ## Sheet census (data governance)
 
 A per-tab row-count reading taken during the fortnightly `npm run backup:sheets` run (`lib/admin/sheet-census.mjs` → `census.json` beside the manifest). It reports total rows, deltas since the last backup, and ranks the *watched* event-heavy tabs (`Incoming_Message_Inbox`, `Event_Log`, `Issue_Queue`, `Practice_Notes_Log`, `Payroll_Runs`, `WhatsApp_Group_Map`) by growth. Its purpose is to make the eventual Sheets→database migration an evidence-triggered decision: sustained growth on a watched tab is the signal to move that lane off Sheets. See `SHEETS_VS_DB_AUDIT.md`.
+
+## Group-only student (tutor dashboard)
+
+A student whose registry `instrument` is a group ensemble (currently `Ukulele Orchestra`). `excludeGroupOnlyStudents()` (`lib/tutor-dashboard-helpers.mjs`) keeps them out of the tutor dashboard's individual student list — they're taught as a group, so their group lesson still appears on the schedule timeline (display-only) but they have no individual card.
