@@ -6,7 +6,7 @@ import StudentCard from '@/components/student/StudentCard';
 import NotesPanel from '@/components/student/NotesPanel';
 import QuickLinks from '@/components/navigation/QuickLinks';
 import TutorSchedulePanel from '@/components/tutor-dashboard/TutorSchedulePanel';
-import { Clock, Search, ChevronLeft } from 'lucide-react';
+import { Search, ChevronLeft } from 'lucide-react';
 import { cache } from '@/lib/cache';
 import {
   excludeGroupOnlyStudents,
@@ -20,6 +20,10 @@ const TUTOR_STORAGE_KEY = 'fc_dashboard_tutor';
 function lessonStartMinutes(lesson) {
   const match = `${lesson.lessonTime || ''}`.match(/^(\d{1,2}):(\d{2})$/);
   return match ? Number(match[1]) * 60 + Number(match[2]) : null;
+}
+
+function possessive(name = '') {
+  return name.endsWith('s') ? `${name}’` : `${name}’s`;
 }
 
 function timeAwareGreeting() {
@@ -431,32 +435,28 @@ export default function DashboardClient() {
       
       {/* Header */}
       <header className="shrink-0 bg-blue-100 shadow-sm border-b border-blue-100/30">
-        <div className="px-6 py-6 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800 uppercase tracking-wide" style={{ fontFamily: '"Cooper Hewitt", "Nimbus Sans L", "Arial", sans-serif' }}>FIRST CHORD DASHBOARD</h1>
-            <p className="text-gray-600">{timeAwareGreeting()}, {tutor}!</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-gray-600">
-              <Clock className="w-5 h-5" />
-              <span>{new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })}</span>
-            </div>
-            <button
-              onClick={() => {
-                setTutor('');
-                setSelectedStudent(null);
-                setLastNotes(null);
-                setPracticeChatPanel(null);
-                setSidebarOpen(true);
-                try {
-                  localStorage.removeItem(TUTOR_STORAGE_KEY);
-                } catch {}
-              }}
-              className="px-4 py-2 text-white rounded-lg bg-[#2F6B3D] hover:bg-[#245230] transition-colors"
-            >
-              Switch Tutor
-            </button>
-          </div>
+        <div className="relative px-6 py-5 text-center">
+          <h1 className="text-3xl font-black tracking-tight text-gray-900">
+            {possessive(tutor)} Dashboard
+          </h1>
+          <p className="mt-1 text-gray-600">
+            {timeAwareGreeting()}! · {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })}
+          </p>
+          <button
+            onClick={() => {
+              setTutor('');
+              setSelectedStudent(null);
+              setLastNotes(null);
+              setPracticeChatPanel(null);
+              setSidebarOpen(true);
+              try {
+                localStorage.removeItem(TUTOR_STORAGE_KEY);
+              } catch {}
+            }}
+            className="absolute right-6 top-1/2 -translate-y-1/2 px-4 py-2 text-white rounded-lg bg-[#2F6B3D] hover:bg-[#245230] transition-colors"
+          >
+            Switch Tutor
+          </button>
         </div>
       </header>
 
