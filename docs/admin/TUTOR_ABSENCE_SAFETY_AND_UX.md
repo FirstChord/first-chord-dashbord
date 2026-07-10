@@ -65,6 +65,7 @@ Early-notice cards, manual group-event records, and final no-payment confirmatio
 4. The early notice never claims payment has happened. The final message is available only in the payment/final-confirmation step.
 5. Manual exceptions remain visible until a human explicitly records completion.
 6. Historical absence work is preserved and never changed merely because this safer version exists.
+7. A later absence sync may create missing cards or refresh a still-active generated card, but it never reopens a card a human has completed, parked, or deferred.
 
 ## Verification Expectations
 

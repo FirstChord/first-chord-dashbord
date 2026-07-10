@@ -14,7 +14,31 @@ import {
   normaliseTutorAbsenceEvent,
   selectRedundantTutorAbsencePauseCards,
   summariseTutorAbsenceState,
+  shouldSyncGeneratedTutorAbsencePlanningItem,
 } from '../../lib/admin/tutor-absence-helpers.mjs';
+
+test('generated tutor-absence sync only refreshes still-active cards', () => {
+  const generated = {
+    planningId: 'planning_tutor_absence_pause_tutor_absence_chloe_2026_07_04_sdt_1_evt_1',
+    title: 'Pause Ada lesson on Sat, 4 Jul 2026',
+    status: 'active',
+    targetDate: '2026-07-02',
+  };
+
+  assert.equal(shouldSyncGeneratedTutorAbsencePlanningItem({ existing: {}, next: generated }), true);
+  assert.equal(shouldSyncGeneratedTutorAbsencePlanningItem({ existing: generated, next: generated }), false);
+  assert.equal(shouldSyncGeneratedTutorAbsencePlanningItem({
+    existing: { ...generated, status: 'active', targetDate: '2026-07-03' },
+    next: generated,
+  }), true);
+
+  for (const status of ['done', 'parked', 'waiting', 'inbox']) {
+    assert.equal(shouldSyncGeneratedTutorAbsencePlanningItem({
+      existing: { ...generated, status },
+      next: generated,
+    }), false, `${status} cards must not be re-opened by a later absence sync`);
+  }
+});
 
 test('normaliseTutorAbsenceEvent preserves MMS wall-clock lesson time', () => {
   const studentByMmsId = new Map([
