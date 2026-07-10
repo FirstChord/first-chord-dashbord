@@ -6,6 +6,7 @@ import StudentCard from '@/components/student/StudentCard';
 import NotesPanel from '@/components/student/NotesPanel';
 import QuickLinks from '@/components/navigation/QuickLinks';
 import TutorSchedulePanel from '@/components/tutor-dashboard/TutorSchedulePanel';
+import HeaderGreenery from '@/components/tutor-dashboard/HeaderGreenery';
 import { Search, ChevronLeft } from 'lucide-react';
 import { cache } from '@/lib/cache';
 import {
@@ -434,7 +435,8 @@ export default function DashboardClient() {
       </div>
       
       {/* Header */}
-      <header className="shrink-0 bg-blue-100 shadow-sm border-b border-blue-100/30">
+      <header className="relative shrink-0 bg-blue-100 shadow-sm border-b border-blue-100/30">
+        <HeaderGreenery />
         <div className="relative px-6 py-5 text-center">
           <h1 className="text-3xl font-black tracking-tight text-gray-900">
             {possessive(tutor)} Dashboard
