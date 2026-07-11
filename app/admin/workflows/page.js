@@ -2,6 +2,12 @@ import Link from 'next/link';
 
 const workflowSections = [
   {
+    href: '/admin/tutors',
+    title: 'Tutors',
+    description: 'Track tutor departures, review handover warnings, and retire tutors from live choices.',
+    status: 'Lifecycle',
+  },
+  {
     href: '/admin/waiting',
     title: 'Waiting List',
     description: 'Move enquiries from waiting state toward welcome group, placement, and onboarding.',

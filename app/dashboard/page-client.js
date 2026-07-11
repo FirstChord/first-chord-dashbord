@@ -12,10 +12,8 @@ import { cache } from '@/lib/cache';
 import {
   excludeGroupOnlyStudents,
   filterTutorStudentsBySearch,
-  getTutorDashboardOptionNames,
 } from '@/lib/tutor-dashboard-helpers.mjs';
 
-const TUTOR_OPTIONS = getTutorDashboardOptionNames();
 const TUTOR_STORAGE_KEY = 'fc_dashboard_tutor';
 
 function lessonStartMinutes(lesson) {
@@ -43,7 +41,8 @@ function notesUrlForStudent(student = {}, { history = false } = {}) {
   return `/api/notes/${encodeURIComponent(studentId)}${params.toString() ? `?${params.toString()}` : ''}`;
 }
 
-export default function DashboardClient() {
+export default function DashboardClient({ tutorOptions = [] }) {
+  const TUTOR_OPTIONS = useMemo(() => tutorOptions.map((entry) => entry.shortName), [tutorOptions]);
   const [tutor, setTutor] = useState('');
   const [students, setStudents] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState(null);

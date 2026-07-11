@@ -1,11 +1,16 @@
 import mmsClient from '@/lib/mms-client-cached';
 import { enhanceStudentsWithSoundslice } from '@/lib/soundslice-mappings';
 import { addStudentNotesTokens } from '@/lib/tutor-surface-token.mjs';
+import { getActiveTutorOptions } from '@/lib/admin/tutors';
 
 // BYPASS DATABASE - JUST USE MMS DATA DIRECTLY WITH HARDCODED SOUNDSLICE
 export async function POST(request) {
   try {
     const { tutor, forceSync = false } = await request.json();
+    const activeTutors = await getActiveTutorOptions();
+    if (!activeTutors.some((entry) => entry.shortName === tutor)) {
+      return Response.json({ success: false, students: [], count: 0, source: 'error', message: 'Tutor is not available on the live dashboard' }, { status: 404 });
+    }
     
     console.log('=== MMS Student Sync Started ===');
     console.log('Tutor:', tutor);

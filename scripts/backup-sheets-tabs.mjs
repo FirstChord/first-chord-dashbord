@@ -20,6 +20,7 @@ const BACKUP_TABS = [
   'Schedule_Context',
   'Parent_Understanding_State',
   'Tutor_Absence_State',
+  'Tutor_Lifecycle',
   'Planning_Items',
   'Planning_Progress_Log',
   'Practice_Notes_Log',

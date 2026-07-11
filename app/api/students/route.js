@@ -1,6 +1,7 @@
 import mmsClient from '@/lib/mms-client-cached';
 import { enhanceStudentsWithSoundslice } from '@/lib/soundslice-mappings';
 import { addStudentNotesTokens } from '@/lib/tutor-surface-token.mjs';
+import { getActiveTutorOptions } from '@/lib/admin/tutors';
 
 // BYPASS DATABASE - JUST USE MMS DATA DIRECTLY WITH SOUNDSLICE
 export async function GET(request) {
@@ -12,6 +13,10 @@ export async function GET(request) {
   
   try {
     if (tutor) {
+      const activeTutors = await getActiveTutorOptions();
+      if (!activeTutors.some((entry) => entry.shortName === tutor)) {
+        return Response.json({ students: [] }, { status: 404 });
+      }
       console.log('Fetching students for tutor from MMS:', tutor);
       const mmsResult = await mmsClient.getStudentsForTeacher(tutor);
       

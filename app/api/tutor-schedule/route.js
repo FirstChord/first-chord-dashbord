@@ -2,10 +2,8 @@ import { getMmsTutorCalendarEventsForDate } from '@/lib/admin/mms';
 import {
   buildTutorDaySchedule,
 } from '@/lib/tutor-schedule-helpers.mjs';
-import {
-  getTutorDashboardOptions,
-  resolveTutorTeacherId,
-} from '@/lib/tutor-dashboard-helpers.mjs';
+import { resolveTutorTeacherId } from '@/lib/tutor-dashboard-helpers.mjs';
+import { getActiveTutorOptions } from '@/lib/admin/tutors';
 
 function todayInputValue() {
   return new Date().toISOString().slice(0, 10);
@@ -26,7 +24,18 @@ export async function GET(request) {
     }, { status: 400 });
   }
 
-  const teacherId = resolveTutorTeacherId(tutor);
+  const activeTutors = await getActiveTutorOptions();
+  const tutorOption = activeTutors.find((entry) => entry.shortName === tutor);
+  if (!tutorOption) {
+    return Response.json({
+      success: false,
+      message: 'Tutor is not available on the live dashboard',
+      lessons: [],
+      summary: buildTutorDaySchedule([]),
+    }, { status: 404 });
+  }
+
+  const teacherId = tutorOption.teacherId || resolveTutorTeacherId(tutor);
   if (!teacherId) {
     return Response.json({
       success: false,
@@ -45,8 +54,6 @@ export async function GET(request) {
       limit: 100,
     });
     const summary = buildTutorDaySchedule(events);
-    const tutorOption = getTutorDashboardOptions().find((entry) => entry.shortName === tutor) || {};
-
     return Response.json({
       success: true,
       tutor,

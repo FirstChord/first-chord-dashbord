@@ -3,6 +3,7 @@ import { getPlanningDashboard } from '@/lib/admin/planning';
 import { getScheduleContextRows } from '@/lib/admin/sheets';
 import { enrichScheduleContextsWithSharedSlots } from '@/lib/admin/schedule-context-helpers.mjs';
 import { getAdminStudents } from '@/lib/admin/students';
+import { getActiveTutorOptions } from '@/lib/admin/tutors';
 
 const ALLOWED_INITIAL_FILTERS = new Set([
   'all',
@@ -26,10 +27,11 @@ const ALLOWED_INITIAL_FILTERS = new Set([
 
 export default async function AdminPlanningPage({ searchParams }) {
   const resolvedSearchParams = await searchParams;
-  const [planning, students, scheduleRows] = await Promise.all([
+  const [planning, students, scheduleRows, tutorOptions] = await Promise.all([
     getPlanningDashboard(),
     getAdminStudents(),
     getScheduleContextRows(),
+    getActiveTutorOptions(),
   ]);
   const scheduleByMmsId = enrichScheduleContextsWithSharedSlots(scheduleRows);
   const requestedFilter = `${resolvedSearchParams?.filter || ''}`.trim();
@@ -55,6 +57,7 @@ export default async function AdminPlanningPage({ searchParams }) {
       initialFilter={initialFilter}
       initialFocusId={initialFocusId}
       studentOptions={studentOptions}
+      tutorOptions={tutorOptions}
     />
   );
 }

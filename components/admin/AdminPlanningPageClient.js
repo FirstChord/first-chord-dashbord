@@ -90,7 +90,7 @@ const EMPTY_SCHOOL_NOTE_FORM = {
 const PAUSE_EXPECTATION_SET_NOTE = 'Set Stripe paused expected from linked pause planning item.';
 const PAUSE_COMPLETED_NOTE = 'Pause completed from Planning: pause tool run, parent confirmation sent, and payment expectation aligned.';
 
-export default function AdminPlanningPageClient({ initialPlanning, initialFilter = 'all', initialFocusId = '', studentOptions = [] }) {
+export default function AdminPlanningPageClient({ initialPlanning, initialFilter = 'all', initialFocusId = '', studentOptions = [], tutorOptions = [] }) {
   const [planning, setPlanning] = useState(initialPlanning || { items: [], summary: {} });
   const [quickNote, setQuickNote] = useState('');
   const [quickOptions, setQuickOptions] = useState({});
@@ -854,6 +854,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
             options={quickOptions}
             setOptions={setQuickOptions}
             studentOptions={studentOptions}
+            tutorOptions={tutorOptions}
             expanded={quickExpanded}
             setExpanded={setQuickExpanded}
             onSubmit={handleCapture}

@@ -35,6 +35,7 @@ export default function QuickBrainCapture({
   options,
   setOptions,
   studentOptions = [],
+  tutorOptions = CLIENT_TUTOR_OPTIONS,
   expanded,
   setExpanded,
   onSubmit,
@@ -68,7 +69,7 @@ export default function QuickBrainCapture({
     linkedStudentId: effectiveStudentIds[0] || '',
     linkedStudentIds: effectiveStudentIds,
   };
-  const tutorAbsenceDetection = detectTutorAbsenceCapture(rawNote, CLIENT_TUTOR_OPTIONS);
+  const tutorAbsenceDetection = detectTutorAbsenceCapture(rawNote, tutorOptions);
   const tutorAbsenceBuilderVisible = !effectiveOptions.hideTutorAbsenceBuilder
     && (tutorAbsenceDetection.isTutorAbsence || effectiveOptions.showTutorAbsenceBuilder);
   const effectiveTutorShortName = effectiveOptions.tutorAbsenceShortName
@@ -78,7 +79,7 @@ export default function QuickBrainCapture({
     ? effectiveOptions.tutorAbsenceDates
     : tutorAbsenceDetection.inferredDates;
   const cleanTutorDates = [...new Set(effectiveTutorDates.filter(Boolean))];
-  const tutorAbsenceFullName = CLIENT_TUTOR_OPTIONS.find((tutor) => tutor.shortName === effectiveTutorShortName)?.fullName
+  const tutorAbsenceFullName = tutorOptions.find((tutor) => tutor.shortName === effectiveTutorShortName)?.fullName
     || effectiveTutorShortName;
   // A tutor-absence capture takes precedence over the single-student pause builder
   // (e.g. "pause tutor robbie"), unless the pause builder was explicitly opened.
@@ -479,7 +480,7 @@ export default function QuickBrainCapture({
               onChange={(value) => setTutorAbsenceOption('tutorAbsenceShortName', value)}
               options={[
                 { value: '', label: 'Select tutor…' },
-                ...CLIENT_TUTOR_OPTIONS.map((tutor) => ({ value: tutor.shortName, label: tutor.fullName })),
+                ...tutorOptions.map((tutor) => ({ value: tutor.shortName, label: tutor.fullName })),
               ]}
             />
             <div className="grid gap-2">

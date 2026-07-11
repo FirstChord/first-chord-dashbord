@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { getAdminStudentByMmsId } from '@/lib/admin/students';
-import { getAllTutorOptions } from '@/lib/admin/tutors';
+import { getActiveTutorOptions } from '@/lib/admin/tutors';
 import { getPlanningDashboard } from '@/lib/admin/planning';
 import { getPracticeNoteLogRows } from '@/lib/admin/sheets';
 import { getCommunicationLogForStudent } from '@/lib/admin/communications';
@@ -14,7 +14,7 @@ export default async function AdminStudentDetailPage({ params }) {
     getPracticeNoteLogRows(resolvedParams.mmsId),
     getCommunicationLogForStudent(resolvedParams.mmsId, { limit: 5 }),
   ]);
-  const tutorOptions = getAllTutorOptions();
+  const tutorOptions = await getActiveTutorOptions();
 
   if (!student) {
     notFound();

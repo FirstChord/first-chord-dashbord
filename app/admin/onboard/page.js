@@ -2,7 +2,7 @@ import AdminOnboardForm from '@/components/admin/AdminOnboardForm';
 import { normaliseExperienceLevel, normaliseInstrument } from '@/lib/admin/fc';
 import { getStudentDetails, getWaitingStudents } from '@/lib/admin/mms';
 import { getOnboardingDuplicateState } from '@/lib/admin/onboarding';
-import { getTutorsForInstrument } from '@/lib/admin/tutors';
+import { getActiveTutorsForInstrument } from '@/lib/admin/tutors';
 
 const VALID_LESSON_LENGTHS = new Set(['30', '45', '60']);
 
@@ -46,7 +46,7 @@ export default async function AdminOnboardPage({ searchParams }) {
   const details = mmsId ? await getStudentDetails(mmsId) : null;
   const parsed = details?.parsed || {};
   const instrument = normaliseInstrument(parsed.instrument || '');
-  const tutorOptions = getTutorsForInstrument(instrument.toLowerCase());
+  const tutorOptions = await getActiveTutorsForInstrument(instrument.toLowerCase());
   const initialTutor = getRequestedTutor(tutorOptions, {
     teacherId: requestedTeacherId,
     tutorName: requestedTutorName,
