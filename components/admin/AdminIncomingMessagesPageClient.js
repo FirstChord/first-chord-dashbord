@@ -1,6 +1,5 @@
 'use client';
 
-import ScopeBadge from '@/components/admin/ui/ScopeBadge';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
@@ -473,9 +472,11 @@ function BridgeStatusStrip({ bridgeStatus, inbox = [] }) {
   }
 
   return (
-    <p className="px-1 text-[11px] text-slate-400">
-      Bridge ✓ connected · {bridgeStatus.confirmedGroups} groups on the capture list · heartbeat {formatDateTime(bridgeStatus.lastHeartbeatAt)}
-      {lastAutoCaptureAt ? ` · last capture ${formatDateTime(lastAutoCaptureAt)}` : ' · no auto-captures yet'}
+    <p
+      className="flex items-center px-1"
+      title={`Bridge connected · ${bridgeStatus.confirmedGroups} groups on the capture list · heartbeat ${formatDateTime(bridgeStatus.lastHeartbeatAt)}${lastAutoCaptureAt ? ` · last capture ${formatDateTime(lastAutoCaptureAt)}` : ''}`}
+    >
+      <span aria-label="WhatsApp bridge connected" className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700">✓</span>
     </p>
   );
 }
@@ -625,7 +626,6 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
   const [pendingChatId, setPendingChatId] = useState('');
   const [submitError, setSubmitError] = useState(error);
   const [showArchived, setShowArchived] = useState(false);
-  const [showAutoArchived, setShowAutoArchived] = useState(false);
   const [showCapture, setShowCapture] = useState(false);
   const [conversions, setConversions] = useState({});
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -663,10 +663,9 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
   const archivedCount = useMemo(() => inbox.filter((entry) => ['converted', 'ignored'].includes(entry.status)).length, [inbox]);
   const autoArchivedCount = useMemo(() => inbox.filter(isAutoArchivedMessage).length, [inbox]);
   const visibleInbox = useMemo(() => {
-    if (showAutoArchived) return inbox.filter(isAutoArchivedMessage);
     if (showArchived) return inbox;
     return inbox.filter((entry) => ['inbox', 'needs_review'].includes(entry.status) || conversions[entry.incomingId]);
-  }, [inbox, showArchived, showAutoArchived, conversions]);
+  }, [inbox, showArchived, conversions]);
 
   async function postPayload(payload) {
     const response = await fetch('/api/admin/incoming-messages', {
@@ -837,11 +836,10 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
     <div className="space-y-8">
       <section className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Incoming messages</p>
-          <h2 className="mt-2 flex items-center gap-3 fc-display text-3xl text-slate-900">
-            Message Inbox
-            <ScopeBadge>Intake only — nothing acts until you do</ScopeBadge>
-          </h2>
+          <h2 className="fc-display text-3xl text-slate-900">Message Inbox</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            {openCount ? `${openCount} unread${absenceCount ? ` · ${absenceCount} likely absence` : ''}` : '0 unread'}
+          </p>
         </div>
         <button
           type="button"
@@ -862,17 +860,6 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
       <BridgeStatusStrip bridgeStatus={bridgeStatus} inbox={inbox} />
 
       <section className="space-y-4">
-        <div className="grid max-w-md gap-3 sm:grid-cols-2">
-          <div className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-[0_12px_36px_rgba(15,23,42,0.04)]">
-            <p className="text-sm text-slate-500">Open messages</p>
-            <p className="mt-1 text-3xl font-semibold text-slate-900">{openCount}</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-[0_12px_36px_rgba(15,23,42,0.04)]">
-            <p className="text-sm text-slate-500">Likely absence / pause</p>
-            <p className="mt-1 text-3xl font-semibold text-slate-900">{absenceCount}</p>
-          </div>
-        </div>
-
         {/* Manual paste is the fallback now that auto-capture handles confirmed
             groups, so it stays collapsed until needed. */}
         <div className="rounded-2xl border border-slate-200 bg-white/90 shadow-[0_12px_36px_rgba(15,23,42,0.04)]">
@@ -942,40 +929,25 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
           ) : null}
         </div>
 
-        <GroupMapPanel
-          groups={groupMap}
-          studentOptions={studentOptions}
-          onReviewGroup={handleReviewGroup}
-          onAddGroupStudent={handleAddGroupStudent}
-          pendingChatId={pendingChatId}
-        />
+        <div className="standalone-hide">
+          <GroupMapPanel
+            groups={groupMap}
+            studentOptions={studentOptions}
+            onReviewGroup={handleReviewGroup}
+            onAddGroupStudent={handleAddGroupStudent}
+            pendingChatId={pendingChatId}
+          />
+        </div>
 
-        {!visibleInbox.length ? (
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-            {inbox.length ? 'No open incoming messages.' : 'No incoming messages yet.'}
-          </div>
-        ) : null}
-
-        {archivedCount || autoArchivedCount ? (
-          <div className="flex justify-end gap-2">
-            {autoArchivedCount ? (
-              <button
-                type="button"
-                onClick={() => { setShowAutoArchived((current) => !current); setShowArchived(false); }}
-                className={`rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm ${showAutoArchived ? 'border-amber-300 bg-amber-50 text-amber-900' : 'border-slate-200 bg-white text-slate-600'}`}
-              >
-                {showAutoArchived ? 'Hide auto-archived' : `Auto-archived (${autoArchivedCount})`}
-              </button>
-            ) : null}
-            {archivedCount ? (
-              <button
-                type="button"
-                onClick={() => { setShowArchived((current) => !current); setShowAutoArchived(false); }}
-                className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm"
-              >
-                {showArchived ? 'Hide archived' : `Show archived (${archivedCount})`}
-              </button>
-            ) : null}
+        {archivedCount + autoArchivedCount ? (
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => setShowArchived((current) => !current)}
+              className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm"
+            >
+              {showArchived ? 'Hide archived' : `Show archived (${archivedCount + autoArchivedCount})`}
+            </button>
           </div>
         ) : null}
 
