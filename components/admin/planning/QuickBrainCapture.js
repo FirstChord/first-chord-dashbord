@@ -245,7 +245,7 @@ export default function QuickBrainCapture({
           onChange={(event) => setRawNote(event.target.value)}
           rows={5}
           autoFocus
-          placeholder="Pause Coban for 7 Feb&#10;Elena away next Friday - arrange cover&#10;Idea: meet students video"
+          placeholder="Whatcha got for me"
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base font-medium leading-7 text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
         />
       </label>

@@ -746,16 +746,9 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
 
   return (
     <div className="space-y-8">
-      <section>
-        <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Planning inbox</p>
-        <h2
-          className="mt-2 fc-display text-3xl text-slate-900"
-        >
-          Planning
-        </h2>
-        <p className="mt-2 max-w-3xl text-sm text-slate-600">
-          Capture ideas quickly, turn chosen work into initiatives, and keep momentum visible through next actions and progress notes.
-        </p>
+      <section className="flex items-baseline justify-between gap-3">
+        <h2 className="fc-display text-3xl text-slate-900">Planning</h2>
+        <p className="text-sm text-slate-500">{filteredItems.length} plan{filteredItems.length === 1 ? '' : 's'}</p>
       </section>
 
       {mondayReviewOpen ? (
@@ -843,83 +836,19 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
         </section>
       ) : null}
 
-      <section className="grid gap-3 md:grid-cols-5">
-        {[
-          ['Open planning', summary.open || 0],
-          ['Active', summary.active || 0],
-          ['Inbox', summary.inbox || 0],
-          ['School notes', summary.activeSchoolNotes || 0],
-          ['No next action', summary.noNextAction || 0],
-        ].map(([label, value]) => (
-          <div key={label} className="rounded-2xl border border-blue-100 bg-white/90 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.05)]">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
-            <p className="mt-2 text-3xl font-bold text-slate-900">{value}</p>
-          </div>
-        ))}
-      </section>
-
-      <section className={cardClasses('border-violet-100 bg-violet-50/50')}>
-        <button
-          type="button"
-          onClick={() => setSchoolNotesOpen((open) => !open)}
-          aria-expanded={schoolNotesOpen}
-          className="flex w-full items-center justify-between gap-4 text-left"
-        >
-          <div>
-            <h3 className="text-lg font-semibold text-slate-900">Let&apos;s work on the school</h3>
-            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">
-              Learning notes, transcript summaries, and strategic scratchpad thoughts.{' '}
-              {schoolNotesOpen ? 'Tap to hide.' : 'Tap to open — kept tucked away so planning stays quick.'}
-            </p>
-          </div>
-          <span
-            aria-hidden="true"
-            className={`shrink-0 text-xl text-violet-700 transition-transform ${schoolNotesOpen ? 'rotate-90' : ''}`}
-          >
-            ›
-          </span>
-        </button>
-        {schoolNotesOpen ? (
-          <>
-            <div className="mt-4 flex justify-end">
-              <Link
-                href="/admin/planning?filter=school_notes"
-                className="rounded-full border border-violet-200 bg-white px-3 py-1 text-xs font-semibold text-violet-900 hover:bg-violet-50"
-              >
-                View school notes
-              </Link>
-            </div>
-            <div className="mt-3 rounded-2xl border border-violet-100 bg-white/90 p-4">
-              <SchoolNoteCapture
-                form={schoolNoteForm}
-                onChange={setSchoolNoteForm}
-                onSubmit={handleSchoolNoteCapture}
-                pending={saveState.pending && !pendingId}
-              />
-            </div>
-          </>
-        ) : null}
-      </section>
 
       <section className={cardClasses()}>
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h3 className="text-lg font-semibold text-slate-900">Brain capture</h3>
-            <p className="mt-1 text-sm text-slate-600">One box for the stuff that would usually disappear in WhatsApp.</p>
-            <p className="mt-2 text-xs leading-5 text-slate-500">
-              Add dates when you can. Pauses, cancellations, and tutor absences should usually be done before the lesson day. Review rhythm: Monday, Thursday, Friday.
-            </p>
-          </div>
-          {saveState.savedAt && (
+        {saveState.savedAt && (
+          <div className="flex justify-end">
             <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
               Saved {saveState.savedAt}
             </span>
-          )}
-        </div>
-        {saveState.error && (
-          <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{saveState.error}</p>
+          </div>
         )}
-        <div className="mt-5">
+        {saveState.error && (
+          <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{saveState.error}</p>
+        )}
+        <div className={saveState.savedAt || saveState.error ? 'mt-3' : ''}>
           <QuickBrainCapture
             rawNote={quickNote}
             setRawNote={setQuickNote}
@@ -939,10 +868,6 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
       <section className="grid gap-4 lg:grid-cols-[1fr_320px]">
         <div className={cardClasses()}>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h3 className="text-lg font-semibold text-slate-900">Review</h3>
-              <p className="mt-1 text-sm text-slate-600">Start with what is due today, or scan the open board.</p>
-            </div>
             <div className="flex flex-wrap items-center gap-2">
               {PRIMARY_REVIEW_FILTERS.map((option) => (
                 <button
@@ -994,12 +919,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
           <div className="mt-5 space-y-6">
             {filter === 'due_now' ? (
               <div className="space-y-3">
-                <div>
-                  <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">On today</h4>
-                  <p className="mt-1 text-xs text-slate-500">
-                    What needs doing today, calmly — overdue first. Open “Details” for the full card and tools.
-                  </p>
-                </div>
+                <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">On today</h4>
                 {[...filteredItems]
                   .sort((a, b) => `${a.targetDate || ''}`.localeCompare(`${b.targetDate || ''}`))
                   .map((item) => (
@@ -1234,6 +1154,43 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
           />
         </SlideOverPanel>
       ) : null}
+
+      <section className={cardClasses('border-violet-100 bg-violet-50/50')}>
+        <button
+          type="button"
+          onClick={() => setSchoolNotesOpen((open) => !open)}
+          aria-expanded={schoolNotesOpen}
+          className="flex w-full items-center justify-between gap-4 text-left"
+        >
+          <h3 className="text-lg font-semibold text-slate-900">Let&apos;s work on the school</h3>
+          <span
+            aria-hidden="true"
+            className={`shrink-0 text-xl text-violet-700 transition-transform ${schoolNotesOpen ? 'rotate-90' : ''}`}
+          >
+            ›
+          </span>
+        </button>
+        {schoolNotesOpen ? (
+          <>
+            <div className="mt-4 flex justify-end">
+              <Link
+                href="/admin/planning?filter=school_notes"
+                className="rounded-full border border-violet-200 bg-white px-3 py-1 text-xs font-semibold text-violet-900 hover:bg-violet-50"
+              >
+                View school notes
+              </Link>
+            </div>
+            <div className="mt-3 rounded-2xl border border-violet-100 bg-white/90 p-4">
+              <SchoolNoteCapture
+                form={schoolNoteForm}
+                onChange={setSchoolNoteForm}
+                onSubmit={handleSchoolNoteCapture}
+                pending={saveState.pending && !pendingId}
+              />
+            </div>
+          </>
+        ) : null}
+      </section>
     </div>
   );
 }
