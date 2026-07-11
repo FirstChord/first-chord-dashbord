@@ -836,7 +836,6 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
         </section>
       ) : null}
 
-
       <section className={cardClasses()}>
         {saveState.savedAt && (
           <div className="flex justify-end">
@@ -865,7 +864,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
         </div>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-[1fr_320px]">
+      <section>
         <div className={cardClasses()}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -1001,56 +1000,6 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
           </div>
         </div>
 
-        <aside className="space-y-4">
-          <div className={cardClasses()}>
-            <h3 className="text-base font-semibold text-slate-900">Planning context</h3>
-            <Link
-              href="/admin/capacity"
-              className="mt-4 block rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-blue-200 hover:bg-white"
-            >
-              <p className="text-sm font-semibold text-slate-900">Capacity</p>
-              <p className="mt-1 text-sm leading-6 text-slate-600">
-                Free slots, tutor availability, waiting-list placement hints, and schedule-cache health.
-              </p>
-            </Link>
-            <Link
-              href="/admin/finance"
-              className="mt-3 block rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-blue-200 hover:bg-white"
-            >
-              <p className="text-sm font-semibold text-slate-900">Finance</p>
-              <p className="mt-1 text-sm leading-6 text-slate-600">
-                Estimate-only run-rate, tutor costs, overhead, and margin context.
-              </p>
-            </Link>
-            <div className="mt-3 rounded-2xl border border-orange-100 bg-orange-50/70 p-4">
-              <p className="text-sm font-semibold text-slate-900">Tutor absence</p>
-              <p className="mt-1 text-sm leading-6 text-slate-600">
-                Start the cancel-or-cover workflow for a tutor being off.
-              </p>
-              <button
-                type="button"
-                onClick={() => setWorkflowPanel({
-                  url: '/admin/workflows/tutor-absence',
-                  title: 'Tutor absence',
-                  eyebrow: 'Tutor absence workflow',
-                })}
-                className="mt-3 inline-flex rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-700"
-              >
-                Open workflow
-              </button>
-            </div>
-            <Link
-              href="/admin/workflows"
-              className="mt-3 block rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-blue-200 hover:bg-white"
-            >
-              <p className="text-sm font-semibold text-slate-900">Workflows</p>
-              <p className="mt-1 text-sm leading-6 text-slate-600">
-                Waiting list, onboarding, showcase, holidays, parent understanding, and tutor absence loops.
-              </p>
-            </Link>
-          </div>
-
-        </aside>
       </section>
 
       {editingItem ? (

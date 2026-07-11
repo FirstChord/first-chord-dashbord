@@ -43,6 +43,12 @@ const workflowSections = [
     description: 'Wednesday tutor-pay review from MMS attendance: per-tutor pay window (since last paid), mark reviewed/paid.',
     status: 'Recurring',
   },
+  {
+    href: '/admin/finance',
+    title: 'Finance',
+    description: 'Run-rate, upcoming pressure, payroll, and absence reconciliation.',
+    status: 'Planning estimate',
+  },
 ];
 
 function WorkflowCard({ section }) {
