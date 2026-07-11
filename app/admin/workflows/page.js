@@ -40,7 +40,7 @@ const workflowSections = [
   {
     href: '/admin/finance/payroll',
     title: 'Payroll',
-    description: 'Wednesday tutor-pay review from MMS attendance: per-tutor pay window (since last paid), mark reviewed/paid. Reconciliation support, not payment execution.',
+    description: 'Wednesday tutor-pay review from MMS attendance: per-tutor pay window (since last paid), mark reviewed/paid.',
     status: 'Recurring',
   },
 ];
@@ -73,7 +73,7 @@ export default function AdminWorkflowsPage() {
           Workflows
         </h2>
         <p className="mt-2 max-w-3xl text-sm text-slate-600">
-          Action-led admin areas for moving work from intent to completion. Student detail remains available through issue links, workflow cards, and the header search.
+          Action-led admin areas for moving work from intent to completion.
         </p>
       </section>
 

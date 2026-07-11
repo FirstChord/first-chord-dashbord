@@ -200,7 +200,7 @@ export default function AdminOnboardForm({ initialData, tutorOptions, initialDup
               <Field label="MMS ID">
                 <Input value={form.mmsId} readOnly />
               </Field>
-              <Field label="Lesson type" hint="Sibling group onboards two students separately but creates one shared group lesson and one family-facing payment message.">
+              <Field label="Lesson type" hint="Two student records, one shared group lesson, one family payment message.">
                 <Select value={form.lessonType || 'individual'} onChange={(e) => updateLessonType(e.target.value)}>
                   <option value="individual">Individual</option>
                   <option value="sibling_group">Sibling group</option>
@@ -238,7 +238,7 @@ export default function AdminOnboardForm({ initialData, tutorOptions, initialDup
               </Field>
               {form.lessonType === 'sibling_group' ? (
                 <div className="sm:col-span-2">
-                  <Field label="Second student from MMS" hint="Pick the sibling/second child. This will create separate records for both students but one shared group lesson and one shared family billing flow.">
+                  <Field label="Second student from MMS" hint="Pick the sibling. Two records, one shared lesson, one family billing flow.">
                     <Select required value={form.secondStudentMmsId || ''} onChange={(e) => updateField('secondStudentMmsId', e.target.value)}>
                       <option value="">Select second student</option>
                       {siblingCandidates.map((student) => (

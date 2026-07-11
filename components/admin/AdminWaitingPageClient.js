@@ -197,7 +197,7 @@ export default function AdminWaitingPageClient({ initialStudents, initialCapacit
 
   async function handlePark(student) {
     const confirmed = window.confirm(
-      `Park ${student.fullName || student.mmsId} from the active waiting list? This saves a closed waiting state; it does not delete anything from MMS.`,
+      `Park ${student.fullName || student.mmsId} from the active waiting list? (Nothing is deleted from MMS.)`,
     );
     if (!confirmed) return;
 

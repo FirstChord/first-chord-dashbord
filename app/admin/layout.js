@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { PawPrint } from 'lucide-react';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import { AdminSignOutButton } from '@/components/admin/AdminAuthButton';
@@ -41,8 +42,9 @@ export default async function AdminLayout({ children }) {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
           <div>
             <p className="text-xs uppercase tracking-[0.25em] text-[#2F6B3D]/70">First Chord</p>
-            <h1 className="fc-display text-2xl text-slate-900">
+            <h1 className="fc-display flex items-center gap-2 text-2xl text-slate-900">
               Admin Dashboard
+              <PawPrint className="h-5 w-5 shrink-0 fill-slate-900 text-slate-900" aria-label="Vince’s sign-off" />
             </h1>
           </div>
           <div className="flex items-center gap-4">

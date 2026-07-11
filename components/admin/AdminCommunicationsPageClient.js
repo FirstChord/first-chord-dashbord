@@ -1,5 +1,6 @@
 'use client';
 
+import ScopeBadge from '@/components/admin/ui/ScopeBadge';
 import Link from 'next/link';
 import { useState } from 'react';
 import { labelCommunicationCategory } from '@/lib/admin/communications-helpers.mjs';
@@ -44,14 +45,12 @@ export default function AdminCommunicationsPageClient({ log = [], error = '' }) 
     <div className="space-y-8">
       <section>
         <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Communication record</p>
-        <h2
-          className="mt-2 fc-display text-3xl text-slate-900"
-        >
+        <h2 className="mt-2 flex items-center gap-3 fc-display text-3xl text-slate-900">
           Messages copied to send
+          <ScopeBadge>Record of copies — not delivery</ScopeBadge>
         </h2>
         <p className="mt-2 max-w-3xl text-sm text-slate-600">
-          A read-only record of parent messages copied to send from the dashboard (e.g. pause confirmations, parent check-ins).
-          It confirms the copy action, not delivery, reading, or a parent response.
+          Parent messages copied from the dashboard — pause confirmations, check-ins.
         </p>
       </section>
 

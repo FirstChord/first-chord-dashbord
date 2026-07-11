@@ -1,6 +1,5 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
-import { PawPrint } from 'lucide-react';
 import { getOperationalAdminStudents } from '@/lib/admin/students';
 import { getParentUnderstandingStateRows } from '@/lib/admin/sheets';
 import { getAdminHealthSummary } from '@/lib/admin/health';
@@ -356,20 +355,6 @@ export default async function AdminHomePage() {
 
   return (
     <div className="space-y-8">
-      <section className="text-center">
-        <h2
-          className="fc-display text-3xl text-slate-900 sm:text-4xl"
-        >
-          The First Chord Mega Brain
-        </h2>
-        <p
-          className="mx-auto mt-3 flex max-w-2xl items-center justify-center gap-2 text-base italic text-slate-600"
-        >
-          <span>Curated tasks and big thoughts designed by Vincey Boy the Young Man Himself.</span>
-          <PawPrint className="h-4 w-4 shrink-0 text-slate-500" aria-label="Vince sign-off" />
-        </p>
-      </section>
-
       <Suspense fallback={null}>
         <OverviewTrustStrip placement="top" />
       </Suspense>
