@@ -81,6 +81,14 @@ export default async function AdminLayout({ children }) {
           `relative` (z-auto) keeps content above the decorative cloud via DOM order
           while letting overlays rise above the header. */}
       <main className="relative mx-auto max-w-7xl px-6 py-8">{children}</main>
+      {/* Installed-PWA escape hatch: the header nav is hidden in standalone
+          mode, so following a link (e.g. inbox → planning) would otherwise
+          strand you with no way back */}
+      <nav className="standalone-only fixed bottom-4 left-1/2 z-30 -translate-x-1/2 items-center gap-1 rounded-full border border-[#2F6B3D]/25 bg-white/90 px-2 py-1 shadow-lg backdrop-blur">
+        <Link href="/admin/incoming-messages" className="rounded-full px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-green-50 hover:text-[#2F6B3D]">Inbox</Link>
+        <Link href="/admin/planning" className="rounded-full px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-green-50 hover:text-[#2F6B3D]">Planning</Link>
+        <Link href="/admin" className="rounded-full px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-green-50 hover:text-[#2F6B3D]">Overview</Link>
+      </nav>
     </div>
   );
 }

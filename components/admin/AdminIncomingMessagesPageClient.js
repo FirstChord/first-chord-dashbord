@@ -2,7 +2,8 @@
 
 import ScopeBadge from '@/components/admin/ui/ScopeBadge';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { RefreshCw } from 'lucide-react';
 import {
   assessBridgeHealth,
   extractIncomingMessageDates,
@@ -200,9 +201,6 @@ function GroupMapPanel({ groups = [], studentOptions = [], onReviewGroup, onAddG
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold text-slate-900">WhatsApp groups</h3>
-          <p className="mt-1 text-xs leading-5 text-slate-500">
-            Matching hints only — they never trigger actions. Confirm a student so future messages from that group match instantly. Unmatched groups (no current student) are hidden by default.
-          </p>
         </div>
         <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
           {reviewGroups.length} to review
@@ -337,9 +335,9 @@ function CorrectionPanel({ entry, studentOptions = [], onCorrect, onConvert, isP
             type="button"
             disabled={isPending || (confirmGroupMap && !canConfirmGroup)}
             onClick={() => onConvert(entry, correctionPayload('converted'))}
-            className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm disabled:opacity-60"
+            className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition active:scale-[0.97] disabled:opacity-60"
           >
-            Convert to plan + draft reply
+            {isPending ? 'Converting…' : 'Convert to plan + draft reply'}
           </button>
           <button
             type="button"
@@ -378,7 +376,7 @@ function ReplyPanel({ conversion }) {
   }
 
   return (
-    <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50/50 px-3 py-3">
+    <div className="fc-slide-in mt-4 rounded-2xl border border-emerald-100 bg-emerald-50/50 px-3 py-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs font-semibold text-emerald-900">Planning item created — draft reply ready</p>
         {conversion.planningId ? (
@@ -571,9 +569,9 @@ function MessageCard({ entry, studentOptions, onReview, onDelete, onCorrect, onC
             type="button"
             disabled={isPending}
             onClick={() => onConvert(entry, { category: '', matchedMmsId: '', reviewNote: '', confirmGroupMap: false })}
-            className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm disabled:opacity-60"
+            className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition active:scale-[0.97] disabled:opacity-60"
           >
-            Convert to plan + draft reply
+            {isPending ? 'Converting…' : 'Convert to plan + draft reply'}
           </button>
         ) : null}
         <button
@@ -630,6 +628,35 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
   const [showAutoArchived, setShowAutoArchived] = useState(false);
   const [showCapture, setShowCapture] = useState(false);
   const [conversions, setConversions] = useState({});
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Fresh data whenever the (installed) app is opened or the tab regains
+  // focus, plus the manual refresh button
+  async function refreshInbox() {
+    setIsRefreshing(true);
+    try {
+      const response = await fetch('/api/admin/incoming-messages');
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.success) {
+        setInbox(data.inbox || []);
+        if (Array.isArray(data.groupMap)) setGroupMap(data.groupMap);
+      }
+    } catch {} finally {
+      setIsRefreshing(false);
+    }
+  }
+
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === 'visible') refreshInbox();
+    }
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('pageshow', onVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('pageshow', onVisible);
+    };
+  }, []);
 
   const openCount = useMemo(() => inbox.filter((entry) => ['inbox', 'needs_review'].includes(entry.status)).length, [inbox]);
   const absenceCount = useMemo(() => inbox.filter((entry) => ABSENCE_CATEGORIES.has(entry.suspectedCategory) && ['inbox', 'needs_review'].includes(entry.status)).length, [inbox]);
@@ -808,15 +835,24 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
 
   return (
     <div className="space-y-8">
-      <section>
-        <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Incoming messages</p>
-        <h2 className="mt-2 flex items-center gap-3 fc-display text-3xl text-slate-900">
-          Message Inbox
-          <ScopeBadge>Intake only — nothing acts until you do</ScopeBadge>
-        </h2>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Parent messages waiting for review.
-        </p>
+      <section className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Incoming messages</p>
+          <h2 className="mt-2 flex items-center gap-3 fc-display text-3xl text-slate-900">
+            Message Inbox
+            <ScopeBadge>Intake only — nothing acts until you do</ScopeBadge>
+          </h2>
+        </div>
+        <button
+          type="button"
+          onClick={refreshInbox}
+          disabled={isRefreshing}
+          aria-label="Refresh inbox"
+          title="Refresh"
+          className="mt-1 rounded-full p-2.5 text-slate-500 transition-colors hover:bg-white/80 hover:text-[#2F6B3D] disabled:opacity-60"
+        >
+          <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+        </button>
       </section>
 
       {submitError ? (
