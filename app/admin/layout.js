@@ -1,16 +1,18 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { PawPrint } from 'lucide-react';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/admin/auth';
 import { AdminSignOutButton } from '@/components/admin/AdminAuthButton';
+
+// The whole /admin tree reads live data (Sheets, MMS) per request; without this,
+// removing getServerSession from the layout lets Next.js try to prerender admin
+// pages at build time, where those credentials aren't available.
+export const dynamic = 'force-dynamic';
 
 const navItems = [
   { href: '/admin', label: 'Overview' },
   { href: '/admin/flags', label: 'Issues' },
   { href: '/admin/workflows', label: 'Workflows' },
   { href: '/admin/planning', label: 'Planning' },
-  { href: '/admin/insights', label: 'Signals' },
 ];
 
 function NavLink({ href, label }) {
@@ -24,9 +26,7 @@ function NavLink({ href, label }) {
   );
 }
 
-export default async function AdminLayout({ children }) {
-  const session = await getServerSession(authOptions);
-
+export default function AdminLayout({ children }) {
   return (
     <div className="min-h-screen bg-gradient-to-t from-green-100 to-blue-100 text-slate-900">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -47,12 +47,7 @@ export default async function AdminLayout({ children }) {
               <PawPrint className="h-5 w-5 shrink-0 fill-slate-900 text-slate-900" aria-label="Vince’s sign-off" />
             </h1>
           </div>
-          <div className="flex items-center gap-4">
-            {session?.user?.email ? (
-              <span className="rounded-full bg-white/80 px-3 py-1 text-sm text-slate-600 shadow-sm">{session.user.email}</span>
-            ) : null}
-            <AdminSignOutButton />
-          </div>
+          <AdminSignOutButton />
         </div>
         <nav className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-6 pb-5">
           <div className="flex flex-wrap items-center gap-3">

@@ -11,6 +11,7 @@ import { getAdminIssues } from '@/lib/admin/issues';
 import { getWaitingWorkflowStudents } from '@/lib/admin/waiting-workflow';
 import { getBridgeStatus, getIncomingMessageInbox } from '@/lib/admin/incoming-messages';
 import { assessBridgeHealth } from '@/lib/admin/incoming-message-helpers.mjs';
+import { labelPlanningArea, labelPlanningType } from '@/lib/admin/planning-helpers.mjs';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,27 +41,6 @@ function healthPriority(health) {
   if (statuses.some((status) => status === 'Failing' || status === 'Stale')) return 'needs attention';
   if (statuses.some((status) => status === 'Running' || status === 'Aging')) return 'watch';
   return 'healthy';
-}
-
-function buildPrioritySentence({
-  openIssues,
-  tutorAbsences,
-  waitingWork,
-  unknownPaymentMode,
-  planningNeedsAttention,
-  openIncomingMessages = 0,
-}) {
-  const priorities = [];
-  if (openIncomingMessages > 0) priorities.push('parent messages in the inbox');
-  if (tutorAbsences > 0) priorities.push('tutor absences');
-  if (waitingWork > 0) priorities.push('waiting-list work');
-  if (openIssues > 0) priorities.push('open flags');
-  if (planningNeedsAttention > 0) priorities.push('planning items needing next action');
-  if (unknownPaymentMode > 0) priorities.push('unknown payment modes');
-
-  return priorities.length
-    ? `Start with ${priorities.slice(0, 2).join(', ')}.`
-    : 'Nothing is asking for urgent attention right now.';
 }
 
 function buildParentUnderstandingOverview(rows = []) {
@@ -190,18 +170,48 @@ function ActionCard({ label, value, href, helper = '', tone = 'border-slate-200 
   );
 }
 
-function ThemeCard({ title, copy, prompt, href = '/admin/planning' }) {
+// The meeting agenda: the freshest captured school notes (learning + strategic),
+// so the aspirational section shows what Finn and Tom actually wrote down,
+// not standing prompts.
+function DiscussionList({ notes, totalOpen }) {
+  if (!notes.length) {
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-white/90 p-5 text-sm shadow-[0_12px_36px_rgba(15,23,42,0.05)]">
+        <p className="font-semibold text-slate-900">Nothing captured to discuss.</p>
+        <p className="mt-1 text-slate-600">
+          When something sparks — an idea, a number to question, a thing worth trying —{' '}
+          <Link href="/admin/planning?filter=school_notes" className="font-medium text-slate-900 underline-offset-2 hover:underline">
+            capture it as a school note
+          </Link>{' '}
+          and it will surface here.
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <Link
-      href={href}
-      className="block rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-[0_12px_36px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-[0_16px_42px_rgba(15,23,42,0.08)]"
-    >
-      <p className="text-base font-semibold text-slate-950">{title}</p>
-      <p className="mt-2 text-sm leading-6 text-slate-600">{copy}</p>
-      <p className="mt-4 rounded-xl border border-blue-100 bg-blue-50/70 px-3 py-2 text-xs font-medium leading-5 text-slate-700">
-        {prompt}
-      </p>
-    </Link>
+    <div className="rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-[0_12px_36px_rgba(15,23,42,0.05)]">
+      <ul className="divide-y divide-slate-100">
+        {notes.map((note) => (
+          <li key={note.planningId}>
+            <Link
+              href={`/admin/planning?filter=school_notes&focus=${encodeURIComponent(note.planningId)}`}
+              className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0 transition hover:bg-blue-50/40"
+            >
+              <span className="min-w-0 truncate text-sm font-medium text-slate-900">{note.title}</span>
+              <span className="shrink-0 text-xs text-slate-500">
+                {labelPlanningArea(note.area)} · {labelPlanningType(note.itemType)}
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-4 border-t border-slate-100 pt-3 text-right">
+        <Link href="/admin/planning?filter=school_notes" className="text-sm font-medium text-slate-700 underline-offset-2 hover:text-slate-900 hover:underline">
+          All school notes{totalOpen > notes.length ? ` (${totalOpen})` : ''}
+        </Link>
+      </div>
+    </div>
   );
 }
 
@@ -234,9 +244,11 @@ function ContextRow({ label, value, href = '', tone = '' }) {
   return href ? <Link href={href}>{content}</Link> : content;
 }
 
+// Left-aligned so the page reads down one edge — centered headers make the eye
+// zigzag between the middle and the left-anchored cards below them.
 function SectionHeader({ title, copy = '' }) {
   return (
-    <div className="mx-auto max-w-3xl text-center">
+    <div className="max-w-3xl">
       <h3 className="text-xl font-semibold tracking-tight text-slate-950 sm:text-2xl">{title}</h3>
       {copy ? <p className="mt-2 text-sm leading-6 text-slate-600">{copy}</p> : null}
     </div>
@@ -265,6 +277,14 @@ export default async function AdminHomePage() {
   const parentUnderstandingSummary = buildParentUnderstandingOverview(parentUnderstandingRows);
   const planningSummary = planningDashboard.summary || {};
   const planningDueNow = planningSummary.dueNow || 0;
+  const openSchoolNotes = (planningDashboard.items || [])
+    .filter((item) => ['learning_note', 'strategic_note'].includes(item.itemType)
+      && !['done', 'parked'].includes(item.status));
+  // Recency, not priority: the point is "what did we last capture worth talking
+  // about", and three items keeps the meeting stimulus meeting-sized.
+  const discussionNotes = [...openSchoolNotes]
+    .sort((a, b) => `${b.updatedAt || b.createdAt || ''}`.localeCompare(`${a.updatedAt || a.createdAt || ''}`))
+    .slice(0, 3);
   const openIncomingMessages = incomingInbox.filter((entry) => ['inbox', 'needs_review'].includes(entry.status)).length;
   // Auto-ingest makes a dead bridge look like a calm inbox — the heartbeat
   // tells "down" and "connected but capturing nothing" apart from quiet.
@@ -272,14 +292,6 @@ export default async function AdminHomePage() {
     .filter((entry) => entry.source === 'whatsapp_group_auto')
     .reduce((latest, entry) => ((entry.capturedAt || '') > latest ? entry.capturedAt : latest), '');
   const bridgeHealth = assessBridgeHealth(bridgeStatus, { lastAutoCaptureAt });
-  const prioritySentence = buildPrioritySentence({
-    openIssues: activeIssues.length,
-    tutorAbsences: tutorAbsenceSummary.openAbsences,
-    waitingWork: waitingSummary.waiting + waitingSummary.onboardingReady + waitingSummary.noResponse,
-    unknownPaymentMode: paymentSummary.unknownPaymentMode,
-    planningNeedsAttention: planningSummary.needsAttention || 0,
-    openIncomingMessages,
-  });
   const tutorAbsenceHref = tutorAbsenceSummary.firstOpenAbsence
     ? `/admin/workflows/tutor-absence?tutor=${encodeURIComponent(tutorAbsenceSummary.firstOpenAbsence.tutorShortName)}&date=${encodeURIComponent(tutorAbsenceSummary.firstOpenAbsence.absenceDate)}`
     : '/admin/workflows/tutor-absence';
@@ -360,7 +372,7 @@ export default async function AdminHomePage() {
       </Suspense>
 
       <section className="space-y-4">
-        <SectionHeader title="Things to Do Today" copy="Use this first on meeting days. If it is clear, move to open loops or planning." />
+        <SectionHeader title="Things to Do Today" />
         {todayItems.length ? (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {todayItems.map((item) => (
@@ -376,7 +388,7 @@ export default async function AdminHomePage() {
       </section>
 
       <section className="space-y-4">
-        <SectionHeader title="Things That Need Attention" copy={prioritySentence} />
+        <SectionHeader title="Things That Need Attention" />
         {attentionItems.length ? (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {attentionItems.map((item) => (
@@ -392,39 +404,8 @@ export default async function AdminHomePage() {
       </section>
 
       <section className="space-y-4">
-        <SectionHeader title="Let’s Work on the School" copy="Use this after the daily work is clear: stimulus, conversation, notes, decisions, then executable actions." />
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-          <ThemeCard
-            title="Growth"
-            copy="Recruitment, enquiries, marketing, new offers, and how more students find us."
-            prompt="What experiment or campaign should we move forward next?"
-            href="/admin/planning?filter=strategic_note"
-          />
-          <ThemeCard
-            title="Learning"
-            copy="Books, teaching ideas, tutor development, student progress, and what we are learning as leaders."
-            prompt="What idea from recent reading/listening should we try or discuss?"
-            href="/admin/planning?filter=learning_note"
-          />
-          <ThemeCard
-            title="Finance"
-            copy="Pricing, payroll, cashflow, owner-teaching reduction, and cleaner financial visibility."
-            prompt="What number or assumption needs clarified before we decide?"
-            href="/admin/planning?filter=strategic_note"
-          />
-          <ThemeCard
-            title="Student Experience"
-            copy="Parent communication, practice support, resources, showcases, and student engagement."
-            prompt="What would make families feel clearer, supported, or more excited?"
-            href="/admin/planning?filter=strategic_note"
-          />
-          <ThemeCard
-            title="Systems"
-            copy="Dashboard, automation, delegation, documentation, and repeatable operating loops."
-            prompt="What admin load can we remove or make calmer next?"
-            href="/admin/planning?filter=strategic_note"
-          />
-        </div>
+        <SectionHeader title="Let’s Work on the School" />
+        <DiscussionList notes={discussionNotes} totalOpen={openSchoolNotes.length} />
       </section>
 
       <details className="rounded-2xl border border-blue-100 bg-white/90 p-5 shadow-[0_12px_36px_rgba(15,23,42,0.05)]">
