@@ -22,8 +22,7 @@ export default async function AdminLoginPage() {
       <div className="mx-auto max-w-md rounded-[1.75rem] border border-blue-100 bg-white/90 p-8 shadow-[0_18px_60px_rgba(15,23,42,0.08)] backdrop-blur-sm">
         <p className="text-xs uppercase tracking-[0.25em] text-slate-500">FirstChord Admin</p>
         <h1
-          className="mt-2 text-3xl font-bold uppercase tracking-wide text-slate-800"
-          style={{ fontFamily: '"Cooper Hewitt", "Nimbus Sans L", "Arial", sans-serif' }}
+          className="mt-2 fc-display text-3xl text-slate-900"
         >
           Sign in
         </h1>

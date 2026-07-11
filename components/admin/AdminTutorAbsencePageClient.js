@@ -296,8 +296,7 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
       <section>
         <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Same-day operations</p>
         <h2
-          className="mt-2 text-3xl font-bold uppercase tracking-wide text-slate-800"
-          style={{ fontFamily: '"Cooper Hewitt", "Nimbus Sans L", "Arial", sans-serif' }}
+          className="mt-2 fc-display text-3xl text-slate-900"
         >
           Tutor Absence
         </h2>

@@ -1,3 +1,4 @@
+import ScopeBadge from '@/components/admin/ui/ScopeBadge';
 import Link from 'next/link';
 import { getCommunicationLog } from '@/lib/admin/communications';
 import { getIncomingMessageInbox } from '@/lib/admin/incoming-messages';
@@ -54,12 +55,13 @@ export default async function AdminInsightsPage() {
   return (
     <div className="space-y-8">
       <section>
-        <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Read-only learning view</p>
-        <h2 className="mt-2 text-3xl font-bold uppercase tracking-wide text-slate-800" style={{ fontFamily: '"Cooper Hewitt", "Nimbus Sans L", "Arial", sans-serif' }}>
+        <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Signals</p>
+        <h2 className="mt-2 flex items-center gap-3 fc-display text-3xl text-slate-900">
           Signals & Learning
+          <ScopeBadge>Read-only</ScopeBadge>
         </h2>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          A rolling {insights.windowDays}-day view of what the existing workflows are telling us. It highlights patterns and uncertainty; it does not claim that a copied message was delivered or that one action caused an outcome.
+          Patterns from the last {insights.windowDays} days — evidence, not proof.
         </p>
       </section>
 

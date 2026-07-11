@@ -495,8 +495,7 @@ export default function AdminParentUnderstandingPageClient({ initialWorkflow }) 
       <section>
         <p className="text-xs uppercase tracking-[0.25em] text-slate-500">One-off workflow</p>
         <h2
-          className="mt-2 text-3xl font-bold uppercase tracking-wide text-slate-800"
-          style={{ fontFamily: '"Cooper Hewitt", "Nimbus Sans L", "Arial", sans-serif' }}
+          className="mt-2 fc-display text-3xl text-slate-900"
         >
           Parent Understanding
         </h2>

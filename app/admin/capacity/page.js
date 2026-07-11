@@ -1,3 +1,4 @@
+import ScopeBadge from '@/components/admin/ui/ScopeBadge';
 import { getMmsFreeCalendarSlotContext } from '@/lib/admin/mms';
 import { getScheduleContextRows } from '@/lib/admin/sheets';
 import { buildFreeSlotSummary, buildScheduleCacheSummary, buildScheduleHealthList } from '@/lib/admin/capacity-helpers.mjs';
@@ -47,14 +48,12 @@ export default async function AdminCapacityPage() {
     <div className="space-y-8">
       <section>
         <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Capacity context</p>
-        <h2
-          className="mt-2 text-3xl font-bold uppercase tracking-wide text-slate-800"
-          style={{ fontFamily: '"Cooper Hewitt", "Nimbus Sans L", "Arial", sans-serif' }}
-        >
+        <h2 className="mt-2 flex items-center gap-3 fc-display text-3xl text-slate-900">
           Tutor Capacity
+          <ScopeBadge>Read-only</ScopeBadge>
         </h2>
         <p className="mt-2 max-w-3xl text-sm text-slate-600">
-          Read-only view of MMS calendar slots marked as Free, grouped into usual weekly capacity, plus schedule-cache health. Future-hire or tentative availability can be added later as a separate overlay.
+          Free MMS calendar slots, grouped into usual weekly capacity.
         </p>
       </section>
 

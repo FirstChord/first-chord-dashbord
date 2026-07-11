@@ -1,3 +1,4 @@
+import ScopeBadge from '@/components/admin/ui/ScopeBadge';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
@@ -484,11 +485,13 @@ export default async function AdminPayrollPage({ searchParams }) {
     <div className="space-y-8">
       <header>
         <Link href="/admin/finance" className="text-sm font-medium text-blue-700">← Finance</Link>
-        <p className="mt-4 text-xs uppercase tracking-[0.25em] text-slate-500">Internal · approval first</p>
-        <h2 className="mt-2 text-3xl font-bold uppercase tracking-wide text-slate-800">Payroll review</h2>
+        <p className="mt-4 text-xs uppercase tracking-[0.25em] text-slate-500">Internal</p>
+        <h2 className="mt-2 flex items-center gap-3 fc-display text-3xl text-slate-900">
+          Payroll review
+          <ScopeBadge>Nothing is paid automatically</ScopeBadge>
+        </h2>
         <p className="mt-2 max-w-3xl text-sm text-slate-600">
-          A Wednesday reconciliation surface for tutor pay. It reads MMS attendance, estimates expected pay from
-          `Tutor_Pay`, then lets Tom/Finn mark rows reviewed or paid. Use MMS side-by-side until the figures are trusted.
+          MMS attendance against expected pay — mark rows reviewed or paid.
         </p>
       </header>
 

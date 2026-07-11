@@ -27,6 +27,14 @@ body {
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
+/* House display style for page titles/nameplates: heavy, tight, sentence case
+   (echoes the logo's weight without a webfont). Replaces the old inline
+   Cooper Hewitt + uppercase treatment. */
+.fc-display {
+  font-weight: 900;
+  letter-spacing: -0.025em;
+}
+
 /* Slim, translucent scrollbars so scroll areas never paint a white track
    frame when the OS shows scrollbars permanently */
 * {

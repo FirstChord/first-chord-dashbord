@@ -82,8 +82,7 @@ export default async function AdminStudentsPage({ searchParams }) {
       <div>
         <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Operational records</p>
         <h2
-          className="mt-2 text-3xl font-bold uppercase tracking-wide text-slate-800"
-          style={{ fontFamily: '"Cooper Hewitt", "Nimbus Sans L", "Arial", sans-serif' }}
+          className="mt-2 fc-display text-3xl text-slate-900"
         >
           Students
         </h2>

@@ -1,3 +1,4 @@
+import ScopeBadge from '@/components/admin/ui/ScopeBadge';
 import Link from 'next/link';
 import { randomUUID } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
@@ -382,17 +383,16 @@ export default async function AdminFinancePage({ searchParams }) {
       <header>
         <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Internal · estimate</p>
         <h2
-          className="mt-2 text-3xl font-bold uppercase tracking-wide text-slate-800"
-          style={{ fontFamily: '"Cooper Hewitt", "Nimbus Sans L", "Arial", sans-serif' }}
+          className="mt-2 flex items-center gap-3 fc-display text-3xl text-slate-900"
         >
           Finance
+          <ScopeBadge>Planning estimate — not accounting</ScopeBadge>
         </h2>
         <p className="mt-2 max-w-3xl text-sm text-slate-600">
-          A tactical planning view of current run-rate, upcoming pressure, and the trust level of the estimate.{' '}
+          Current run-rate and upcoming pressure.{' '}
           {revenue.bySource.stripe_actual.count > 0
             ? `${revenue.bySource.stripe_actual.count} of ${revenue.active.count} active students are priced from their real Stripe subscription; the rest use the price table.`
-            : 'Priced from the price table — Stripe actuals appear once the weekly cache has run.'}{' '}
-          This is not accounting, bank balance, or final profit.
+            : 'Priced from the price table — Stripe actuals appear once the weekly cache has run.'}
         </p>
       </header>
 

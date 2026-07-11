@@ -378,7 +378,7 @@ export default function DashboardClient() {
                   />
                 </div>
               </div>
-              <h2 className="text-xl font-bold italic text-gray-800 max-w-md mx-auto leading-relaxed loading-dots" style={{ fontFamily: '"Cooper Hewitt", "Nimbus Sans L", "Arial", sans-serif' }}>
+              <h2 className="text-xl font-bold italic text-gray-800 max-w-md mx-auto leading-relaxed loading-dots">
                 {loadingMessage.replace(/\.\.\.$/, '')}
               </h2>
             </div>

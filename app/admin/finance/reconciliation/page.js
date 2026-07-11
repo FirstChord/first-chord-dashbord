@@ -1,3 +1,4 @@
+import ScopeBadge from '@/components/admin/ui/ScopeBadge';
 import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
 import { getServerSession } from 'next-auth';
@@ -135,12 +136,13 @@ export default async function ReconciliationPreviewPage({ searchParams }) {
   return (
     <div className="space-y-6">
       <header>
-        <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Internal · read-only preview</p>
-        <h2 className="mt-2 text-2xl font-bold text-slate-900">Absence reconciliation</h2>
+        <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Internal</p>
+        <h2 className="mt-2 flex items-center gap-3 fc-display text-2xl text-slate-900">
+          Absence reconciliation
+          <ScopeBadge>Shadow view — changes nothing</ScopeBadge>
+        </h2>
         <p className="mt-2 max-w-3xl text-sm text-slate-600">
-          For a tutor absence, the net-new effect after reconciling against students&apos; own pauses. Shadow view — it
-          does not change finance or create anything. Conflicts (a pause record that disagrees with the active flag) are
-          surfaced for you to confirm, never auto-applied.
+          The net-new effect of a tutor absence after each student&apos;s own pauses. Conflicts wait for your confirmation.
         </p>
       </header>
 

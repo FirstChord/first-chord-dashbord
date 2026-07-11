@@ -40,11 +40,8 @@ export default async function AdminLayout({ children }) {
       <header className="standalone-hide sticky top-0 z-20 border-b border-blue-100/40 bg-blue-100/90 backdrop-blur-sm shadow-sm">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
           <div>
-            <p className="text-xs uppercase tracking-[0.25em] text-slate-500">FirstChord Admin</p>
-            <h1
-              className="text-2xl font-bold uppercase tracking-wide text-slate-800"
-              style={{ fontFamily: '"Cooper Hewitt", "Nimbus Sans L", "Arial", sans-serif' }}
-            >
+            <p className="text-xs uppercase tracking-[0.25em] text-[#2F6B3D]/70">First Chord</p>
+            <h1 className="fc-display text-2xl text-slate-900">
               Admin Dashboard
             </h1>
           </div>

@@ -358,14 +358,12 @@ export default async function AdminHomePage() {
     <div className="space-y-8">
       <section className="text-center">
         <h2
-          className="text-3xl font-black uppercase tracking-wide text-slate-900 sm:text-4xl"
-          style={{ fontFamily: '"Nexa Rust Sans Black", "Nexa Rust Sans", "Cooper Hewitt", "Arial Black", Impact, sans-serif' }}
+          className="fc-display text-3xl text-slate-900 sm:text-4xl"
         >
           The First Chord Mega Brain
         </h2>
         <p
           className="mx-auto mt-3 flex max-w-2xl items-center justify-center gap-2 text-base italic text-slate-600"
-          style={{ fontFamily: 'Georgia, "Iowan Old Style", "Palatino Linotype", serif' }}
         >
           <span>Curated tasks and big thoughts designed by Vincey Boy the Young Man Himself.</span>
           <PawPrint className="h-4 w-4 shrink-0 text-slate-500" aria-label="Vince sign-off" />

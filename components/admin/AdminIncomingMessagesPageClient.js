@@ -1,5 +1,6 @@
 'use client';
 
+import ScopeBadge from '@/components/admin/ui/ScopeBadge';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import {
@@ -809,15 +810,12 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
     <div className="space-y-8">
       <section>
         <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Incoming messages</p>
-        <h2
-          className="mt-2 text-3xl font-bold uppercase tracking-wide text-slate-800"
-          style={{ fontFamily: '"Cooper Hewitt", "Nimbus Sans L", "Arial", sans-serif' }}
-        >
+        <h2 className="mt-2 flex items-center gap-3 fc-display text-3xl text-slate-900">
           Message Inbox
+          <ScopeBadge>Intake only — nothing acts until you do</ScopeBadge>
         </h2>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Paste or ingest parent messages that need operational review. This is an intake lane only: it does not pause payments,
-          message parents, or change workflow state until a human acts.
+          Parent messages waiting for review.
         </p>
       </section>
 
