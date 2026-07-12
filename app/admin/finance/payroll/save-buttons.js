@@ -8,12 +8,11 @@ import { useState } from 'react';
 // (useFormStatus), and once saved the button reflects the persisted state with a
 // tick ("Reviewed ✓" / "Paid ✓") — the component remounts on revalidation, so
 // the tick is driven by the actual saved status, not a transient toast.
-export default function PayrollSaveButtons({ status }) {
+export default function PayrollSaveButtons({ status, blocked = false }) {
   const { pending } = useFormStatus();
   const [clicked, setClicked] = useState('');
 
   const isReviewed = status === 'reviewed' || status === 'paid';
-  const isPaid = status === 'paid';
 
   function Spinner() {
     return (
@@ -25,37 +24,22 @@ export default function PayrollSaveButtons({ status }) {
   }
 
   return (
-    <div className="flex items-end gap-2">
+    <div className="flex items-end">
       <button
         name="status"
         value="reviewed"
         onClick={() => setClicked('reviewed')}
-        disabled={pending}
+        disabled={pending || blocked}
+        title={blocked ? 'Resolve the attendance or period warning first' : ''}
         aria-busy={pending && clicked === 'reviewed'}
-        className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-white px-4 py-2 text-sm font-semibold text-blue-700 shadow-sm transition hover:bg-blue-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
       >
         {pending && clicked === 'reviewed' ? (
           <><Spinner /> Saving…</>
         ) : isReviewed ? (
-          'Reviewed ✓'
+          'Save changes'
         ) : (
-          'Mark reviewed'
-        )}
-      </button>
-      <button
-        name="status"
-        value="paid"
-        onClick={() => setClicked('paid')}
-        disabled={pending}
-        aria-busy={pending && clicked === 'paid'}
-        className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {pending && clicked === 'paid' ? (
-          <><Spinner /> Saving…</>
-        ) : isPaid ? (
-          'Paid ✓'
-        ) : (
-          'Mark paid'
+          'Review and generate statement'
         )}
       </button>
     </div>

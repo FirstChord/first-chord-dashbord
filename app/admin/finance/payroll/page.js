@@ -16,9 +16,11 @@ import {
 import { ADMIN_TUTORS } from '@/lib/admin/tutors-data';
 import { formatMoney } from '@/lib/admin/finance-helpers.mjs';
 import { parseTutorWise, buildWiseBatch, selectPayableReviewedRuns } from '@/lib/admin/wise-helpers.mjs';
+import { getPayrollWorkflowState } from '@/lib/admin/payroll-workflow-helpers.mjs';
 import AdjustWindowForm from './adjust-window-form';
 import WisePayoutPanel from './wise-payout-panel';
 import PayrollSaveButtons from './save-buttons';
+import TutorSelector from './tutor-selector';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,7 +33,9 @@ async function savePayrollRunAction(formData) {
   }
 
   const now = new Date().toISOString();
-  const status = `${formData.get('status') || 'reviewed'}`.trim() === 'paid' ? 'paid' : 'reviewed';
+  // Individual cards can lock/review a figure, but never originate a payment.
+  // Only the audited batch action marks reviewed rows paid.
+  const status = `${formData.get('existing_status') || ''}`.trim() === 'paid' ? 'paid' : 'reviewed';
   const existingCreatedAt = `${formData.get('created_at') || ''}`.trim();
   const expectedAmount = Number.parseFloat(`${formData.get('expected_amount') || '0'}`) || 0;
   const adjustmentAmount = Number.parseFloat(`${formData.get('adjustment_amount') || '0'}`) || 0;
@@ -54,11 +58,17 @@ async function savePayrollRunAction(formData) {
     final_amount: finalAmount,
     status,
     invoice_status: `${formData.get('invoice_status') || ''}`.trim(),
+    payment_route: `${formData.get('payment_route') || 'normal'}`.trim() === 'confirmation' ? 'confirmation' : 'normal',
+    statement_sent_at: `${formData.get('statement_sent_at') || ''}`.trim(),
+    statement_sent_by: `${formData.get('statement_sent_by') || ''}`.trim(),
     notes: `${formData.get('notes') || ''}`.trim(),
     reviewed_at: status === 'reviewed' ? now : `${formData.get('reviewed_at') || now}`.trim(),
     reviewed_by: status === 'reviewed' ? session.user.email || '' : `${formData.get('reviewed_by') || session.user.email || ''}`.trim(),
-    paid_at: status === 'paid' ? now : `${formData.get('paid_at') || ''}`.trim(),
-    paid_by: status === 'paid' ? session.user.email || '' : `${formData.get('paid_by') || ''}`.trim(),
+    paid_at: status === 'paid' ? `${formData.get('paid_at') || now}`.trim() : '',
+    paid_by: status === 'paid' ? `${formData.get('paid_by') || session.user.email || ''}`.trim() : '',
+    tutor_response: `${formData.get('tutor_response') || ''}`.trim(),
+    tutor_responded_at: `${formData.get('tutor_responded_at') || ''}`.trim(),
+    tutor_note: `${formData.get('tutor_note') || ''}`.trim(),
     source: 'mms_attendance_preview',
     created_at: existingCreatedAt || now,
     updated_at: now,
@@ -109,35 +119,6 @@ function minutesLabel(minutes) {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return `${h}h${m ? ` ${m}m` : ''}`;
-}
-
-function statusClass(status) {
-  if (status === 'paid') return 'border-emerald-200 bg-emerald-50 text-emerald-800';
-  if (status === 'reviewed') return 'border-blue-200 bg-blue-50 text-blue-800';
-  return 'border-slate-200 bg-slate-50 text-slate-700';
-}
-
-// Sticky chip bar to jump straight to a tutor's card without scrolling.
-// Pure anchor links (#t-<shortName>) — no client JS. Chips are alphabetical for
-// fast scanning; the status colour keeps a half-done board legible.
-function TutorJumpIndex({ rows = [] }) {
-  if (rows.length < 2) return null;
-  const chips = [...rows].sort((a, b) => `${a.tutor}`.localeCompare(`${b.tutor}`));
-  return (
-    <nav className="sticky top-[148px] z-10 -mx-1 rounded-2xl border border-slate-200 bg-white/85 px-3 py-2 shadow-sm backdrop-blur">
-      <div className="flex flex-wrap gap-1.5">
-        {chips.map((row) => (
-          <a
-            key={row.payrollId}
-            href={`#t-${row.tutorShortName}`}
-            className={`rounded-full border px-2.5 py-1 text-xs font-medium transition hover:brightness-95 ${statusClass(row.status)}`}
-          >
-            {row.tutorShortName || row.tutor}
-          </a>
-        ))}
-      </div>
-    </nav>
-  );
 }
 
 function mmsStudentUrl(studentId) {
@@ -251,14 +232,23 @@ function PayrollTutorCard({ row, payDate }) {
   const basisLabel = { since_paid: 'since last paid', first_run: 'default window', override: 'custom window' }[row.windowBasis] || row.windowBasis || '';
   const reviewPast = (row.reviewSlots || []).filter((slot) => slot.timing === 'past');
   const reviewUpcoming = (row.reviewSlots || []).filter((slot) => slot.timing === 'upcoming');
+  const workflow = getPayrollWorkflowState(row);
+  const workflowClass = {
+    danger: 'border-rose-200 bg-rose-50 text-rose-800',
+    warning: 'border-amber-200 bg-amber-50 text-amber-800',
+    attention: 'border-blue-200 bg-blue-50 text-blue-800',
+    waiting: 'border-slate-200 bg-slate-100 text-slate-700',
+    ready: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+    complete: 'border-slate-200 bg-slate-50 text-slate-500',
+  }[workflow.tone] || 'border-slate-200 bg-slate-50 text-slate-700';
   return (
-    <article id={`t-${row.tutorShortName}`} className="scroll-mt-[200px] rounded-[1.4rem] border border-slate-200 bg-white/90 p-5 shadow-sm transition target:ring-2 target:ring-blue-400">
+    <article className="rounded-[1.4rem] border border-slate-200 bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-lg font-semibold text-slate-900">{row.tutor}</h3>
-            <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${statusClass(row.status)}`}>
-              {row.status}
+            <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${workflowClass}`}>
+              {workflow.label}
             </span>
             <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-600">
               {row.invoiceCadence}
@@ -270,7 +260,6 @@ function PayrollTutorCard({ row, payDate }) {
           <p className="mt-1 text-sm text-slate-500">
             {formatPayrollDate(row.periodStart)} - {formatPayrollDate(row.periodEnd)} · {row.windowDays} days{basisLabel ? ` · ${basisLabel}` : ''}{row.windowEndCustom ? ' · custom end' : ''}
           </p>
-          <AdjustWindowForm payDate={payDate} tutor={row.tutorShortName} start={row.periodStart} end={row.periodEnd} />
         </div>
         <div className="text-right">
           <p className="text-2xl font-semibold text-slate-900">{formatMoney(owed)}</p>
@@ -282,12 +271,22 @@ function PayrollTutorCard({ row, payDate }) {
           {row.status === 'reviewed' || row.status === 'paid' ? (
             <Link
               href={`/admin/finance/payroll/statement?pid=${encodeURIComponent(row.payrollId)}`}
-              className="mt-1 inline-block text-xs font-medium text-blue-700 hover:underline"
+              className={`mt-2 inline-flex rounded-xl px-3 py-2 text-sm font-semibold transition ${workflow.key === 'send' ? 'bg-slate-950 text-white hover:bg-slate-800' : 'text-blue-700 hover:bg-blue-50'}`}
             >
-              Statement →
+              {workflow.key === 'send' ? 'Send statement' : 'View statement'} →
             </Link>
           ) : null}
         </div>
+      </div>
+
+      <div className={`mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border px-4 py-3 ${workflowClass}`}>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] opacity-70">Next</p>
+          <p className="mt-0.5 text-sm font-semibold">{workflow.nextAction}</p>
+        </div>
+        <span className="text-xs font-medium">
+          {row.paymentRoute === 'confirmation' ? 'Tutor confirmation' : 'Pay normally'}
+        </span>
       </div>
 
       {row.overlapsPaid ? (
@@ -323,39 +322,29 @@ function PayrollTutorCard({ row, payDate }) {
 
       <div className="mt-4 space-y-3">
         {/* Lead with the genuine open loop: taught but not yet recorded in MMS. */}
-        <SlotList
-          title="Needs recording — taught, not marked in MMS"
-          slots={reviewPast}
-          empty="Nothing to record — every past lesson in this window is marked in MMS."
-          withFix
-        />
-
-        {/* Upcoming review lessons self-resolve once taught — kept quiet. */}
-        {reviewUpcoming.length ? (
-          <CollapsibleSlotList
-            title="Upcoming — not yet taught"
-            slots={reviewUpcoming}
-            note="These lessons haven't happened yet, so they're unrecorded for now. They drop out of review automatically once they're taught and marked in MMS — no action needed."
-          />
+        {reviewPast.length ? (
+          <SlotList title="Needs recording — taught, not marked in MMS" slots={reviewPast} withFix />
         ) : null}
 
-        {/* Confident lists collapsed by default to keep the card calm. */}
-        <CollapsibleSlotList
-          title="Payable from MMS attendance"
-          slots={row.payableSlots}
-          empty="No payable lessons found for this period."
-        />
-        {row.excludedSlots?.length ? (
-          <CollapsibleSlotList
-            title="Not counted — absent / cancelled"
-            slots={row.excludedSlots}
-            note="Marked absent or cancelled in MMS, so currently £0. Practice-video / paid-absence lessons sit here — the £ shown is what they would pay if payable."
-            empty="None."
-          />
-        ) : null}
+        <details className="group rounded-2xl border border-slate-200 bg-white px-4 py-3">
+          <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-semibold text-slate-700">
+            Lesson detail
+            <span className="text-xs font-medium text-slate-400 group-open:hidden">Show</span>
+            <span className="hidden text-xs font-medium text-slate-400 group-open:inline">Hide</span>
+          </summary>
+          <div className="mt-4 space-y-3">
+            {reviewUpcoming.length ? (
+              <CollapsibleSlotList title="Upcoming — not yet taught" slots={reviewUpcoming} />
+            ) : null}
+            <CollapsibleSlotList title="Payable from MMS attendance" slots={row.payableSlots} empty="No payable lessons found for this period." />
+            {row.excludedSlots?.length ? (
+              <CollapsibleSlotList title="Not counted — absent / cancelled" slots={row.excludedSlots} empty="None." />
+            ) : null}
+          </div>
+        </details>
       </div>
 
-      <form action={savePayrollRunAction} className="mt-5 grid gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4 md:grid-cols-[1fr_1fr_auto]">
+      <form action={savePayrollRunAction} className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
         {[
           ['payroll_id', row.payrollId],
           ['pay_date', row.payDate],
@@ -370,6 +359,12 @@ function PayrollTutorCard({ row, payDate }) {
           ['review_lesson_count', row.reviewLessonCount],
           ['teaching_minutes', row.teachingMinutes],
           ['expected_amount', row.expectedAmount],
+          ['existing_status', row.status],
+          ['statement_sent_at', row.statementSentAt],
+          ['statement_sent_by', row.statementSentBy],
+          ['tutor_response', row.tutorResponse],
+          ['tutor_responded_at', row.tutorRespondedAt],
+          ['tutor_note', row.tutorNote],
           ['reviewed_at', row.reviewedAt],
           ['reviewed_by', row.reviewedBy],
           ['paid_at', row.paidAt],
@@ -378,24 +373,41 @@ function PayrollTutorCard({ row, payDate }) {
         ].map(([name, value]) => (
           <input key={name} type="hidden" name={name} value={value ?? ''} />
         ))}
-        <label className="block">
-          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Invoice</span>
-          <select name="invoice_status" defaultValue={row.invoiceStatus || ''} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">
-            <option value="">Not checked</option>
-            <option value="received">Received</option>
-            <option value="missing">Missing</option>
-            <option value="not_needed">Not needed</option>
-          </select>
-        </label>
-        <label className="block">
-          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Adjustment</span>
-          <input name="adjustment_amount" type="number" step="0.01" defaultValue={row.adjustmentAmount || 0} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" />
-        </label>
-        <label className="block md:col-span-2">
-          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Notes</span>
-          <input name="notes" defaultValue={row.notes || ''} placeholder="Invoice note, manual correction, checked against MMS..." className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" />
-        </label>
-        <PayrollSaveButtons status={row.status} />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <label className="block sm:min-w-64">
+            <span className="text-xs font-semibold text-slate-600">Payment route</span>
+            <select name="payment_route" defaultValue={row.paymentRoute || 'normal'} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm">
+              <option value="normal">Pay normally · confirmation optional</option>
+              <option value="confirmation">Tutor confirmation required</option>
+            </select>
+          </label>
+          <PayrollSaveButtons status={row.status} blocked={row.status === 'draft' && Boolean(reviewPast.length || row.overlapsPaid)} />
+        </div>
+        <details className="group mt-3 border-t border-slate-200 pt-3">
+          <summary className="cursor-pointer list-none text-sm font-medium text-slate-500">Adjustments, invoice tracking and period</summary>
+          <div className="mt-3 grid gap-3 md:grid-cols-2">
+            <label className="block">
+              <span className="text-xs font-semibold text-slate-500">Tutor invoice</span>
+              <select name="invoice_status" defaultValue={row.invoiceStatus || ''} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">
+                <option value="">Not recorded</option>
+                <option value="received">Received</option>
+                <option value="missing">Expected</option>
+                <option value="not_needed">Not required</option>
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-xs font-semibold text-slate-500">Adjustment</span>
+              <input name="adjustment_amount" type="number" step="0.01" defaultValue={row.adjustmentAmount || 0} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" />
+            </label>
+            <label className="block md:col-span-2">
+              <span className="text-xs font-semibold text-slate-500">Notes</span>
+              <input name="notes" defaultValue={row.notes || ''} placeholder="Optional note" className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" />
+            </label>
+            <div className="md:col-span-2">
+              <AdjustWindowForm payDate={payDate} tutor={row.tutorShortName} start={row.periodStart} end={row.periodEnd} />
+            </div>
+          </div>
+        </details>
       </form>
     </article>
   );
@@ -475,47 +487,55 @@ export default async function AdminPayrollPage({ searchParams }) {
   const wiseBatch = buildWiseBatch({ rows: payableRows, wiseByKey: parseTutorWise(tutorWiseRows) });
   // Tutor confirmation tally across reviewed (unpaid) rows — the "am I informed" surface.
   const reviewedRows = preview.rows.filter((row) => row.status === 'reviewed');
+  const confirmationRows = reviewedRows.filter((row) => row.paymentRoute === 'confirmation');
   const confirmations = {
-    confirmed: reviewedRows.filter((row) => row.tutorResponse === 'confirmed').length,
-    disputed: reviewedRows.filter((row) => row.tutorResponse === 'disputed').length,
-    awaiting: reviewedRows.filter((row) => !row.tutorResponse).length,
+    confirmed: confirmationRows.filter((row) => row.tutorResponse === 'confirmed').length,
+    disputed: confirmationRows.filter((row) => row.tutorResponse === 'disputed').length,
+    awaiting: confirmationRows.filter((row) => !row.tutorResponse).length,
   };
+  const workspaceRows = activeRows.map((row) => ({ ...row, workflow: getPayrollWorkflowState(row) }));
+  const requestedTutor = `${params.tutor || ''}`.trim();
+  const selectedRow = workspaceRows.find((row) => row.tutorShortName === requestedTutor)
+    || workspaceRows.find((row) => !['paid', 'ready'].includes(row.workflow.key))
+    || workspaceRows[0]
+    || null;
+  const selectedTutor = selectedRow?.tutorShortName || '';
+  const selectorRows = workspaceRows.map(({ payrollId, tutor, tutorShortName, workflow }) => ({ payrollId, tutor, tutorShortName, workflow }));
 
   return (
-    <div className="space-y-8">
-      <header>
+    <div className="mx-auto max-w-6xl space-y-6">
+      <header className="border-b border-slate-200 pb-6">
         <Link href="/admin/finance" className="text-sm font-medium text-blue-700">← Finance</Link>
-        <p className="mt-4 text-xs uppercase tracking-[0.25em] text-slate-500">Internal</p>
-        <h2 className="mt-2 flex items-center gap-3 fc-display text-3xl text-slate-900">
-          Payroll review
-          <ScopeBadge>Nothing is paid automatically</ScopeBadge>
-        </h2>
-        <p className="mt-2 max-w-3xl text-sm text-slate-600">
-          MMS attendance against expected pay — mark rows reviewed or paid.
-        </p>
+        <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="flex items-center gap-3 text-[2rem] font-semibold tracking-[-0.035em] text-slate-950">
+              Payroll
+              <ScopeBadge>Nothing is paid automatically</ScopeBadge>
+            </h2>
+            <p className="mt-2 text-sm text-slate-500">
+              {formatMoney(wiseBatch.totalAmount)} ready · {preview.totals.reviewLessonCount} lesson{preview.totals.reviewLessonCount === 1 ? '' : 's'} need review · {confirmations.awaiting} awaiting
+            </p>
+          </div>
+          <form className="flex items-end gap-2">
+            <label>
+              <span className="text-xs font-semibold text-slate-500">Pay date</span>
+              <input type="date" name="payDate" defaultValue={payDate} className="mt-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" />
+            </label>
+            <button className="rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white">Load</button>
+          </form>
+        </div>
       </header>
 
-      <section className="rounded-[1.6rem] border border-blue-100 bg-white/90 p-5 shadow-sm">
-        <form className="flex flex-wrap items-end gap-3">
-          <label>
-            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Pay date</span>
-            <input type="date" name="payDate" defaultValue={payDate} className="mt-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" />
-          </label>
-          <button className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Load payroll</button>
-          <Link
-            href={`/admin/finance/payroll?${[buildPayrollQuery(params), 'refresh=1'].filter(Boolean).join('&')}`}
-            prefetch={false}
-            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
-            title="Attendance is cached for 10 minutes. Use this after recording a lesson in MMS."
-          >
-            Refresh from MMS
-          </Link>
-          <p className="text-sm text-slate-500">
-            Weekly tutors: {formatPayrollDate(buildPayrollPeriod({ payDate, cadence: 'weekly' }).periodStart)} - {formatPayrollDate(buildPayrollPeriod({ payDate, cadence: 'weekly' }).periodEnd)}.
-            {' '}Each tutor&apos;s window comes from their `Tutor_Pay` cadence (weekly / biweekly / three-weekly, up to 21 days back: {formatPayrollDate(fetchStart)}).
-          </p>
-        </form>
-      </section>
+      <div className="flex justify-end">
+        <Link
+          href={`/admin/finance/payroll?${[buildPayrollQuery(params), 'refresh=1'].filter(Boolean).join('&')}`}
+          prefetch={false}
+          className="text-sm font-medium text-slate-500 hover:text-slate-900"
+          title="Use after recording attendance in MMS"
+        >
+          Refresh from MMS
+        </Link>
+      </div>
 
       {loadError ? (
         <section className="rounded-[1.6rem] border border-rose-200 bg-rose-50 p-5 text-sm text-rose-900">
@@ -523,49 +543,39 @@ export default async function AdminPayrollPage({ searchParams }) {
         </section>
       ) : null}
 
-      <section className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-2xl border border-slate-200 bg-white/90 p-4">
-          <p className="text-sm text-slate-500">Outstanding to pay</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">{formatMoney(preview.totals.outstandingAmount)}</p>
-          <p className="mt-1 text-xs text-slate-500">{formatMoney(preview.totals.expectedAmount)} expected before paid</p>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white/90 p-4">
-          <p className="text-sm text-slate-500">Payable lessons</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">{preview.totals.lessonCount}</p>
-        </div>
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-          <p className="text-sm text-amber-800">Needs review</p>
-          <p className="mt-1 text-2xl font-semibold text-amber-950">{preview.totals.reviewLessonCount}</p>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white/90 p-4">
-          <p className="text-sm text-slate-500">Reviewed / paid</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">{preview.totals.reviewedCount} / {preview.totals.paidCount}</p>
-        </div>
-      </section>
-
-      <WisePayoutPanel
-        includedCount={wiseBatch.includedCount}
-        totalLabel={formatMoney(wiseBatch.totalAmount)}
-        missingNames={wiseBatch.missing.map((entry) => entry.tutor).filter(Boolean)}
-        payDate={payDate}
-        downloadHref={`/admin/finance/payroll/wise-csv?payDate=${payDate}`}
-        payrollIds={wiseBatch.includedPayrollIds}
-        amountConflicts={amountConflicts}
-        disputed={disputed}
-        confirmations={confirmations}
-        markBatchPaidAction={markBatchPaidAction}
-      />
-
       <section className="space-y-4">
-        <TutorJumpIndex rows={activeRows} />
-        {activeRows.length ? activeRows.map((row) => (
-          <PayrollTutorCard key={row.payrollId} row={row} payDate={payDate} />
-        )) : (
+        <TutorSelector rows={selectorRows} selectedTutor={selectedTutor} payDate={payDate} />
+        {selectedRow ? (
+          <PayrollTutorCard key={selectedRow.payrollId} row={selectedRow} payDate={payDate} />
+        ) : (
           <div className="rounded-[1.6rem] border border-slate-200 bg-white/90 p-6 text-sm text-slate-500">
             No payroll rows found for this period.
           </div>
         )}
       </section>
+
+      <details className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm" open={Boolean(wiseBatch.includedCount)}>
+        <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-semibold text-slate-800">
+          Ready to pay · {wiseBatch.includedCount} tutor{wiseBatch.includedCount === 1 ? '' : 's'} · {formatMoney(wiseBatch.totalAmount)}
+          <span className="text-xs text-slate-400 group-open:hidden">Show</span>
+          <span className="hidden text-xs text-slate-400 group-open:inline">Hide</span>
+        </summary>
+        <div className="mt-4">
+          <WisePayoutPanel
+            includedCount={wiseBatch.includedCount}
+            totalLabel={formatMoney(wiseBatch.totalAmount)}
+            missingNames={wiseBatch.missing.map((entry) => entry.tutor).filter(Boolean)}
+            payDate={payDate}
+            downloadHref={`/admin/finance/payroll/wise-csv?payDate=${payDate}`}
+            payrollIds={wiseBatch.includedPayrollIds}
+            amountConflicts={amountConflicts}
+            disputed={disputed}
+            confirmations={confirmations}
+            markBatchPaidAction={markBatchPaidAction}
+            embedded
+          />
+        </div>
+      </details>
     </div>
   );
 }

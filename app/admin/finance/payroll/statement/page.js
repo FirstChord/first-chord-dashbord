@@ -64,7 +64,7 @@ async function StatementReady({ statement, payrollId }) {
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Send to tutor</p>
         <div className="mt-3 flex flex-wrap gap-2">
           <CopyStatementButton text={text} label="Copy statement text" />
-          {shareLink ? <CopyStatementButton text={shareLink} label="Copy share link" /> : null}
+          {shareLink ? <CopyStatementButton text={shareLink} label="Copy link and mark sent" markSentPayrollId={payrollId} /> : null}
         </div>
         {shareLink ? (
           <p className="mt-3 break-all rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-500">

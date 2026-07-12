@@ -155,6 +155,29 @@ test('selectPayableReviewedRuns holds a disputed row out of the batch and surfac
   assert.equal(disputed[0].note, 'missing a lesson');
 });
 
+test('selectPayableReviewedRuns holds confirmation-required rows until confirmed', () => {
+  const waiting = selectPayableReviewedRuns([{
+    payroll_id: 'pay_waiting',
+    tutor: 'David Husz',
+    tutor_short_name: 'David',
+    status: 'reviewed',
+    payment_route: 'confirmation',
+    final_amount: '100',
+  }]);
+  assert.equal(waiting.rows.length, 0);
+
+  const confirmed = selectPayableReviewedRuns([{
+    payroll_id: 'pay_confirmed',
+    tutor: 'David Husz',
+    tutor_short_name: 'David',
+    status: 'reviewed',
+    payment_route: 'confirmation',
+    tutor_response: 'confirmed',
+    final_amount: '100',
+  }]);
+  assert.equal(confirmed.rows.length, 1);
+});
+
 test('selectPayableReviewedRuns ignores non-reviewed and non-positive rows', () => {
   const { rows } = selectPayableReviewedRuns([
     savedRun({ status: 'draft' }),

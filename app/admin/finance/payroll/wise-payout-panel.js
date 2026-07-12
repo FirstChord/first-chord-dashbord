@@ -16,6 +16,7 @@ export default function WisePayoutPanel({
   downloadHref,
   payrollIds = [],
   markBatchPaidAction,
+  embedded = false,
 }) {
   const [downloaded, setDownloaded] = useState(false);
 
@@ -29,7 +30,7 @@ export default function WisePayoutPanel({
   }
 
   return (
-    <section className="rounded-[1.6rem] border border-slate-200 bg-white/90 p-5 shadow-sm">
+    <section className={embedded ? '' : 'rounded-[1.6rem] border border-slate-200 bg-white/90 p-5 shadow-sm'}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Pay out via Wise</p>
