@@ -1,5 +1,6 @@
 import { getStudentData } from '@/lib/student-helpers';
 import { getStudentIdFromUrl, isValidFriendlyName } from '@/lib/student-url-mappings';
+import { getAssignedSongsForStudent } from '@/lib/songs/portal-songs.mjs';
 import StudentDashboard from '@/components/student-portal/StudentDashboard';
 import { notFound } from 'next/navigation';
 
@@ -27,7 +28,9 @@ export default async function RootStudentPage({ params }) {
     notFound();
   }
   
-  return <StudentDashboard student={studentData} />;
+  const assignedSongs = await getAssignedSongsForStudent(studentId);
+
+  return <StudentDashboard student={studentData} assignedSongs={assignedSongs} />;
 }
 
 // Generate metadata for the page

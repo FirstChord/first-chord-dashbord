@@ -1,13 +1,14 @@
 import Image from 'next/image';
 import StudentNotes from './StudentNotes';
 import StudentLinks from './StudentLinks';
+import StudentSongs from './StudentSongs';
 import HeaderGreenery from '@/components/tutor-dashboard/HeaderGreenery';
 
 function possessive(name = '') {
   return name.endsWith('s') ? `${name}’` : `${name}’s`;
 }
 
-export default function StudentDashboard({ student }) {
+export default function StudentDashboard({ student, assignedSongs = [] }) {
   if (!student) {
     return (
       <div className="min-h-screen bg-gradient-to-t from-green-100 to-blue-100 flex items-center justify-center relative overflow-hidden">
@@ -84,6 +85,10 @@ export default function StudentDashboard({ student }) {
           <div className="lg:col-span-1">
             <StudentLinks student={student} />
           </div>
+        </div>
+
+        <div className="mt-4 sm:mt-6">
+          <StudentSongs songs={assignedSongs} />
         </div>
 
       </div>
