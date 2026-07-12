@@ -1,11 +1,11 @@
 # Student Paths & Song Objects — Architecture Plan
 
-Last updated: 2026-07-12. **Slice 1 shipped** (song catalogue + tutor Song Browser,
-local; see §6 — all acceptance criteria met). Catalogue: **70 songs** (15 guitar +
-55 piano from the Rock School Piano 2025 + RSL Classical G1 lists), all secret-link
-verified and MusicXML cold-backed-up. 26 piano entries carry `artist: 'RSL'`
-(needs-curation marker). Next: slice 2 (`Song_Assignments` tab + assign action) —
-implementation spec in §10. Access-model experiment log in §11.
+Last updated: 2026-07-12. **Slices 1 and 2 shipped.** Slice 1: 70-song catalogue
+(15 guitar + 55 piano; all secret-link verified + MusicXML cold-backed-up; 26 piano
+entries carry the `artist: 'RSL'` needs-curation marker) + read-only Song Browser.
+Slice 2: Assign buttons → `Song_Assignments` Sheets tab per the §10 spec,
+token-guarded, e2e-verified with the MMS test student (`sdt_fBg9JN`).
+Next: slice 3 (student portal "Your songs") — spec in §10. Experiment log in §11.
 
 Purpose: turn Soundslice material into reusable **Song objects**, organise them into
 progressive **Paths**, and connect them to the student portal, tutor dashboard, and
