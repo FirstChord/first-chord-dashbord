@@ -6,6 +6,7 @@ import StudentCard from '@/components/student/StudentCard';
 import NotesPanel from '@/components/student/NotesPanel';
 import QuickLinks from '@/components/navigation/QuickLinks';
 import TutorSchedulePanel from '@/components/tutor-dashboard/TutorSchedulePanel';
+import SongBrowser from '@/components/tutor-dashboard/SongBrowser';
 import HeaderGreenery from '@/components/tutor-dashboard/HeaderGreenery';
 import { Search, ChevronLeft } from 'lucide-react';
 import { cache } from '@/lib/cache';
@@ -565,6 +566,8 @@ export default function DashboardClient({ tutorOptions = [] }) {
                   />
                 </div>
               </div>
+
+              <SongBrowser student={selectedStudent} />
 
             </div>
           ) : (

@@ -62,3 +62,11 @@ A per-tab row-count reading taken during the fortnightly `npm run backup:sheets`
 ## Group-only student (tutor dashboard)
 
 A student whose registry `instrument` is a group ensemble (currently `Ukulele Orchestra`). `excludeGroupOnlyStudents()` (`lib/tutor-dashboard-helpers.mjs`) keeps them out of the tutor dashboard's individual student list — they're taught as a group, so their group lesson still appears on the schedule timeline (display-only) but they have no individual card.
+
+## Song object / song catalogue (student paths)
+
+A song as a reusable structured object in `lib/config/songs-catalogue.mjs` — title, artist, instruments, level, contentType, tags, tutor/student notes, and a nested `soundslice.scorehash` as the only Soundslice reference. The catalogue is **canonical and hand-curated** (not generated; edit it directly, unlike the 5 registry-derived config files). It ships in the client bundle, so it must never contain student names — a test enforces this. Soundslice URLs are derived exclusively in `lib/songs/catalogue-helpers.mjs`. Plan: `STUDENT_PATHS_PLAN.md`.
+
+## Scorehash (Soundslice)
+
+Soundslice's stable ID for one slice (one piece of playable notation), e.g. `Yvmfc` → `soundslice.com/slices/Yvmfc/`. The catalogue references slices only by scorehash; a slice is student-viewable only when its secret URL is enabled (`status=3`), which `enable_secret_links.py` (Soundslice toolshed) sets, verifies, and logs at curation time.
