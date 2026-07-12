@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { searchAttendanceForPayroll, clearPayrollAttendanceCacheForTests } from '../../lib/admin/mms.js';
+import { searchAttendanceForPayroll, clearPayrollAttendanceCacheForTests, updatePayrollAttendanceStatus } from '../../lib/admin/mms.js';
 
 // Two contracts live here:
 //
@@ -167,4 +167,52 @@ test('concurrent callers coalesce onto a single MMS fetch', async () => {
     assert.deepEqual(a, b);
     assert.deepEqual(b, c);
   });
+});
+
+test('payroll attendance decisions preserve notes and write an allowed status to MMS', async () => {
+  const originalFetch = globalThis.fetch;
+  const originalBearer = process.env.MMS_BEARER_TOKEN;
+  const calls = [];
+  process.env.MMS_BEARER_TOKEN = 'test-token';
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url, init });
+    if (init.method === 'POST') {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ ItemSubset: [{
+          ID: 'atn_1',
+          EventID: 'evt_1',
+          StudentID: 'sdt_1',
+          TeacherNote: 'keep teacher',
+          ParentNote: 'keep parent',
+          StudentNote: 'keep student',
+        }] }),
+      };
+    }
+    return { ok: true, status: 200, text: async () => '{}' };
+  };
+
+  try {
+    const result = await updatePayrollAttendanceStatus({
+      studentId: 'sdt_1',
+      eventId: 'evt_1',
+      attendanceId: 'atn_1',
+      attendanceStatus: 'AbsentNotice',
+    });
+    assert.equal(result.ok, true);
+    assert.equal(calls.length, 2);
+    assert.match(calls[1].url, /events\/evt_1\/attendance\/atn_1/u);
+    assert.deepEqual(JSON.parse(calls[1].init.body), {
+      TeacherNote: 'keep teacher',
+      ParentNote: 'keep parent',
+      StudentNote: 'keep student',
+      AttendanceStatus: 'AbsentNotice',
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+    clearPayrollAttendanceCacheForTests();
+    if (originalBearer === undefined) delete process.env.MMS_BEARER_TOKEN;
+    else process.env.MMS_BEARER_TOKEN = originalBearer;
+  }
 });

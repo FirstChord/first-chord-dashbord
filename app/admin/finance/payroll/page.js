@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
-import { getPayrollRunRows, getTutorPayRows, getTutorWiseRows, upsertPayrollRunRow } from '@/lib/admin/sheets';
+import { getPauseHistoryRows, getPayrollRunRows, getStudentsSheetRows, getTutorPayRows, getTutorWiseRows, upsertPayrollRunRow } from '@/lib/admin/sheets';
 import { searchAttendanceForPayroll } from '@/lib/admin/mms';
 import { parseTutorPay } from '@/lib/admin/cost-helpers.mjs';
 import {
@@ -17,10 +17,12 @@ import { ADMIN_TUTORS } from '@/lib/admin/tutors-data';
 import { formatMoney } from '@/lib/admin/finance-helpers.mjs';
 import { parseTutorWise, buildWiseBatch, selectPayableReviewedRuns } from '@/lib/admin/wise-helpers.mjs';
 import { getPayrollWorkflowState } from '@/lib/admin/payroll-workflow-helpers.mjs';
+import { findPauseHistoryCoverageForLesson } from '@/lib/admin/pause-helpers.mjs';
 import AdjustWindowForm from './adjust-window-form';
 import WisePayoutPanel from './wise-payout-panel';
 import PayrollSaveButtons from './save-buttons';
 import TutorSelector from './tutor-selector';
+import AttendanceDecision from './attendance-decision';
 
 export const dynamic = 'force-dynamic';
 
@@ -121,6 +123,45 @@ function minutesLabel(minutes) {
   return `${h}h${m ? ` ${m}m` : ''}`;
 }
 
+function pickSheetValue(row, keys) {
+  for (const key of keys) {
+    const value = `${row?.[key] || ''}`.trim();
+    if (value) return value;
+  }
+  return '';
+}
+
+function addPauseEvidenceToPayrollRows(rows = [], studentRows = [], pauseRows = []) {
+  const studentsById = new Map(studentRows.map((student) => {
+    const mmsId = pickSheetValue(student, ['mms_id', 'MMS ID', 'MMS Id', 'Student ID']);
+    return [mmsId, {
+      studentName: [pickSheetValue(student, ['Student forename']), pickSheetValue(student, ['Student Surname'])].filter(Boolean).join(' '),
+      email: pickSheetValue(student, ['Email']),
+      stripeSubscriptionId: pickSheetValue(student, ['stripe_subscription_id']),
+    }];
+  }).filter(([mmsId]) => mmsId));
+
+  return rows.map((row) => ({
+    ...row,
+    reviewSlots: (row.reviewSlots || []).map((slot) => ({
+      ...slot,
+      students: (slot.students || []).map((student) => {
+        const context = studentsById.get(student.studentId) || {};
+        return {
+          ...student,
+          pauseEvidence: findPauseHistoryCoverageForLesson({
+            studentEmail: context.email || '',
+            studentName: context.studentName || student.studentName || '',
+            stripeSubscriptionId: context.stripeSubscriptionId || '',
+            lessonDate: slot.lessonDate,
+            pauseRows,
+          }),
+        };
+      }),
+    })),
+  }));
+}
+
 function mmsStudentUrl(studentId) {
   // #AttendanceNotes opens the student's attendance log directly — where the
   // unrecorded lesson gets marked.
@@ -150,7 +191,7 @@ function FixInMms({ slot }) {
   );
 }
 
-function SlotLine({ slot, withFix = false }) {
+function SlotLine({ slot, withFix = false, withDecision = false }) {
   return (
     <li className="rounded-xl bg-slate-50 px-3 py-2">
       <span className="font-medium text-slate-800">{formatPayrollDate(slot.startAt, { withTime: true })}</span>
@@ -163,11 +204,23 @@ function SlotLine({ slot, withFix = false }) {
       {slot.students.map((student) => student.studentName).filter(Boolean).join(', ') || 'Student unknown'}
       {slot.amount !== null ? ` · ${formatMoney(slot.amount)}` : ' · unpriced'}
       {withFix ? <FixInMms slot={slot} /> : null}
+      {withDecision ? slot.students
+        .filter((student) => `${student.status || ''}`.trim().toLowerCase() === 'unrecorded')
+        .map((student) => (
+          <AttendanceDecision
+            key={student.attendanceId || student.studentId}
+            studentId={student.studentId}
+            studentName={student.studentName}
+            eventId={slot.eventId}
+            attendanceId={student.attendanceId}
+            pauseEvidence={student.pauseEvidence || null}
+          />
+        )) : null}
     </li>
   );
 }
 
-function SlotListBody({ slots = [], empty = 'None', withFix = false }) {
+function SlotListBody({ slots = [], empty = 'None', withFix = false, withDecision = false }) {
   const first = slots.slice(0, 6);
   const rest = slots.slice(6);
   if (!slots.length) {
@@ -176,7 +229,7 @@ function SlotListBody({ slots = [], empty = 'None', withFix = false }) {
   return (
     <ul className="mt-2 space-y-1.5 text-xs text-slate-600">
       {first.map((slot) => (
-        <SlotLine key={`${slot.eventId || slot.startAt}-${slot.studentCount}-${slot.state}`} slot={slot} withFix={withFix} />
+        <SlotLine key={`${slot.eventId || slot.startAt}-${slot.studentCount}-${slot.state}`} slot={slot} withFix={withFix} withDecision={withDecision} />
       ))}
       {rest.length ? (
         <li>
@@ -186,7 +239,7 @@ function SlotListBody({ slots = [], empty = 'None', withFix = false }) {
             </summary>
             <ul className="mt-1.5 space-y-1.5">
               {rest.map((slot) => (
-                <SlotLine key={`${slot.eventId || slot.startAt}-${slot.studentCount}-${slot.state}`} slot={slot} withFix={withFix} />
+                <SlotLine key={`${slot.eventId || slot.startAt}-${slot.studentCount}-${slot.state}`} slot={slot} withFix={withFix} withDecision={withDecision} />
               ))}
             </ul>
           </details>
@@ -196,12 +249,12 @@ function SlotListBody({ slots = [], empty = 'None', withFix = false }) {
   );
 }
 
-function SlotList({ title, slots = [], empty = 'None', note = '', withFix = false }) {
+function SlotList({ title, slots = [], empty = 'None', note = '', withFix = false, withDecision = false }) {
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{title}</p>
       {note ? <p className="mt-1 text-[0.7rem] leading-4 text-slate-400">{note}</p> : null}
-      <SlotListBody slots={slots} empty={empty} withFix={withFix} />
+      <SlotListBody slots={slots} empty={empty} withFix={withFix} withDecision={withDecision} />
     </div>
   );
 }
@@ -323,7 +376,7 @@ function PayrollTutorCard({ row, payDate }) {
       <div className="mt-4 space-y-3">
         {/* Lead with the genuine open loop: taught but not yet recorded in MMS. */}
         {reviewPast.length ? (
-          <SlotList title="Needs recording — taught, not marked in MMS" slots={reviewPast} withFix />
+          <SlotList title="Needs recording" slots={reviewPast} withDecision />
         ) : null}
 
         <details className="group rounded-2xl border border-slate-200 bg-white px-4 py-3">
@@ -437,10 +490,12 @@ export default async function AdminPayrollPage({ searchParams }) {
     ? { [`${params.tutor}`]: { start: `${params.start || ''}`.slice(0, 10), end: `${params.end || ''}`.slice(0, 10) } }
     : {};
 
-  const [tutorPayRows, savedRuns, tutorWiseRows] = await Promise.all([
+  const [tutorPayRows, savedRuns, tutorWiseRows, studentRows, pauseRows] = await Promise.all([
     getTutorPayRows(),
     getPayrollRunRows(),
     getTutorWiseRows(),
+    getStudentsSheetRows(),
+    getPauseHistoryRows(),
   ]);
 
   // Attendance is cached with stale-while-revalidate, so saves and window tweaks
@@ -480,7 +535,8 @@ export default async function AdminPayrollPage({ searchParams }) {
   // Salaried tutors (Finn/Tom/Fennella) are paid a fixed wage, not per-lesson via
   // this Wise reconciliation — keep them off the payroll page entirely. Totals and
   // the Wise batch already exclude salary, so this is display-only.
-  const activeRows = preview.rows.filter((row) => row.payModel !== 'salary');
+  const activeRows = addPauseEvidenceToPayrollRows(preview.rows, studentRows, pauseRows)
+    .filter((row) => row.payModel !== 'salary');
   // Wise batch comes straight from saved reviewed rows (window-independent), so
   // a tutor reviewed under an adjusted window still lands in the CSV.
   const { rows: payableRows, amountConflicts, disputed } = selectPayableReviewedRuns(savedRuns);

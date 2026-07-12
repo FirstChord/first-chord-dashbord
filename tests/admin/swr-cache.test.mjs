@@ -101,6 +101,27 @@ test('swr cache: force bypasses a fresh cache and awaits the fetch', async () =>
   assert.equal(fetches, 2);
 });
 
+test('swr cache: force never adopts an older in-flight request', async () => {
+  const cache = makeCache();
+  let fetches = 0;
+  let releaseFirst;
+  const firstGate = new Promise((resolve) => { releaseFirst = resolve; });
+  const fetcher = async () => {
+    fetches += 1;
+    if (fetches === 1) await firstGate;
+    return [`fetch-${fetches}`];
+  };
+
+  const first = cache.read('k', fetcher);
+  const forced = cache.read('k', fetcher, { force: true });
+  releaseFirst();
+
+  assert.deepEqual(await first, ['fetch-1']);
+  assert.deepEqual(await forced, ['fetch-2']);
+  assert.equal(fetches, 2);
+  assert.deepEqual(cache.peek('k').value, ['fetch-2']);
+});
+
 test('swr cache: clone isolates callers from the stored value', async () => {
   const cache = makeCache({ clone: (rows) => rows.map((row) => [...row]) });
   const fetcher = async () => [['a']];

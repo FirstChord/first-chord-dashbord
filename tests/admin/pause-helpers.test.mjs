@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildPauseSummary, derivePauseCoverageContext, normalisePauseHistoryRow } from '../../lib/admin/pause-helpers.mjs';
+import { buildPauseSummary, derivePauseCoverageContext, findPauseHistoryCoverageForLesson, normalisePauseHistoryRow } from '../../lib/admin/pause-helpers.mjs';
 
 test('normalisePauseHistoryRow handles Pause History field variations', () => {
   const row = normalisePauseHistoryRow({
@@ -18,6 +18,35 @@ test('normalisePauseHistoryRow handles Pause History field variations', () => {
   assert.equal(row.email, 'parent@example.com');
   assert.equal(row.subscriptionId, 'sub_123');
   assert.equal(row.stripeStatus, 'paused');
+});
+
+test('findPauseHistoryCoverageForLesson matches the exact covered lesson with confidence', () => {
+  const pauseRows = [{
+    'Student Name': 'Owen Example',
+    Email: 'parent@example.com',
+    'Subscription ID': 'sub_123',
+    'Start Date': '2026-05-01',
+    'End Date': '2026-05-10',
+    'Stripe Status': 'paused',
+  }];
+  const covered = findPauseHistoryCoverageForLesson({
+    studentName: 'Owen Example',
+    studentEmail: 'parent@example.com',
+    stripeSubscriptionId: 'sub_123',
+    lessonDate: '2026-05-06',
+    pauseRows,
+  });
+  assert.equal(covered.found, true);
+  assert.equal(covered.actionable, true);
+  assert.equal(covered.confidence, 'high');
+  assert.equal(covered.startDate, '2026-05-01');
+  assert.equal(findPauseHistoryCoverageForLesson({
+    studentName: 'Owen Example',
+    studentEmail: 'parent@example.com',
+    stripeSubscriptionId: 'sub_123',
+    lessonDate: '2026-05-11',
+    pauseRows,
+  }).found, false);
 });
 
 test('buildPauseSummary finds a current pause by subscription id', () => {
