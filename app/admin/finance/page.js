@@ -17,6 +17,7 @@ import { getPlanningItemRows, getWaitingListStateRows, getStudentsArchiveRows } 
 import { buildRosterMovement, onboardedDatesFromWaitingState, leftDatesFromArchive } from '@/lib/admin/roster-movement.mjs';
 import { authOptions } from '@/lib/admin/auth';
 import SaveSpendButton from '@/components/admin/SaveSpendButton';
+import AdminFinanceView from '@/components/finance/AdminFinanceView';
 
 export const dynamic = 'force-dynamic';
 
@@ -241,6 +242,7 @@ function EvidenceSection({ id = '', title, summary, children, defaultOpen = fals
 
 export default async function AdminFinancePage({ searchParams }) {
   const params = (await searchParams) || {};
+  const view = ['overview', 'plan', 'details', 'spend', 'legacy'].includes(`${params.view || ''}`) ? `${params.view || ''}` : 'overview';
   const trendPeriod = params.trend === 'monthly' ? 'monthly' : 'weekly';
 
   const [students, scheduleRows, tutorPayRows, expenseRows, expenseLogRows, snapshotRows, planningRows] = await Promise.all([
@@ -377,6 +379,33 @@ export default async function AdminFinancePage({ searchParams }) {
         }
       : null,
   ].filter(Boolean);
+
+  if (view !== 'legacy') {
+    return (
+      <AdminFinanceView
+        view={view}
+        modelConfidenceLabel={modelConfidenceLabel}
+        totals={totals}
+        revenue={revenue}
+        cost={cost}
+        expenses={expenses}
+        coverage={coverage}
+        trend={trend}
+        scenario={scenario}
+        scenarioStudents={scenarioStudents}
+        scenarioPricePct={scenarioPricePct}
+        trendPeriod={trendPeriod}
+        pauseForecast={pauseForecast}
+        attentionItems={attentionItems}
+        calibration={calibration}
+        roster={roster}
+        spend={spend}
+        today={today}
+        addExpenseLogAction={addExpenseLogAction}
+        deleteExpenseLogAction={deleteExpenseLogAction}
+      />
+    );
+  }
 
   return (
     <div className="space-y-8">
