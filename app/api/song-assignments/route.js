@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSongAssignmentRows, upsertSongAssignmentRow } from '@/lib/admin/sheets';
-import { buildAssignmentUpsert } from '@/lib/songs/assignment-helpers.mjs';
+import { buildAssignmentUpsert, buildAssignmentUpdate } from '@/lib/songs/assignment-helpers.mjs';
 import { getTutorSurfaceTokenSecret, verifyStudentNotesToken } from '@/lib/tutor-surface-token.mjs';
 
 // The per-student token minted for the tutor dashboard (same one that guards
@@ -65,6 +65,49 @@ export async function POST(request) {
     return NextResponse.json({ success: true, assignment: result.row, created: result.created });
   } catch (error) {
     console.error('Song assignment write failed:', error.message);
+    return NextResponse.json({ success: false, code: 'write_failed' }, { status: 502 });
+  }
+}
+
+// Status transition or reorder for one assignment. Body:
+// { mmsId, songId, token, status } or { mmsId, songId, token, direction: 'up'|'down' }.
+export async function PATCH(request) {
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ success: false, code: 'invalid_json' }, { status: 400 });
+  }
+
+  const mmsId = `${body.mmsId || ''}`.trim();
+  const auth = authorize(`${body.token || ''}`, mmsId);
+  if (!auth.ok) {
+    return NextResponse.json({ success: false, code: auth.code }, { status: auth.status });
+  }
+
+  try {
+    const existingRows = await getSongAssignmentRows(mmsId);
+    const result = buildAssignmentUpdate({
+      mmsId,
+      songId: body.songId,
+      status: `${body.status || ''}`.trim(),
+      direction: `${body.direction || ''}`.trim(),
+      existingRows,
+    });
+    if (result.error) {
+      return NextResponse.json({ success: false, code: result.error }, { status: 400 });
+    }
+
+    for (const row of result.rows) {
+      await upsertSongAssignmentRow(row);
+    }
+
+    // Return the student's full merged list so the UI can re-render in place.
+    const changed = new Map(result.rows.map((row) => [row.assignmentId, row]));
+    const assignments = existingRows.map((row) => changed.get(row.assignmentId) || row);
+    return NextResponse.json({ success: true, assignments });
+  } catch (error) {
+    console.error('Song assignment update failed:', error.message);
     return NextResponse.json({ success: false, code: 'write_failed' }, { status: 502 });
   }
 }

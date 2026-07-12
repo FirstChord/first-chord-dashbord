@@ -1,12 +1,12 @@
 # Student Paths & Song Objects — Architecture Plan
 
-Last updated: 2026-07-12. **Slices 1–3 shipped.** Slice 1: 70-song catalogue
+Last updated: 2026-07-12. **Slices 1–4 shipped.** Slice 1: 70-song catalogue
 (15 guitar + 55 piano; all secret-link verified + MusicXML cold-backed-up; 26 piano
 entries carry the `artist: 'RSL'` needs-curation marker) + read-only Song Browser.
 Slice 2: Assign buttons → `Song_Assignments` Sheets tab, token-guarded.
 Slice 3: portal "Your Songs" (fail-safe reads; course button coexists; zero change
 for students with no assignments). All e2e-verified with the registry test student
-(`sdt_fBg9JN`, portal `/test`). Next: slice 4 (ordering + status). Specs in §10;
+(`sdt_fBg9JN`, portal `/test`). Slice 4: ordering + status transitions (Assigned panel, PATCH, portal chips). Next: slice 5 (ingestion workflow). Specs in §10;
 experiment log in §11.
 
 Purpose: turn Soundslice material into reusable **Song objects**, organise them into
