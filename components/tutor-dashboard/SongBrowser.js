@@ -13,6 +13,7 @@ export default function SongBrowser({ student }) {
   const [expandedSongId, setExpandedSongId] = useState(null);
   const [assignedSongIds, setAssignedSongIds] = useState(null); // null = not loaded
   const [pendingSongId, setPendingSongId] = useState(null);
+  const [assignError, setAssignError] = useState(null);
 
   const studentId = student?.mms_id || student?.ID || '';
   const token = student?.noteAccessToken || student?.note_access_token || '';
@@ -30,6 +31,7 @@ export default function SongBrowser({ student }) {
   useEffect(() => {
     setAssignedSongIds(null);
     setPendingSongId(null);
+    setAssignError(null);
   }, [studentId]);
 
   useEffect(() => {
@@ -57,6 +59,7 @@ export default function SongBrowser({ student }) {
 
   const assignSong = async (songId) => {
     setPendingSongId(songId);
+    setAssignError(null);
     try {
       const res = await fetch('/api/song-assignments', {
         method: 'POST',
@@ -66,8 +69,12 @@ export default function SongBrowser({ student }) {
       const data = await res.json();
       if (data.success) {
         setAssignedSongIds((prev) => new Set([...(prev || []), songId]));
+      } else {
+        setAssignError(`Couldn't save that assignment (${data.code || res.status}). Try again, or check this domain can reach the sheet.`);
       }
-    } catch {}
+    } catch {
+      setAssignError("Couldn't save that assignment — network error. Try again.");
+    }
     setPendingSongId(null);
   };
 
@@ -115,6 +122,12 @@ export default function SongBrowser({ student }) {
                 </button>
               ))}
             </div>
+          )}
+
+          {assignError && (
+            <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+              {assignError}
+            </p>
           )}
 
           <ul className="divide-y divide-gray-100">
