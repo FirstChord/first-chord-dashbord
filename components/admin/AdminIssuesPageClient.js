@@ -1,26 +1,19 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { SelectField } from '@/components/admin/ui/fields';
 import { SlideOverPanel, panelActionClass } from '@/components/admin/ui/SlideOverPanel';
 import IssueCard from '@/components/admin/issues/IssueCard';
 import { formatDateTime } from '@/lib/admin/health-helpers.mjs';
 import {
-  ISSUE_TYPE_OPTIONS,
-  ISSUE_VIEW_OPTIONS,
   freshnessClasses,
   buildPaymentQuickActionAuditNote,
+  getIssueWorkBucket,
   paymentQuickActionResolvesIssue,
-  issueMatchesView,
 } from '@/lib/admin/issues-client-helpers.mjs';
 
 export default function AdminIssuesPageClient({ issues, freshness }) {
   const [issueList, setIssueList] = useState(issues);
-  const [viewFilter, setViewFilter] = useState('all');
-  const [typeFilter, setTypeFilter] = useState('all');
-  const [severityFilter, setSeverityFilter] = useState('all');
-  const [systemFilter, setSystemFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('active');
+  const [workView, setWorkView] = useState('needs_you');
   const [actionState, setActionState] = useState({ pendingId: '', error: '', success: '' });
   const [copiedEmailIssueId, setCopiedEmailIssueId] = useState('');
   // issueId -> { message, fading } for the brief "Sorted ✓" beat before a card leaves the queue.
@@ -65,6 +58,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
     'SUBSCRIPTION_STATE_MISMATCH',
     'INACTIVE_STILL_BILLING',
     'PAYMENT_FAILED',
+    'PAYMENT_RETRYING',
   ];
 
   useEffect(() => {
@@ -80,20 +74,12 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [recordPanel]);
 
-  const filteredIssues = useMemo(
-    () =>
-      issueList.filter((issue) => {
-        if (!issueMatchesView(issue, viewFilter)) return false;
-        if (typeFilter !== 'all' && issue.type !== typeFilter) return false;
-        if (severityFilter !== 'all' && issue.severity !== severityFilter) return false;
-        if (systemFilter !== 'all' && !issue.systemsAffected.includes(systemFilter)) return false;
-        if (statusFilter === 'active' && !['open', 'acknowledged'].includes(issue.status)) return false;
-        if (statusFilter !== 'all' && statusFilter !== 'active' && issue.status !== statusFilter) return false;
-        return true;
-      }),
-    [issueList, severityFilter, statusFilter, systemFilter, typeFilter, viewFilter],
-  );
-  const visibleSystemClearedIssues = filteredIssues.filter(
+  const issueBuckets = useMemo(() => issueList.reduce((buckets, issue) => {
+    buckets[getIssueWorkBucket(issue)].push(issue);
+    return buckets;
+  }, { needs_you: [], waiting: [], data_health: [], history: [] }), [issueList]);
+  const visibleIssues = issueBuckets[workView] || [];
+  const visibleSystemClearedIssues = issueList.filter(
     (issue) => ['open', 'acknowledged'].includes(issue.status) && !issue.sourcePresent,
   );
 
@@ -578,118 +564,77 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
     }
   }
 
-  const activeIssues = issueList.filter((issue) => ['open', 'acknowledged'].includes(issue.status));
-  const activeIssueCount = activeIssues.length;
-  const activeDetectedIssueCount = activeIssues.filter((issue) => issue.sourcePresent).length;
-  const activeRegistryIssueCount = activeIssues.filter((issue) => issue.systemsAffected.includes('Registry')).length;
-  const activeSheetsIssueCount = activeIssues.filter((issue) => issue.systemsAffected.includes('Sheets')).length;
+  const views = [
+    { value: 'needs_you', label: 'Needs you', count: issueBuckets.needs_you.length },
+    { value: 'waiting', label: 'Waiting', count: issueBuckets.waiting.length },
+    { value: 'data_health', label: 'Data health', count: issueBuckets.data_health.length },
+    { value: 'history', label: 'History', count: issueBuckets.history.length },
+  ];
+
+  const emptyCopy = {
+    needs_you: ['Nothing needs you', 'The exceptional cases are clear.'],
+    waiting: ['Nothing waiting', 'Stripe has no recoverable retries in progress.'],
+    data_health: ['Data is tidy', 'There is no routine maintenance waiting.'],
+    history: ['No history yet', 'Resolved issues will collect here.'],
+  }[workView];
+
+  function renderIssue(issue, featured = false) {
+    return (
+      <IssueCard
+        key={issue.issueId || issue.id}
+        issue={issue}
+        freshness={freshness}
+        featured={featured}
+        readOnly={workView === 'history'}
+        fadingEntry={fadingIssues[issue.issueId] || null}
+        liveStripeState={stripeRefreshState[issue.issueId] || null}
+        actionState={actionState}
+        copiedEmailIssueId={copiedEmailIssueId}
+        onStatusChange={handleStatusChange}
+        onRefreshStripe={handleRefreshIssueStripe}
+        onPaymentQuickAction={handlePaymentQuickAction}
+        onCreateRegistry={handleCreateRegistry}
+        onDelete={handleDelete}
+        onPracticeFollowUpHandled={handlePracticeFollowUpHandled}
+        onCopyEmail={copyEmail}
+        onOpenRecord={setRecordPanel}
+      />
+    );
+  }
 
   return (
-    <div className="space-y-8">
-      <section>
-        <h2 className="text-2xl font-semibold text-slate-900">Flags & Issues</h2>
-        <p className="mt-2 text-sm text-slate-600">
-          Operational issues queue for data drift, tutor mismatches, and missing cross-system records. This page is intended to become the main review surface for human and future agent triage.
-        </p>
-      </section>
+    <div className="mx-auto max-w-5xl space-y-6">
+      <header className="flex flex-col gap-5 border-b border-slate-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div className="flex items-baseline gap-3">
+            <h2 className="text-[2rem] font-semibold tracking-[-0.035em] text-slate-950">Issues</h2>
+            <span className="text-sm font-medium text-slate-500">
+              {issueBuckets.needs_you.length} need{issueBuckets.needs_you.length === 1 ? 's' : ''} you
+            </span>
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-500">
+            <span>Records checked {formatDateTime(freshness?.latestGeneratedAt)}</span>
+            {stripeScanState.scannedAt ? <span>Stripe checked {formatDateTime(stripeScanState.scannedAt)}</span> : null}
+            {freshness?.status && !['Fresh', 'Current'].includes(freshness.status) ? (
+              <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${freshnessClasses(freshness.status)}`}>
+                {freshness.status}
+              </span>
+            ) : null}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={handleRunStripeScan}
+          disabled={stripeScanState.pending}
+          className="self-start rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 sm:self-auto"
+        >
+          {stripeScanState.pending ? 'Checking…' : 'Check Stripe'}
+        </button>
+      </header>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-          <div>
-            <h3 className="text-sm font-semibold text-slate-900">Evidence freshness</h3>
-            <p className="mt-1 text-sm text-slate-600">
-              Review flags are generated; Sheets/payment issues are checked from the current page load; live Stripe issues come from manual scans.
-            </p>
-          </div>
-          <span className={`rounded-full border px-3 py-1 text-xs font-medium ${freshnessClasses(freshness?.status)}`}>
-            Review flags: {freshness?.status || 'Unknown'}
-          </span>
-        </div>
-        <div className="mt-4 grid gap-4 md:grid-cols-4">
-          <div>
-            <p className="text-xs uppercase tracking-wide text-slate-500">Latest generated</p>
-            <p className="mt-1 text-sm text-slate-800">{formatDateTime(freshness?.latestGeneratedAt)}</p>
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-wide text-slate-500">Age</p>
-            <p className="mt-1 text-sm text-slate-800">
-              {typeof freshness?.ageDays === 'number' ? `${freshness.ageDays} day${freshness.ageDays === 1 ? '' : 's'}` : '—'}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-wide text-slate-500">Distinct generated dates</p>
-            <p className="mt-1 text-sm text-slate-800">{freshness?.distinctGeneratedDates?.length || 0}</p>
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-wide text-slate-500">How to read cards</p>
-            <p className="mt-1 text-sm text-slate-800">Use each card&apos;s evidence badge before deciding whether to fix, refresh, or resolve.</p>
-          </div>
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-          <div>
-            <h3 className="text-sm font-semibold text-slate-900">Live Stripe scan</h3>
-            <p className="mt-1 text-sm text-slate-600">
-              Manual only. This checks Stripe-managed students against the current rule set and adds live payment issues to the queue without polling Stripe on every page load.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={handleRunStripeScan}
-            disabled={stripeScanState.pending}
-            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {stripeScanState.pending ? 'Scanning…' : 'Run Stripe scan'}
-          </button>
-        </div>
-        {stripeScanState.error ? <p className="mt-3 text-sm text-red-700">{stripeScanState.error}</p> : null}
-        {stripeScanState.scannedAt ? (
-          <p className="mt-3 text-sm text-slate-600">
-            Last Stripe scan: {formatDateTime(stripeScanState.scannedAt)} • Students checked: {stripeScanState.scannedCount}
-          </p>
-        ) : null}
-      </section>
-
-      <section className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-sm text-slate-500">Active queue issues</p>
-          <p className="mt-3 text-3xl font-semibold text-slate-900">{activeIssueCount}</p>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-sm text-slate-500">Active + detected</p>
-          <p className="mt-3 text-3xl font-semibold text-slate-900">{activeDetectedIssueCount}</p>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-sm text-slate-500">Active Registry-related</p>
-          <p className="mt-3 text-3xl font-semibold text-slate-900">{activeRegistryIssueCount}</p>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-sm text-slate-500">Active Sheets-related</p>
-          <p className="mt-3 text-3xl font-semibold text-slate-900">{activeSheetsIssueCount}</p>
-        </div>
-      </section>
-
-      {visibleSystemClearedIssues.length ? (
-        <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h3 className="text-sm font-semibold text-emerald-950">Fixed issues ready to clear</h3>
-              <p className="mt-1 text-sm text-emerald-900">
-                {visibleSystemClearedIssues.length} visible issue{visibleSystemClearedIssues.length === 1 ? ' is' : 's are'} no longer detected by the latest source check. Clearing removes them from the active queue; they will reappear if detected again.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handleResolveVisibleSystemCleared}
-              disabled={actionState.pendingId === 'bulk-system-cleared'}
-              className="rounded-lg border border-emerald-300 bg-white px-4 py-2 text-sm font-medium text-emerald-900 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {actionState.pendingId === 'bulk-system-cleared' ? 'Clearing…' : 'Clear fixed issues'}
-            </button>
-          </div>
-        </section>
+      {stripeScanState.error ? <p className="text-sm text-red-700">{stripeScanState.error}</p> : null}
+      {stripeScanState.scannedAt ? (
+        <p className="-mt-4 text-xs text-slate-500">Checked {stripeScanState.scannedCount} Stripe students.</p>
       ) : null}
 
       {actionState.error ? (
@@ -703,111 +648,57 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
         </section>
       ) : null}
 
-      <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div>
-          <h3 className="text-sm font-semibold text-slate-900">Start here</h3>
-          <p className="mt-1 text-sm text-slate-600">
-            Use a simple work view first. Exact issue types are still available under advanced filters.
-          </p>
+      <nav className="flex gap-1 overflow-x-auto rounded-xl bg-slate-100 p-1" aria-label="Issue views">
+        {views.map((view) => (
+          <button
+            key={view.value}
+            type="button"
+            onClick={() => setWorkView(view.value)}
+            className={`whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium transition ${
+              workView === view.value
+                ? 'bg-white text-slate-950 shadow-sm'
+                : 'text-slate-600 hover:text-slate-950'
+            }`}
+          >
+            {view.label} <span className="ml-1 text-xs text-slate-400">{view.count}</span>
+          </button>
+        ))}
+      </nav>
+
+      {workView === 'history' && visibleSystemClearedIssues.length ? (
+        <div className="flex items-center justify-between gap-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+          <p className="text-sm text-emerald-900">{visibleSystemClearedIssues.length} fixed automatically.</p>
+          <button
+            type="button"
+            onClick={handleResolveVisibleSystemCleared}
+            disabled={actionState.pendingId === 'bulk-system-cleared'}
+            className="text-sm font-semibold text-emerald-900 disabled:opacity-60"
+          >
+            {actionState.pendingId === 'bulk-system-cleared' ? 'Clearing…' : 'Clear them'}
+          </button>
         </div>
-        <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
-          {ISSUE_VIEW_OPTIONS.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => {
-                setViewFilter(option.value);
-                setTypeFilter('all');
-              }}
-              className={`rounded-2xl border p-4 text-left transition ${
-                viewFilter === option.value
-                  ? 'border-blue-300 bg-blue-50 text-slate-950 shadow-[0_12px_30px_rgba(15,23,42,0.08)]'
-                  : 'border-slate-200 bg-slate-50 text-slate-800 hover:border-blue-200 hover:bg-white'
-              }`}
-            >
-              <span className="block text-sm font-semibold">{option.label}</span>
-              <span className={`mt-1 block text-xs leading-5 ${viewFilter === option.value ? 'text-slate-700' : 'text-slate-500'}`}>
-                {option.hint}
-              </span>
-            </button>
-          ))}
-        </div>
-        <details className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-          <summary className="cursor-pointer text-sm font-semibold text-slate-800">
-            Advanced filters
-          </summary>
-          <div className="mt-4 grid gap-4 md:grid-cols-4">
-            <SelectField
-              label="Exact issue type"
-              value={typeFilter}
-              onChange={(event) => setTypeFilter(event.target.value)}
-              options={ISSUE_TYPE_OPTIONS}
-            />
-            <SelectField
-              label="Severity"
-              value={severityFilter}
-              onChange={(event) => setSeverityFilter(event.target.value)}
-              options={[
-                { value: 'all', label: 'All severities' },
-                { value: 'Needs action', label: 'Needs action' },
-                { value: 'Warning', label: 'Warning' },
-                { value: 'Info', label: 'Info' },
-              ]}
-            />
-            <SelectField
-              label="System"
-              value={systemFilter}
-              onChange={(event) => setSystemFilter(event.target.value)}
-              options={[
-                { value: 'all', label: 'All systems' },
-                { value: 'Sheets', label: 'Sheets' },
-                { value: 'Registry', label: 'Registry' },
-                { value: 'Stripe', label: 'Stripe' },
-                { value: 'Pause', label: 'Pause' },
-              ]}
-            />
-            <SelectField
-              label="Queue status"
-              value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value)}
-              options={[
-                { value: 'active', label: 'Open + acknowledged' },
-                { value: 'all', label: 'All statuses' },
-                { value: 'open', label: 'Open' },
-                { value: 'acknowledged', label: 'Acknowledged' },
-                { value: 'ignored', label: 'Ignored' },
-                { value: 'resolved', label: 'Resolved' },
-              ]}
-            />
-          </div>
-        </details>
-      </section>
+      ) : null}
 
       <section className="space-y-4">
-        {filteredIssues.length === 0 ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm">
-            No issues match the current filters.
+        {visibleIssues.length === 0 ? (
+          <div className="rounded-2xl border border-slate-200 bg-white px-6 py-14 text-center shadow-sm">
+            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 text-lg text-emerald-700">✓</div>
+            <h3 className="mt-4 text-base font-semibold text-slate-950">{emptyCopy[0]}</h3>
+            <p className="mt-1 text-sm text-slate-500">{emptyCopy[1]}</p>
           </div>
+        ) : workView === 'needs_you' ? (
+          <>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Next issue</p>
+            {renderIssue(visibleIssues[0], true)}
+            {visibleIssues.length > 1 ? (
+              <div className="pt-4">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Up next</p>
+                <div className="space-y-3">{visibleIssues.slice(1).map((issue) => renderIssue(issue))}</div>
+              </div>
+            ) : null}
+          </>
         ) : (
-          filteredIssues.map((issue) => (
-            <IssueCard
-              key={issue.id}
-              issue={issue}
-              freshness={freshness}
-              fadingEntry={fadingIssues[issue.issueId] || null}
-              liveStripeState={stripeRefreshState[issue.issueId] || null}
-              actionState={actionState}
-              copiedEmailIssueId={copiedEmailIssueId}
-              onStatusChange={handleStatusChange}
-              onRefreshStripe={handleRefreshIssueStripe}
-              onPaymentQuickAction={handlePaymentQuickAction}
-              onCreateRegistry={handleCreateRegistry}
-              onDelete={handleDelete}
-              onPracticeFollowUpHandled={handlePracticeFollowUpHandled}
-              onCopyEmail={copyEmail}
-              onOpenRecord={setRecordPanel}
-            />
-          ))
+          visibleIssues.map((issue) => renderIssue(issue))
         )}
       </section>
 

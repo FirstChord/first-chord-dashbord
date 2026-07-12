@@ -16,6 +16,7 @@ test('normaliseIssueTypeKey converts issue labels into stable key segments', () 
 test('buildIssueContextKey derives the expected queue context for known edge cases', () => {
   assert.equal(buildIssueContextKey({ type: 'TUTOR CONFLICT' }), 'registry_vs_sheets');
   assert.equal(buildIssueContextKey({ type: 'PAYMENT_FAILED', stripeSubscriptionId: 'sub_123' }), 'sub_123');
+  assert.equal(buildIssueContextKey({ type: 'PAYMENT_RETRYING', stripeSubscriptionId: 'sub_retry' }), 'sub_retry');
   assert.equal(buildIssueContextKey({ type: 'SHEETS ONLY' }), '');
 });
 

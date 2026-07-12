@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   buildLiveStripeIssues,
   buildStripeSnapshot,
+  classifyStripePaymentRecovery,
   deriveStripeInvoiceSummary,
   deriveStripePauseState,
 } from '../../lib/admin/stripe-snapshot-helpers.mjs';
@@ -43,6 +44,53 @@ test('deriveStripeInvoiceSummary marks payment problems from invoice or payment 
   assert.equal(invoice.hasPaymentProblem, true);
   assert.equal(invoice.latestInvoiceStatus, 'past_due');
   assert.equal(invoice.latestPaymentIntentStatus, 'requires_payment_method');
+});
+
+test('deriveStripeInvoiceSummary does not mistake an untouched open invoice for a failed payment', () => {
+  const invoice = deriveStripeInvoiceSummary({
+    id: 'in_open',
+    status: 'open',
+    paid: false,
+    attempt_count: 0,
+    created: 1777000000,
+  });
+
+  assert.equal(invoice.hasPaymentProblem, false);
+});
+
+test('payment recovery waits for one scheduled soft retry but promotes hard or repeated failures', () => {
+  const now = new Date('2026-07-12T12:00:00.000Z');
+  const recoverable = {
+    hasPaymentProblem: true,
+    subscriptionStatus: 'past_due',
+    latestPaymentIntentStatus: 'requires_payment_method',
+    latestDeclineCode: 'insufficient_funds',
+    latestInvoiceAttemptCount: 1,
+    nextPaymentAttemptAt: '2026-07-14T12:00:00.000Z',
+  };
+
+  assert.equal(classifyStripePaymentRecovery(recoverable, now), 'waiting');
+  assert.equal(classifyStripePaymentRecovery({ ...recoverable, latestInvoiceAttemptCount: 2 }, now), 'action');
+  assert.equal(classifyStripePaymentRecovery({ ...recoverable, latestDeclineCode: 'stolen_card' }, now), 'action');
+  assert.equal(classifyStripePaymentRecovery({ ...recoverable, latestPaymentIntentStatus: 'requires_action' }, now), 'action');
+});
+
+test('buildLiveStripeIssues places a first scheduled payment retry in waiting', () => {
+  const issues = buildLiveStripeIssues({
+    student: { paymentMode: 'stripe', paymentExpectation: 'stripe_active_expected' },
+    snapshot: {
+      subscriptionFound: true,
+      subscriptionStatus: 'past_due',
+      pauseState: 'active',
+      activelyBilling: true,
+      hasPaymentProblem: true,
+      latestInvoiceAttemptCount: 1,
+      latestDeclineCode: 'insufficient_funds',
+      nextPaymentAttemptAt: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
+    },
+  });
+
+  assert.deepEqual(issues, ['PAYMENT_RETRYING']);
 });
 
 test('deriveStripeInvoiceSummary marks void invoices with a remaining balance for review', () => {

@@ -16,8 +16,20 @@ import {
   getStudentLabel,
   getIssueStory,
   getIssueWhatToDo,
+  getIssueWorkBucket,
   summariseStripeSnapshot,
 } from '../../lib/admin/issues-client-helpers.mjs';
+
+test('work buckets reserve the default queue for current exceptional cases', () => {
+  const active = { status: 'open', sourcePresent: true };
+  assert.equal(getIssueWorkBucket({ ...active, type: 'PAYMENT_FAILED' }), 'needs_you');
+  assert.equal(getIssueWorkBucket({ ...active, type: 'PAYMENT_RETRYING' }), 'waiting');
+  assert.equal(getIssueWorkBucket({ ...active, type: 'SHEETS ONLY' }), 'data_health');
+  assert.equal(getIssueWorkBucket({ ...active, type: 'FINANCE DATA GAP' }), 'data_health');
+  assert.equal(getIssueWorkBucket({ ...active, type: 'TUTOR CONFLICT' }), 'needs_you');
+  assert.equal(getIssueWorkBucket({ ...active, type: 'PAYMENT_FAILED', sourcePresent: false }), 'history');
+  assert.equal(getIssueWorkBucket({ ...active, type: 'PAYMENT_FAILED', status: 'resolved' }), 'history');
+});
 
 test('issue classification predicates bucket types correctly', () => {
   assert.equal(isSetupIssue({ type: 'STRIPE CUSTOMER MISSING' }), true);

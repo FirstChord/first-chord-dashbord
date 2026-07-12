@@ -7,7 +7,6 @@ import {
   getIssueCategoryLabel,
   getIssueKeyFact,
   getIssueStory,
-  getIssueWhatToDo,
   getLifecycleContextText,
   getPaymentActionHint,
   getPaymentActionPath,
@@ -34,6 +33,8 @@ const STRIPE_DASHBOARD_BASE = process.env.NEXT_PUBLIC_STRIPE_DASHBOARD_BASE_URL 
 export default function IssueCard({
   issue,
   freshness,
+  featured = false,
+  readOnly = false,
   fadingEntry,
   liveStripeState,
   actionState,
@@ -49,7 +50,7 @@ export default function IssueCard({
 }) {
   return (
     <article
-      className={`rounded-2xl border bg-white p-6 shadow-sm transition-opacity duration-700 ${severityEdgeClass(issue.severity)} ${fadingEntry ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200'}`}
+      className={`rounded-2xl border bg-white transition-opacity duration-700 ${featured ? 'p-7 shadow-[0_18px_50px_rgba(15,23,42,0.08)]' : 'p-5 shadow-sm'} ${severityEdgeClass(issue.severity)} ${fadingEntry ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200'}`}
       style={fadingEntry?.fading ? { opacity: 0 } : undefined}
     >
       {fadingEntry ? (
@@ -66,6 +67,8 @@ export default function IssueCard({
         <IssueCardBody
           issue={issue}
           freshness={freshness}
+          featured={featured}
+          readOnly={readOnly}
           liveStripeState={liveStripeState}
           actionState={actionState}
           copiedEmailIssueId={copiedEmailIssueId}
@@ -86,6 +89,8 @@ export default function IssueCard({
 function IssueCardBody({
   issue,
   freshness,
+  featured,
+  readOnly,
   liveStripeState,
   actionState,
   copiedEmailIssueId,
@@ -119,7 +124,8 @@ function IssueCardBody({
 
   // One obvious primary action per card; everything else lives under Details.
   let primaryKind = 'none';
-  if (!issue.sourcePresent) primaryKind = 'resolve';
+  if (readOnly || issue.type === 'PAYMENT_RETRYING') primaryKind = 'none';
+  else if (!issue.sourcePresent) primaryKind = 'resolve';
   else if (refreshStripeFirst) primaryKind = 'refresh';
   else if (primaryQuickAction) primaryKind = 'quick';
   else if (needsLiveStripeReview(issue)) primaryKind = 'refresh';
@@ -133,7 +139,7 @@ function IssueCardBody({
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-lg font-semibold text-slate-900">{getStudentLabel(issue)}</h3>
+              <h3 className={`${featured ? 'text-xl' : 'text-lg'} font-semibold tracking-[-0.015em] text-slate-950`}>{getStudentLabel(issue)}</h3>
               {issue.reappeared ? (
                 <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800">
                   Reappeared
@@ -151,11 +157,9 @@ function IssueCardBody({
               ) : null}
               <AgeChip updatedAt={issue.updatedAt} />
             </div>
-            <p className="text-base leading-relaxed text-slate-800">{getIssueStory(issue)}</p>
-            {getIssueWhatToDo(issue) ? (
-              <p className="text-sm text-slate-500">
-                <span className="font-medium text-slate-600">What to do:</span> {getIssueWhatToDo(issue)}
-              </p>
+            <p className={`${featured ? 'text-[1.08rem]' : 'text-base'} max-w-3xl leading-relaxed text-slate-700`}>{getIssueStory(issue)}</p>
+            {issue.type === 'PAYMENT_RETRYING' && issue.stripeSnapshot?.nextPaymentAttemptAt ? (
+              <p className="text-sm text-slate-500">Next attempt {formatDateTime(issue.stripeSnapshot.nextPaymentAttemptAt)}</p>
             ) : null}
           </div>
           <span className="shrink-0 whitespace-nowrap text-xs font-medium text-slate-400">
@@ -213,25 +217,15 @@ function IssueCardBody({
             </button>
           ) : null}
           {primaryKind === 'follow_up' ? (
-            <>
-              {issue.adminStudentPath ? (
-                <button
-                  type="button"
-                  onClick={() => onOpenRecord({ path: issue.adminStudentPath, name: getStudentLabel(issue) })}
-                  className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700"
-                >
-                  Open student record
-                </button>
-              ) : null}
+            issue.adminStudentPath ? (
               <button
                 type="button"
-                onClick={() => onPracticeFollowUpHandled(issue)}
-                disabled={actionState.pendingId === issue.issueId}
-                className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-900 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={() => onOpenRecord({ path: issue.adminStudentPath, name: getStudentLabel(issue) })}
+                className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700"
               >
-                {actionState.pendingId === issue.issueId ? 'Saving…' : 'Mark follow-up handled'}
+                Open student record
               </button>
-            </>
+            ) : null
           ) : null}
           {primaryKind === 'open' && issue.adminStudentPath ? (
             <button
@@ -242,20 +236,20 @@ function IssueCardBody({
               Open student record
             </button>
           ) : null}
-          {issue.stripeCustomerId ? (
-            <a
-              href={`${STRIPE_DASHBOARD_BASE}/customers/${encodeURIComponent(issue.stripeCustomerId)}`}
-              target="_blank"
-              rel="noreferrer"
-              className="rounded-lg border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-medium text-violet-900 transition hover:bg-violet-100"
-            >
-              View customer in Stripe ↗
-            </a>
-          ) : null}
-          <details className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700">
-            <summary className="cursor-pointer list-none font-medium text-slate-900">Details</summary>
+          <details className="rounded-lg px-2 py-2 text-sm text-slate-700">
+            <summary className="cursor-pointer list-none font-medium text-slate-500 transition hover:text-slate-900" aria-label="More options">•••</summary>
             <div className="mt-4 space-y-4">
               <div className="flex flex-wrap gap-3">
+                {issue.stripeCustomerId ? (
+                  <a
+                    href={`${STRIPE_DASHBOARD_BASE}/customers/${encodeURIComponent(issue.stripeCustomerId)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-lg border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-medium text-violet-900 transition hover:bg-violet-100"
+                  >
+                    View in Stripe ↗
+                  </a>
+                ) : null}
                 {issue.email ? (
                   <button
                     type="button"
@@ -330,6 +324,16 @@ function IssueCardBody({
                     className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-800 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {actionState.pendingId === issue.id ? 'Removing…' : 'Remove from portal'}
+                  </button>
+                ) : null}
+                {issue.type === 'PRACTICE NOTE DELIVERY FAILED' && issue.practiceNote ? (
+                  <button
+                    type="button"
+                    onClick={() => onPracticeFollowUpHandled(issue)}
+                    disabled={actionState.pendingId === issue.issueId}
+                    className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-900 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {actionState.pendingId === issue.issueId ? 'Saving…' : 'Mark follow-up handled'}
                   </button>
                 ) : null}
                 {!refreshStripeFirst && needsLiveStripeReview(issue) && primaryQuickAction ? (
