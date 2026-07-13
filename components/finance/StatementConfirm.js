@@ -1,10 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 // Confirm / dispute controls on the public statement link (Phase 2). Posts the
 // signed token back — no login. On success it flips to a thank-you state.
 export default function StatementConfirm({ token, initialResponse = '', initialNote = '' }) {
+  const router = useRouter();
   const [response, setResponse] = useState(initialResponse);
   const [note, setNote] = useState(initialNote);
   const [showDispute, setShowDispute] = useState(false);
@@ -27,6 +29,9 @@ export default function StatementConfirm({ token, initialResponse = '', initialN
       }
       setResponse(value);
       setShowDispute(false);
+      // Refresh the server-rendered record above so a PDF saved immediately
+      // after this action includes the confirmation status and date.
+      router.refresh();
     } catch {
       setError('Could not reach the server — please try again.');
     } finally {

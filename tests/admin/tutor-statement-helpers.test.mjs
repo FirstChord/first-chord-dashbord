@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   buildTutorStatement,
+  buildStatementReference,
   renderTutorStatementText,
   signStatementToken,
   verifyStatementToken,
@@ -10,6 +11,7 @@ import {
 } from '../../lib/admin/tutor-statement-helpers.mjs';
 
 const savedRow = {
+  payrollId: 'payroll_david_2026-06-16_2026-07-01',
   tutor: 'David Husz',
   tutorShortName: 'David',
   periodStart: '2026-06-16',
@@ -17,6 +19,8 @@ const savedRow = {
   invoiceCadence: 'weekly',
   finalAmount: 211.42,
   status: 'reviewed',
+  paymentRoute: 'confirmation',
+  reviewedAt: '2026-07-02T09:00:00.000Z',
 };
 
 const previewRow = {
@@ -37,6 +41,30 @@ test('buildTutorStatement uses the frozen total from the saved row and lines fro
   assert.equal(statement.lines[0].student, 'Alice');
   assert.equal(statement.lessonCount, 2);
   assert.equal(statement.hasUnrecorded, false);
+  assert.equal(statement.reference, 'FC-DAVID-20260616-20260701');
+  assert.equal(statement.documentType, 'statement');
+  assert.equal(statement.issuedAt, '2026-07-02T09:00:00.000Z');
+});
+
+test('paid payroll runs become dated payment receipts using the same stable reference', () => {
+  const statement = buildTutorStatement({
+    savedRow: { ...savedRow, status: 'paid', paidAt: '2026-07-04T12:00:00.000Z' },
+    previewRow,
+  });
+  assert.equal(statement.documentType, 'receipt');
+  assert.equal(statement.paidAt, '2026-07-04T12:00:00.000Z');
+  assert.equal(statement.reference, 'FC-DAVID-20260616-20260701');
+  assert.match(renderTutorStatementText(statement), /payment receipt/i);
+  assert.match(renderTutorStatementText(statement), /Paid:/);
+});
+
+test('buildStatementReference is readable and deterministic for tutor records', () => {
+  assert.equal(buildStatementReference({
+    payrollId: 'payroll_elena_x',
+    tutorShortName: 'Eléna Rose',
+    periodStart: '2026-06-01',
+    periodEnd: '2026-06-30',
+  }), 'FC-ELENA-ROSE-20260601-20260630');
 });
 
 test('buildTutorStatement carries the tutor response through for the public view', () => {

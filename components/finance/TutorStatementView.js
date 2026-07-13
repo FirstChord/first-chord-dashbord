@@ -9,19 +9,70 @@ function hoursLabel(minutes) {
   return `${h}h${rem ? ` ${rem}m` : ''}`;
 }
 
+function recordDate(value) {
+  if (!value) return '—';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return `${value}`;
+  return parsed.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'Europe/London',
+  });
+}
+
+function recordStatus(statement) {
+  if (statement.status === 'paid') return 'Paid';
+  if (statement.tutorResponse === 'confirmed') return 'Confirmed';
+  if (statement.tutorResponse === 'disputed') return 'Query raised';
+  if (statement.paymentRoute === 'confirmation') return 'Awaiting confirmation';
+  return 'Approved';
+}
+
 // Presentational, read-only statement card. Shared by the admin view and the
 // public signed-link view so the tutor sees exactly what the admin sees.
 export default function TutorStatementView({ statement }) {
   if (!statement) return null;
   const lines = statement.lines || [];
+  const isReceipt = statement.documentType === 'receipt' || statement.status === 'paid';
   return (
-    <article className="rounded-[1.4rem] border border-slate-200 bg-white/95 p-6 shadow-sm">
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">First Chord Music School</p>
-      <h2 className="mt-1 text-2xl font-bold text-slate-900">Pay statement</h2>
-      <p className="mt-1 text-lg font-semibold text-slate-800">{statement.tutor}</p>
-      <p className="text-sm text-slate-500">
-        {formatPayrollDate(statement.periodStart)} – {formatPayrollDate(statement.periodEnd)} · {statement.cadence}
-      </p>
+    <article className="rounded-[1.4rem] border border-slate-200 bg-white/95 p-6 shadow-sm print:break-inside-avoid print:rounded-none print:border-0 print:p-0 print:shadow-none">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">First Chord Music School</p>
+          <h2 className="mt-1 text-2xl font-bold text-slate-900">{isReceipt ? 'Payment receipt' : 'Payment statement'}</h2>
+          <p className="mt-1 text-lg font-semibold text-slate-800">{statement.tutor}</p>
+          <p className="text-sm text-slate-500">
+            {formatPayrollDate(statement.periodStart)} – {formatPayrollDate(statement.periodEnd)} · {statement.cadence}
+          </p>
+        </div>
+        <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${isReceipt ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700'}`}>
+          {recordStatus(statement)}
+        </span>
+      </div>
+
+      <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-2 rounded-xl bg-slate-50 px-4 py-3 text-xs sm:grid-cols-3 print:border print:border-slate-200 print:bg-white">
+        <div>
+          <dt className="text-slate-400">Reference</dt>
+          <dd className="mt-0.5 break-all font-semibold text-slate-700">{statement.reference || '—'}</dd>
+        </div>
+        <div>
+          <dt className="text-slate-400">Issued</dt>
+          <dd className="mt-0.5 font-semibold text-slate-700">{recordDate(statement.issuedAt)}</dd>
+        </div>
+        {statement.tutorResponse === 'confirmed' ? (
+          <div>
+            <dt className="text-slate-400">Confirmed</dt>
+            <dd className="mt-0.5 font-semibold text-slate-700">{recordDate(statement.tutorRespondedAt)}</dd>
+          </div>
+        ) : null}
+        {isReceipt ? (
+          <div>
+            <dt className="text-slate-400">Paid</dt>
+            <dd className="mt-0.5 font-semibold text-slate-700">{recordDate(statement.paidAt)}</dd>
+          </div>
+        ) : null}
+      </dl>
 
       <div className="mt-5 overflow-hidden rounded-2xl border border-slate-100">
         <table className="w-full text-sm">
@@ -55,7 +106,14 @@ export default function TutorStatementView({ statement }) {
         </p>
       ) : null}
 
-      <p className="mt-5 text-sm text-slate-500">If anything looks off, just reply and we’ll sort it before payment. Thank you!</p>
+      <p className="mt-5 text-sm text-slate-500">
+        {isReceipt
+          ? 'This receipt records the payment marked as paid by First Chord for the lessons above.'
+          : 'If anything looks off, just reply and we’ll sort it before payment. Thank you!'}
+      </p>
+      <p className="mt-2 text-[0.7rem] leading-4 text-slate-400">
+        This First Chord payment record does not replace an invoice the tutor may be required to provide.
+      </p>
     </article>
   );
 }

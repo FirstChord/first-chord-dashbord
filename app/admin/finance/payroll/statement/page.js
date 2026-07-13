@@ -6,6 +6,7 @@ import { loadTutorStatement } from '@/lib/admin/tutor-statement';
 import { renderTutorStatementText, buildStatementToken } from '@/lib/admin/tutor-statement-helpers.mjs';
 import TutorStatementView from '@/components/finance/TutorStatementView';
 import CopyStatementButton from '@/components/finance/CopyStatementButton';
+import StatementRecordActions from '@/components/finance/StatementRecordActions';
 
 export const dynamic = 'force-dynamic';
 
@@ -59,6 +60,7 @@ async function StatementReady({ statement, payrollId }) {
   return (
     <>
       <TutorStatementView statement={statement} />
+      <StatementRecordActions reference={statement.reference} isReceipt={statement.documentType === 'receipt'} />
 
       <section className="rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-sm">
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Send to tutor</p>
