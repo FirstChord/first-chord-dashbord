@@ -16,7 +16,7 @@ import {
 import { ADMIN_TUTORS } from '@/lib/admin/tutors-data';
 import { formatMoney } from '@/lib/admin/finance-helpers.mjs';
 import { parseTutorWise, buildWiseBatch, selectPayableReviewedRuns } from '@/lib/admin/wise-helpers.mjs';
-import { getPayrollWorkflowState } from '@/lib/admin/payroll-workflow-helpers.mjs';
+import { getPayrollWorkflowState, hasMaterialTutorStatementChange } from '@/lib/admin/payroll-workflow-helpers.mjs';
 import { findPauseHistoryCoverageForLesson } from '@/lib/admin/pause-helpers.mjs';
 import AdjustWindowForm from './adjust-window-form';
 import WisePayoutPanel from './wise-payout-panel';
@@ -42,8 +42,28 @@ async function savePayrollRunAction(formData) {
   const expectedAmount = Number.parseFloat(`${formData.get('expected_amount') || '0'}`) || 0;
   const adjustmentAmount = Number.parseFloat(`${formData.get('adjustment_amount') || '0'}`) || 0;
   const finalAmount = Math.round((expectedAmount + adjustmentAmount) * 100) / 100;
+  const payrollId = `${formData.get('payroll_id') || ''}`.trim();
+  const paymentRoute = `${formData.get('payment_route') || 'normal'}`.trim() === 'confirmation' ? 'confirmation' : 'normal';
+  const nextStatement = {
+    period_start: `${formData.get('period_start') || ''}`.trim(),
+    period_end: `${formData.get('period_end') || ''}`.trim(),
+    lesson_count: `${formData.get('lesson_count') || '0'}`.trim(),
+    teaching_minutes: `${formData.get('teaching_minutes') || '0'}`.trim(),
+    expected_amount: expectedAmount,
+    adjustment_amount: adjustmentAmount,
+    final_amount: finalAmount,
+    payment_route: paymentRoute,
+  };
+  const existingRuns = await getPayrollRunRows();
+  const existingRun = existingRuns.find((row) => `${row.payroll_id ?? row.payrollId ?? ''}`.trim() === payrollId) || null;
+  const statementChanged = status === 'reviewed'
+    && existingRun
+    && hasMaterialTutorStatementChange(existingRun, nextStatement);
+  const reviewedAt = statementChanged || !`${formData.get('reviewed_at') || ''}`.trim()
+    ? now
+    : `${formData.get('reviewed_at') || now}`.trim();
   await upsertPayrollRunRow({
-    payroll_id: `${formData.get('payroll_id') || ''}`.trim(),
+    payroll_id: payrollId,
     pay_date: `${formData.get('pay_date') || ''}`.trim(),
     period_start: `${formData.get('period_start') || ''}`.trim(),
     period_end: `${formData.get('period_end') || ''}`.trim(),
@@ -60,17 +80,17 @@ async function savePayrollRunAction(formData) {
     final_amount: finalAmount,
     status,
     invoice_status: `${formData.get('invoice_status') || ''}`.trim(),
-    payment_route: `${formData.get('payment_route') || 'normal'}`.trim() === 'confirmation' ? 'confirmation' : 'normal',
-    statement_sent_at: `${formData.get('statement_sent_at') || ''}`.trim(),
-    statement_sent_by: `${formData.get('statement_sent_by') || ''}`.trim(),
+    payment_route: paymentRoute,
+    statement_sent_at: statementChanged ? '' : `${formData.get('statement_sent_at') || ''}`.trim(),
+    statement_sent_by: statementChanged ? '' : `${formData.get('statement_sent_by') || ''}`.trim(),
     notes: `${formData.get('notes') || ''}`.trim(),
-    reviewed_at: status === 'reviewed' ? now : `${formData.get('reviewed_at') || now}`.trim(),
+    reviewed_at: status === 'reviewed' ? reviewedAt : `${formData.get('reviewed_at') || now}`.trim(),
     reviewed_by: status === 'reviewed' ? session.user.email || '' : `${formData.get('reviewed_by') || session.user.email || ''}`.trim(),
     paid_at: status === 'paid' ? `${formData.get('paid_at') || now}`.trim() : '',
     paid_by: status === 'paid' ? `${formData.get('paid_by') || session.user.email || ''}`.trim() : '',
-    tutor_response: `${formData.get('tutor_response') || ''}`.trim(),
-    tutor_responded_at: `${formData.get('tutor_responded_at') || ''}`.trim(),
-    tutor_note: `${formData.get('tutor_note') || ''}`.trim(),
+    tutor_response: statementChanged ? '' : `${formData.get('tutor_response') || ''}`.trim(),
+    tutor_responded_at: statementChanged ? '' : `${formData.get('tutor_responded_at') || ''}`.trim(),
+    tutor_note: statementChanged ? '' : `${formData.get('tutor_note') || ''}`.trim(),
     source: 'mms_attendance_preview',
     created_at: existingCreatedAt || now,
     updated_at: now,

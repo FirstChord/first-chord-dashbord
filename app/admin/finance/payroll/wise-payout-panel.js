@@ -96,7 +96,7 @@ export default function WisePayoutPanel({
               <li key={entry.tutor}>{entry.tutor}{entry.note ? `: “${entry.note}”` : ''}</li>
             ))}
           </ul>
-          Resolve it with them, then re-review to include them.
+          Resolve it with them, update and resend the statement if the figure changed, then ask them to confirm it.
         </div>
       ) : null}
 

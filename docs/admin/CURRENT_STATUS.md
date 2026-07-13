@@ -64,7 +64,7 @@ npm run build
 
 Open candidates (the Obsidian `08 Operations/Active Roadmap` is the fuller list):
 
-- **Tutor-facing payroll — Phase 2 (tutor confirm) + Phase 3 (cadence self-select + scheduled delivery):** Phase 1 (statement + signed link) shipped; the full plan, decisions and open questions live in `docs/admin/TUTOR_FACING_PAYROLL_ROADMAP.md`. Gating cost for both is **tutor auth** (none today) — likely a magic-link confirm for Phase 2, real `isTutor` login for Phase 3. Returning to this soon.
+- **Tutor-facing payroll — Phase 2 shipped; Phase 3 deferred:** reviewed figures produce a signed no-login statement link; tutors can confirm or query; confirmation-required rows wait, disputes are held out of Wise, and the same printable record becomes a dated receipt after payment. The live operating sequence is `docs/workflows/06-paying-tutors.md`; design history and the remaining cadence/scheduled-delivery work are in `docs/admin/TUTOR_FACING_PAYROLL_ROADMAP.md`. Only Phase 3 needs persistent tutor auth/contact email.
 - Pause-loop maturity — make pause issue cards clearer about whether a mismatch is from `Pause History`, sheet expectation, or live Stripe (Stripe mutation stays out of scope).
 - Contact-role model before any message automation.
 - Communication draft→approve layer before any WhatsApp Cloud API (no auto-send).

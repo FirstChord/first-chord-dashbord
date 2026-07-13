@@ -1,6 +1,6 @@
 # Documentation Map
 
-Last updated: 2026-07-03
+Last updated: 2026-07-13
 
 The docs are useful, but there are many entry points. This map defines the canonical ones so future agents do not treat old drafts as current authority.
 
@@ -19,7 +19,7 @@ Read in this order:
 9. `docs/admin/PAYMENTS_RULES.md` when touching payments, pauses, Stripe, or setup-pending logic
 10. `docs/admin/TUTOR_ABSENCE_PAUSE_BRIDGE.md` when touching tutor absence, pause planning, or finance pause forecasts
 11. `docs/admin/WHATSAPP_INCOMING_BRIDGE.md` when touching incoming WhatsApp capture, group maps, or message classification
-12. `docs/admin/STATE_TABS_SCHEMA.md` + `docs/admin/CURRENT_STATUS.md` finance section when touching `/admin/finance`, payroll, `Tutor_Pay`, `Finance_Snapshot`, or `Payroll_Runs`
+12. `docs/workflows/06-paying-tutors.md` for the live human payroll run; pair it with `docs/admin/STATE_TABS_SCHEMA.md` + the `CURRENT_STATUS.md` finance section when changing `/admin/finance`, payroll, `Tutor_Pay`, `Tutor_Wise`, statements or `Payroll_Runs`
 13. `docs/admin/PRACTICE_CHAT_DELIVERY_AUDIT.md` when touching Practice Chat Level 2 delivery or rollout
 
 `docs/admin/AUDIT_2026-06-10.md` is critique input, not a live plan. Use judgement before implementing its recommendations.

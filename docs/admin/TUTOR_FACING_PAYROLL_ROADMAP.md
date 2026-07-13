@@ -24,12 +24,13 @@ questions*, not code behaviour.
   same source `selectPayableReviewedRuns` feeds into the Wise CSV.
 - **No money moves and nothing auto-sends.** The admin pastes the link/text.
 
-## The gating decision for BOTH phases: tutor auth
+## Identity decision: Phase 2 resolved; Phase 3 still gated
 
-There is **no tutor auth today** — `isAdmin` (an allow-listed email) is the only
-role (`lib/admin/auth.js`, `middleware.js`). Phase 2/3 can't land without one of:
+There is **no persistent tutor login today** — `isAdmin` (an allow-listed email)
+is the only account role (`lib/admin/auth.js`, `middleware.js`). Phase 2 shipped
+using the statement bearer token; Phase 3 still needs persistent tutor identity:
 
-1. **Magic-link identity via the statement token (recommended for Phase 2).**
+1. **Magic-link identity via the statement token (implemented for Phase 2).**
    The signed `/pay/statement/<token>` link *already* proves "this tutor, this
    row". A Confirm button can POST that same token back — no accounts, no login
    UI, matches a ~15-person team. Bind confirmation to the token's `pid`/`t`.
@@ -43,8 +44,8 @@ role (`lib/admin/auth.js`, `middleware.js`). Phase 2/3 can't land without one of
    a `/tutor/*` area outside the admin matcher. Heavier, but required once tutors
    self-serve cadence or see history across periods.
 
-**Recommendation:** Phase 2 on the magic-link (option 1) to stay light; introduce
-option 2 only when Phase 3 needs a persistent tutor portal.
+**Decision:** keep Phase 2 on the magic-link; introduce option 2 only if Phase 3
+earns the cost of a persistent tutor portal.
 
 ---
 
@@ -54,9 +55,9 @@ option 2 only when Phase 3 needs a persistent tutor portal.
 on `/pay/statement/<token>` → `recordTutorStatementResponse` writes
 `tutor_response`/`tutor_responded_at`/`tutor_note`; the payroll board shows a
 per-card banner + confirmations tally; disputed rows are held out of the Wise
-batch until re-reviewed. Details in the 2026-07-05 Learning Log entry.*
+batch until the tutor confirms the resolved statement. Details in the 2026-07-05 Learning Log entry.*
 
-Original design (kept for reference):
+Original design (kept for reference; shipped outcomes below are authoritative):
 
 
 **Goal:** replace "chase the invoice" with the tutor actively agreeing the figure,
@@ -79,22 +80,22 @@ built it read-only for exactly this). POST to a new action/route that:
 - `tutor_note` (free text, dispute reason)
 
   Keep it on the existing row (not a new tab) — it's per-run state, alongside
-  `reviewed_by`/`paid_by`. A dispute should **not** block the admin from paying
-  (they may override), but should show loudly on the card and ideally hold the
-  row out of the default Wise batch until acknowledged.
+  `reviewed_by`/`paid_by`. A dispute is visibly held out of the Wise batch until
+  the tutor confirms the resolved statement.
 
 **Payroll page changes:** show `confirmed ✓ by tutor` / `disputed — see note` on
-each card; optionally let the Wise batch prefer confirmed rows (a filter toggle,
-not a hard gate).
+each card. `Tutor confirmation required` is a hard readiness gate; the
+transitional `Pay normally` route can enter the batch without confirmation.
 
-**Open decisions:**
-- Does a dispute *remove* the row from the Wise batch, or just flag it? (Lean:
-  flag + keep out of the default batch, admin can force-include.)
-- One-time confirm vs re-confirmable? (Lean: confirm is sticky; re-issue a link
-  to change it.)
-- What exactly is the tutor attesting — "I taught these" or "I agree the £"? Word
-  the button/consent line carefully (it leans on MMS attendance being right,
-  which also nudges tutors to keep the register accurate).
+**Decisions shipped:**
+- A dispute removes the row from the Wise batch; there is no silent force-pay.
+- The tutor can move between Confirmed and Query raised until the run is paid;
+  payment locks further responses.
+- The tutor confirms that the displayed lesson breakdown and frozen amount look
+  right. MMS remains attendance truth; confirmation never moves money.
+- The shared record is a Payment statement before payment and a Payment receipt
+  after the batch is marked paid, with Print/Save PDF for retention. It is not a
+  substitute for a freelancer invoice.
 
 ---
 
