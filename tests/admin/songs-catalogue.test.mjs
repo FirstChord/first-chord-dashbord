@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { SONGS_CATALOGUE } from '../../lib/config/songs-catalogue.mjs';
+import { SONGS_CATALOGUE, SONG_LEVELS } from '../../lib/config/songs-catalogue.mjs';
 import {
   soundsliceUrlFor,
   songMatchesInstrument,
@@ -58,12 +58,16 @@ test('instrument matching handles combo instrument strings', () => {
 test('getSongsForInstrument returns guitar songs sorted by level then title', () => {
   const songs = getSongsForInstrument('Guitar');
   assert.ok(songs.length >= 10, 'seed catalogue should have 10+ guitar songs');
-  const levels = songs.map((s) => s.level);
-  const debutCount = levels.filter((l) => l === 'Debut').length;
-  assert.deepEqual(levels, [
-    ...Array(debutCount).fill('Debut'),
-    ...Array(levels.length - debutCount).fill('Grade 1'),
-  ]);
+  const levelIndexes = songs.map((s) => SONG_LEVELS.indexOf(s.level));
+  for (let i = 1; i < levelIndexes.length; i += 1) {
+    assert.ok(levelIndexes[i] >= levelIndexes[i - 1], 'levels must be in SONG_LEVELS order');
+    if (levelIndexes[i] === levelIndexes[i - 1]) {
+      assert.ok(
+        songs[i].title.localeCompare(songs[i - 1].title) >= 0,
+        'titles sorted within a level'
+      );
+    }
+  }
   for (const song of songs) {
     assert.match(song.soundsliceUrl, /^https:\/\/www\.soundslice\.com\/slices\/[\w-]+\/$/);
     assert.ok(song.songId.startsWith('fc_song_'));
