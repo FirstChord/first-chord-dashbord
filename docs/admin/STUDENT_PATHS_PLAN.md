@@ -1,12 +1,12 @@
 # Student Paths & Song Objects — Architecture Plan
 
-Last updated: 2026-07-12. **Slices 1–4 shipped.** Slice 1: 70-song catalogue
+Last updated: 2026-07-12. **Slices 1–5 shipped.** Slice 1: 70-song catalogue
 (15 guitar + 55 piano; all secret-link verified + MusicXML cold-backed-up; 26 piano
 entries carry the `artist: 'RSL'` needs-curation marker) + read-only Song Browser.
 Slice 2: Assign buttons → `Song_Assignments` Sheets tab, token-guarded.
 Slice 3: portal "Your Songs" (fail-safe reads; course button coexists; zero change
 for students with no assignments). All e2e-verified with the registry test student
-(`sdt_fBg9JN`, portal `/test`). Slice 4: ordering + status transitions (Assigned panel, PATCH, portal chips). Next: slice 5 (ingestion workflow). Specs in §10;
+(`sdt_fBg9JN`, portal `/test`). Slice 4: ordering + status transitions (Assigned panel, PATCH, portal chips). Slice 5: ingestion toolshed scripts (`build_catalogue_draft.py` draft-never-merge + `verify_catalogue_links.py` drift check). Next: slice 6 (path templates). Specs in §10;
 experiment log in §11.
 
 Purpose: turn Soundslice material into reusable **Song objects**, organise them into
@@ -470,7 +470,7 @@ Read the workspace `CLAUDE.md` first (canonical-vs-derived, docs ritual, deploy 
   section; portal for students with zero registry changes renders exactly as
   before.
 
-### Slice 5 spec — ingestion workflow (sketch; refine when started)
+### Slice 5 spec — ingestion workflow (SHIPPED 2026-07-13 — see Soundslice toolshed `build_catalogue_draft.py` + `verify_catalogue_links.py`; kept for context)
 
 Port the manual seeding done on 2026-07-12 into one repeatable script in the
 Soundslice toolshed: export list → propose catalogue entries as a reviewable diff
