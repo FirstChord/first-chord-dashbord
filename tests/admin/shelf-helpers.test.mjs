@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildPathProgress, buildShelf, inferStudentLevel } from '../../lib/songs/shelf-helpers.mjs';
+import { buildPathProgress, inferStudentLevel } from '../../lib/songs/shelf-helpers.mjs';
 
 const SONGS = [
   { songId: 'fc_song_d1', title: 'D1', level: 'Debut' },
@@ -19,22 +19,6 @@ test('level is the highest assigned level, falling back to the lowest available'
   );
   assert.equal(inferStudentLevel([], SONGS), 'Debut');
   assert.equal(inferStudentLevel([], []), null);
-});
-
-test('shelf offers unassigned songs at level, topping up from the next level', () => {
-  const { level, candidates } = buildShelf(
-    [{ songId: 'fc_song_g1a', status: 'working' }],
-    SONGS,
-    { limit: 3 }
-  );
-  assert.equal(level, 'Grade 1');
-  assert.deepEqual(candidates.map((s) => s.songId), ['fc_song_g1b', 'fc_song_g2a']);
-});
-
-test('new student shelf starts at the lowest level', () => {
-  const { level, candidates } = buildShelf([], SONGS, { limit: 2 });
-  assert.equal(level, 'Debut');
-  assert.deepEqual(candidates.map((s) => s.songId), ['fc_song_d1', 'fc_song_d2']);
 });
 
 test('path progress reports steps, statuses, and the current position', () => {

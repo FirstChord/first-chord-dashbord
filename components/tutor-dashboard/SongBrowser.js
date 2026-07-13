@@ -13,9 +13,10 @@ import {
   Plus,
   RotateCcw,
   Search,
+  X,
 } from 'lucide-react';
 import { getSongsForInstrument, songMatchesInstrument } from '@/lib/songs/catalogue-helpers.mjs';
-import { buildPathProgress, buildShelf } from '@/lib/songs/shelf-helpers.mjs';
+import { buildPathProgress, inferStudentLevel } from '@/lib/songs/shelf-helpers.mjs';
 import { PATH_TEMPLATES } from '@/lib/config/path-templates.mjs';
 import { SONG_LEVELS } from '@/lib/config/songs-catalogue.mjs';
 
@@ -29,16 +30,17 @@ const STATUS_STYLES = {
   parked: 'bg-gray-100 text-gray-400',
 };
 
-// Student-centred song panel: opens on "pick the next song" (level-matched
-// shelf), with the current song + path progress as a compact strip above and
-// the full catalogue behind an explicit Browse toggle. Renders nothing when
-// the catalogue has no songs for the student's instrument.
+// Student-centred song panel: a Now strip (current song + path progress, tap
+// to manage the sequence) above the RSL bookcase — a rail of grade tiles with
+// the student's grade preselected and that grade's songs as cards. Assigned
+// cards stay on the shelf with a tick. Renders nothing when the catalogue has
+// no songs for the student's instrument.
 export default function SongBrowser({ student }) {
   const [open, setOpen] = useState(false);
-  const [browseOpen, setBrowseOpen] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
+  const [selectedLevel, setSelectedLevel] = useState(null); // null = student's level
+  const [searchOpen, setSearchOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const [expandedSongId, setExpandedSongId] = useState(null);
   const [assignments, setAssignments] = useState(null); // null = not loaded
   const [pendingId, setPendingId] = useState(null);
   const [assignError, setAssignError] = useState(null);
@@ -55,8 +57,9 @@ export default function SongBrowser({ student }) {
     setAssignments(null);
     setPendingId(null);
     setAssignError(null);
-    setBrowseOpen(false);
     setManageOpen(false);
+    setSelectedLevel(null);
+    setSearchOpen(false);
     setSearch('');
   }, [studentId]);
 
@@ -100,10 +103,10 @@ export default function SongBrowser({ student }) {
     activeAssignments.find((a) => a.status === 'working') || activeAssignments[0] || null;
   const nowSong = nowAssignment ? songs.find((s) => s.songId === nowAssignment.songId) : null;
   const pathProgress = loaded ? buildPathProgress(assignments) : null;
-  const shelf = useMemo(
-    () => buildShelf(assignments || [], songs, { limit: 5 }),
-    [assignments, songs]
-  );
+
+  const railLevels = SONG_LEVELS.filter((level) => songs.some((song) => song.level === level));
+  const studentLevel = inferStudentLevel(assignments || [], songs);
+  const shelfLevel = selectedLevel || studentLevel || railLevels[0];
 
   const pathTemplates = Object.entries(PATH_TEMPLATES)
     .filter(([, template]) =>
@@ -156,16 +159,13 @@ export default function SongBrowser({ student }) {
   };
 
   const searchTerm = search.trim().toLowerCase();
-  const browseSongs = searchTerm
+  const shelfSongs = searchTerm
     ? songs.filter(
         (song) =>
           song.title.toLowerCase().includes(searchTerm) ||
           (song.artist || '').toLowerCase().includes(searchTerm)
       )
-    : songs;
-  const browseLevels = SONG_LEVELS.filter((level) =>
-    browseSongs.some((song) => song.level === level)
-  );
+    : songs.filter((song) => song.level === shelfLevel);
 
   const titleFor = (assignment) =>
     songs.find((s) => s.songId === assignment.songId)?.title ||
@@ -317,36 +317,123 @@ export default function SongBrowser({ student }) {
             </div>
           )}
 
-          {/* Next: level-matched shelf. Tap a card to assign it. */}
-          {canAssign && loaded && shelf.candidates.length > 0 && (
-            <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
-                {activeAssignments.length ? 'Next song' : 'First song'} · {shelf.level}
-              </p>
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                {shelf.candidates.map((song) => (
-                  <button
-                    key={song.songId}
-                    type="button"
-                    disabled={pendingId === song.songId}
-                    onClick={() => assignSong(song.songId)}
-                    className="group w-32 shrink-0 rounded-lg border border-[#2F6B3D]/25 p-3 text-left transition-colors hover:border-[#2F6B3D] hover:bg-green-50 disabled:opacity-50"
-                  >
-                    <span className="block text-sm font-semibold leading-snug text-gray-800">
-                      {song.title}
-                    </span>
-                    <span className="mt-0.5 block truncate text-xs text-gray-500">
-                      {song.artist}
-                    </span>
-                    <span className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-[#2F6B3D]">
-                      <Plus className="h-3 w-3" />
-                      {pendingId === song.songId ? 'Assigning…' : 'Assign'}
-                    </span>
-                  </button>
-                ))}
+          {/* The RSL bookcase: grade rail + that grade's songs as cards. */}
+          <div>
+            <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+              <span className="text-xs font-bold uppercase tracking-wide text-[#2F6B3D]">
+                RSL
+              </span>
+              <div className="flex flex-wrap items-center gap-1">
+                {railLevels.map((level) => {
+                  const isShelf = !searchTerm && level === shelfLevel;
+                  const isStudentLevel = level === studentLevel;
+                  return (
+                    <button
+                      key={level}
+                      type="button"
+                      onClick={() => {
+                        setSelectedLevel(level);
+                        setSearch('');
+                        setSearchOpen(false);
+                      }}
+                      className={`rounded-full px-3 py-1 text-sm transition-colors ${
+                        isShelf
+                          ? 'bg-[#2F6B3D] font-semibold text-white'
+                          : isStudentLevel
+                            ? 'font-semibold text-[#2F6B3D] hover:bg-green-50'
+                            : 'text-gray-400 hover:bg-gray-50 hover:text-gray-600'
+                      }`}
+                    >
+                      {level}
+                    </button>
+                  );
+                })}
               </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchOpen(!searchOpen);
+                  setSearch('');
+                }}
+                className="rounded p-1.5 text-gray-400 hover:bg-gray-50 hover:text-[#2F6B3D]"
+                aria-label={searchOpen ? 'Close search' : 'Search songs'}
+              >
+                {searchOpen ? <X className="h-4 w-4" /> : <Search className="h-4 w-4" />}
+              </button>
+              {searchOpen && (
+                <input
+                  type="search"
+                  autoFocus
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Title or artist"
+                  className="min-w-40 flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm outline-none focus:border-[#2F6B3D]/50"
+                />
+              )}
             </div>
-          )}
+
+            <div className="grid max-w-4xl grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4">
+              {shelfSongs.map((song) => {
+                const isAssigned = assignedSongIds.has(song.songId);
+                const busy = pendingId === song.songId;
+                return (
+                  <div
+                    key={song.songId}
+                    className={`relative rounded-lg border p-3 transition-colors ${
+                      isAssigned
+                        ? 'border-[#2F6B3D]/30 bg-green-50/60'
+                        : 'border-gray-200 hover:border-[#2F6B3D]/50'
+                    }`}
+                  >
+                    <a
+                      href={song.soundsliceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="absolute right-2 top-2 rounded p-1 text-gray-300 hover:bg-green-50 hover:text-[#2F6B3D]"
+                      aria-label={`Open ${song.title} in Soundslice`}
+                      title="Open in Soundslice"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                    <p
+                      className="pr-6 text-sm font-semibold leading-snug text-gray-800"
+                      title={song.tutorNote || undefined}
+                    >
+                      {song.title}
+                    </p>
+                    <p className="mt-0.5 truncate text-xs text-gray-500">{song.artist}</p>
+                    {searchTerm && (
+                      <p className="mt-0.5 text-xs text-gray-400">{song.level}</p>
+                    )}
+                    <div className="mt-2">
+                      {isAssigned ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-[#2F6B3D]">
+                          <Check className="h-3.5 w-3.5" /> Assigned
+                        </span>
+                      ) : (
+                        canAssign && (
+                          <button
+                            type="button"
+                            disabled={busy || !loaded}
+                            onClick={() => assignSong(song.songId)}
+                            className="inline-flex items-center gap-1 text-xs font-medium text-[#2F6B3D] hover:underline disabled:opacity-40"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                            {busy ? 'Assigning…' : 'Assign'}
+                          </button>
+                        )
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              {shelfSongs.length === 0 && (
+                <p className="col-span-full text-sm text-gray-500">
+                  {searchTerm ? `Nothing matches “${search}”.` : 'No songs at this grade yet.'}
+                </p>
+              )}
+            </div>
+          </div>
 
           {/* Paths with something left to offer. */}
           {canAssign && loaded && pathTemplates.length > 0 && (
@@ -368,111 +455,6 @@ export default function SongBrowser({ student }) {
               ))}
             </div>
           )}
-
-          {/* Browse: the full catalogue, only when asked for. */}
-          <div>
-            <button
-              type="button"
-              onClick={() => setBrowseOpen(!browseOpen)}
-              className="flex items-center gap-1.5 text-sm font-medium text-[#2F6B3D] hover:underline"
-            >
-              {browseOpen ? (
-                <ChevronDown className="h-4 w-4" />
-              ) : (
-                <ChevronRight className="h-4 w-4" />
-              )}
-              Browse all {songs.length}
-            </button>
-
-            {browseOpen && (
-              <div className="mt-3 max-w-2xl space-y-4">
-                <label className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2">
-                  <Search className="h-4 w-4 shrink-0 text-gray-400" />
-                  <input
-                    type="search"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search title or artist"
-                    className="w-full bg-transparent text-sm outline-none"
-                  />
-                </label>
-
-                {browseLevels.map((level) => (
-                  <div key={level}>
-                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-400">
-                      {level}
-                    </p>
-                    <ul className="divide-y divide-gray-100">
-                      {browseSongs
-                        .filter((song) => song.level === level)
-                        .map((song) => {
-                          const isAssigned = assignedSongIds.has(song.songId);
-                          const expanded = expandedSongId === song.songId;
-                          return (
-                            <li key={song.songId} className="py-2">
-                              <div className="flex items-center justify-between gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setExpandedSongId(expanded ? null : song.songId)
-                                  }
-                                  className="min-w-0 flex-1 text-left"
-                                >
-                                  <span className="font-medium text-gray-800">{song.title}</span>
-                                  <span className="text-sm text-gray-500"> — {song.artist}</span>
-                                </button>
-                                <div className="flex shrink-0 items-center gap-1">
-                                  {canAssign &&
-                                    (isAssigned ? (
-                                      <span className="p-1.5 text-[#2F6B3D]" title="Assigned">
-                                        <Check className="h-4 w-4" />
-                                      </span>
-                                    ) : (
-                                      <button
-                                        type="button"
-                                        disabled={pendingId === song.songId || !loaded}
-                                        onClick={() => assignSong(song.songId)}
-                                        className="rounded-lg border border-[#2F6B3D]/40 p-1.5 text-[#2F6B3D] transition-colors hover:bg-green-50 disabled:opacity-40"
-                                        aria-label={`Assign ${song.title}`}
-                                        title="Assign"
-                                      >
-                                        <Plus className="h-4 w-4" />
-                                      </button>
-                                    ))}
-                                  <a
-                                    href={song.soundsliceUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="rounded-lg p-1.5 text-[#2F6B3D] transition-colors hover:bg-green-50"
-                                    aria-label={`Open ${song.title} in Soundslice`}
-                                    title="Open in Soundslice"
-                                  >
-                                    <ExternalLink className="h-4 w-4" />
-                                  </a>
-                                </div>
-                              </div>
-                              {expanded && (song.tutorNote || song.tags?.length > 0) && (
-                                <div className="mt-1.5 text-sm text-gray-600">
-                                  {song.tutorNote && <p>{song.tutorNote}</p>}
-                                  {song.tags?.length > 0 && (
-                                    <p className="mt-1 text-xs text-gray-400">
-                                      {song.tags.join(' · ')}
-                                    </p>
-                                  )}
-                                </div>
-                              )}
-                            </li>
-                          );
-                        })}
-                    </ul>
-                  </div>
-                ))}
-                {browseSongs.length === 0 && (
-                  <p className="text-sm text-gray-500">Nothing matches “{search}”.</p>
-                )}
-              </div>
-            )}
-          </div>
         </div>
       )}
     </div>
