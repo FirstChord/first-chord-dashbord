@@ -23,6 +23,7 @@ test('catalogue passes validation', () => {
 // a student's first name. Add here ONLY after confirming the match is coincidental.
 const NAME_LEAK_EXCEPTIONS = new Set([
   'fc_song_cat_and_mouse: contains "cat"', // RSL Classical Piano G1 exam piece title
+  'fc_song_kiss_from_a_rose: contains "rose"', // Seal, RSL Acoustic Grade 6 exam piece
 ]);
 
 test('catalogue contains no student first names (ships in the client bundle)', () => {
