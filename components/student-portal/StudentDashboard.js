@@ -3,6 +3,7 @@ import StudentNotes from './StudentNotes';
 import StudentLinks from './StudentLinks';
 import StudentSongs from './StudentSongs';
 import HeaderGreenery from '@/components/tutor-dashboard/HeaderGreenery';
+import TimeOfDaySky from '@/components/shared/TimeOfDaySky';
 
 function possessive(name = '') {
   return name.endsWith('s') ? `${name}’` : `${name}’s`;
@@ -11,7 +12,7 @@ function possessive(name = '') {
 export default function StudentDashboard({ student, assignedSongs = [] }) {
   if (!student) {
     return (
-      <div className="min-h-screen bg-gradient-to-t from-green-100 to-blue-100 flex items-center justify-center relative overflow-hidden">
+      <TimeOfDaySky className="min-h-screen flex items-center justify-center relative overflow-hidden">
         {/* Cloud */}
         <div className="absolute inset-0 pointer-events-none">
           <Image
@@ -42,12 +43,12 @@ export default function StudentDashboard({ student, assignedSongs = [] }) {
             priority={false}
           />
         </div>
-      </div>
+      </TimeOfDaySky>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-t from-green-100 to-blue-100 relative overflow-hidden">
+    <TimeOfDaySky className="min-h-screen relative overflow-hidden">
       {/* Cloud */}
       <div className="absolute inset-0 pointer-events-none">
         <Image
@@ -60,7 +61,10 @@ export default function StudentDashboard({ student, assignedSongs = [] }) {
       </div>
       
       {/* Header */}
-      <header className="relative bg-blue-100 shadow-sm border-b border-blue-100/30">
+      <header
+        className="relative shadow-sm border-b border-white/30"
+        style={{ background: 'var(--dashboard-header-background)' }}
+      >
         <HeaderGreenery />
         <div className="relative px-4 sm:px-6 py-4 sm:py-5 text-center">
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-gray-900">
@@ -107,6 +111,6 @@ export default function StudentDashboard({ student, assignedSongs = [] }) {
       
       {/* Bottom padding to prevent content overlap with logo */}
       <div className="h-20 sm:h-24"></div>
-    </div>
+    </TimeOfDaySky>
   );
 }

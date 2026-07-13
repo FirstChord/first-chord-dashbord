@@ -8,6 +8,7 @@ import QuickLinks from '@/components/navigation/QuickLinks';
 import TutorSchedulePanel from '@/components/tutor-dashboard/TutorSchedulePanel';
 import SongBrowser from '@/components/tutor-dashboard/SongBrowser';
 import HeaderGreenery from '@/components/tutor-dashboard/HeaderGreenery';
+import TimeOfDaySky from '@/components/shared/TimeOfDaySky';
 import { Search, ChevronLeft } from 'lucide-react';
 import { cache } from '@/lib/cache';
 import {
@@ -352,7 +353,7 @@ export default function DashboardClient({ tutorOptions = [] }) {
             100% { content: ''; }
           }
         `}</style>
-        <div className="min-h-screen bg-gradient-to-t from-green-100 to-blue-100 flex items-center justify-center relative overflow-hidden">
+        <TimeOfDaySky className="min-h-screen flex items-center justify-center relative overflow-hidden">
           {/* Cloud */}
           <div className="absolute inset-0 pointer-events-none">
             <Image
@@ -383,7 +384,7 @@ export default function DashboardClient({ tutorOptions = [] }) {
               </h2>
             </div>
           </div>
-        </div>
+        </TimeOfDaySky>
       </>
     );
   }
@@ -391,7 +392,7 @@ export default function DashboardClient({ tutorOptions = [] }) {
   // If no tutor selected, show tutor selection
   if (!tutor) {
     return (
-      <div className="min-h-screen bg-gradient-to-t from-green-100 to-blue-100 flex items-center justify-center relative overflow-hidden">
+      <TimeOfDaySky className="min-h-screen flex items-center justify-center relative overflow-hidden">
         {/* Cloud */}
         <div className="absolute inset-0 pointer-events-none">
           <Image
@@ -417,12 +418,12 @@ export default function DashboardClient({ tutorOptions = [] }) {
             ))}
           </div>
         </div>
-      </div>
+      </TimeOfDaySky>
     );
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-t from-green-100 to-blue-100 relative overflow-hidden">
+    <TimeOfDaySky className="h-screen flex flex-col relative overflow-hidden">
       {/* Cloud */}
       <div className="absolute inset-0 pointer-events-none">
         <Image
@@ -435,7 +436,10 @@ export default function DashboardClient({ tutorOptions = [] }) {
       </div>
       
       {/* Header */}
-      <header className="relative shrink-0 bg-blue-100 shadow-sm border-b border-blue-100/30">
+      <header
+        className="relative shrink-0 shadow-sm border-b border-white/30"
+        style={{ background: 'var(--dashboard-header-background)' }}
+      >
         <HeaderGreenery />
         <div className="relative px-6 py-5 text-center">
           <h1 className="text-3xl font-black tracking-tight text-gray-900">
@@ -469,7 +473,7 @@ export default function DashboardClient({ tutorOptions = [] }) {
             sidebarOpen ? 'w-80 border-r' : 'w-0'
           }`}
           style={{
-            background: 'radial-gradient(ellipse at center, rgba(254, 240, 138, 0.4) 0%, rgba(254, 249, 195, 0.3) 30%, rgba(255, 255, 255, 0.1) 70%, transparent 100%)'
+            background: 'radial-gradient(ellipse at center, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0.12) 42%, transparent 76%)'
           }}
         >
           <div className="w-80">
@@ -579,8 +583,8 @@ export default function DashboardClient({ tutorOptions = [] }) {
                   onSelectStudent={handleSelectStudent}
                 />
                 <div className="text-center">
-                  <p className="text-xl font-semibold text-gray-700">{todaySummary.headline}</p>
-                  <p className="mt-1 text-sm text-gray-500">{todaySummary.hint}</p>
+                  <p className="text-xl font-semibold text-slate-950">{todaySummary.headline}</p>
+                  <p className="mt-1 text-sm text-slate-900">{todaySummary.hint}</p>
                 </div>
               </div>
             </div>
@@ -662,6 +666,6 @@ export default function DashboardClient({ tutorOptions = [] }) {
           priority={false}
         />
       </div>
-    </div>
+    </TimeOfDaySky>
   );
 }
