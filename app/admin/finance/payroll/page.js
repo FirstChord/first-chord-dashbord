@@ -437,7 +437,15 @@ function PayrollTutorCard({ row, payDate }) {
           <PayrollSaveButtons status={row.status} blocked={row.status === 'draft' && Boolean(reviewPast.length || row.overlapsPaid)} />
         </div>
         <details className="group mt-3 border-t border-slate-200 pt-3">
-          <summary className="cursor-pointer list-none text-sm font-medium text-slate-500">Adjustments, invoice tracking and period</summary>
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-slate-500">
+            <span>Adjustments, invoice tracking and period</span>
+            <span
+              aria-hidden="true"
+              className="text-base leading-none text-slate-400 transition-transform duration-200 group-open:rotate-180"
+            >
+             ⌄
+            </span>
+          </summary>
           <div className="mt-3 grid gap-3 md:grid-cols-2">
             <label className="block">
               <span className="text-xs font-semibold text-slate-500">Tutor invoice</span>
