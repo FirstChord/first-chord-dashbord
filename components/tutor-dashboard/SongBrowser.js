@@ -41,6 +41,7 @@ export default function SongBrowser({ student }) {
   const [selectedLevel, setSelectedLevel] = useState(null); // null = student's level
   const [searchOpen, setSearchOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [techOpen, setTechOpen] = useState(false);
   const [assignments, setAssignments] = useState(null); // null = not loaded
   const [pendingId, setPendingId] = useState(null);
   const [assignError, setAssignError] = useState(null);
@@ -159,13 +160,21 @@ export default function SongBrowser({ student }) {
   };
 
   const searchTerm = search.trim().toLowerCase();
-  const shelfSongs = searchTerm
+  const shelfItems = searchTerm
     ? songs.filter(
         (song) =>
           song.title.toLowerCase().includes(searchTerm) ||
           (song.artist || '').toLowerCase().includes(searchTerm)
       )
     : songs.filter((song) => song.level === shelfLevel);
+  // Songs are the shelf; scales/exercises sit in a quiet row below it.
+  // A search shows everything as cards so nothing is unfindable.
+  const shelfSongs = searchTerm
+    ? shelfItems
+    : shelfItems.filter((song) => (song.contentType || 'song') === 'song');
+  const shelfTechnical = searchTerm
+    ? []
+    : shelfItems.filter((song) => (song.contentType || 'song') !== 'song');
 
   const titleFor = (assignment) =>
     songs.find((s) => s.songId === assignment.songId)?.title ||
@@ -403,7 +412,10 @@ export default function SongBrowser({ student }) {
                     </p>
                     <p className="mt-0.5 truncate text-xs text-gray-500">{song.artist}</p>
                     {searchTerm && (
-                      <p className="mt-0.5 text-xs text-gray-400">{song.level}</p>
+                      <p className="mt-0.5 text-xs text-gray-400">
+                        {song.level}
+                        {(song.contentType || 'song') !== 'song' ? ` · ${song.contentType}` : ''}
+                      </p>
                     )}
                     <div className="mt-2">
                       {isAssigned ? (
@@ -433,6 +445,68 @@ export default function SongBrowser({ student }) {
                 </p>
               )}
             </div>
+
+            {shelfTechnical.length > 0 && (
+              <div className="mt-3">
+                <button
+                  type="button"
+                  onClick={() => setTechOpen(!techOpen)}
+                  className="flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-[#2F6B3D]"
+                >
+                  {techOpen ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
+                  Technical exercises · {shelfTechnical.length}
+                </button>
+                {techOpen && (
+                  <ul className="mt-2 flex max-w-4xl flex-wrap gap-1.5">
+                    {shelfTechnical.map((item) => {
+                      const isAssigned = assignedSongIds.has(item.songId);
+                      const busy = pendingId === item.songId;
+                      return (
+                        <li
+                          key={item.songId}
+                          className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium ${
+                            isAssigned
+                              ? 'border-[#2F6B3D]/30 bg-green-50 text-[#2F6B3D]'
+                              : 'border-gray-200 text-gray-600'
+                          }`}
+                        >
+                          {canAssign && !isAssigned ? (
+                            <button
+                              type="button"
+                              disabled={busy || !loaded}
+                              onClick={() => assignSong(item.songId)}
+                              className="inline-flex items-center gap-1 hover:text-[#2F6B3D] disabled:opacity-40"
+                              title="Assign"
+                            >
+                              <Plus className="h-3 w-3" />
+                              {item.title}
+                            </button>
+                          ) : (
+                            <span className="inline-flex items-center gap-1">
+                              {isAssigned && <Check className="h-3 w-3" />}
+                              {item.title}
+                            </span>
+                          )}
+                          <a
+                            href={item.soundsliceUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-gray-300 hover:text-[#2F6B3D]"
+                            aria-label={`Open ${item.title} in Soundslice`}
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Paths with something left to offer. */}
