@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { ExternalLink, ChevronDown, ChevronRight, Music, Check, Plus, ArrowDown, ArrowUp } from 'lucide-react';
-import { getSongsForInstrument } from '@/lib/songs/catalogue-helpers.mjs';
+import { getSongsForInstrument, songMatchesInstrument } from '@/lib/songs/catalogue-helpers.mjs';
 import { ASSIGNMENT_STATUSES } from '@/lib/songs/assignment-helpers.mjs';
+import { PATH_TEMPLATES } from '@/lib/config/path-templates.mjs';
 
 // Catalogue browser + assign for the selected student's instrument.
 // Renders nothing when the catalogue has no songs for that instrument.
@@ -116,9 +117,40 @@ export default function SongBrowser({ student }) {
     setPendingSongId(null);
   };
 
+  // Instantiate a path template; the API returns the full merged list.
+  const assignPath = async (pathId) => {
+    setPendingSongId(pathId);
+    setAssignError(null);
+    try {
+      const res = await fetch('/api/song-assignments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mmsId: studentId, pathId, token }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAssignments(data.assignments || []);
+      } else {
+        setAssignError(`Couldn't assign that path (${data.code || res.status}). Try again.`);
+      }
+    } catch {
+      setAssignError("Couldn't assign that path — network error. Try again.");
+    }
+    setPendingSongId(null);
+  };
+
   const visibleSongs =
     levelFilter === 'All' ? songs : songs.filter((song) => song.level === levelFilter);
   const canAssign = Boolean(studentId && token);
+
+  const pathTemplates = Object.entries(PATH_TEMPLATES)
+    .filter(([, template]) =>
+      songMatchesInstrument({ instruments: [template.instrument] }, student?.instrument)
+    )
+    .map(([pathId, template]) => ({ pathId, ...template }));
+  // A path is "assigned" once every step is; offer the button until then.
+  const pathFullyAssigned = (template) =>
+    assignedSongIds !== null && template.steps.every((songId) => assignedSongIds.has(songId));
 
   return (
     <div className="bg-white rounded-xl shadow-md border border-[#2F6B3D]/25 mt-6">
@@ -196,6 +228,34 @@ export default function SongBrowser({ student }) {
                   );
                 })}
               </ul>
+            </div>
+          )}
+
+          {canAssign && pathTemplates.length > 0 && (
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                Paths
+              </span>
+              {pathTemplates.map((template) => (
+                <button
+                  key={template.pathId}
+                  type="button"
+                  disabled={
+                    pendingSongId === template.pathId
+                    || assignments === null
+                    || pathFullyAssigned(template)
+                  }
+                  onClick={() => assignPath(template.pathId)}
+                  className="inline-flex items-center gap-1 rounded-full border border-[#2F6B3D]/40 px-3 py-1 text-sm font-medium text-[#2F6B3D] transition-colors hover:bg-green-50 disabled:opacity-40"
+                >
+                  {pathFullyAssigned(template) ? (
+                    <Check className="h-3.5 w-3.5" />
+                  ) : (
+                    <Plus className="h-3.5 w-3.5" />
+                  )}
+                  {template.name} ({template.steps.length})
+                </button>
+              ))}
             </div>
           )}
 

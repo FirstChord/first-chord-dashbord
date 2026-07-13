@@ -2,6 +2,8 @@
 
 Plain-English explanations of technical terms used in the admin dashboard. This is a general reference (not a dated change log) — add to it whenever new jargon appears. A mirror lives in the Obsidian "First Chord OS" vault (`09 Glossary`).
 
+- **Path template** — a named ordered list of catalogue song IDs (`lib/config/path-templates.mjs`, canonical hand-edited). "Assign path" instantiates it into per-student `Song_Assignments` rows; the student copy is personal from then on.
+
 ## Loading skeleton
 
 A placeholder layout shown instantly while a page's real data is still loading — grey pulsing shapes where the real content will appear, instead of a blank or frozen screen.

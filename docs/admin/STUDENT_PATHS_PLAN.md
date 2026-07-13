@@ -1,12 +1,12 @@
 # Student Paths & Song Objects — Architecture Plan
 
-Last updated: 2026-07-12. **Slices 1–5 shipped.** Slice 1: 70-song catalogue
+Last updated: 2026-07-12. **Slices 1–7 shipped.** Slice 1: 70-song catalogue
 (15 guitar + 55 piano; all secret-link verified + MusicXML cold-backed-up; 26 piano
 entries carry the `artist: 'RSL'` needs-curation marker) + read-only Song Browser.
 Slice 2: Assign buttons → `Song_Assignments` Sheets tab, token-guarded.
 Slice 3: portal "Your Songs" (fail-safe reads; course button coexists; zero change
 for students with no assignments). All e2e-verified with the registry test student
-(`sdt_fBg9JN`, portal `/test`). Slice 4: ordering + status transitions (Assigned panel, PATCH, portal chips). Slice 5: ingestion toolshed scripts (`build_catalogue_draft.py` draft-never-merge + `verify_catalogue_links.py` drift check). Next: slice 6 (path templates). Specs in §10;
+(`sdt_fBg9JN`, portal `/test`). Slice 4: ordering + status transitions (Assigned panel, PATCH, portal chips). Slice 5: ingestion toolshed scripts (`build_catalogue_draft.py` draft-never-merge + `verify_catalogue_links.py` drift check). Slices 6–7: path templates (`path-templates.mjs`, assign-path via POST pathId, adopt-not-reset) + read-only "no active song, by tutor" signal on /admin/insights. Remaining: slice 8 (recommendations/progress log — only if justified). Specs in §10;
 experiment log in §11.
 
 Purpose: turn Soundslice material into reusable **Song objects**, organise them into

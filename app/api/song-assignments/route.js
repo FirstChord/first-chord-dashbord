@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSongAssignmentRows, upsertSongAssignmentRow } from '@/lib/admin/sheets';
-import { buildAssignmentUpsert, buildAssignmentUpdate } from '@/lib/songs/assignment-helpers.mjs';
+import { buildAssignmentUpsert, buildAssignmentUpdate, buildPathAssignments } from '@/lib/songs/assignment-helpers.mjs';
 import { getTutorSurfaceTokenSecret, verifyStudentNotesToken } from '@/lib/tutor-surface-token.mjs';
 
 // The per-student token minted for the tutor dashboard (same one that guards
@@ -51,6 +51,29 @@ export async function POST(request) {
 
   try {
     const existingRows = await getSongAssignmentRows(mmsId);
+
+    // Path flow: instantiate a whole template (body.pathId instead of songId).
+    if (body.pathId) {
+      const result = buildPathAssignments({
+        mmsId,
+        pathId: body.pathId,
+        assignedBy: auth.tutor,
+        existingRows,
+      });
+      if (result.error) {
+        return NextResponse.json({ success: false, code: result.error }, { status: 400 });
+      }
+      for (const row of result.rows) {
+        await upsertSongAssignmentRow(row);
+      }
+      const changed = new Map(result.rows.map((row) => [row.assignmentId, row]));
+      const assignments = [
+        ...existingRows.map((row) => changed.get(row.assignmentId) || row),
+        ...result.rows.filter((row) => !existingRows.some((r) => r.assignmentId === row.assignmentId)),
+      ];
+      return NextResponse.json({ success: true, assignments, created: result.createdCount });
+    }
+
     const result = buildAssignmentUpsert({
       mmsId,
       songId: body.songId,

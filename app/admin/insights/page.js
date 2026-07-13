@@ -4,7 +4,9 @@ import { getCommunicationLog } from '@/lib/admin/communications';
 import { getIncomingMessageInbox } from '@/lib/admin/incoming-messages';
 import { buildLearningInsights } from '@/lib/admin/learning-insights.mjs';
 import { getParentUnderstandingWorkflow } from '@/lib/admin/parent-understanding';
-import { getPracticeNoteLogRows } from '@/lib/admin/sheets';
+import { getPracticeNoteLogRows, getSongAssignmentRows } from '@/lib/admin/sheets';
+import { getRegistryEntries } from '@/lib/admin/registry';
+import { buildPathsSignal } from '@/lib/songs/paths-signal.mjs';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,12 +40,15 @@ function ThemeList({ title, rows = [], empty = 'Nothing recorded yet.' }) {
 }
 
 export default async function AdminInsightsPage() {
-  const [practiceNotes, parentWorkflow, incomingMessages, communications] = await Promise.all([
+  const [practiceNotes, parentWorkflow, incomingMessages, communications, registryEntries, songAssignments] = await Promise.all([
     getPracticeNoteLogRows(),
     getParentUnderstandingWorkflow(),
     getIncomingMessageInbox(),
     getCommunicationLog(),
+    getRegistryEntries().catch(() => []),
+    getSongAssignmentRows('').catch(() => []),
   ]);
+  const pathsSignal = buildPathsSignal({ students: registryEntries, assignmentRows: songAssignments });
   const insights = buildLearningInsights({
     practiceNotes,
     parentRecords: parentWorkflow.records,
@@ -63,6 +68,34 @@ export default async function AdminInsightsPage() {
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
           Patterns from the last {insights.windowDays} days — evidence, not proof.
         </p>
+      </section>
+
+      <section className="space-y-4">
+        <div>
+          <h3 className="text-xl font-semibold text-slate-900">Student paths</h3>
+          <p className="mt-1 text-sm text-slate-600">Counts only students whose instrument has catalogue songs; an active song is one still in front of the student (not done or parked).</p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <InsightCard
+            label="Students with an active song"
+            value={pathsSignal.withActiveCount}
+            copy={`of ${pathsSignal.eligibleCount} students whose instrument is in the catalogue`}
+          />
+          <InsightCard
+            label="No active song"
+            value={pathsSignal.noActiveCount}
+            copy="Assign from the Songs panel on the tutor dashboard."
+          />
+        </div>
+        {pathsSignal.noActiveCount > 0 && (
+          <div className="grid gap-4 lg:grid-cols-2">
+            <ThemeList
+              title="No active song, by tutor"
+              rows={pathsSignal.noActiveByTutor}
+              empty="Every eligible student has an active song."
+            />
+          </div>
+        )}
       </section>
 
       <section className="space-y-4">

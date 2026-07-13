@@ -6,7 +6,10 @@ import {
   buildAssignmentId,
   buildAssignmentUpsert,
   buildAssignmentUpdate,
+  buildPathAssignments,
 } from '../../lib/songs/assignment-helpers.mjs';
+import { PATH_TEMPLATES } from '../../lib/config/path-templates.mjs';
+import { SONGS_CATALOGUE, SONG_INSTRUMENTS, SONG_LEVELS } from '../../lib/config/songs-catalogue.mjs';
 
 const CATALOGUE = {
   fc_song_ho_hey: { title: 'Ho Hey' },
@@ -185,6 +188,81 @@ test('reorder skips parked neighbours and normalises messy sort orders', () => {
   // c jumps over parked b to swap with a; b keeps its normalised slot.
   assert.equal(byId.sdt_abc_fc_song_a, 3);
   assert.equal(byId.sdt_abc_fc_song_c, 1);
+});
+
+const TEMPLATES = {
+  fc_path_test: {
+    name: 'Test Path',
+    instrument: 'Guitar',
+    level: 'Debut',
+    steps: ['fc_song_ho_hey', 'fc_song_yellow'],
+  },
+};
+
+test('path instantiation appends steps in order with path fields', () => {
+  const existingRows = [
+    { assignmentId: 'sdt_abc_fc_song_other', mmsId: 'sdt_abc', songId: 'fc_song_other', status: 'working', sortOrder: '1', assignedAt: '2026-07-01T09:00:00.000Z' },
+  ];
+  const { rows, createdCount, error } = buildPathAssignments({
+    mmsId: 'sdt_abc',
+    pathId: 'fc_path_test',
+    assignedBy: 'Finn',
+    existingRows,
+    templates: TEMPLATES,
+    catalogue: CATALOGUE,
+    now: NOW,
+  });
+  assert.equal(error, undefined);
+  assert.equal(createdCount, 2);
+  assert.deepEqual(rows.map((r) => [r.songId, r.sortOrder, r.stepLabel, r.pathId]), [
+    ['fc_song_ho_hey', 2, '1 of 2', 'fc_path_test'],
+    ['fc_song_yellow', 3, '2 of 2', 'fc_path_test'],
+  ]);
+  assert.equal(rows[0].assignedBy, 'Finn');
+});
+
+test('re-instantiating a path is idempotent and adopts existing assignments', () => {
+  const existingRows = [
+    { assignmentId: 'sdt_abc_fc_song_yellow', mmsId: 'sdt_abc', songId: 'fc_song_yellow', assignedBy: 'Dean', assignedAt: '2026-07-01T09:00:00.000Z', status: 'working', sortOrder: '1' },
+  ];
+  const { rows, createdCount } = buildPathAssignments({
+    mmsId: 'sdt_abc',
+    pathId: 'fc_path_test',
+    assignedBy: 'Finn',
+    existingRows,
+    templates: TEMPLATES,
+    catalogue: CATALOGUE,
+    now: NOW,
+  });
+  assert.equal(createdCount, 1); // only ho_hey is new
+  const yellow = rows.find((r) => r.songId === 'fc_song_yellow');
+  assert.equal(yellow.status, 'working'); // progress kept
+  assert.equal(yellow.sortOrder, '1'); // position kept
+  assert.equal(yellow.assignedBy, 'Dean'); // original assigner kept
+  assert.equal(yellow.pathId, 'fc_path_test'); // adopted into the path
+  assert.equal(yellow.stepLabel, '2 of 2');
+});
+
+test('rejects unknown paths', () => {
+  assert.equal(
+    buildPathAssignments({ mmsId: 'sdt_abc', pathId: 'fc_path_nope', templates: TEMPLATES }).error,
+    'unknown_path'
+  );
+});
+
+test('every real template step exists in the catalogue with matching instrument and level', () => {
+  for (const [pathId, template] of Object.entries(PATH_TEMPLATES)) {
+    assert.ok(SONG_INSTRUMENTS.includes(template.instrument), `${pathId}: instrument`);
+    assert.ok(SONG_LEVELS.includes(template.level), `${pathId}: level`);
+    assert.ok(template.name, `${pathId}: name`);
+    assert.ok(template.steps.length > 0, `${pathId}: steps`);
+    assert.equal(new Set(template.steps).size, template.steps.length, `${pathId}: duplicate steps`);
+    for (const songId of template.steps) {
+      const song = SONGS_CATALOGUE[songId];
+      assert.ok(song, `${pathId}: ${songId} not in catalogue`);
+      assert.ok(song.instruments.includes(template.instrument), `${pathId}: ${songId} instrument mismatch`);
+    }
+  }
 });
 
 test('works against the real catalogue', () => {
