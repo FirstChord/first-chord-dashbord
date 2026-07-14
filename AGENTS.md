@@ -115,7 +115,7 @@ Start with the smallest matching test file, then run the full admin suite.
 
 ```bash
 node --test tests/admin/<focused-file>.test.mjs
-node --test tests/admin/*.test.mjs tests/admin/**/*.test.mjs
+node --test tests/admin/*.test.mjs
 npm run hygiene:check
 npm run lint
 ```

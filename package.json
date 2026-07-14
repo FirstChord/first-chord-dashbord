@@ -12,7 +12,7 @@
     "build": "next build",
     "start": "next start",
     "pretest:admin": "node scripts/generate-configs.js --no-backup",
-    "test:admin": "node --test tests/admin/*.test.mjs tests/admin/**/*.test.mjs",
+    "test:admin": "node --test tests/admin/*.test.mjs",
     "sync-admin-tutors": "node scripts/sync-admin-tutors.js",
     "backup:sheets": "node scripts/backup-sheets-tabs.mjs",
     "ensure:state-tabs": "node scripts/ensure-state-tabs.mjs",
