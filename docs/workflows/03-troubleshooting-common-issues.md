@@ -1,5 +1,10 @@
 # Workflow: Troubleshooting Common Issues
 
+> **Primarily a legacy portal-era troubleshooting guide.** For current admin,
+> integration, deployment, or recovery incidents use
+> [`../admin/OPERATIONS_RUNBOOK.md`](../admin/OPERATIONS_RUNBOOK.md) and
+> [`../admin/BUG_FIXES.md`](../admin/BUG_FIXES.md).
+
 **Purpose**: Quick fixes for common problems in the Music School Dashboard
 
 **Last Updated**: October 3, 2025

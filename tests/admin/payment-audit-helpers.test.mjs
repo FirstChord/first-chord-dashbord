@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   buildPaymentFieldChangeEvent,
   buildPaymentIssueActionEvent,
+  buildPauseExpectationReconciliationEvent,
   buildPauseWorkflowActionEvent,
   normaliseAuditContext,
   shouldLogPaymentIssueAction,
@@ -170,6 +171,27 @@ test('buildPauseWorkflowActionEvent records pause workflow outcomes', () => {
   assert.deepEqual(payload.changed_fields, ['payment_expectation']);
   assert.equal(payload.action_label, 'Set Stripe paused expected');
   assert.equal(payload.note, 'Pause History shows an active pause.');
+});
+
+test('buildPauseExpectationReconciliationEvent identifies the admin and explicit source', () => {
+  const event = buildPauseExpectationReconciliationEvent({
+    student: {
+      mmsId: 'sdt_123',
+      fullName: 'Owen Example',
+    },
+    previousValue: 'stripe_active_expected',
+    nextValue: 'stripe_paused_expected',
+    actorEmail: 'admin@example.com',
+    occurredAt: '2026-07-14T12:00:00.000Z',
+    reason: 'Pause History and usual lesson coverage agree.',
+  });
+
+  const payload = JSON.parse(event.payloadJson);
+  assert.equal(event.eventType, 'payment_expectation_reconciled');
+  assert.equal(event.actorEmail, 'admin@example.com');
+  assert.equal(payload.source, 'pause_history_explicit_reconciliation');
+  assert.equal(payload.action_label, 'Reconcile payment expectation from Pause History');
+  assert.equal(payload.note, 'Pause History and usual lesson coverage agree.');
 });
 
 test('shouldLogPaymentIssueAction only logs changed issue-originated payment actions', () => {

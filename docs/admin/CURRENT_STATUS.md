@@ -24,6 +24,16 @@ The admin overview is a strict meeting-start surface, not a complete status boar
 
 *Last working arc only — older work is in `git log --oneline` + the Learning Log.*
 
+- **Agent-readiness foundation (2026-07-14, local):** root `AGENTS.md` is now the
+  repository-contained code/safety/test map; stale portal-era guidance is marked
+  historical and documentation links are clean; PR and `main` CI now performs a
+  clean install, all admin tests, ESLint over application code, and a production
+  build. This changes development guardrails only, not runtime behavior.
+- **Pause expectation writes are explicit (2026-07-14, local):** Overview,
+  Issues, and live Stripe scans no longer change `Students.payment_expectation`.
+  `/admin/flags` now previews the exact high-confidence Pause History changes,
+  asks for confirmation, re-evaluates on POST, and logs each applied transition
+  to `Event_Log` with the signed-in admin. It never mutates Stripe.
 - **Every student has a shelf: bass, electric guitar, and 37 missing instruments (2026-07-14, deployed):** three groups were opening the Song panel to nothing. **Bass** (41 entries, Debut–G6, 6 students) and **Electric Guitar** (60 entries, Debut–G6, 4 students — a genuinely separate instrument, not a spelling of Guitar) are seeded; and **38 students had no instrument at all** because the Google Sheet and `students-registry.js` are *both* canonical and **nothing syncs `instrument` between them** — Finn had filled in the Sheet, the dashboard reads the registry. Synced (now 1 blank), which also revealed **Alba McMillan is bass, not guitar** — invisible to a registry scan, because the registry was the thing that was wrong. **New standing guard:** a test fails if any student holds an instrument the catalogue does not know, with an explicit `INSTRUMENTS_WITHOUT_REPERTOIRE` list — the empty-shelf bug shipped *three times in one day* before anything said so out loud. Separately, `students-registry.js` had held **invalid JavaScript** (`lastName: 'O'Neil'`) since April, invisible because every consumer regexes it as text and nothing ever parses it; the admin editor would have added a backslash to that name on every save. Fixed and guarded (the text parser and the JS parser must now agree on every student). **`artist: 'RSL'` now means two things** — needs-curation marker *and* the true artist of a Rockschool Original — and the official RSL Awards syllabus pages settle which, because they group covers separately from originals. Catalogue **310 entries**. **→ Coverage, every known gap, and the ingestion traps now live in [`SONG_CATALOGUE_COVERAGE.md`](SONG_CATALOGUE_COVERAGE.md) — read that before adding grades or paths.** Why: [[2026-07-14 - Bass Gets Its Own Shelf (and a Registry Landmine)]] and [[2026-07-14 - Song Series (John Thompson Joins RSL)]].
 - **Guitar Grades 5–6 seeded (2026-07-13):** discovery+curation agents ran the full loop (Soundslice fetch → student-copy filter → RSL syllabus verification). Grade 5: Fire and Rain, Blackbird, Wanted Dead or Alive, Put Your Records On + the grade's scales/arpeggios and riff exercise; Grade 6: Kiss From a Rose, River Man. `SONG_LEVELS` extended to Grade 6 (rail, sorting and validation all derive from it). A mangled slice ("record on") was identified by its **recording's** backing-track title rather than guessed — recordings are a provenance channel. "Kiss From a Rose" joined the reviewed name-leak exceptions (student *Rose*). **Gap report closed a loop:** Finn read the missing-pieces list and fixed Soundslice the same evening (renamed the mis-named Sting slice, uploaded Ain't Misbehavin' + Heartbeats), so G6 now carries 5 of 6 pieces — only More Than Words is unrecorded; G5 still lacks Tears in Heaven + Songbird. Catalogue now 154 entries. Why: [[2026-07-13 - Student Paths Slice 5 (Ingestion Workflow)]].
 - **Guitar Grades 2–4 seeded via the ingestion pipeline (2026-07-13):** 19 RSL acoustic songs added (G2: 6, G3: 8 incl. two 2018-book pieces, G4: 5) — drafts from `build_catalogue_draft.py`, attributions verified against the RSL syllabus by three parallel curation agents (notable: RSL's "Landslide" is the Dixie Chicks arrangement). Zero `artist: 'RSL'` markers. Same day: **54 technical entries** (guitar scales/riffs Debut–G3; piano Rock School 2025 technical sets Debut/G1/G3, grade labels verified against the official RSL syllabus PDFs by a research agent — no piano G2 uploads exist; a Classical-Debut cluster deliberately left out). Bookcase shows exercises as a collapsible "Technical exercises · N" chip row per grade, never crowding song cards. Catalogue now 143 entries; all secret links verified; MusicXML backups current.
@@ -40,7 +50,12 @@ Durable rules (don't grow per session). The state-tab map is `docs/admin/STATE_T
 - **V4 context is read-only:** `deriveStudentLifecycleStatus()`, `Schedule_Context` (cached MMS calendar, refreshed per-student / bulk / cron — not per page load), and payment value context are baseline operational context only — they don't change issue generation, onboarding, Stripe, or stored state.
 - **Shared MMS slots = group lessons** when multiple students share teacher + next-lesson start + duration; price as group, not 1:1.
 - **Capacity:** `/admin/capacity` reads MMS `Free` calendar slots (don't duplicate into a Sheets tab); `/admin/capacity` + `/admin/waiting` share a short-lived `Free`-slot cache; capacity page also shows schedule-cache health. `/admin/waiting` shows possible slots only where the tutor teaches the parsed instrument — hints only, no auto-assign/onboard.
-- **Navigation is action-led:** Overview = today's operating summary; Issues = detected problems + loop actions; Workflows = waiting/onboarding/showcase/holidays/comms; Planning = capacity, schedule health, seasonal + finance/capacity layers. Student records are reached via search/links, not a top-nav mode.
+- **Navigation is action-led:** Overview = today's operating summary; Issues =
+  detected problems + loop actions; Workflows = tutors, waiting, recurring
+  workflows, parent understanding, tutor absence, incoming messages, payroll,
+  and finance; Planning = due work, meeting review, school notes, ideas,
+  initiatives, and linked actions. Student records are reached via search/links,
+  not a top-nav mode.
 - **Overview placement:** top cards = work to do today / needs attention / deliberate school-improvement prompts; background health belongs lower down unless something's wrong; prefer human labels over big counts; don't add a panel just because data exists. (`docs/admin/COPY_AND_TONE.md` records the language layer.)
 - **Planning state is dashboard-owned work state** (`Planning_Items` + append-only `Planning_Progress_Log`), not external truth. Linked student IDs point at `Students` rows. The Friday school-forward + Monday scheduling prompts are seeded planning items, not a workflow engine. Learning/strategic notes are planning items, not finance forecasts.
 - **Pause guardrail:** pause reminders link to a student before billing actions; generic `Done` never changes payment state — **`Mark pause completed`** is the guarded action that logs confirmation, sets `stripe_paused_expected` via the student PATCH route, appends `Event_Log`, and closes the task. The dashboard generates the parent message but does **not** send WhatsApp. Parked pause cards are ignored by the finance forecast.
@@ -53,6 +68,7 @@ Before deploying, verify with:
 ```bash
 npm run hygiene:check
 npm run test:admin
+npm run lint
 npm run build
 ```
 
@@ -84,7 +100,12 @@ Open candidates (the Obsidian `08 Operations/Active Roadmap` is the fuller list)
 
 ## Source of truth & fragile contracts
 
-Canonical/derived ownership and full forbidden-actions list live in the workspace `CLAUDE.md`. In short: Google Sheets `Students` = operational school truth; `lib/config/students-registry.js` = portal/registry truth (regenerate the rest); MMS = lesson/billing truth (calendar `Free` = free-slot truth); Stripe = payment truth; dashboard-owned state tabs are mapped in `STATE_TABS_SCHEMA.md`.
+Canonical/derived ownership lives in `STATE_TABS_SCHEMA.md` and
+`OWNERSHIP_MATRIX.md`; repository-wide forbidden and approval-gated action
+boundaries live in `AGENTS.md`. Google Sheets `Students` = operational school
+truth; `lib/config/students-registry.js` = portal/registry truth (regenerate the
+rest); MMS = lesson/billing truth (calendar `Free` = free-slot truth); Stripe =
+payment truth.
 
 Fragile format contracts (don't change without updating the parser + tests — recorded in `STATE_TABS_SCHEMA.md` → Format Contracts):
 
@@ -95,8 +116,8 @@ Fragile format contracts (don't change without updating the parser + tests — r
 
 ## Read order for a new agent
 
-1. workspace `CURRENT_HANDOVER.md` (in-flight + machine context) → `CLAUDE.md` (rules) → this file (current + policy)
-2. `git log --oneline -20` (recent change history) + Obsidian `06 Learning Log` (why)
+1. repository `AGENTS.md` (map + safety rules) → this file (current direction)
+2. `git log --oneline -20` (recent change history); workspace handovers and the Obsidian Learning Log are optional context for why
 3. **working on songs, grades, or paths?** `docs/admin/SONG_CATALOGUE_COVERAGE.md` — coverage, every known gap, and the ingestion traps that have already drawn blood
-4. `docs/admin/STATE_TABS_SCHEMA.md` (state lanes) and the relevant Obsidian `03 Architecture` note for the area you're touching
+4. `docs/admin/STATE_TABS_SCHEMA.md` (state lanes); a relevant Obsidian `03 Architecture` note is optional design context
 5. the code itself for behaviour — don't trust prose descriptions of code over the code

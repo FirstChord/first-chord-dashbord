@@ -2,12 +2,16 @@
 
 For current active work and recommended next slices, start with:
 
+- [../../AGENTS.md](../../AGENTS.md) for the repository-wide coding-agent guide
 - [CURRENT_STATUS.md](./CURRENT_STATUS.md)
 
 This admin index is the map of durable admin documentation. Older V1/V2 drafts are retained for history and should not override `CURRENT_STATUS.md` or `V3_LOOP_ARCHITECTURE.md`.
 
 ## Start Here
 
+- [../../AGENTS.md](../../AGENTS.md)
+  Short repository-wide dispatcher for code location, truth boundaries, focused
+  tests, high-risk invariants, validation, and recovery.
 - [NEW_AGENT_START_HERE.md](./NEW_AGENT_START_HERE.md)
   Practical handoff note for a new Codex/AI agent: paths, commands, current direction, source-of-truth rules, and documentation update rules.
 - [CURRENT_STATUS.md](./CURRENT_STATUS.md)
@@ -23,7 +27,9 @@ This admin index is the map of durable admin documentation. Older V1/V2 drafts a
 - [TUTOR_ABSENCE_PAUSE_BRIDGE.md](./TUTOR_ABSENCE_PAUSE_BRIDGE.md)
   Focused map of the tutor absence -> cancellation -> structured pause planning bridge, including grouping, superseding, parked cards, and finance behaviour.
 - [WHATSAPP_INCOMING_BRIDGE.md](./WHATSAPP_INCOMING_BRIDGE.md)
-  Safe intake contract for manual/starred WhatsApp messages into `Incoming_Message_Inbox`; review-only, no automatic action.
+  Safe intake contract for automatic capture from confirmed lesson groups, with
+  starred/manual fallback; classification is reviewable and consequential
+  actions remain human-approved.
 - [COPY_AND_TONE.md](./COPY_AND_TONE.md)
   Lightweight voice guide for calm, human, action-led dashboard copy.
 - [UI_CONVENTIONS.md](./UI_CONVENTIONS.md)
@@ -59,7 +65,7 @@ This admin index is the map of durable admin documentation. Older V1/V2 drafts a
 - [OPERATIONS_RUNBOOK.md](./OPERATIONS_RUNBOOK.md)
   Practical recovery and credential runbook for MMS, Google Sheets, Railway, admin auth, deploys, rollbacks, Sheets backups, and component-level diagnostic boundaries.
 - [RAILWAY_ADMIN_LAUNCH_CHECKLIST.md](./RAILWAY_ADMIN_LAUNCH_CHECKLIST.md)
-  Railway deployment and environment setup checklist.
+  Historical V1 Railway launch checklist; use the operations runbook for current deployment.
 - [TUTOR_ABSENCE_SAFETY_AND_UX.md](./TUTOR_ABSENCE_SAFETY_AND_UX.md)
   Tutor absence timing, fail-loud exception handling, reconciliation boundary, and safe UI contract.
 - [BUG_FIXES.md](./BUG_FIXES.md)
@@ -71,10 +77,12 @@ This admin index is the map of durable admin documentation. Older V1/V2 drafts a
 - Admin top navigation is intentionally short and action-led:
   - `/admin` = Overview
   - `/admin/flags` = Issues
-  - `/admin/workflows` = Waiting List, Onboarding, Showcase, Holidays
-  - `/admin/planning` = Capacity, schedule health, seasonal planning, and future planning layers
+  - `/admin/workflows` = Tutors, Waiting List, Showcase, Holidays, Parent Understanding, Tutor Absence, Message Inbox, Payroll, and Finance
+  - `/admin/planning` = due work, meeting review, school notes, ideas, initiatives, and linked actions
 - Student records are important context, but they are reached through header search, issue links, workflow links, or `/admin/students`; they are not a primary top-nav mode.
-- `/admin/flags` moves detected issues into managed workflow.
+- `/admin/flags` moves detected issues into managed workflow. Its explicit
+  `Sync pause expectations` action previews, confirms, re-evaluates, and logs any
+  high-confidence Students-sheet changes; loading the page never performs them.
 - `Issue_Queue` in Google Sheets stores persistent issue state.
 - `Event_Log` in Google Sheets stores append-only issue actions and reappearance events.
 - `/admin/waiting` is the waiting-list placement/contact decision surface:
@@ -109,19 +117,25 @@ This admin index is the map of durable admin documentation. Older V1/V2 drafts a
   - it does not automatically notify tutors
 - Consequential parent-understanding saves append to `Event_Log` when a record is completed, marked needs-follow-up, or escalated.
 - Tutor absence cancellation can auto-create structured pause planning. Read [TUTOR_ABSENCE_PAUSE_BRIDGE.md](./TUTOR_ABSENCE_PAUSE_BRIDGE.md) before changing tutor-absence, pause-planning, or finance-forecast logic.
-- `/admin/incoming-messages` is the inbound message review inbox for manual paste or a future WhatsApp/n8n bridge. It writes `Incoming_Message_Inbox`; classification/matching are hints only and do not create pause/payment/workflow actions automatically.
+- `/admin/incoming-messages` is the inbound review inbox for automatic capture
+  from dashboard-confirmed WhatsApp lesson groups, with starred/manual fallback.
+  It writes `Incoming_Message_Inbox`; classification, student matching, and date
+  extraction are review hints. A human may explicitly convert a reviewed item to
+  Planning, but capture itself never pauses payments, sends a reply, or changes
+  attendance/workflow state.
 - `/admin/finance/payroll` is the first payroll review surface. It reads MMS attendance and `Tutor_Pay`, then writes reviewed/paid state to `Payroll_Runs`; it does not execute payments.
 
 ## Suggested Handoff Order
 
-1. Read [CURRENT_STATUS.md](./CURRENT_STATUS.md)
-2. Read [V3_LOOP_ARCHITECTURE.md](./V3_LOOP_ARCHITECTURE.md)
-3. Read [STATE_TABS_SCHEMA.md](./STATE_TABS_SCHEMA.md)
-4. Read [HYGIENE_AND_SECRETS.md](./HYGIENE_AND_SECRETS.md)
-5. Skim [ADMIN_IMPLEMENTATION_LOG.md](./ADMIN_IMPLEMENTATION_LOG.md)
-6. Check [OWNERSHIP_MATRIX.md](./OWNERSHIP_MATRIX.md)
-7. Read [SCHOOL_POLICY.md](./SCHOOL_POLICY.md)
-8. Review [PAYMENTS_RULES.md](./PAYMENTS_RULES.md) if working on Stripe or pauses
-9. Read [V3_ARCHITECTURE.md](./V3_ARCHITECTURE.md) for broader system direction
-10. Use [ADMIN_BRIEF.md](./ADMIN_BRIEF.md) and [V2_SPEC_DRAFT.md](./V2_SPEC_DRAFT.md) only as historical background
-11. Read [BRAIN_CAPABILITY_ROADMAP.md](./BRAIN_CAPABILITY_ROADMAP.md) only for longer-term assistant design
+1. Read [../../AGENTS.md](../../AGENTS.md)
+2. Read [CURRENT_STATUS.md](./CURRENT_STATUS.md)
+3. Read [V3_LOOP_ARCHITECTURE.md](./V3_LOOP_ARCHITECTURE.md)
+4. Read [STATE_TABS_SCHEMA.md](./STATE_TABS_SCHEMA.md)
+5. Read [HYGIENE_AND_SECRETS.md](./HYGIENE_AND_SECRETS.md)
+6. Skim [ADMIN_IMPLEMENTATION_LOG.md](./ADMIN_IMPLEMENTATION_LOG.md)
+7. Check [OWNERSHIP_MATRIX.md](./OWNERSHIP_MATRIX.md)
+8. Read [SCHOOL_POLICY.md](./SCHOOL_POLICY.md)
+9. Review [PAYMENTS_RULES.md](./PAYMENTS_RULES.md) if working on Stripe or pauses
+10. Read [V3_ARCHITECTURE.md](./V3_ARCHITECTURE.md) for broader system direction
+11. Use [ADMIN_BRIEF.md](./ADMIN_BRIEF.md) and [V2_SPEC_DRAFT.md](./V2_SPEC_DRAFT.md) only as historical background
+12. Read [BRAIN_CAPABILITY_ROADMAP.md](./BRAIN_CAPABILITY_ROADMAP.md) only for historical capability framing

@@ -1,5 +1,12 @@
 # Brain Capability Roadmap
 
+> **Forward-looking historical roadmap.** Several prerequisites below now exist,
+> including persistent issue state, finance summaries, communication history,
+> explicit policies, and planning memory. Do not use the build order as current
+> implementation direction. Use `CURRENT_STATUS.md` for priorities and
+> `AGENTS.md` for the present AI/action boundary. This document remains useful
+> for capability framing only.
+
 ## What Brain Can Realistically Do Now
 
 - explain current admin and system state

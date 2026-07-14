@@ -12,10 +12,15 @@ This runbook covers operational recovery for the First Chord dashboard. It is in
 - Before any deploy, run:
 
 ```bash
+npm run hygiene:check
 npm run test:admin
+npm run lint
 npm run build
 ```
 
+- Pull requests and pushes to `main` repeat clean install, tests, application
+  lint, and production build in `.github/workflows/ci.yml`. A green local run is
+  not a substitute for investigating a failed GitHub check.
 - Pushing `main` deploys through Railway. Confirm before pushing.
 - Parent-facing, payment-affecting, and deletion/archive actions should stay human-approved.
 

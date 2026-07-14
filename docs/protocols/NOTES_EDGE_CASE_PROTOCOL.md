@@ -2,7 +2,9 @@
 
 **Last Updated**: September 29, 2025  
 **Status**: Issue resolved with enhanced algorithm  
-**Related Files**: [DEPLOYMENT_PROTOCOLS.md](./DEPLOYMENT_PROTOCOLS.md), [ADDING_NEW_STUDENTS.md](./docs/ADDING_NEW_STUDENTS.md)
+> **Legacy portal-era protocol.** Check current code and [`../../AGENTS.md`](../../AGENTS.md) before applying it.
+
+**Related Files**: [DEPLOYMENT_PROTOCOLS.md](./DEPLOYMENT_PROTOCOLS.md), [Adding New Students](../workflows/01-adding-students.md)
 
 ## 🚨 Quick Fixes
 - **Student shows old notes?** → Check if recent lessons are marked as "Present" vs "Unrecorded"

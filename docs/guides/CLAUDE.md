@@ -1,5 +1,11 @@
 # 🤖 Claude Context & Project Overview
 
+> **Legacy portal-era snapshot (September 2025).** This is historical context,
+> not current agent guidance. Start with [`../../AGENTS.md`](../../AGENTS.md)
+> and [`../admin/CURRENT_STATUS.md`](../admin/CURRENT_STATUS.md). Do not use the
+> deployment targets, counts, or generated-file instructions below without
+> checking current code and the admin operations runbook.
+
 **Last Updated**: September 29, 2025  
 **Claude Version**: Sonnet 4 (claude-sonnet-4-20250514)  
 **Project Status**: Production-ready with 177+ student portals  

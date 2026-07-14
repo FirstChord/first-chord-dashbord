@@ -1,5 +1,10 @@
 # Railway Admin Launch Checklist
 
+> **Historical V1 launch checklist.** Use
+> [`OPERATIONS_RUNBOOK.md`](./OPERATIONS_RUNBOOK.md) for current deployment,
+> environment, smoke-check, rollback, and recovery guidance. Retain this file for
+> the original admin launch context only.
+
 This checklist is for getting the private FirstChord admin dashboard onto Railway so Finn and Tom can use it as an internal tool.
 
 This is a V1 internal launch checklist, not a final production-readiness checklist.
@@ -23,7 +28,7 @@ What is still intentionally manual in V1:
 Confirm this app is the service being deployed:
 - repo: `music-school-dashboard`
 - runtime: Next.js
-- current Railway config: [railway.json](./railway.json)
+- current Railway config: [railway.json](../../railway.json)
 
 Current start path:
 - build via Nixpacks

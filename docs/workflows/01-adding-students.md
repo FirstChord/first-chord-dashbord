@@ -1,5 +1,11 @@
 # Workflow: Adding New Students
 
+> **Legacy portal-era manual workflow.** The private admin onboarding flow now
+> coordinates Sheets, the registry, and MMS. Start with [`../../AGENTS.md`](../../AGENTS.md),
+> the onboarding row in [`../admin/OWNERSHIP_MATRIX.md`](../admin/OWNERSHIP_MATRIX.md),
+> and current code under `app/api/admin/onboard/`. Keep this document only for
+> portal-generation background.
+
 **Purpose**: Add a new student to both the main tutor dashboard and create their individual student portal
 
 **Time Required**: ~2 minutes with Registry System

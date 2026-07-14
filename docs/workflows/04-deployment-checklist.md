@@ -1,5 +1,11 @@
 # Workflow: Deployment Checklist
 
+> **Legacy portal-era checklist (October 2025).** It is not the current admin
+> deployment authority and its instructions to stage generated files are no
+> longer safe. Use [`../../AGENTS.md`](../../AGENTS.md) for validation routing
+> and [`../admin/OPERATIONS_RUNBOOK.md`](../admin/OPERATIONS_RUNBOOK.md) for the
+> current deployment, smoke-check, rollback, and recovery process.
+
 **Purpose**: Ensure safe, successful deployments to production
 
 **Last Updated**: October 3, 2025

@@ -1,6 +1,6 @@
 # Documentation Map
 
-Last updated: 2026-07-13
+Last updated: 2026-07-14
 
 The docs are useful, but there are many entry points. This map defines the canonical ones so future agents do not treat old drafts as current authority.
 
@@ -8,19 +8,20 @@ The docs are useful, but there are many entry points. This map defines the canon
 
 Read in this order:
 
-1. `docs/admin/NEW_AGENT_START_HERE.md`
+1. `AGENTS.md`
 2. `docs/admin/CURRENT_STATUS.md`
-3. `docs/admin/V3_LOOP_ARCHITECTURE.md`
-4. `docs/admin/STATE_TABS_SCHEMA.md` — canonical dashboard state lane map
-5. `docs/admin/HYGIENE_AND_SECRETS.md`
-6. `docs/admin/OPERATIONS_RUNBOOK.md` when touching deployment, auth, env vars, recovery, backups, or integration health
-7. `docs/admin/OWNERSHIP_MATRIX.md`
-8. `docs/admin/SCHOOL_POLICY.md`
-9. `docs/admin/PAYMENTS_RULES.md` when touching payments, pauses, Stripe, or setup-pending logic
-10. `docs/admin/TUTOR_ABSENCE_PAUSE_BRIDGE.md` when touching tutor absence, pause planning, or finance pause forecasts
-11. `docs/admin/WHATSAPP_INCOMING_BRIDGE.md` when touching incoming WhatsApp capture, group maps, or message classification
-12. `docs/workflows/06-paying-tutors.md` for the live human payroll run; pair it with `docs/admin/STATE_TABS_SCHEMA.md` + the `CURRENT_STATUS.md` finance section when changing `/admin/finance`, payroll, `Tutor_Pay`, `Tutor_Wise`, statements or `Payroll_Runs`
-13. `docs/admin/PRACTICE_CHAT_DELIVERY_AUDIT.md` when touching Practice Chat Level 2 delivery or rollout
+3. `docs/admin/NEW_AGENT_START_HERE.md` for the fuller operating handoff
+4. `docs/admin/V3_LOOP_ARCHITECTURE.md`
+5. `docs/admin/STATE_TABS_SCHEMA.md` — canonical dashboard state lane map
+6. `docs/admin/HYGIENE_AND_SECRETS.md`
+7. `docs/admin/OPERATIONS_RUNBOOK.md` when touching deployment, auth, env vars, recovery, backups, or integration health
+8. `docs/admin/OWNERSHIP_MATRIX.md`
+9. `docs/admin/SCHOOL_POLICY.md`
+10. `docs/admin/PAYMENTS_RULES.md` when touching payments, pauses, Stripe, or setup-pending logic
+11. `docs/admin/TUTOR_ABSENCE_PAUSE_BRIDGE.md` when touching tutor absence, pause planning, or finance pause forecasts
+12. `docs/admin/WHATSAPP_INCOMING_BRIDGE.md` when touching incoming WhatsApp capture, group maps, or message classification
+13. `docs/workflows/06-paying-tutors.md` for the live human payroll run; pair it with `docs/admin/STATE_TABS_SCHEMA.md` + the `CURRENT_STATUS.md` finance section when changing `/admin/finance`, payroll, `Tutor_Pay`, `Tutor_Wise`, statements or `Payroll_Runs`
+14. `docs/admin/PRACTICE_CHAT_DELIVERY_AUDIT.md` when touching Practice Chat Level 2 delivery or rollout
 
 `docs/admin/AUDIT_2026-06-10.md` is critique input, not a live plan. Use judgement before implementing its recommendations.
 
@@ -42,6 +43,10 @@ Use the Obsidian vault for:
 - decision history
 - blog/case-study seeds
 - language that helps Finn/Tom/Fenella understand the system
+
+The repository must still contain every safety-critical code, validation,
+ownership, security, and recovery rule. Obsidian and workspace handovers are
+optional context, not prerequisites for changing this repository safely.
 
 ## Learning Log Split
 

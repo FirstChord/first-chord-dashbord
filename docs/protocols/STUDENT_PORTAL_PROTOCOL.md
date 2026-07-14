@@ -2,7 +2,9 @@
 
 **Last Updated**: September 29, 2025  
 **Status**: Successfully implemented with 177+ students  
-**Related Files**: [ADDING_NEW_STUDENTS.md](./docs/ADDING_NEW_STUDENTS.md), [DEPLOYMENT_PROTOCOLS.md](./DEPLOYMENT_PROTOCOLS.md)
+> **Legacy portal-era protocol.** Check current code and [`../../AGENTS.md`](../../AGENTS.md) before applying it.
+
+**Related Files**: [Adding New Students](../workflows/01-adding-students.md), [DEPLOYMENT_PROTOCOLS.md](./DEPLOYMENT_PROTOCOLS.md)
 
 ## 🚨 Quick Fixes
 - **Student portal not found?** → Check URL mapping in `student-url-mappings.js` and security whitelist

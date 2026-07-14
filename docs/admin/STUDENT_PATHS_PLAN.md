@@ -9,6 +9,11 @@ for students with no assignments). All e2e-verified with the registry test stude
 (`sdt_fBg9JN`, portal `/test`). Slice 4: ordering + status transitions (Assigned panel, PATCH, portal chips). Slice 5: ingestion toolshed scripts (`build_catalogue_draft.py` draft-never-merge + `verify_catalogue_links.py` drift check). Slices 6–7: path templates (`path-templates.mjs`, assign-path via POST pathId, adopt-not-reset) + read-only "no active song, by tutor" signal on /admin/insights. Remaining: slice 8 (recommendations/progress log — only if justified). Specs in §10;
 experiment log in §11.
 
+> **Architecture and shipped-slice record, not the live catalogue inventory.**
+> Song counts and remaining ingestion gaps in the opening snapshot have moved on.
+> Use `SONG_CATALOGUE_COVERAGE.md` and `CURRENT_STATUS.md` for current coverage
+> and priorities; use this file for the durable path/assignment design.
+
 Purpose: turn Soundslice material into reusable **Song objects**, organise them into
 progressive **Paths**, and connect them to the student portal, tutor dashboard, and
 (only where genuinely useful) the admin dashboard.
@@ -402,7 +407,8 @@ clipped shots; never build while the dev server runs).
 ## 10. Implementation specs for future agents
 
 Everything an agent needs to build the next slices without re-deriving decisions.
-Read the workspace `CLAUDE.md` first (canonical-vs-derived, docs ritual, deploy rules).
+Read the repository `AGENTS.md` first for canonical-vs-derived, validation,
+approval, and deployment-routing rules.
 
 ### Standing conventions (apply to every slice)
 
@@ -422,10 +428,10 @@ Read the workspace `CLAUDE.md` first (canonical-vs-derived, docs ritual, deploy 
 - Verification: `npm run test:admin`, then `npm run build` (stop any dev server
   first), then drive `/dashboard` with Playwright (full-viewport screenshots hang;
   use a fresh page + clipped screenshots with `animations: 'disabled'`).
-- Docs ritual after every meaningful slice: Obsidian Learning Log entry + README
-  index line, `CURRENT_STATUS.md` "Recently shipped" (add + prune),
-  `CURRENT_HANDOVER.md` in-flight line, glossaries for new jargon, and this file's
-  status line.
+- Repo docs after every meaningful slice: update `CURRENT_STATUS.md` (add +
+  prune), this file's status line, and any changed ownership/contract document.
+  Obsidian learning notes and workspace handovers are optional operating memory,
+  not prerequisites for a safe repository change.
 
 ### Slice 2 spec — assign a song
 

@@ -19,7 +19,7 @@
     "hygiene:check": "node scripts/hygiene-check.mjs",
     "eval:incoming": "node scripts/eval-incoming-classifier.mjs",
     "install:backup-schedule": "node scripts/install-sheets-backup-launch-agent.mjs",
-    "lint": "next lint",
+    "lint": "eslint app components lib middleware.js",
     "analyze": "ANALYZE=true npm run build",
     "prevalidate": "node scripts/generate-configs.js --no-backup",
     "validate": "node scripts/validate-students.js",

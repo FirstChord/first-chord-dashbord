@@ -3,6 +3,9 @@
 > **FROZEN (2026-07-08) — do not append.** The Learning Log's one home is the
 > Obsidian vault `06 Learning Log/` (the *why*); the *what* is `git log`.
 > This file predates that rule and stays only as history for its inbound links.
+> References below to pause expectation auto-sync inside `getAdminIssues()` and
+> `scanLiveStripeIssues()` describe the historical design. On 2026-07-14 that
+> student write moved to an explicit preview-and-confirm action on `/admin/flags`.
 
 ## Rule (historical)
 

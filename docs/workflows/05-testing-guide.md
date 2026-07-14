@@ -1,5 +1,10 @@
 # Workflow: Testing Guide
 
+> **Legacy portal-era testing guide (October 2025).** It does not cover the
+> current admin helper suite, API contracts, or integration boundaries. Use the
+> validation matrix in [`../../AGENTS.md`](../../AGENTS.md); retain the manual
+> portal checks below only when changing the public tutor/student surfaces.
+
 **Purpose**: Comprehensive testing procedures for all changes
 
 **Last Updated**: October 3, 2025

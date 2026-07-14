@@ -140,6 +140,12 @@ Keep these approval-first:
 - deleting/archive actions
 - MMS status or lesson changes
 
+Pause expectation reconciliation follows that boundary: `/admin/flags` previews
+the exact high-confidence changes, the admin confirms them, the server
+re-evaluates rather than trusting the preview, and the existing Sheets/Event Log
+path applies the result. Loading Overview, Issues, or a Stripe scan must not
+change a student's payment expectation.
+
 The dashboard can prepare, prefill, copy, and log. The human approves the consequential step.
 
 Communication boundary:

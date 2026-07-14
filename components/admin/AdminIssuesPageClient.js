@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { SlideOverPanel, panelActionClass } from '@/components/admin/ui/SlideOverPanel';
 import IssueCard from '@/components/admin/issues/IssueCard';
 import { formatDateTime } from '@/lib/admin/health-helpers.mjs';
@@ -12,6 +13,7 @@ import {
 } from '@/lib/admin/issues-client-helpers.mjs';
 
 export default function AdminIssuesPageClient({ issues, freshness }) {
+  const router = useRouter();
   const [issueList, setIssueList] = useState(issues);
   const [workView, setWorkView] = useState('needs_you');
   const [actionState, setActionState] = useState({ pendingId: '', error: '', success: '' });
@@ -50,6 +52,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
     window.setTimeout(() => setCopiedEmailIssueId((current) => (current === issue.issueId ? '' : current)), 1800);
   }
   const [stripeScanState, setStripeScanState] = useState({ pending: false, error: '', scannedAt: '', scannedCount: 0 });
+  const [pauseSyncState, setPauseSyncState] = useState({ pending: false, error: '', success: '' });
   const [stripeRefreshState, setStripeRefreshState] = useState({});
 
   const LIVE_STRIPE_TYPES = [
@@ -227,6 +230,69 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
       });
     } catch (error) {
       setStripeScanState({ pending: false, error: error.message || 'Stripe scan failed', scannedAt: '', scannedCount: 0 });
+    }
+  }
+
+  async function handleReconcilePauseExpectations() {
+    setPauseSyncState({ pending: true, error: '', success: '' });
+
+    try {
+      const previewResponse = await fetch('/api/admin/issues/pause-expectations/reconcile', {
+        cache: 'no-store',
+      });
+      const preview = await previewResponse.json();
+
+      if (!previewResponse.ok) {
+        setPauseSyncState({ pending: false, error: preview.error || 'Pause expectation preview failed', success: '' });
+        return;
+      }
+
+      if (!preview.changeCount) {
+        setPauseSyncState({
+          pending: false,
+          error: '',
+          success: `Checked ${preview.checkedCount || 0} students. No pause expectations need changing.`,
+        });
+        return;
+      }
+
+      const changeLines = (preview.changes || [])
+        .map((change) => `${change.studentName}: ${change.previousPaymentExpectation} → ${change.nextPaymentExpectation}`);
+      const confirmed = window.confirm([
+        `Update ${preview.changeCount} payment expectation${preview.changeCount === 1 ? '' : 's'} from high-confidence Pause History and lesson coverage?`,
+        '',
+        ...changeLines,
+        '',
+        'This updates the Students sheet and logs the changes. It does not change Stripe.',
+      ].join('\n'));
+
+      if (!confirmed) {
+        setPauseSyncState({ pending: false, error: '', success: 'No pause expectations were changed.' });
+        return;
+      }
+
+      const response = await fetch('/api/admin/issues/pause-expectations/reconcile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: true }),
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        setPauseSyncState({ pending: false, error: payload.error || 'Pause expectation reconciliation failed', success: '' });
+        return;
+      }
+
+      setPauseSyncState({
+        pending: false,
+        error: '',
+        success: payload.changeCount
+          ? `Updated and logged ${payload.changeCount} pause expectation${payload.changeCount === 1 ? '' : 's'}.`
+          : 'The records changed after preview; no pause expectations needed updating.',
+      });
+      router.refresh();
+    } catch (error) {
+      setPauseSyncState({ pending: false, error: error.message || 'Pause expectation reconciliation failed', success: '' });
     }
   }
 
@@ -622,20 +688,32 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
             ) : null}
           </div>
         </div>
-        <button
-          type="button"
-          onClick={handleRunStripeScan}
-          disabled={stripeScanState.pending}
-          className="self-start rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 sm:self-auto"
-        >
-          {stripeScanState.pending ? 'Checking…' : 'Check Stripe'}
-        </button>
+        <div className="flex flex-wrap gap-2 self-start sm:justify-end">
+          <button
+            type="button"
+            onClick={handleReconcilePauseExpectations}
+            disabled={pauseSyncState.pending || stripeScanState.pending}
+            className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-950 transition hover:border-amber-400 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {pauseSyncState.pending ? 'Checking pauses…' : 'Sync pause expectations'}
+          </button>
+          <button
+            type="button"
+            onClick={handleRunStripeScan}
+            disabled={stripeScanState.pending || pauseSyncState.pending}
+            className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {stripeScanState.pending ? 'Checking…' : 'Check Stripe'}
+          </button>
+        </div>
       </header>
 
       {stripeScanState.error ? <p className="text-sm text-red-700">{stripeScanState.error}</p> : null}
       {stripeScanState.scannedAt ? (
         <p className="-mt-4 text-xs text-slate-500">Checked {stripeScanState.scannedCount} Stripe students.</p>
       ) : null}
+      {pauseSyncState.error ? <p className="text-sm text-red-700">{pauseSyncState.error}</p> : null}
+      {pauseSyncState.success ? <p className="text-sm text-emerald-700">{pauseSyncState.success}</p> : null}
 
       {actionState.error ? (
         <section className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">

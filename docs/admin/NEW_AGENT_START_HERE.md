@@ -1,8 +1,11 @@
 # New Agent Start Here — Admin Dashboard
 
-Last updated: 2026-07-03
+Last updated: 2026-07-14
 
 This is the practical handoff note for a new Codex/AI agent working on the First Chord admin dashboard.
+
+Start with the repository-wide `AGENTS.md`; this document adds current operating
+detail but does not replace its safety and validation guidance.
 
 ## Paths
 
@@ -87,8 +90,8 @@ Keep this short; it is an operator pointer, not a permissions model.
 12. `docs/admin/PAYMENTS_RULES.md` if touching Stripe, pauses, or payment expectations
 13. `docs/admin/BUG_FIXES.md` if debugging Railway, MMS calendar times, or recent production issues
 14. `docs/admin/PRACTICE_CHAT_DELIVERY_AUDIT.md` if touching Practice Chat Level 2 delivery or rollout
-15. Obsidian: `08 Operations/Current System Map.md`
-16. Obsidian: `08 Operations/Active Roadmap.md`
+15. Optional operating context: Obsidian `08 Operations/Current System Map.md`
+16. Optional product context: Obsidian `08 Operations/Active Roadmap.md`
 
 ## Source-of-Truth Rules
 

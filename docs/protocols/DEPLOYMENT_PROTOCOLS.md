@@ -1,8 +1,13 @@
 # 🚀 Music School Dashboard - Deployment Protocols
 
+> **Legacy portal-era deployment protocol (September 2025).** Do not use its
+> Railway target or deployment sequence for the private admin/API runtime. Use
+> [`../../AGENTS.md`](../../AGENTS.md) and the current
+> [`../admin/OPERATIONS_RUNBOOK.md`](../admin/OPERATIONS_RUNBOOK.md).
+
 **Last Updated**: September 29, 2025  
 **Verified Working**: Kenny student setup and URL simplification  
-**Related Files**: [ADDING_NEW_STUDENTS.md](./docs/ADDING_NEW_STUDENTS.md), [NOTES_EDGE_CASE_PROTOCOL.md](./NOTES_EDGE_CASE_PROTOCOL.md)
+**Related Files**: [Adding New Students](../workflows/01-adding-students.md), [NOTES_EDGE_CASE_PROTOCOL.md](./NOTES_EDGE_CASE_PROTOCOL.md)
 
 ## 🚨 Quick Fixes
 - **Build fails?** → Check syntax in config files, run `npm run build` locally first
@@ -140,7 +145,7 @@ npm run dev
 
 ## 🎯 Student Management Protocols
 
-> **For detailed student portal setup, see [ADDING_NEW_STUDENTS.md](./docs/ADDING_NEW_STUDENTS.md)**
+> **For the legacy manual student portal setup, see [Adding New Students](../workflows/01-adding-students.md).**
 
 ### Adding New Tutors with Theta Music Integration
 

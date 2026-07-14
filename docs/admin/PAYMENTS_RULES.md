@@ -61,7 +61,7 @@ Current meaning:
 
 ### `payment_expectation`
 
-Planned next canonical field for expected Stripe/payment behavior.
+Canonical field for expected Stripe/payment behavior in the `Students` sheet.
 
 Recommended values:
 
@@ -85,6 +85,29 @@ If `payment_mode` resolves to `stripe`, `payment_expectation` is blank, and both
 | `stripe_active_expected` | Normal active paying student | Active subscription, not intentionally paused | Yes if broken | Main default state |
 | `stripe_paused_expected` | Payment intentionally paused | Subscription paused or equivalent expected state | Yes only if mismatch | Should suppress failure alarms |
 | `inactive_or_stopped` | Left, stopped, or no longer operational | Stripe may be canceled or absent | Usually no | Only flag if obviously contradictory |
+
+---
+
+## Pause Expectation Reconciliation
+
+Normal Overview, Issues, and live Stripe-check reads never update
+`payment_expectation`.
+
+`/admin/flags` has an explicit `Sync pause expectations` action:
+
+1. an authenticated GET previews the exact proposed changes
+2. the admin confirms after seeing the affected students and transitions
+3. an authenticated POST requires `confirm: true` and reloads the current
+   deterministic Sheets, pause, registry, waiting-list, and schedule context
+4. only then may it update `Students.payment_expectation`
+5. every applied change appends `payment_expectation_reconciled` to `Event_Log`
+   with the signed-in admin and deterministic reason
+
+Eligibility remains deliberately narrow: Stripe-managed student,
+subscription-ID Pause History match, high confidence, and usual-lesson coverage.
+`setup_pending`, `inactive_or_stopped`, low-confidence matches, missing schedule,
+invalid windows, and pauses that cover no usual lesson are never reconciled by
+this action. The action never changes Stripe itself.
 
 ---
 
@@ -198,10 +221,11 @@ Long-term:
 
 ---
 
-## Recommended Next Implementation Order
+## Current Implementation Position
 
-1. Add `payment_expectation`
-2. Keep `payment_mode` as canonical payment intent
-3. Add a cached Stripe snapshot layer
-4. Add live Stripe failure/cancellation rules using this document
-5. Later integrate Payment Pause state as authoritative pause intent
+- `payment_mode` and `payment_expectation` are live canonical intent fields.
+- Static issue rules run on ordinary reads; live Stripe checks are explicit or scheduled.
+- Stripe amount snapshots are cached and labelled as non-authoritative.
+- Pause History reconciliation is explicit, previewed, confirmed, and audited.
+- Future work should improve provenance and transactional safety without moving
+  Stripe mutation into the Issues page.

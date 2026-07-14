@@ -1,5 +1,11 @@
 # Agent Quick Start — Music School Dashboard
 
+> **Legacy portal-era snapshot (April 2026).** Do not use this as the current
+> coding-agent, deployment, source-of-truth, or forbidden-actions guide. Start
+> with [`../../AGENTS.md`](../../AGENTS.md), then read
+> [`../admin/CURRENT_STATUS.md`](../admin/CURRENT_STATUS.md). The legacy Railway
+> URL and external `CLAUDE.md` dependency below are retained only as history.
+
 **For AI agents working on the FirstChord student portal.**
 
 Last updated: April 2026

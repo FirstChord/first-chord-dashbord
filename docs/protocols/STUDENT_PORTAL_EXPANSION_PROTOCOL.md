@@ -2,7 +2,9 @@
 
 **Last Updated**: September 29, 2025  
 **Status**: Expanded to 177+ students with friendly URLs  
-**Related Files**: [ADDING_NEW_STUDENTS.md](./docs/ADDING_NEW_STUDENTS.md), [STUDENT_PORTAL_PROTOCOL.md](./STUDENT_PORTAL_PROTOCOL.md)
+> **Legacy portal-era protocol.** Check current code and [`../../AGENTS.md`](../../AGENTS.md) before applying it.
+
+**Related Files**: [Adding New Students](../workflows/01-adding-students.md), [STUDENT_PORTAL_PROTOCOL.md](./STUDENT_PORTAL_PROTOCOL.md)
 
 ## 🚨 Quick Fixes  
 - **New student not appearing?** → Check all 5 required files: url-mappings, student-helpers, soundslice-mappings, theta-credentials, deployment

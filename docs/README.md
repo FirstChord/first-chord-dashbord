@@ -10,11 +10,13 @@ This repository now contains three connected surfaces:
 
 For current admin-dashboard work, always start with:
 
+- [../AGENTS.md](../AGENTS.md)
 - [admin/CURRENT_STATUS.md](./admin/CURRENT_STATUS.md)
 - [admin/INDEX.md](./admin/INDEX.md)
-- [admin/ADMIN_IMPLEMENTATION_LOG.md](./admin/ADMIN_IMPLEMENTATION_LOG.md)
 
-Older portal docs are still useful, but they are not the authority for the current V4 admin direction.
+Older portal docs and the implementation log are useful history, but they are
+not the authority for the current admin direction, deployment process, or
+source-of-truth boundaries.
 
 ## Current Admin Model
 
@@ -58,15 +60,15 @@ Student records remain important, but they are reached through header search, is
 
 - [Student Portal System](./STUDENT_PORTAL_SYSTEM.md)
 - [Student Registry Guide](./STUDENT_REGISTRY_GUIDE.md)
-- [Adding New Students](./workflows/01-adding-students.md)
-- [Managing Portals](./workflows/02-managing-portals.md)
+- [Adding New Students — legacy manual workflow](./workflows/01-adding-students.md)
 - [Validation Guide](./VALIDATION_GUIDE.md)
 - [WordPress Redirect Setup](./WORDPRESS_REDIRECT_SETUP.md)
 
 ### Operations And Setup
 
 - [Troubleshooting Guide](./TROUBLESHOOTING_GUIDE.md)
-- [Deployment Checklist](./workflows/04-deployment-checklist.md)
+- [Current Operations Runbook](./admin/OPERATIONS_RUNBOOK.md)
+- [Legacy Portal Deployment Checklist](./workflows/04-deployment-checklist.md)
 - [Google Sheets Setup](./guides/GOOGLE_SHEETS_SETUP_GUIDE.md)
 - [Google Sheets Schema](./guides/GOOGLE_SHEETS_SCHEMA.md)
 - [API Usage Guide](./guides/EFFICIENT_API_USAGE_GUIDE.md)
@@ -97,4 +99,4 @@ npm run test:admin
 npm run build
 ```
 
-**Last Updated**: May 2026
+**Last Updated**: July 2026
