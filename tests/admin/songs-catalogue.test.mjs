@@ -161,6 +161,41 @@ test('no student holds an instrument the catalogue has never heard of', () => {
   }
 });
 
+test("artist 'RSL' is only used where RSL really is the artist", () => {
+  // 'RSL' means two things: the needs-curation marker, AND the true artist of a
+  // Rockschool Original (a piece written for the syllabus, which has no other artist).
+  // Piano was ingested before that distinction existed, and 13 of its 26 markers turned
+  // out to be plain wrong — Danny is Daniel Rosenfeld's, Arcadia is Lana Del Rey's.
+  // These are the pieces verified against the official RSL syllabus pages as genuine
+  // Originals. Anything else carrying 'RSL' has not been checked.
+  const VERIFIED_RSL_ORIGINALS = new Set([
+    // Piano (Rock School 2025)
+    'Home To Philadelphia', 'Vanishing Footprints', 'Short Fuse', 'Midnight Song',
+    'Step By Step', 'Circus Waltz', 'Ignite',
+    'Le Noche En Havana', 'Cinnamon Roll', 'Elevator Shoes',
+    'Get Going', 'Contemplation', 'Camden Square',
+    // Bass
+    'Noisy Neighbour', 'Do Balanco', 'Slam Dunk Funk',
+    // Electric guitar
+    'Route 66', 'Cashville', 'Helicopter', 'Headline Act', "Just Don't Know", 'Overrated',
+  ]);
+
+  const unverified = Object.values(SONGS_CATALOGUE)
+    .filter((song) => song.artist === 'RSL' && song.contentType === 'song')
+    .map((song) => song.title)
+    .filter((title) => !VERIFIED_RSL_ORIGINALS.has(title));
+
+  assert.deepEqual(
+    unverified,
+    [],
+    "these songs claim RSL as their artist but nobody has confirmed they are Rockschool " +
+      'Originals — verify against the official RSL syllabus page (it groups covers ' +
+      'separately from Originals), then add them to VERIFIED_RSL_ORIGINALS'
+  );
+
+  // Technical exercises are RSL's own material and need no such check.
+});
+
 test('getSongsForInstrument returns [] for unseeded instruments', () => {
   assert.deepEqual(getSongsForInstrument('Ukulele Orchestra'), []);
   assert.deepEqual(getSongsForInstrument('Voice'), []);

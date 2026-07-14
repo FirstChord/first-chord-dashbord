@@ -22,21 +22,37 @@ the settling source: **they group cover tracks separately from Rockschool Origin
 is the strongest evidence channel we have found — better than the slice name, the Soundslice
 `artist` field, or recording provenance. Use it first.
 
-**Known-verified originals** (artist `'RSL'` is correct, these are NOT gaps):
+**Every `artist: 'RSL'` song in the catalogue is now a verified Rockschool Original.** A
+test (`songs-catalogue.test.mjs`) enforces it against an explicit `VERIFIED_RSL_ORIGINALS`
+list, so a new unverified marker cannot be added silently:
 
-| Instrument | Pieces |
+| Instrument | Verified Originals |
 |---|---|
+| Piano (Rock School 2025) | Home To Philadelphia, Vanishing Footprints, Short Fuse, Midnight Song, Step By Step, Circus Waltz, Ignite, Le Noche En Havana, Cinnamon Roll, Elevator Shoes, Get Going, Contemplation, Camden Square |
 | Bass | Noisy Neighbour, Do Balanco, Slam Dunk Funk |
 | Electric Guitar | Route 66, Cashville, Helicopter, Headline Act, Just Don't Know, Overrated |
+| Guitar (acoustic) | *(none — fully curated at ingest)* |
 
-⚠️ **Piano is unverified on this point.** Piano was ingested *before* the distinction was
-made explicit, so its ~26 `artist: 'RSL'` songs (Step By Step, Cinnamon Roll, Skedaddle,
-Camden Square, …) are an unresolved mix of true originals and needs-curation markers. Most
-are probably genuine Rock School originals, but **nobody has checked.** That is the single
-biggest piece of catalogue debt. Guitar (acoustic) has zero `RSL` markers — it was fully
-curated.
+**Piano's markers were audited on 2026-07-14, and 13 of 26 were WRONG.** The assumption
+that "they're all Rockschool originals" was reasonable and false: *Danny* is Daniel
+Rosenfeld's (the Minecraft piece), *Arcadia* is Lana Del Rey's, *The Moth* is Maikapar's,
+and the whole Classical Grade 1 set had real composers (Carolyn Miller, Anne Crosby Gaudet,
+August Eberhard Müller, Ignatius Sancho). All corrected. **The lesson: `'RSL'` is not
+self-describing — it must be checked piece by piece against the syllabus page, never
+assumed in bulk.**
 
 Technical exercises legitimately use `artist: 'RSL'` everywhere. That is never a gap.
+
+### Two piano syllabuses share one shelf
+
+RSL publishes **Rock School Piano** *and* **RSL Classical Piano**, and a student's grade can
+draw on both. Piano Grade 1 holds 11 Rock School pieces and 9 Classical ones side by side.
+
+Classical entries carry the **`classical` tag**, and the tutor Song panel shows a small
+**Classical** badge on those cards, so a tutor can tell which syllabus a piece belongs to
+without opening it. The badge means *"from the RSL Classical syllabus"* — **not** "sounds
+classical". Mozart's *Minuet in F* and Bartók's *Quasi Adagio* sit in the **Rock School**
+book and are correctly unbadged.
 
 ---
 
@@ -138,6 +154,12 @@ Corrected in the catalogue, still wrong at source:
 | `tlSlc` | "Fell on Black **Times**" | **Fell On Black Days** (Soundgarden) |
 | `dGyMc` | artist "**Alleman** Brothers" | **The Allman Brothers Band** |
 | `pvWMc` | artist "**Jimmy** Hendrix" | **Jimi Hendrix** |
+| Piano G1 | title "Le Douz De Decembre" | **Le Douze de Decembre** (Ignatius Sancho) — corrected in the catalogue |
+
+**One open question, deliberately NOT changed:** piano Grade 2 has an entry titled
+**"Le Noche En Havana"**, but the RSL Grade 2 syllabus lists an Original called
+**"La Noche En Rio"**. Same piece under a garbled title, or a different piece? The evidence
+does not say, so nothing was renamed. **Checking the physical Grade 2 book settles it.**
 
 ### E. Instruments with no repertoire at all
 

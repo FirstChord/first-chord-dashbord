@@ -457,7 +457,17 @@ export default function SongBrowser({ student }) {
                     >
                       {song.title}
                     </p>
-                    <p className="mt-0.5 truncate text-xs text-gray-500">{song.artist}</p>
+                    <div className="mt-0.5 flex items-center gap-1.5">
+                      <p className="truncate text-xs text-gray-500">{song.artist}</p>
+                      {/* A grade can hold pieces from two different RSL syllabuses at once
+                          (Rock School and Classical). Only the Classical ones are marked —
+                          badging both would just be noise on every card. */}
+                      {(song.tags || []).includes('classical') && (
+                        <span className="shrink-0 rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-700 ring-1 ring-inset ring-amber-200">
+                          Classical
+                        </span>
+                      )}
+                    </div>
                     {searchTerm && (
                       <p className="mt-0.5 text-xs text-gray-400">
                         {song.level}
