@@ -24,12 +24,20 @@ The admin overview is a strict meeting-start surface, not a complete status boar
 
 *Last working arc only — older work is in `git log --oneline` + the Learning Log.*
 
-- **Agent-readiness foundation (2026-07-14, local):** root `AGENTS.md` is now the
+- **Agent-readiness improvements 5–8 (2026-07-14, local):** Students and Issues
+  now share one deterministic student-context builder with source/conflict/cache
+  provenance; pure payment/pause detectors and the explicitly writable pause
+  workflow are separated from generic issue orchestration; approval and
+  partial-failure behavior has executable contract coverage; and
+  `AI_TOOL_CONTRACTS.md` defines a design-only allowlist for future redacted
+  reads/proposals without adding an AI dependency or action endpoint.
+
+- **Agent-readiness foundation (2026-07-14, deployed):** root `AGENTS.md` is now the
   repository-contained code/safety/test map; stale portal-era guidance is marked
   historical and documentation links are clean; PR and `main` CI now performs a
   clean install, all admin tests, ESLint over application code, and a production
   build. This changes development guardrails only, not runtime behavior.
-- **Pause expectation writes are explicit (2026-07-14, local):** Overview,
+- **Pause expectation writes are explicit (2026-07-14, deployed):** Overview,
   Issues, and live Stripe scans no longer change `Students.payment_expectation`.
   `/admin/flags` now previews the exact high-confidence Pause History changes,
   asks for confirmation, re-evaluates on POST, and logs each applied transition

@@ -82,6 +82,26 @@ Chat, and planning, use `STATE_TABS_SCHEMA.md`.
   Local registry changes still require `npm run generate-configs` before local
   portal verification.
 
+## Shared Student Context Read Model
+
+`lib/admin/student-context-helpers.mjs` is the shared deterministic composition
+boundary used by Students, Issues, live Stripe issue scans, and explicit pause
+reconciliation. It preserves the existing Sheet-first registry fallbacks and
+adds runtime-only provenance for source role, cache freshness, inferred payment
+fields, and Sheet/registry conflicts.
+
+- Provenance describes how the current value was selected; it owns no truth and
+  is never written back to Sheets or the registry.
+- `Students` remains operational truth. Registry fallback does not silently
+  repair a missing Sheet field.
+- `Schedule_Context` remains a cached MMS projection. `checkedAt`, confidence,
+  and freshness travel with the context; a `found` row is not live MMS truth.
+- Lifecycle, payment value, pause coverage, and pause-expectation decisions are
+  derived values.
+- Raw student context includes sensitive contact and provider identifiers. Any
+  future assistant read must use a separate redacted projection defined in
+  `AI_TOOL_CONTRACTS.md`.
+
 ## Future Direction
 
 - Keep the admin dashboard as the main human write surface.

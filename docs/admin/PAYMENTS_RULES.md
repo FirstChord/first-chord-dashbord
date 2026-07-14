@@ -100,7 +100,9 @@ Normal Overview, Issues, and live Stripe-check reads never update
 3. an authenticated POST requires `confirm: true` and reloads the current
    deterministic Sheets, pause, registry, waiting-list, and schedule context
 4. only then may it update `Students.payment_expectation`
-5. every applied change appends `payment_expectation_reconciled` to `Event_Log`
+5. every planned write first appends
+   `payment_expectation_reconciliation_attempted`; every applied change then
+   appends `payment_expectation_reconciled` to `Event_Log`
    with the signed-in admin and deterministic reason
 
 Eligibility remains deliberately narrow: Stripe-managed student,

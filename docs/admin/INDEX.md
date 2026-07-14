@@ -59,6 +59,9 @@ This admin index is the map of durable admin documentation. Older V1/V2 drafts a
   Payment-mode, payment-expectation, and Stripe issue rules.
 - [BRAIN_CAPABILITY_ROADMAP.md](./BRAIN_CAPABILITY_ROADMAP.md)
   Forward-looking roadmap for Brain as an admin assistant and thought partner.
+- [AI_TOOL_CONTRACTS.md](./AI_TOOL_CONTRACTS.md)
+  Design-only allowlist for narrow AI reads/proposals, privacy, evaluation, and
+  prohibited integration access. It does not enable an AI runtime.
 
 ## Operations
 

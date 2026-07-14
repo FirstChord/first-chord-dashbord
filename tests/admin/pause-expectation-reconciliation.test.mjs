@@ -52,10 +52,13 @@ test('explicit reconciliation writes only planned changes and logs the signed-in
   assert.equal(result.reconciledAt, '2026-07-14T12:00:00.000Z');
   assert.deepEqual(updates, [{ mmsId: 'sdt_sync', paymentExpectation: 'stripe_paused_expected' }]);
   assert.equal(result.synced[0].studentName, 'Sam Example');
-  assert.equal(eventBatches.length, 1);
+  assert.equal(eventBatches.length, 2);
   assert.equal(eventBatches[0].length, 1);
+  assert.equal(eventBatches[1].length, 1);
 
-  const event = eventBatches[0][0];
+  const attempt = eventBatches[0][0];
+  assert.equal(attempt.eventType, 'payment_expectation_reconciliation_attempted');
+  const event = eventBatches[1][0];
   const payload = JSON.parse(event.payloadJson);
   assert.equal(event.actorEmail, 'admin@example.com');
   assert.equal(event.eventType, 'payment_expectation_reconciled');
@@ -84,4 +87,53 @@ test('explicit reconciliation refuses to change state without both write adapter
     }),
     /requires explicit write adapters/i,
   );
+});
+
+test('explicit reconciliation records completed students and the failed write stage', async () => {
+  const events = [];
+  let updateCount = 0;
+
+  await assert.rejects(
+    applyPauseExpectationReconciliation([
+      eligiblePausedStudent({ mmsId: 'sdt_first', fullName: 'First Student' }),
+      eligiblePausedStudent({ mmsId: 'sdt_second', fullName: 'Second Student' }),
+    ], {
+      actorEmail: 'admin@example.com',
+      currentDate: '2026-07-14T12:00:00.000Z',
+      updateStudentPaymentExpectation: async () => {
+        updateCount += 1;
+        if (updateCount === 2) throw new Error('Sheets update failed');
+      },
+      appendEvents: async (rows) => events.push(...rows),
+    }),
+    (error) => {
+      assert.equal(error.partialResult.changeCount, 1);
+      assert.equal(error.partialResult.synced[0].mmsId, 'sdt_first');
+      assert.deepEqual(error.partialResult.failed, {
+        mmsId: 'sdt_second',
+        nextPaymentExpectation: 'stripe_paused_expected',
+        stage: 'student_write',
+      });
+      return true;
+    },
+  );
+
+  assert.deepEqual(events.map((event) => [event.entityId, event.eventType]), [
+    ['sdt_first', 'payment_expectation_reconciliation_attempted'],
+    ['sdt_first', 'payment_expectation_reconciled'],
+    ['sdt_second', 'payment_expectation_reconciliation_attempted'],
+  ]);
+});
+
+test('explicit reconciliation never writes when the attempt audit cannot be stored', async () => {
+  let updateCalled = false;
+  await assert.rejects(
+    applyPauseExpectationReconciliation([eligiblePausedStudent()], {
+      currentDate: '2026-07-14T12:00:00.000Z',
+      updateStudentPaymentExpectation: async () => { updateCalled = true; },
+      appendEvents: async () => { throw new Error('Event Log unavailable'); },
+    }),
+    (error) => error.partialResult.failed.stage === 'attempt_log',
+  );
+  assert.equal(updateCalled, false);
 });

@@ -58,7 +58,7 @@ Do not silently choose a winner for a new conflict type.
 
 | Area | Main UI / API | Domain and storage code | Read before changing | Focused tests |
 |---|---|---|---|---|
-| Students and issues | `app/admin/students/`, `app/admin/flags/`, `app/api/admin/students/`, `app/api/admin/issues/` | `lib/admin/students.js`, `lib/admin/issues.js`, `lib/admin/issue-queue.js`, `lib/admin/sheets/students.mjs`, `lib/admin/sheets/issues.mjs` | `OWNERSHIP_MATRIX.md`, `V3_LOOP_ARCHITECTURE.md` | `student-detail-helpers`, `issues-helpers`, `issue-queue*`, `student-archive-helpers` |
+| Students and issues | `app/admin/students/`, `app/admin/flags/`, `app/api/admin/students/`, `app/api/admin/issues/` | `lib/admin/student-context*`, `lib/admin/students.js`, `lib/admin/issues.js`, `lib/admin/issue-detectors.mjs`, `lib/admin/issue-queue.js`, `lib/admin/sheets/students.mjs`, `lib/admin/sheets/issues.mjs` | `OWNERSHIP_MATRIX.md`, `V3_LOOP_ARCHITECTURE.md` | `student-context-helpers`, `student-detail-helpers`, `issue-detectors`, `issues-helpers`, `issue-queue*`, `student-archive-helpers` |
 | Waiting and onboarding | `app/admin/waiting/`, `app/admin/onboard/`, `app/api/admin/waiting/`, `app/api/admin/onboard/` | `lib/admin/waiting-workflow.js`, `lib/admin/onboarding.js`, `lib/admin/registry.js`, `lib/admin/mms.js` | `SCHOOL_POLICY.md`, `OWNERSHIP_MATRIX.md` | `waiting-workflow`, `onboarding-helpers`, `registry-helpers`, `mms-helpers` |
 | Payments and finance | `app/admin/finance/`, student Stripe routes | `lib/admin/stripe.js`, `lib/admin/payment-*.mjs`, `lib/admin/finance-*.mjs`, `lib/admin/sheets/finance.mjs` | `PAYMENTS_RULES.md`, finance section of `CURRENT_STATUS.md` | `payments-helpers`, `payment-*`, `finance-*`, `stripe-*` |
 | Payroll | `app/admin/finance/payroll/`, `app/api/admin/payroll/` | `lib/admin/payroll-*.mjs`, `lib/admin/tutor-statement*`, `lib/admin/wise-helpers.mjs`, `lib/admin/mms.js` | `docs/workflows/06-paying-tutors.md`, `STATE_TABS_SCHEMA.md` | `payroll-*`, `mms-payroll-attendance`, `tutor-statement-*`, `wise-helpers` |
@@ -108,6 +108,8 @@ boundary, executed by the existing workflow, and logged.
 
 Never expose broad Sheets, MMS, Stripe, Gmail, shell, filesystem, or arbitrary
 HTTP access to an assistant. Prefer narrow read models and typed action proposals.
+`docs/admin/AI_TOOL_CONTRACTS.md` is the design allowlist for future dashboard AI
+capabilities. A model-supplied confirmation is never human approval.
 
 ## Validation By Change Type
 

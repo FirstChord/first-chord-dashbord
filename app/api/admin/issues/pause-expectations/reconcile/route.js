@@ -3,7 +3,11 @@ import { authOptions } from '@/lib/admin/auth';
 import {
   getPauseExpectationReconciliationPreview,
   reconcilePauseExpectations,
-} from '@/lib/admin/issues';
+} from '@/lib/admin/pause-expectation-workflow';
+import {
+  executePauseExpectationPreview,
+  executePauseExpectationReconciliation,
+} from '@/lib/admin/pause-expectation-route-contract.mjs';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,45 +18,28 @@ async function requireAdminSession() {
 
 export async function GET() {
   const session = await requireAdminSession();
-  if (!session) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  try {
-    return Response.json(await getPauseExpectationReconciliationPreview(), {
-      headers: { 'Cache-Control': 'no-store' },
-    });
-  } catch (error) {
-    return Response.json({ error: error.message || 'Pause expectation preview failed' }, { status: 500 });
-  }
+  const result = await executePauseExpectationPreview({
+    session,
+    getPreview: getPauseExpectationReconciliationPreview,
+  });
+  return Response.json(result.body, { status: result.status, headers: result.headers });
 }
 
 export async function POST(request) {
   const session = await requireAdminSession();
-  if (!session) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   let payload = {};
-  try {
-    payload = await request.json();
-  } catch {
-    payload = {};
+  if (session) {
+    try {
+      payload = await request.json();
+    } catch {
+      payload = {};
+    }
   }
 
-  if (payload.confirm !== true) {
-    return Response.json(
-      { error: 'Explicit confirmation is required before changing payment expectations' },
-      { status: 400 },
-    );
-  }
-
-  try {
-    const result = await reconcilePauseExpectations({
-      actorEmail: session.user.email || '',
-    });
-    return Response.json(result);
-  } catch (error) {
-    return Response.json({ error: error.message || 'Pause expectation reconciliation failed' }, { status: 500 });
-  }
+  const result = await executePauseExpectationReconciliation({
+    session,
+    payload,
+    reconcile: reconcilePauseExpectations,
+  });
+  return Response.json(result.body, { status: result.status, headers: result.headers });
 }
