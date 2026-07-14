@@ -211,6 +211,14 @@ Toolshed: `~/Desktop/Tools:Games/FC Admin Tools/Soundslice/`
    `status=1` (private); students cannot open them until `status=3`.
 4. **Verify** — `verify_catalogue_links.py` (slice exists, secret link on, anonymous GET 200).
 
+**The rules live in `slice_cleaning.py` — ONE home, with the reason attached to each, and
+`python3 slice_cleaning.py --selftest` (43 real slice names that each once produced wrong
+data). Change them there, never in a copy.** `build_catalogue_draft.py` uses them, and
+derives its instrument/level vocabulary from `songs-catalogue.mjs` so it cannot drift stale.
+
+Sheet→registry instrument drift has its own tool:
+`first-chord-brain/sync_instruments_to_registry.py` (dry-run by default).
+
 **Traps, all of which have drawn blood:**
 
 - **macOS is case-insensitive.** `G1bQ7` and `g1bQ7` are *different lists* but the *same
@@ -232,5 +240,11 @@ Toolshed: `~/Desktop/Tools:Games/FC Admin Tools/Soundslice/`
   jammed onto titles ("MAthildeRunning away"), defeating word-boundary matching.
 - **Dedupe must prefer the copy that NAMES its artist**, or bare "Green Onions" beats
   "Green Onions by Booker T and the MG's".
+- **Arrangement notes are not names.** Treating any unrecognised parenthetical as a student
+  name deleted **7 of 9 real songs** from the bass Advanced list (`Gosh (Pick Bass Groove)`,
+  `Hysteria (Bass)`). Recognise musical vocabulary; don't enumerate phrases.
+- **Titles need gentler cleaning than artists.** Word-level stripping mangles a real title
+  (`Piano Joint` → `Joint`). Artists never legitimately contain "Grade 5 bass", so there the
+  aggressive strip is safe; titles are cleaned by segment.
 - **Never guess an artist.** "Unknown" is a correct answer; a plausible wrong artist ships to
   children and is worse than a blank.
