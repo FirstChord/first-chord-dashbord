@@ -215,9 +215,7 @@ test('buildIncomingReplyTemplate produces a per-category parent draft', () => {
     studentName: 'Alex Chang',
     startDate: '2026-07-10',
   });
-  assert.match(absence, /^Hi Mina/u);
-  assert.match(absence, /Alex/u);
-  assert.match(absence, /no worries at all/u);
+  assert.equal(absence, 'Noted, I’ll get that date paused 🙂');
   // House style: parent drafts never use em-dashes.
   assert.doesNotMatch(absence, /—/u);
 
@@ -367,7 +365,7 @@ test('the structured pause path needs a matched student', () => {
   assert.match(draft.notes, /Dates spotted in message: from 2026-06-24 · back 2026-07-21/u);
 });
 
-test('buildIncomingReplyTemplate confirms extracted dates back to the parent', () => {
+test('buildIncomingReplyTemplate keeps pause replies short and general', () => {
   const dated = buildIncomingReplyTemplate({
     category: 'extended_absence',
     senderName: 'Mina Chang',
@@ -375,9 +373,8 @@ test('buildIncomingReplyTemplate confirms extracted dates back to the parent', (
     startDate: '2026-06-24',
     returnDate: '2026-07-21',
   });
-  assert.match(dated, /away from Wednesday 24 June/u);
-  assert.match(dated, /pick back up from Tuesday 21 July/u);
-  assert.doesNotMatch(dated, /—/u);
+  assert.equal(dated, 'Noted, I’ll get those dates paused 🙂');
+  assert.doesNotMatch(dated, /Mina|Alex|June|July/u);
 
   const oneOff = buildIncomingReplyTemplate({
     category: 'one_off_absence',
@@ -385,11 +382,17 @@ test('buildIncomingReplyTemplate confirms extracted dates back to the parent', (
     studentName: 'Alex',
     startDate: '2026-07-03',
   });
-  assert.match(oneOff, /Alex will miss Friday 3 July/u);
+  assert.equal(oneOff, 'Noted, I’ll get that date paused 🙂');
+  assert.doesNotMatch(oneOff, /Mina|Alex|July/u);
 
-  // No dates → the ask-for-return-date wording still applies.
+  // The parent's own message carries the detail even when extraction is incomplete.
   const undated = buildIncomingReplyTemplate({ category: 'extended_absence', senderName: 'Mina', studentName: 'Alex' });
-  assert.match(undated, /Whenever you have the return date/u);
+  assert.equal(undated, 'Noted, I’ll get those dates paused 🙂');
+
+  assert.equal(
+    buildIncomingReplyTemplate({ category: 'summer_break', senderName: 'Mina', studentName: 'Alex' }),
+    'Noted, I’ll get those dates paused 🙂',
+  );
 });
 
 test('extractIncomingMessageDates resolves relative dates against the message time', () => {

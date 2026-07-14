@@ -99,10 +99,15 @@ They should still be:
 - specific about what the parent/tutor should know or do
 - easy to copy into WhatsApp or email
 
+Incoming-inbox pause acknowledgements are the deliberately light exception to
+specificity: keep them short and general ("that date" / "those dates") rather
+than repeating names or interpreted dates. The linked Planning card owns the
+precise details and its later confirmation message can be specific once the
+pause has been actioned.
+
 ## What Not To Do
 
 - Do not create a large "language system" before it is needed.
 - Do not add AI rewriting to core workflows yet.
 - Do not make every page playful; use warmth where it helps and restraint where density matters.
 - Do not hide important risks just to make the page feel calm.
-
