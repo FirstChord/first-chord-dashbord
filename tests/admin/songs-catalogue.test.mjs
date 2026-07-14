@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { SONGS_CATALOGUE, SONG_LEVELS } from '../../lib/config/songs-catalogue.mjs';
+import { SONGS_CATALOGUE, SONG_LEVELS, SONG_INSTRUMENTS } from '../../lib/config/songs-catalogue.mjs';
 import {
   soundsliceUrlFor,
   songMatchesInstrument,
@@ -101,6 +101,64 @@ test('bass students get a shelf of their own, not the guitar one', () => {
   // A beginner needs a rung below Grade 1 to start on.
   assert.ok(bass.some((s) => s.level === 'Debut'), 'bass needs a Debut level');
   assert.ok(bass.some((s) => s.level === 'Grade 6'), 'bass runs up to Grade 6');
+});
+
+test('electric guitar is its own instrument, not a spelling of Guitar', () => {
+  const electric = getSongsForInstrument('Electric Guitar');
+  assert.ok(electric.length > 30, 'electric should be seeded from the RSL Electric lists');
+
+  // 'Electric Guitar' matches no acoustic song — the shelf compares the whole string,
+  // which is exactly why these students saw an empty panel before the repertoire landed.
+  const acoustic = new Set(getSongsForInstrument('Guitar').map((s) => s.songId));
+  assert.ok(electric.every((s) => !acoustic.has(s.songId)), 'electric is not acoustic');
+
+  // Every instrument a student can hold must appear in SONG_INSTRUMENTS, or its owner
+  // gets a silently empty shelf.
+  assert.ok(SONG_INSTRUMENTS.includes('Electric Guitar'));
+});
+
+// Instruments a student can hold that deliberately have NO repertoire yet. Every one of
+// these is a person opening the Song panel to an empty shelf, so the list must be an
+// explicit, reviewed decision — never something that creeps in unnoticed. This test is
+// the guard for the bug we shipped twice: bass, then electric guitar, both had students
+// and no songs, and nothing anywhere said so.
+const INSTRUMENTS_WITHOUT_REPERTOIRE = new Set([
+  'Voice',
+  'Singing',
+  'Ukulele Orchestra',
+]);
+
+test('no student holds an instrument the catalogue has never heard of', () => {
+  const registrySource = fs.readFileSync(
+    path.join(here, '../../lib/config/students-registry.js'),
+    'utf8'
+  );
+  const held = new Set(
+    [...registrySource.matchAll(/instrument:\s*'([^']*)'/g)]
+      .map((m) => m[1].trim())
+      .filter(Boolean)
+      // A combo ("Piano / Guitar") is satisfied by any one of its parts.
+      .flatMap((value) => value.split('/').map((part) => part.trim()))
+  );
+
+  const unknown = [...held].filter(
+    (instrument) =>
+      !SONG_INSTRUMENTS.includes(instrument) && !INSTRUMENTS_WITHOUT_REPERTOIRE.has(instrument)
+  );
+  assert.deepEqual(
+    unknown,
+    [],
+    'these students get an empty Song panel: either seed repertoire for the instrument, ' +
+      'or add it to INSTRUMENTS_WITHOUT_REPERTOIRE to say so on purpose'
+  );
+
+  // And the converse: an instrument we seeded but nobody holds is dead weight worth knowing about.
+  for (const instrument of SONG_INSTRUMENTS) {
+    assert.ok(
+      getSongsForInstrument(instrument).length > 0,
+      `${instrument} is in SONG_INSTRUMENTS but has no songs`
+    );
+  }
 });
 
 test('getSongsForInstrument returns [] for unseeded instruments', () => {
