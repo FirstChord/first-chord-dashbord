@@ -15,10 +15,19 @@ import {
   Search,
   X,
 } from 'lucide-react';
-import { getSongsForInstrument, songMatchesInstrument } from '@/lib/songs/catalogue-helpers.mjs';
-import { buildPathProgress, inferStudentLevel } from '@/lib/songs/shelf-helpers.mjs';
+import {
+  getSongsForInstrument,
+  levelsForSeries,
+  seriesForSongs,
+  seriesOf,
+  songMatchesInstrument,
+} from '@/lib/songs/catalogue-helpers.mjs';
+import {
+  buildPathProgress,
+  inferStudentLevel,
+  inferStudentSeries,
+} from '@/lib/songs/shelf-helpers.mjs';
 import { PATH_TEMPLATES } from '@/lib/config/path-templates.mjs';
-import { SONG_LEVELS } from '@/lib/config/songs-catalogue.mjs';
 
 // Tapping the status chip walks this cycle; parking lives on its own control.
 const STATUS_CYCLE = ['assigned', 'working', 'ready', 'done'];
@@ -38,6 +47,7 @@ const STATUS_STYLES = {
 export default function SongBrowser({ student }) {
   const [open, setOpen] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
+  const [selectedSeries, setSelectedSeries] = useState(null); // null = student's series
   const [selectedLevel, setSelectedLevel] = useState(null); // null = student's level
   const [searchOpen, setSearchOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -59,6 +69,7 @@ export default function SongBrowser({ student }) {
     setPendingId(null);
     setAssignError(null);
     setManageOpen(false);
+    setSelectedSeries(null);
     setSelectedLevel(null);
     setSearchOpen(false);
     setSearch('');
@@ -105,8 +116,13 @@ export default function SongBrowser({ student }) {
   const nowSong = nowAssignment ? songs.find((s) => s.songId === nowAssignment.songId) : null;
   const pathProgress = loaded ? buildPathProgress(assignments) : null;
 
-  const railLevels = SONG_LEVELS.filter((level) => songs.some((song) => song.level === level));
-  const studentLevel = inferStudentLevel(assignments || [], songs);
+  // A series (RSL grades, John Thompson books) is a tab; its levels are the rail.
+  const availableSeries = seriesForSongs(songs);
+  const studentSeries = inferStudentSeries(assignments || [], songs);
+  const shelfSeries = selectedSeries || studentSeries || availableSeries[0]?.id || null;
+
+  const railLevels = levelsForSeries(shelfSeries, songs);
+  const studentLevel = inferStudentLevel(assignments || [], songs, shelfSeries);
   const shelfLevel = selectedLevel || studentLevel || railLevels[0];
 
   const pathTemplates = Object.entries(PATH_TEMPLATES)
@@ -160,13 +176,14 @@ export default function SongBrowser({ student }) {
   };
 
   const searchTerm = search.trim().toLowerCase();
+  // Search reaches across every series; otherwise the shelf is one series' level.
   const shelfItems = searchTerm
     ? songs.filter(
         (song) =>
           song.title.toLowerCase().includes(searchTerm) ||
           (song.artist || '').toLowerCase().includes(searchTerm)
       )
-    : songs.filter((song) => song.level === shelfLevel);
+    : songs.filter((song) => seriesOf(song) === shelfSeries && song.level === shelfLevel);
   // Songs are the shelf; scales/exercises sit in a quiet row below it.
   // A search shows everything as cards so nothing is unfindable.
   const shelfSongs = searchTerm
@@ -326,12 +343,42 @@ export default function SongBrowser({ student }) {
             </div>
           )}
 
-          {/* The RSL bookcase: grade rail + that grade's songs as cards. */}
+          {/* The bookcase: series tabs (only when more than one), then that
+              series' level rail, then the selected level's songs as cards. */}
           <div>
+            {availableSeries.length > 1 && (
+              <div className="mb-2 flex flex-wrap items-center gap-1 border-b border-gray-100">
+                {availableSeries.map((series) => {
+                  const isShelf = series.id === shelfSeries;
+                  return (
+                    <button
+                      key={series.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedSeries(series.id);
+                        setSelectedLevel(null);
+                        setSearch('');
+                        setSearchOpen(false);
+                      }}
+                      className={`-mb-px border-b-2 px-3 py-1.5 text-sm transition-colors ${
+                        isShelf
+                          ? 'border-[#2F6B3D] font-semibold text-[#2F6B3D]'
+                          : 'border-transparent text-gray-400 hover:text-gray-600'
+                      }`}
+                    >
+                      {series.name}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
             <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2">
-              <span className="text-xs font-bold uppercase tracking-wide text-[#2F6B3D]">
-                RSL
-              </span>
+              {availableSeries.length === 1 && (
+                <span className="text-xs font-bold uppercase tracking-wide text-[#2F6B3D]">
+                  {availableSeries[0].name}
+                </span>
+              )}
               <div className="flex flex-wrap items-center gap-1">
                 {railLevels.map((level) => {
                   const isShelf = !searchTerm && level === shelfLevel;

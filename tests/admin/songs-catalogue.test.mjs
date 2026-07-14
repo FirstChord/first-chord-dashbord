@@ -75,6 +75,17 @@ test('getSongsForInstrument returns guitar songs sorted by level then title', ()
   }
 });
 
+test('a course series is shelved in course order, not alphabetically', () => {
+  // John Thompson's books are taught in sequence: The Train is #1 and must lead,
+  // even though alphabetically it would sit near the end.
+  const book1 = getSongsForInstrument('Piano').filter((s) => s.level === 'Book 1');
+  assert.ok(book1.length > 10, 'Book 1 should be seeded');
+  assert.equal(book1[0].title, 'The Train');
+  const orders = book1.map((s) => s.order);
+  assert.deepEqual(orders, [...orders].sort((a, b) => a - b), 'shelf follows course order');
+  assert.deepEqual(orders, Array.from({ length: orders.length }, (_, i) => i + 1), 'no gaps');
+});
+
 test('getSongsForInstrument returns [] for unseeded instruments', () => {
   assert.deepEqual(getSongsForInstrument('Ukulele Orchestra'), []);
   assert.deepEqual(getSongsForInstrument('Voice'), []);
@@ -97,11 +108,40 @@ test('validateCatalogue catches bad entries', () => {
   const errors = validateCatalogue(bad);
   assert.ok(errors.some((e) => e.includes('bad id format')));
   assert.ok(errors.some((e) => e.includes('missing title')));
-  assert.ok(errors.some((e) => e.includes('unknown level')));
+  assert.ok(errors.some((e) => e.includes('is not in series')));
   assert.ok(errors.some((e) => e.includes('unknown contentType')));
   assert.ok(errors.some((e) => e.includes('unknown instrument')));
   assert.ok(errors.some((e) => e.includes('missing soundslice.scorehash')));
   assert.ok(errors.some((e) => e.includes('duplicate scorehash')));
+});
+
+test('a level from another series is rejected', () => {
+  // 'Book 1' is a real level, but it belongs to John Thompson — not to RSL.
+  const errors = validateCatalogue({
+    fc_song_wrong_series: {
+      title: 'X',
+      artist: 'Y',
+      instruments: ['Piano'],
+      level: 'Book 1',
+      contentType: 'song',
+      soundslice: { scorehash: 'aaaaa' },
+    },
+  });
+  assert.ok(errors.some((e) => e.includes('"Book 1" is not in series "rsl"')));
+  assert.deepEqual(
+    validateCatalogue({
+      fc_song_right_series: {
+        title: 'X',
+        artist: 'Y',
+        series: 'john_thompson',
+        instruments: ['Piano'],
+        level: 'Book 1',
+        contentType: 'song',
+        soundslice: { scorehash: 'aaaaa' },
+      },
+    }),
+    []
+  );
 });
 
 test('findNameLeaks flags student names in titles and notes', () => {
