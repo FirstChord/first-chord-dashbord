@@ -72,3 +72,17 @@ A song as a reusable structured object in `lib/config/songs-catalogue.mjs` — t
 ## Scorehash (Soundslice)
 
 Soundslice's stable ID for one slice (one piece of playable notation), e.g. `Yvmfc` → `soundslice.com/slices/Yvmfc/`. The catalogue references slices only by scorehash; a slice is student-viewable only when its secret URL is enabled (`status=3`), which `enable_secret_links.py` (Soundslice toolshed) sets, verifies, and logs at curation time.
+
+## Rockschool Original (and the two meanings of `artist: 'RSL'`)
+
+A piece **written for** the RSL/Rockschool syllabus rather than covered from a commercial recording (e.g. bass *Noisy Neighbour*, electric *Cashville*). It has no other artist, so `artist: 'RSL'` is its **true artist**.
+
+This collides with the catalogue's other use of the same string: `artist: 'RSL'` is *also* the **needs-curation marker**, meaning "we could not find a trustworthy artist and refused to guess". **One string, two meanings** — you cannot tell them apart by looking, so `songs-catalogue.mjs` names the verified originals in comments. The settling source is the official RSL Awards syllabus page for the grade (`rslawards.com/products/…`), which **groups cover tracks separately from Rockschool Originals**. Piano's markers predate this distinction and are unverified — see `SONG_CATALOGUE_COVERAGE.md`.
+
+## Song series
+
+A body of repertoire with its own progression vocabulary (`SONG_SERIES` in `songs-catalogue.mjs`). RSL runs in **grades** (Debut→Grade 6); John Thompson's piano course runs in **books** (Book 1→Book 2). Each becomes a tab in the tutor Song panel. **Levels are only comparable inside a series** — Book 2 is not "above" Grade 6 — which validation and level-inference both enforce. `series` defaults to `rsl`, so adding one costs nothing to existing entries. A new exam board (Trinity) or method book would be a new series.
+
+## INSTRUMENTS_WITHOUT_REPERTOIRE
+
+The explicit, reviewed list (in `tests/admin/songs-catalogue.test.mjs`) of instruments a student may hold that deliberately have **no songs** — currently Voice, Singing, Ukulele Orchestra. Every entry is a person opening the Song panel to an empty shelf, so the list must be a conscious decision. A test fails if a student holds an instrument that is neither seeded in `SONG_INSTRUMENTS` nor named here. It exists because the empty-shelf bug shipped three times in one day (bass, the 38 blank-instrument students, then electric guitar) with nothing anywhere saying so.
