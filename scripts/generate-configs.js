@@ -63,12 +63,20 @@ function loadRegistry() {
 }
 
 /**
- * Extract a property value from a string of object properties
+ * Extract a property value from a string of object properties.
+ *
+ * Quotes inside a value are backslash-escaped in the registry (O'Neil -> 'O\'Neil'),
+ * so the match must skip escaped quotes and then unescape. A naive [^']* stops at the
+ * backslash and truncates the value — harmless in a comment, but this same helper
+ * reads friendlyUrl and thetaUsername, where a truncated value would be a live bug.
+ * Canonical definitions: escapeRegistryValue / unescapeRegistryValue in
+ * lib/admin/registry-helpers.mjs (duplicated here because this is a CommonJS script).
  */
 function extractProperty(propertiesText, propertyName) {
-  const regex = new RegExp(`${propertyName}:\\s*'([^']*)'`);
+  const regex = new RegExp(`${propertyName}:\\s*'((?:[^'\\\\]|\\\\.)*)'`);
   const match = propertiesText.match(regex);
-  return match ? match[1] : null;
+  if (!match) return null;
+  return match[1].replaceAll("\\'", "'").replaceAll('\\\\', '\\');
 }
 
 /**
