@@ -86,6 +86,23 @@ test('a course series is shelved in course order, not alphabetically', () => {
   assert.deepEqual(orders, Array.from({ length: orders.length }, (_, i) => i + 1), 'no gaps');
 });
 
+test('bass students get a shelf of their own, not the guitar one', () => {
+  const bass = getSongsForInstrument('Bass');
+  assert.ok(bass.length > 30, 'bass should be seeded from the RSL Bass grade lists');
+
+  // The bug this guards: bass students used to see an empty Song panel because the
+  // catalogue had no bass entries at all, while the shelf filters strictly on instrument.
+  const guitar = new Set(getSongsForInstrument('Guitar').map((s) => s.songId));
+  assert.ok(
+    bass.every((song) => !guitar.has(song.songId)),
+    'bass repertoire must not be guitar repertoire'
+  );
+
+  // A beginner needs a rung below Grade 1 to start on.
+  assert.ok(bass.some((s) => s.level === 'Debut'), 'bass needs a Debut level');
+  assert.ok(bass.some((s) => s.level === 'Grade 6'), 'bass runs up to Grade 6');
+});
+
 test('getSongsForInstrument returns [] for unseeded instruments', () => {
   assert.deepEqual(getSongsForInstrument('Ukulele Orchestra'), []);
   assert.deepEqual(getSongsForInstrument('Voice'), []);
