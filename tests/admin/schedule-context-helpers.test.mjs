@@ -72,6 +72,20 @@ test('deriveScheduleContextFromMms falls back to low-confidence missing schedule
   assert.match(context.warnings.join(' '), /No upcoming MMS calendar events/);
 });
 
+test('deriveScheduleContextFromMms preserves MMS wall-clock day and time across host timezones', () => {
+  const context = deriveScheduleContextFromMms({
+    student: { ID: 'sdt_late', FullName: 'Late Lesson' },
+    events: [{
+      StartDate: '2026-05-31T23:30:00',
+      Duration: 30,
+      TeacherID: 'tch_test',
+    }],
+  });
+
+  assert.equal(context.usualWeekday, 'Sunday');
+  assert.equal(context.usualTime, '23:30');
+});
+
 test('enrichScheduleContextsWithSharedSlots marks students sharing the same MMS lesson slot', () => {
   const byMmsId = enrichScheduleContextsWithSharedSlots([
     {
