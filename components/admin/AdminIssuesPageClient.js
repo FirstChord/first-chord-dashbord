@@ -673,7 +673,7 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
       <header className="flex flex-col gap-5 border-b border-slate-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div className="flex items-baseline gap-3">
-            <h2 className="text-[2rem] font-semibold tracking-[-0.035em] text-slate-950">Issues</h2>
+            <h2 className="fc-display text-3xl text-slate-900">Issues</h2>
             <span className="text-sm font-medium text-slate-500">
               {issueBuckets.needs_you.length} need{issueBuckets.needs_you.length === 1 ? 's' : ''} you
             </span>
