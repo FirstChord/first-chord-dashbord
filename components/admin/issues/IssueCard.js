@@ -7,6 +7,7 @@ import { buildPauseWorkflowSummary } from '@/lib/admin/pause-workflow-helpers.mj
 import {
   getIssueCategoryLabel,
   getIssueKeyFact,
+  getIssueShortLabel,
   getIssueStory,
   getLifecycleContextText,
   getPaymentActionHint,
@@ -144,6 +145,9 @@ function IssueCardBody({
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
               <h3 className={`${featured ? 'text-xl' : 'text-lg'} font-semibold tracking-[-0.015em] text-slate-950`}>{getStudentLabel(issue)}</h3>
+              <span className="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-700">
+                {getIssueShortLabel(issue)}
+              </span>
               {issue.reappeared ? (
                 <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800">
                   Reappeared

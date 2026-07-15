@@ -60,7 +60,7 @@ These names come from real code reads of `process.env` and local token paths.
 | `MMS_DEFAULT_TOKEN` | Older MMS proxy/tutor dashboard compatibility routes | Older dashboard/proxy routes may fail | Prefer `MMS_BEARER_TOKEN` for admin; keep this only while legacy routes need it. FINN TO FILL IN whether it can be retired. |
 | `MMS_API_URL` | Older MMS proxy routes and placeholder service config | Older proxy routes may hit wrong host | Usually `https://api.mymusicstaff.com`. |
 | `GITHUB_TOKEN` | Production registry writes and workflow health cards | Registry edits from admin fail in production; GitHub workflow health shows unknown | Use a token with repo/workflow access. FINN TO FILL IN token owner and renewal. |
-| `STRIPE_API_KEY` | Stripe/payment scans | Payment issue refreshes and student Stripe checks fail | Refresh in Stripe dashboard and update Railway/local `.env.local`. |
+| `STRIPE_API_KEY` | Stripe/payment scans | Payment issue refreshes and student Stripe checks fail | Use a restricted live key with Read access for Customers, Subscriptions, Invoices, Prices, and Payment Intents. Payment Intents Read is required by the live issue scan's `latest_invoice.payment_intent` expansion. Edit permissions in Stripe; update Railway/local `.env.local` only when the key value itself is rotated. |
 | `STRIPE_PAYMENT_LINK` or `PAYMENT_LINK` | Onboarding message templates | Payment link copy falls back to placeholder | Set to current one-to-one payment link. |
 | `GROUP_LESSON_PAYMENT_LINK` | Group onboarding copy | Group payment link may be wrong or use fallback | Set to current group lesson payment link. |
 | `HANDBOOK_URL` | Onboarding and parent messaging copy | Handbook link may be wrong or use default | Usually `https://firstchord.co.uk/handbook`. |

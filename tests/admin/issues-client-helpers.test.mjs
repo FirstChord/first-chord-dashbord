@@ -13,6 +13,7 @@ import {
   getPaymentQuickActions,
   getPrimaryPaymentQuickAction,
   getIssueCategoryLabel,
+  getIssueShortLabel,
   getStudentLabel,
   getIssueStory,
   getIssueWhatToDo,
@@ -88,6 +89,16 @@ test('getIssueCategoryLabel reflects the predicate buckets', () => {
   assert.equal(getIssueCategoryLabel({ type: 'STRIPE CUSTOMER MISSING' }), 'Payment');
   assert.equal(getIssueCategoryLabel({ type: 'TUTOR CONFLICT' }), 'Records');
   assert.equal(getIssueCategoryLabel({ type: 'SOMETHING ELSE' }), 'Issue');
+});
+
+test('getIssueShortLabel gives every current issue type concise deterministic copy', () => {
+  assert.equal(getIssueShortLabel({ type: 'SUBSCRIPTION_CANCELLED_UNEXPECTEDLY' }), 'Billing stopped unexpectedly');
+  assert.equal(getIssueShortLabel({ type: 'PAYMENT_FAILED' }), 'Payment needs attention');
+  assert.equal(getIssueShortLabel({ type: 'PAYMENT_RETRYING' }), 'Stripe retry scheduled');
+  assert.equal(getIssueShortLabel({ type: 'PAUSE EXPECTATION MISMATCH' }), 'Pause state mismatch');
+  assert.equal(getIssueShortLabel({ type: 'PRACTICE NOTE DELIVERY FAILED' }), 'Practice note not delivered');
+  assert.equal(getIssueShortLabel({ type: 'FINANCE DATA GAP' }), 'Finance data missing');
+  assert.equal(getIssueShortLabel({ type: ' SOMETHING NEW ' }), 'Review issue');
 });
 
 test('story/what-to-do copy and student label handle source-gone + fallbacks', () => {

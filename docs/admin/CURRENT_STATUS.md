@@ -24,6 +24,15 @@ The admin overview is a strict meeting-start surface, not a complete status boar
 
 *Last working arc only — older work is in `git log --oneline` + the Learning Log.*
 
+- **Human issue labels + corrected Stripe read contract (2026-07-15, local):**
+  issue cards now expose short deterministic labels such as **Billing stopped
+  unexpectedly**, **Pause state mismatch**, and **Practice note not delivered**
+  while retaining stable detector types underneath. Railway's restricted Stripe
+  key now has—and a no-PII live check verified—Payment Intents Read, required by
+  the 12 July `latest_invoice.payment_intent` expansion. The operational minimum
+  is now documented as Customers, Subscriptions, Invoices, Prices, and Payment
+  Intents Read, with writes and bank-level endpoints still denied.
+
 - **“Why does this issue exist?” deterministic layer (2026-07-15, local):**
   each Issues card can now load an admin-only explanation of the exact rule,
   redacted evidence, source role, queue workflow state, ambiguity, unqueried

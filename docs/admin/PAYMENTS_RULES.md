@@ -130,6 +130,19 @@ Recommended snapshot fields:
 | `last_invoice_status` | Paid/failed/open/etc | Stripe API |
 | `last_checked_at` | When snapshot was refreshed | Internal cached state |
 
+### Restricted key permission contract
+
+`STRIPE_API_KEY` is a live restricted read key. Keep Read access for Customers,
+Subscriptions, Invoices, Prices, and Payment Intents; keep write permissions
+disabled. The amounts cache uses the first four. Manual/live issue refreshes
+expand `latest_invoice.payment_intent`, so Stripe also requires Payment Intents
+Read. Without it Stripe returns HTTP 403 and the refresh fails loudly rather
+than silently classifying incomplete evidence.
+
+Charges, payouts, and balance transactions remain deliberately unavailable to
+the dashboard. Editing permissions on the existing restricted key does not
+require a Railway variable change; rotating the key value does.
+
 ---
 
 ## Stripe Issue Rules
