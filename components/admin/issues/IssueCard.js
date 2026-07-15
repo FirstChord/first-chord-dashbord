@@ -1,6 +1,7 @@
 'use client';
 
 import { AgeChip } from '@/components/admin/ui/AgeChip';
+import IssueExplanationPanel from '@/components/admin/issues/IssueExplanationPanel';
 import { buildIssueEvidenceSummary, formatDateTime } from '@/lib/admin/health-helpers.mjs';
 import { buildPauseWorkflowSummary } from '@/lib/admin/pause-workflow-helpers.mjs';
 import {
@@ -172,6 +173,7 @@ function IssueCardBody({
             {issue.identityMismatchHint.description}
           </p>
         ) : null}
+        <IssueExplanationPanel issue={issue} />
       </div>
 
       <div className="mt-5 space-y-3">

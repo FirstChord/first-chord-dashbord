@@ -38,9 +38,26 @@ Google accepted a send. Caller identity, caller/student authorisation,
 config-driven rollout, and a transactional unique `delivery_key` remain blockers
 before widening the pilot. See `PRACTICE_CHAT_DELIVERY_AUDIT.md`.
 
+## First Runtime Slice: Why This Issue Exists
+
+Issues now have an on-demand, admin-only deterministic explanation panel. It
+states the rule, the redacted evidence used, source and queue roles, uncertainty,
+anything not checked, and the existing recommended next step. Static Review
+Flags and payment/pause checks are safely re-evaluated; Practice Chat delivery,
+finance coverage, and live Stripe are labelled as recorded-only rather than
+being presented as fresh checks. Stripe is never refreshed by opening the panel.
+
+The route returns an explanation view model rather than raw student context. It
+does not synchronise `Issue_Queue`, mutate a record, resolve an issue, call an
+external provider, or use an AI model. Tests cover current, recorded-only,
+source-absent/conflicting, unavailable, privacy, registry-only and route-boundary
+states. This turns improvement 9 into a useful dashboard feature without
+weakening the deterministic action boundary.
+
 ## What Is Deliberately Not Live
 
-- No AI provider, agent framework, assistant route, or dashboard AI interface.
+- No AI provider, agent framework, assistant chat/tool route, or model-generated
+  dashboard output. The live issue explanation is fixed deterministic output.
 - No model receives student context, message history, Practice Chat logs, or
   operations documents.
 - No assistant can write Sheets, call MMS/Stripe/Gmail/WhatsApp, use shell or
@@ -56,6 +73,7 @@ Safe automated checks:
 
 ```bash
 node --test tests/admin/assistant-context-*.test.mjs
+node --test tests/admin/issue-explanation-*.test.mjs
 node --test tests/admin/practice-note-delivery-workflow.test.mjs
 node --test tests/admin/operations-guidance-helpers.test.mjs
 node --test tests/admin/communication-draft-proposal-helpers.test.mjs
@@ -74,8 +92,13 @@ Manual checks after deployment:
    claim-failure contract for that path. During the next normal pilot note,
    verify its `Practice_Notes_Log` claim/final state, MMS attendance, Gmail
    evidence, and duplicate response as described in the delivery audit.
-3. Treat assistant context, guidance, and communication proposal helpers as
-   developer foundations only: there is no dashboard surface to click yet.
+3. On `/admin/flags`, open **Why does this issue exist?** on one static payment
+   or record issue and one live Stripe/Practice/finance issue. Confirm the first
+   says **Currently detected** when rechecked, while the latter says
+   **Recorded — not rechecked** and lists what was not checked. Confirm opening
+   and closing the panel does not change the issue status.
+4. Treat operations guidance and communication proposal helpers as developer
+   foundations only: there is still no dashboard surface or model for them.
 
 ## Privacy And Evaluation Note
 
@@ -97,7 +120,7 @@ minimised, consistently de-identified, access-controlled, and stored outside git
 - Contact-role and retention rules must exist before live message drafting or
   history retrieval.
 - Synthetic evaluation proves regression behavior, not real-world accuracy.
-- The assistant-safe modules have no caller authorization boundary yet because
-  they are intentionally not exposed through a route.
+- The issue explanation consumer has an explicit admin authorization boundary;
+  the other assistant-safe foundations are intentionally still server-only.
 - Existing Sheets lanes are generally last-write-wins; follow the state schema
   and runbook for rollback/reconciliation rather than assuming transactions.

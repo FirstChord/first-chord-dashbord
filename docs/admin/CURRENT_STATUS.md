@@ -24,6 +24,16 @@ The admin overview is a strict meeting-start surface, not a complete status boar
 
 *Last working arc only — older work is in `git log --oneline` + the Learning Log.*
 
+- **“Why does this issue exist?” deterministic layer (2026-07-15, local):**
+  each Issues card can now load an admin-only explanation of the exact rule,
+  redacted evidence, source role, queue workflow state, ambiguity, unqueried
+  context, and safe next step. Static record/payment/pause detectors re-run
+  through the strict read-only context service; Practice Chat, finance and live
+  Stripe claims are explicitly shown as recorded-only, and opening the panel
+  never refreshes a provider, syncs the issue queue, changes a record, resolves
+  an issue, or calls a model. This is the first useful runtime consumer of the
+  assistant-safe foundation while remaining entirely deterministic.
+
 - **Agent-readiness improvements 9–12 + Practice Chat claim hardening
   (2026-07-15, deployed):** Practice Chat now fails closed when its delivery claim
   cannot be saved, so an MMS/Gmail action cannot start behind a failed audit

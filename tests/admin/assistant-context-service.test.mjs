@@ -116,6 +116,37 @@ test('live Stripe context never claims it was refreshed', async () => {
   assert.ok(result.context.ambiguityCodes.includes('stripe_live_not_refreshed'));
 });
 
+test('registry-only issues remain explainable without allowing arbitrary queue-only IDs', async () => {
+  const injected = dependencies({
+    getStudents: async () => [],
+    getRegistry: async () => [{ mmsId: 'sdt_REGISTRY', firstName: 'PrivateRegistryName', tutor: 'PrivateTutor' }],
+    getFlags: async () => [{
+      mms_id: 'sdt_REGISTRY', category: 'REGISTRY ONLY', student_name: 'PrivateRegistryName', detail: 'Private detail',
+    }],
+    getQueue: async () => ({ available: true, rows: [{
+      mmsId: 'sdt_REGISTRY', source: 'review_flags', issueType: 'REGISTRY ONLY', status: 'open', sourcePresent: true,
+    }, {
+      mmsId: 'sdt_QUEUE_ONLY', source: 'review_flags', issueType: 'REGISTRY ONLY', status: 'open', sourcePresent: true,
+    }] }),
+  });
+  const service = createAssistantContextService(injected.values);
+
+  const registryResult = await service.getIssueContext({
+    mmsId: 'sdt_REGISTRY', source: 'review_flags', issueType: 'REGISTRY ONLY', generatedAt: GENERATED_AT,
+  });
+  assert.equal(registryResult.found, true);
+  assert.equal(registryResult.context.detector.currentPresent, true);
+  assert.equal(registryResult.context.evidence.recordPresence.studentsSheet, false);
+  assert.equal(registryResult.context.evidence.recordPresence.studentRegistry, true);
+  assert.doesNotMatch(JSON.stringify(registryResult), /sdt_REGISTRY|PrivateRegistryName|PrivateTutor|Private detail/i);
+
+  const queueOnlyResult = await service.getIssueContext({
+    mmsId: 'sdt_QUEUE_ONLY', source: 'review_flags', issueType: 'REGISTRY ONLY', generatedAt: GENERATED_AT,
+  });
+  assert.equal(queueOnlyResult.found, false);
+  assert.equal(queueOnlyResult.context, null);
+});
+
 test('test students and malformed identifiers are not retrievable', async () => {
   const injected = dependencies();
   const service = createAssistantContextService(injected.values);
