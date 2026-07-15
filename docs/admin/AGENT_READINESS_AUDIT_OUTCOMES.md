@@ -54,12 +54,28 @@ source-absent/conflicting, unavailable, privacy, registry-only and route-boundar
 states. This turns improvement 9 into a useful dashboard feature without
 weakening the deterministic action boundary.
 
+## Second Runtime Slice: Optional AI Briefing
+
+The Issues panel now offers an on-demand **Explain this simply** pilot. Its
+server route re-builds the same redacted deterministic explanation and sends
+only that view model to a tool-free OpenAI Responses API call. Structured output
+is checked again locally for exact fields, evidence references, required
+caveats, identifiers, lengths and unsupported action claims. Invalid, slow or
+unavailable output is not rendered; the deterministic explanation remains.
+
+The model key is separate from Practice Chat, server-only and feature-gated.
+Requests have a five-second timeout, no automatic retry and a per-admin rate
+limit. Runtime logs contain version/cost/latency outcome metadata but not prompt,
+output, student ID or context. Helpful/not-helpful enum feedback is pilot
+evaluation only and cannot change the issue or workflow state.
+
 ## What Is Deliberately Not Live
 
-- No AI provider, agent framework, assistant chat/tool route, or model-generated
-  dashboard output. The live issue explanation is fixed deterministic output.
-- No model receives student context, message history, Practice Chat logs, or
-  operations documents.
+- No agent framework, assistant chat, model tools or model-selected actions. The
+  optional issue briefing is one on-demand server-side generation over the
+  fixed deterministic explanation.
+- No model receives raw student context, message history, Practice Chat logs,
+  operations documents, contact details, provider IDs or broad page responses.
 - No assistant can write Sheets, call MMS/Stripe/Gmail/WhatsApp, use shell or
   filesystem access, resolve issues, change payments, archive students, or send
   messages.
@@ -99,6 +115,10 @@ Manual checks after deployment:
    and closing the panel does not change the issue status.
 4. Treat operations guidance and communication proposal helpers as developer
    foundations only: there is still no dashboard surface or model for them.
+5. When the AI pilot is enabled, click **Explain this simply** for several issue
+   sources. Confirm stale/not-checked evidence produces a caveat, the standard
+   explanation remains visible, feedback changes no issue state, and disabling
+   `ADMIN_AI_ISSUE_BRIEFING_ENABLED` restores deterministic-only behaviour.
 
 ## Privacy And Evaluation Note
 

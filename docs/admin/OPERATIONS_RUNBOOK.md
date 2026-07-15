@@ -48,6 +48,9 @@ These names come from real code reads of `process.env` and local token paths.
 | `GOOGLE_CLIENT_ID` | Admin Google OAuth | Admin login unavailable | Refresh in Google Cloud OAuth app, then update Railway. FINN TO FILL IN console location. |
 | `GOOGLE_CLIENT_SECRET` | Admin Google OAuth | Admin login unavailable | Refresh in Google Cloud OAuth app, then update Railway. FINN TO FILL IN console location. |
 | `ADMIN_ALLOWED_EMAILS` | Admin auth allow-list | Correct users may be blocked, or wrong users may be allowed if misconfigured | Comma-separated allowed admin emails in Railway. |
+| `ADMIN_AI_ISSUE_BRIEFING_ENABLED` | Optional admin Issues AI pilot | `false`/missing keeps the deterministic explanation working and the AI call unavailable | Set to `true` only after the dedicated key, privacy boundary and smoke check are ready. Set back to `false` for immediate rollback. |
+| `ADMIN_AI_OPENAI_API_KEY` | Server-side OpenAI Responses API call for issue briefing | AI pilot returns unavailable; deterministic Issues workflow is unaffected | Use a separate restricted/budget-capped project key on the canonical admin Railway service only. Do not reuse the historically exposed Practice Chat relay key. Never expose as `NEXT_PUBLIC_*`. |
+| `ADMIN_AI_OPENAI_MODEL` | Optional model override for the issue pilot | Defaults to `gpt-5.6-luna` | Change only with representative contract/evaluation checks; record the model used in pilot results. |
 | `GOOGLE_SPREADSHEET_ID` | Admin Sheets integration | Admin data reads/writes fail | Set to the main First Chord operational Sheet ID. FINN TO FILL IN exact Sheet link. |
 | `SHEETS_REFRESH_TOKEN` | Google Sheets OAuth | Sheets reads/writes fail once token is invalid | Generate a new OAuth refresh token with Sheets scope, then update Railway. FINN TO FILL IN exact refresh procedure. |
 | `SHEETS_CLIENT_ID` | Google Sheets OAuth | Sheets reads/writes fail | Update from Google Cloud OAuth credentials. |
@@ -121,6 +124,22 @@ As of 13 June 2026, the Railway account has three relevant projects:
 | `awake-connection` | `enhanced-music-lesson-notes` | `https://enhanced-music-lesson-notes-production.up.railway.app` | Practice Chat speech/Whisper relay. | OpenAI relay env only. |
 
 Do not assume a GitHub deploy to one Railway service means all Railway services have the same environment variables. Practice Chat quick links should use the canonical admin API base URL for writeback, even if the tutor opens the public dashboard from an older domain.
+
+### AI issue briefing pilot recovery
+
+The AI button is non-consequential and the deterministic explanation is always
+the fallback. If calls fail, become slow, produce validation failures, or show
+materially misleading wording:
+
+1. Set `ADMIN_AI_ISSUE_BRIEFING_ENABLED=false` on the canonical admin Railway
+   service and redeploy/restart. No Sheets/provider reconciliation is required.
+2. Confirm **Why does this issue exist?** still loads the deterministic rule,
+   evidence, caveats and next step.
+3. Inspect runtime metadata by opaque request ID. Logs must not contain the
+   prompt, model output, MMS ID, student name, contact details or provider IDs.
+4. Fix/evaluate locally with synthetic or redacted fixtures before re-enabling.
+5. Rotate `ADMIN_AI_OPENAI_API_KEY` if exposure is suspected; do not rotate or
+   interrupt the separate Practice Chat transcription key as part of this step.
 
 ## Component Recovery Matrix
 

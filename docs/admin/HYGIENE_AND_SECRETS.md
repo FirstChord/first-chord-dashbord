@@ -75,6 +75,10 @@ Do not delete external test rows automatically. Keep them explicitly flagged unl
 - Google OAuth/token files in the home directory are not repo artifacts.
 - Never paste live tokens, Stripe secrets, OAuth refresh tokens, or private sheet IDs into docs.
 - For docs and handovers, describe the variable name and owner, not the value.
+- The admin AI pilot uses `ADMIN_AI_OPENAI_API_KEY` only on the canonical admin
+  Railway service. Do not reuse the Practice Chat relay's `OPENAI_API_KEY`: that
+  relay key has a documented browser-exposure history and separate rotation
+  plan. Never prefix the admin key with `NEXT_PUBLIC_` or return it from a route.
 
 ## Local Sheets Backups
 

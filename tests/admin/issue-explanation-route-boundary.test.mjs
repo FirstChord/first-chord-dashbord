@@ -11,6 +11,8 @@ test('issue explanation route is admin-authenticated, read-only, and uses the na
   assert.match(source, /session\?\.user\?\.isAdmin/u);
   assert.match(source, /assistantContextService\.getIssueContext/u);
   assert.match(source, /buildIssueExplanation/u);
+  assert.match(source, /isIssueAiBriefingConfigured/u);
+  assert.match(source, /aiBriefingAvailable/u);
   assert.match(source, /export async function GET/u);
   assert.doesNotMatch(source, /export async function (?:POST|PATCH|PUT|DELETE)|getAdminIssues|upsert|append|update|delete|send|scanLiveStripe|getLiveStripe/u);
 });

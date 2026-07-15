@@ -11,8 +11,104 @@ import {
   mapPracticeNoteLogRowToPortalNote,
   normalisePracticeNoteLogRow,
   normalisePracticeNotePayload,
+  parsePracticeNoteSections,
   selectLatestPortalPracticeNote,
 } from '../../lib/admin/practice-notes-helpers.mjs';
+
+const LEVEL_2_RAW = [
+  '[What Did We Do In The Lesson?]Today we worked on your F major scale and broken chords.',
+  '[What Went Well Or What Was Challenging?]The broken chords were successful today.',
+  '[What Would Be Good Practice Over The Week? (and How!)]Practise the scale slowly with correct fingering.',
+].join('');
+
+test('parsePracticeNoteSections maps both heading vocabularies onto the three fields', () => {
+  const level1 = parsePracticeNoteSections(
+    '[What we did]\nRhythm.\n[Progress & Challenges]\nStronger.\n[Practice Goals]\nSlow practice.',
+  );
+  assert.deepEqual(level1, {
+    whatWeDid: 'Rhythm.',
+    progressChallenges: 'Stronger.',
+    practiceGoals: 'Slow practice.',
+  });
+
+  const level2 = parsePracticeNoteSections(LEVEL_2_RAW);
+  assert.equal(level2.whatWeDid, 'Today we worked on your F major scale and broken chords.');
+  assert.equal(level2.progressChallenges, 'The broken chords were successful today.');
+  assert.equal(level2.practiceGoals, 'Practise the scale slowly with correct fingering.');
+});
+
+test('parsePracticeNoteSections handles bare-line headings without brackets', () => {
+  const raw = [
+    'What Did We Do In The Lesson?',
+    'Today we played Follow the Leader and Lightly Row.',
+    'What Went Well Or What Was Challenging?',
+    'Follow the Leader is now completed.',
+    'What Would Be Good Practice Over The Week? (and How!)',
+    'Keep the left hand steady.',
+  ].join('\n');
+  const sections = parsePracticeNoteSections(raw);
+  assert.equal(sections.whatWeDid, 'Today we played Follow the Leader and Lightly Row.');
+  assert.equal(sections.progressChallenges, 'Follow the Leader is now completed.');
+  assert.equal(sections.practiceGoals, 'Keep the left hand steady.');
+});
+
+test('parsePracticeNoteSections does not treat a body sentence as a heading', () => {
+  const raw = '[What we did]\nWhat went well was your timing this week. We revised scales.';
+  const sections = parsePracticeNoteSections(raw);
+  assert.equal(sections.whatWeDid, 'What went well was your timing this week. We revised scales.');
+  assert.equal(sections.progressChallenges, '');
+});
+
+test('normalisePracticeNotePayload derives structured fields from a raw-only Level 2 note', () => {
+  const note = normalisePracticeNotePayload({
+    studentId: 'sdt_fen',
+    rawNoteText: LEVEL_2_RAW,
+    createdAt: '2026-07-08T12:00:00Z',
+  });
+
+  assert.equal(note.errors.length, 0);
+  assert.equal(note.whatWeDid, 'Today we worked on your F major scale and broken chords.');
+  assert.equal(note.progressChallenges, 'The broken chords were successful today.');
+  assert.equal(note.practiceGoals, 'Practise the scale slowly with correct fingering.');
+});
+
+test('normalisePracticeNotePayload keeps client-supplied fields over raw derivation', () => {
+  const note = normalisePracticeNotePayload({
+    studentId: 'sdt_123',
+    whatWeDid: 'Explicit value.',
+    rawNoteText: LEVEL_2_RAW,
+    createdAt: '2026-07-08T12:00:00Z',
+  });
+
+  assert.equal(note.whatWeDid, 'Explicit value.');
+  assert.equal(note.progressChallenges, '');
+  assert.equal(note.practiceGoals, '');
+});
+
+test('normalisePracticeNoteLogRow backfills blank structured columns on read', () => {
+  const row = normalisePracticeNoteLogRow({
+    student_mms_id: 'sdt_fen',
+    raw_note_text: LEVEL_2_RAW,
+    what_we_did: '',
+    progress_challenges: '',
+    practice_goals: '',
+  });
+
+  assert.equal(row.whatWeDid, 'Today we worked on your F major scale and broken chords.');
+  assert.equal(row.progressChallenges, 'The broken chords were successful today.');
+  assert.equal(row.practiceGoals, 'Practise the scale slowly with correct fingering.');
+});
+
+test('buildPortalPracticeNoteText renders Level 2 headings and inline bodies', () => {
+  assert.equal(
+    buildPortalPracticeNoteText({ rawNoteText: LEVEL_2_RAW }),
+    [
+      '**What we did:**\nToday we worked on your F major scale and broken chords.',
+      '**Progress & Challenges:**\nThe broken chords were successful today.',
+      '**Practice Goals:**\nPractise the scale slowly with correct fingering.',
+    ].join('\n\n'),
+  );
+});
 
 test('normalisePracticeNotePayload requires student and note text', () => {
   const note = normalisePracticeNotePayload({}, new Date('2026-06-11T12:00:00Z'));

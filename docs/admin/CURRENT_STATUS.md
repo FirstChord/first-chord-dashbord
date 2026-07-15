@@ -24,6 +24,15 @@ The admin overview is a strict meeting-start surface, not a complete status boar
 
 *Last working arc only — older work is in `git log --oneline` + the Learning Log.*
 
+- **Optional AI issue briefing pilot (2026-07-15, local):** the deterministic
+  issue explanation can now be compressed on demand by a server-side model into
+  a short headline, explanation, check and caveat. The model receives only the
+  already-redacted explanation view model, has no tools, and cannot change or
+  resolve an issue. Strict local validation, a five-second timeout, per-admin
+  rate limit, deterministic fallback, enum-only feedback and a dedicated
+  feature flag/key keep the integration bounded. It remains disabled until the
+  separate Railway AI key and enable flag are configured.
+
 - **Human issue labels + corrected Stripe read contract (2026-07-15, local):**
   issue cards now expose short deterministic labels such as **Billing stopped
   unexpectedly**, **Pause state mismatch**, and **Practice note not delivered**
@@ -53,9 +62,9 @@ The admin overview is a strict meeting-start surface, not a complete status boar
   incoming-message regression set is 48 independent synthetic cases with
   privacy checks and date/abstention/harmful-archive scoring. Fixed cited
   operations guidance and a low-risk, human-approval-required communication
-  proposal contract are implemented as pure seams only. No AI provider,
-  dashboard AI UI, broad tool access, sending, or consequential action was
-  added. The previous real-family fixture is removed from HEAD but still exists
+  proposal contract were implemented as pure seams. The later issue-briefing
+  pilot is the sole model consumer; it adds no broad tool access, sending, or
+  consequential action. The previous real-family fixture is removed from HEAD but still exists
   in git history; do not reuse it and do not rewrite history without an explicit
   repository-wide decision. The complete 1–12 implementation register,
   verification guide, privacy explanation, and remaining risks are in

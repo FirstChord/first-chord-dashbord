@@ -4,6 +4,7 @@ import { getActiveTutorOptions } from '@/lib/admin/tutors';
 import { getPlanningDashboard } from '@/lib/admin/planning';
 import { getPracticeNoteLogRows } from '@/lib/admin/sheets';
 import { getCommunicationLogForStudent } from '@/lib/admin/communications';
+import { buildStudentPracticeTimeline } from '@/lib/admin/practice-timeline-helpers.mjs';
 import AdminStudentDetailClient from '@/components/admin/AdminStudentDetailClient';
 
 export default async function AdminStudentDetailPage({ params }) {
@@ -35,12 +36,15 @@ export default async function AdminStudentDetailPage({ params }) {
       momentumLabel: item.momentumLabel,
     }));
 
+  const practiceTimeline = buildStudentPracticeTimeline(recentPracticeNotes);
+
   return (
     <AdminStudentDetailClient
       student={student}
       tutorOptions={tutorOptions}
       linkedPlanningItems={linkedPlanningItems}
       recentPracticeNotes={recentPracticeNotes.slice(0, 5)}
+      practiceTimeline={practiceTimeline}
       recentCommunications={recentCommunications}
     />
   );
