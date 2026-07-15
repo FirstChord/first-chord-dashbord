@@ -114,6 +114,9 @@ function IssueCardBody({
   const refreshStripeFirst = issue.sourcePresent && shouldRefreshStripeFirst(issue);
   const recommendedActionText = getRecommendedActionText(issue);
   const evidence = buildIssueEvidenceSummary(issue, freshness);
+  const stripeCustomerUrl = issue.stripeCustomerId && issue.systemsAffected?.includes('Stripe')
+    ? `${STRIPE_DASHBOARD_BASE}/customers/${encodeURIComponent(issue.stripeCustomerId)}`
+    : '';
   const pauseWorkflow = isPauseIssue(issue)
     ? buildPauseWorkflowSummary({
       pauseSummary: issue.pauseSummary,
@@ -157,6 +160,17 @@ function IssueCardBody({
                 </span>
               ) : null}
               <AgeChip updatedAt={issue.updatedAt} />
+              {stripeCustomerUrl ? (
+                <a
+                  href={stripeCustomerUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={`Open ${getStudentLabel(issue)}'s Stripe customer page`}
+                  className="rounded-full border border-violet-200 bg-violet-50 px-2.5 py-0.5 text-[11px] font-semibold text-violet-800 transition hover:border-violet-300 hover:bg-violet-100 hover:text-violet-950"
+                >
+                  Stripe customer ↗
+                </a>
+              ) : null}
             </div>
             <p className={`${featured ? 'text-[1.08rem]' : 'text-base'} max-w-3xl leading-relaxed text-slate-700`}>{getIssueStory(issue)}</p>
             {issue.type === 'PAYMENT_RETRYING' && issue.stripeSnapshot?.nextPaymentAttemptAt ? (
@@ -242,16 +256,6 @@ function IssueCardBody({
             <summary className="cursor-pointer list-none font-medium text-slate-500 transition hover:text-slate-900" aria-label="More options">•••</summary>
             <div className="mt-4 space-y-4">
               <div className="flex flex-wrap gap-3">
-                {issue.stripeCustomerId ? (
-                  <a
-                    href={`${STRIPE_DASHBOARD_BASE}/customers/${encodeURIComponent(issue.stripeCustomerId)}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="rounded-lg border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-medium text-violet-900 transition hover:bg-violet-100"
-                  >
-                    View in Stripe ↗
-                  </a>
-                ) : null}
                 {issue.email ? (
                   <button
                     type="button"
