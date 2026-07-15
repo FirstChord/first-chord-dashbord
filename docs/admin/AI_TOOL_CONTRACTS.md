@@ -4,9 +4,9 @@ Last updated: 2026-07-14
 
 This is the allowlist and design boundary for any future AI assistance inside
 the dashboard. It does not enable an AI runtime, expose an endpoint, or grant an
-agent access to an integration. A capability is unavailable until its narrow
-read/proposal implementation, privacy review, tests, UI boundary, and logging
-exist.
+agent access to an integration. Some pure read/proposal foundations now exist,
+but a capability is unavailable to a model or user until its privacy review,
+tests, UI boundary, provider/retention decision, and logging exist.
 
 ## Core Pattern
 
@@ -53,12 +53,12 @@ These names reserve narrow contracts; they are not callable tools today.
 
 | Capability | Problem solved | Deterministic input/context | AI may produce | Must not do | Approval / evaluation / privacy | Readiness |
 |---|---|---|---|---|---|---|
-| `student_context.read` | Give an admin a concise explanation of a student's current operational context | Exact `mmsId`; redacted projection of the shared student context, lifecycle, pause/schedule cache provenance, conflicts and freshness | Summary with source labels, uncertainty, and links to existing screens | Return raw Sheet rows, email, phone, Stripe IDs, credentials, or infer missing facts | Read-only; test that redaction and provenance are complete. Evaluate against manually checked context summaries. Student-scoped and minimum necessary | Build next, after a redacted projection is specified |
-| `issue_context.read` | Explain why a named issue exists and what evidence would resolve it | Exact issue ID/type plus non-mutating detector inputs and current queue state | Explanation, missing evidence, and relevant workflow link | Call `getAdminIssues()` because that synchronizes `Issue_Queue`; acknowledge/resolve issues; write student truth | Read-only. Golden fixtures should cover active, stale, source-absent, and conflicting issues. Avoid unrelated family context | Viable after a non-mutating issue read service exists |
+| `student_context.read` | Give an admin a concise explanation of a student's current operational context | Exact `mmsId`; redacted projection of the shared student context, lifecycle, pause/schedule cache provenance, conflicts and freshness | Summary with source labels, uncertainty, and links to existing screens | Return raw Sheet rows, email, phone, Stripe IDs, credentials, or infer missing facts | Read-only; test that redaction and provenance are complete. Evaluate against manually checked context summaries. Student-scoped and minimum necessary | Server-only strict reader/projection/service implemented; no route, UI, or model |
+| `issue_context.read` | Explain why a named issue exists and what evidence would resolve it | Exact student/source/type plus non-mutating detector inputs and current queue state | Explanation, missing evidence, and relevant workflow link | Call `getAdminIssues()` because that synchronizes `Issue_Queue`; acknowledge/resolve issues; write student truth | Read-only. Golden fixtures should cover active, stale, source-absent, and conflicting issues. Avoid unrelated family context | Server-only static-detector/recorded-evidence service implemented; live Stripe is always labelled not refreshed; no route, UI, or model |
 | `finance_overview.read` | Explain aggregate finance position without exposing provider accounts | Existing aggregate finance overview, assumptions version, cache age, and coverage counts | Plain-English aggregate explanation and caveats | Fetch live Stripe data, expose per-family payment details, change assumptions, or execute payment | Read-only aggregate. Evaluate calculations against the deterministic response and require explicit cache caveats | Viable now as a future wrapper around the existing aggregate service |
-| `operations_guidance.read` | Find the right policy or recovery step quickly | Fixed allowlist of runbook/policy document IDs and sections | Quoted-short guidance, source link, and whether human escalation is needed | Read arbitrary repository files, use shell, inspect secrets, or invent recovery steps | Read-only. Retrieval tests must require citations and abstention when the allowlist has no answer | Viable now after an allowlisted document index exists |
-| `incoming_classification.propose` | Reduce manual triage of captured WhatsApp messages | Redacted message text, existing classification enum, deterministic date candidates, and bounded student candidates | Proposed category/dates/student, evidence spans, ambiguity flags, and `needs_review` abstention | Create a pause, planning item, archive decision, payment change, message, or new student match outside supplied candidates | Human reviews before any conversion/archive. Evaluate against corrected classifications/dates and false-auto-archive cases. Remove names/phones from evaluation fixtures | Useful now as a shadow/proposal feature only |
-| `communication_draft.propose` | Prepare a reply from confirmed context and policy | Confirmed student/workflow facts, approved policy snippets, audience/tone chosen by the admin | Draft text plus cited facts and unresolved placeholders | Select or reveal a recipient, send/copy/log as sent, claim delivery, or invent a promise/date | Human edits and approves in the existing communication workflow. Evaluate approved edits, unsupported claims, tone, and safeguarding leakage | Useful after contact-role and draft-approval rules are explicit |
+| `operations_guidance.read` | Find the right policy or recovery step quickly | Fixed allowlist of runbook/policy document IDs and sections | Quoted-short guidance, source link, and whether human escalation is needed | Read arbitrary repository files, use shell, inspect secrets, or invent recovery steps | Read-only. Retrieval tests require citations, bounded results, and abstention when the allowlist has no answer | Pure fixed index/search implemented; no arbitrary file read, route, UI, or model |
+| `incoming_classification.propose` | Reduce manual triage of captured WhatsApp messages | Redacted message text, existing classification enum, deterministic date candidates, and bounded student candidates | Proposed category/dates/student, evidence spans, ambiguity flags, and `needs_review` abstention | Create a pause, planning item, archive decision, payment change, message, or new student match outside supplied candidates | Human reviews before any conversion/archive. Evaluate against corrected classifications/dates and false-auto-archive cases. Remove names/phones from evaluation fixtures | Synthetic classification/date/abstention/privacy harness implemented; proposal runtime and production holdout do not exist |
+| `communication_draft.propose` | Prepare a reply from confirmed context and policy | Confirmed student/workflow facts, approved policy snippets, audience/tone chosen by the admin | Draft text plus cited facts and unresolved placeholders | Select or reveal a recipient, send/copy/log as sent, claim delivery, or invent a promise/date | Human edits and approves in the existing communication workflow. Evaluate approved edits, unsupported claims, tone, and safeguarding leakage | Pure low-risk context/proposal validator implemented for acknowledgement cases; no contact-role lookup, UI, provider, copy, log, or send |
 
 ## Explicitly Not Allowlisted
 
@@ -95,6 +95,12 @@ pause/planning outcomes, and event-log transition shapes. Practice Chat history
 should wait for an explicit retention/redaction decision; delivery logs contain
 student, recipient, device, and provider metadata that a drafting feature does
 not normally need.
+
+The committed incoming regression fixture is synthetic as of 2026-07-14. Its
+predecessor contained a real family's message history and remains reachable in
+git history. Do not use that historical blob for development, prompts, or
+evaluation. Rewriting shared history is a separate operational decision because
+it affects every clone and deployment; it has not been done by this change.
 
 Student and family records can contain safeguarding-sensitive context. Retrieval
 must be admin-authorised, student-scoped, bounded in time and record count, and

@@ -51,7 +51,7 @@ A starred WhatsApp message captured without its text (older than the bridge cach
 
 ## Eval fixture (incoming classifier)
 
-The hand-labelled set of real anonymised parent messages (`tests/admin/fixtures/incoming-eval-set.json`) that `classifyIncomingMessage` is measured against. `npm run eval:incoming` prints accuracy + misses; the test suite pins minimum floors so rule changes can't silently regress on real traffic. Labels are the operationally correct category, not the old prototype's labels.
+The privacy-reviewed set of independent synthetic message cases (`tests/admin/fixtures/incoming-eval-set.json`) that `classifyIncomingMessage` is measured against. `npm run eval:incoming` prints classification, date and harmful-auto-archive results; the test suite pins minimum floors so rule changes cannot silently regress. It is a development regression set, not a production holdout. Any later holdout built from reviewed outcomes must be de-identified, access-controlled and kept out of git.
 
 ## Auto-capture (incoming inbox)
 

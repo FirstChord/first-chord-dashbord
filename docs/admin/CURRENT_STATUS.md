@@ -1,6 +1,6 @@
 # Admin Current Status
 
-Last updated: 2026-07-14
+Last updated: 2026-07-15
 
 Tracked current-status entrypoint for agents working from the `music-school-dashboard` repo.
 
@@ -24,7 +24,25 @@ The admin overview is a strict meeting-start surface, not a complete status boar
 
 *Last working arc only — older work is in `git log --oneline` + the Learning Log.*
 
-- **Agent-readiness improvements 5–8 (2026-07-14, local):** Students and Issues
+- **Agent-readiness improvements 9–12 + Practice Chat claim hardening
+  (2026-07-15, deployed):** Practice Chat now fails closed when its delivery claim
+  cannot be saved, so an MMS/Gmail action cannot start behind a failed audit
+  write; a same-process key guard narrows duplicate execution while the existing
+  Sheets cross-instance race remains an explicit rollout blocker. Future
+  assistant work now has non-mutating strict readers, redacted student/issue
+  projections, and a server-only context service with no route or model. The
+  incoming-message regression set is 48 independent synthetic cases with
+  privacy checks and date/abstention/harmful-archive scoring. Fixed cited
+  operations guidance and a low-risk, human-approval-required communication
+  proposal contract are implemented as pure seams only. No AI provider,
+  dashboard AI UI, broad tool access, sending, or consequential action was
+  added. The previous real-family fixture is removed from HEAD but still exists
+  in git history; do not reuse it and do not rewrite history without an explicit
+  repository-wide decision. The complete 1–12 implementation register,
+  verification guide, privacy explanation, and remaining risks are in
+  `AGENT_READINESS_AUDIT_OUTCOMES.md`.
+
+- **Agent-readiness improvements 5–8 (2026-07-14, deployed):** Students and Issues
   now share one deterministic student-context builder with source/conflict/cache
   provenance; pure payment/pause detectors and the explicitly writable pause
   workflow are separated from generic issue orchestration; approval and
@@ -68,7 +86,7 @@ Durable rules (don't grow per session). The state-tab map is `docs/admin/STATE_T
 - **Planning state is dashboard-owned work state** (`Planning_Items` + append-only `Planning_Progress_Log`), not external truth. Linked student IDs point at `Students` rows. The Friday school-forward + Monday scheduling prompts are seeded planning items, not a workflow engine. Learning/strategic notes are planning items, not finance forecasts.
 - **Pause guardrail:** pause reminders link to a student before billing actions; generic `Done` never changes payment state — **`Mark pause completed`** is the guarded action that logs confirmation, sets `stripe_paused_expected` via the student PATCH route, appends `Event_Log`, and closes the task. The dashboard generates the parent message but does **not** send WhatsApp. Parked pause cards are ignored by the finance forecast.
 - **Parent understanding** (`Parent_Understanding_State`) is a manual, approval-first campaign workflow — not a CRM or message automation. Contact-detail fixes are flag/note only; don't edit MMS from it yet.
-- **Practice Chat** note ownership bridges admin↔learning via `Practice_Notes_Log`. Level 2 (Gmail-delivered parent notes) is a **controlled pilot** limited to Finn/Tom/Fennella (+ test student), idempotent via `delivery_key = student + MMS attendance + note hash`; transactional lesson-note email is the one automated-email exception — payment/pause/onboarding/WhatsApp/marketing stay approval-first. Before widening, update `docs/admin/PRACTICE_CHAT_DELIVERY_AUDIT.md` (caller identity, authorisation, config-driven rollout, duplicate-send concurrency are the blockers).
+- **Practice Chat** note ownership bridges admin↔learning via `Practice_Notes_Log`. Level 2 (Gmail-delivered parent notes) is a **controlled pilot** limited in code to Finn/Tom/Fennella/Dean (+ test student), idempotent via `delivery_key = student + MMS attendance + note hash`; transactional lesson-note email is the one automated-email exception — payment/pause/onboarding/WhatsApp/marketing stay approval-first. A claim must be recorded before provider work begins, but Sheets cannot enforce a cross-instance unique claim. Before widening, update `docs/admin/PRACTICE_CHAT_DELIVERY_AUDIT.md` (caller identity, authorisation, config-driven rollout, duplicate-send concurrency are the blockers).
 - **Finance lanes** (see [[Financial Layer]]): `Expenses` = recurring overhead; `Expense_Log` = actual spend to reconcile at month-end (replaces the old `General` buffer); `Finance_Snapshot` = dated estimates, not accounting (each row's `notes` = `PRICE_ASSUMPTIONS_VERSION`); `Stripe_Amounts_Cache`/`Stripe_Collected_Monthly` = weekly-cron Stripe actuals + monthly collections (read-only calibration — live Stripe truth stays in Stripe); `Payroll_Runs` = payroll review/paid ledger; `Tutor_Pay`/`Tutor_Wise` = pay config + Wise recipients (salaries/banking never in git).
 
 Before deploying, verify with:
@@ -100,7 +118,7 @@ Open candidates (the Obsidian `08 Operations/Active Roadmap` is the fuller list)
 - Contact-role model before any message automation.
 - Communication draft→approve layer before any WhatsApp Cloud API (no auto-send).
 - **Incoming/WhatsApp groups — deferred (from the 2026-07 build):** (a) **PII/retention + lawful-basis note** for stored parent/child message content — not yet written; (b) **capture a student's WhatsApp group at onboarding** rather than relying only on the weekly re-sync; (c) **sibling groups are add-only in the UI** — removing a mis-added student means editing `WhatsApp_Group_Map.additional_mms_ids` directly (add a remove affordance if it bites); (d) **"open the group from a planning card" — explored and shelved:** desktop invite-link (browser interstitial + "Open WhatsApp?" handoff) is clunkier than just searching the predictable group name, so we surface nothing; a phone-only invite-link button is possible later at a one-time ~189 **admin-gated** `groupInviteCode` fetch (codes are revocable) — only worth it if the phone flow specifically annoys; (e) the **last-active/inactivity filter is inert** (Baileys history doesn't deliver `conversationTimestamp` in the sync window; `skippedInactive` stays 0) — roster bucketing covers old-student removal, so the timestamp path is prunable dead-ish code.
-- Practice Chat Level 2 delivery audit (read-only first) before widening beyond Finn/Tom/Fennella.
+- Practice Chat Level 2 delivery blockers before widening beyond Finn/Tom/Fennella/Dean.
 - Future capacity overlay (tentative/hire availability) — only after the MMS `Free` view proves useful; keep separate from real calendar data.
 - **Monoliths to split:** planning client and `sheets.js` are done (see Recently shipped). Remaining candidates are feature/section-component peels where helpers already exist: `AdminIssuesPageClient.js`, `AdminStudentDetailClient.js`, `AdminParentUnderstandingPageClient.js`. See `docs/admin/MONOLITH_SPLIT_MAP.md` + [[Monolith Split — Why and How]].
 

@@ -14,6 +14,10 @@ import {
   isPracticeNoteDeliveryInProgress,
   normalisePracticeNotePayload,
 } from '@/lib/admin/practice-notes-helpers.mjs';
+import {
+  buildPracticeNoteClaimFailureResponse,
+  executeClaimedPracticeNoteDelivery,
+} from '@/lib/admin/practice-note-delivery-workflow.mjs';
 import { assertPracticeNotesEmailConfigured, sendPracticeNoteEmail } from '@/lib/admin/practice-notes-email';
 import { getPracticeNoteLogRows, upsertPracticeNoteLogRow } from '@/lib/admin/sheets';
 import { authenticatePracticeChatRequest, corsHeaders } from '@/lib/admin/practice-chat-auth.mjs';
@@ -221,65 +225,92 @@ export async function POST(request) {
       return Response.json({ error: claimNote.errors.join(', ') }, { status: 400, headers });
     }
 
-    let practiceNoteLog = null;
-    try {
-      const claimResult = await upsertPracticeNoteLogRow(claimNote);
-      practiceNoteLog = {
-        ok: !claimResult?.error,
-        ...claimResult,
-      };
-    } catch (error) {
-      practiceNoteLog = {
-        ok: false,
-        error: error.message || 'Practice note delivery claim save failed',
-      };
-    }
-
-    const result = existingDelivery?.mmsAttendanceSaved
-      ? await executePracticeNoteEmailRetry({
-          preview,
-          noteText: effectiveNoteText,
-          existingDelivery,
-        })
-      : await executePracticeNoteMmsTestWrite({
-          studentId,
-          noteText: effectiveNoteText,
-          targetAttendanceId,
-          attendanceStatus,
+    const delivery = await executeClaimedPracticeNoteDelivery({
+      deliveryKey,
+      saveClaim: () => upsertPracticeNoteLogRow(claimNote),
+      executeDelivery: () => existingDelivery?.mmsAttendanceSaved
+        ? executePracticeNoteEmailRetry({
+            preview,
+            noteText: effectiveNoteText,
+            existingDelivery,
+          })
+        : executePracticeNoteMmsTestWrite({
+            studentId,
+            noteText: effectiveNoteText,
+            targetAttendanceId,
+            attendanceStatus,
+          }),
+      finalizeDelivery: async (result) => {
+        const email = result.practiceNoteEmail || result.emailNotes || {};
+        const completedAt = new Date().toISOString();
+        const finalNote = normalisePracticeNotePayload({
+          ...baseNotePayload,
+          recipientEmail: recipient.email || email.toEmail || existingDelivery?.recipientEmail || '',
+          emailChannel: isAbsentNoMakeup ? 'none' : email.channel || 'gmail',
+          emailSendStatus: isAbsentNoMakeup ? 'not_sent_absent' : email.ok === false ? 'failed' : 'sent',
+          emailSentAt: isAbsentNoMakeup || email.ok === false ? '' : completedAt,
+          gmailMessageId: email.gmailMessageId || '',
+          gmailThreadId: email.gmailThreadId || '',
+          emailError: email.error || '',
+          manualFollowUpNeeded: email.ok === false,
+          mmsAttendanceSaved: Boolean(result.attendanceSave?.ok || existingDelivery?.mmsAttendanceSaved),
+          mmsAttendanceStatus: attendanceStatus,
+          operationStatus: isAbsentNoMakeup ? 'attendance_only_completed' : email.ok === false ? 'email_failed' : 'completed',
+          completedAt: email.ok === false ? '' : completedAt,
         });
 
-    const email = result.practiceNoteEmail || result.emailNotes || {};
-    const completedAt = new Date().toISOString();
-    const finalNote = normalisePracticeNotePayload({
-      ...baseNotePayload,
-      recipientEmail: recipient.email || email.toEmail || existingDelivery?.recipientEmail || '',
-      emailChannel: isAbsentNoMakeup ? 'none' : email.channel || 'gmail',
-      emailSendStatus: isAbsentNoMakeup ? 'not_sent_absent' : email.ok === false ? 'failed' : 'sent',
-      emailSentAt: isAbsentNoMakeup || email.ok === false ? '' : completedAt,
-      gmailMessageId: email.gmailMessageId || '',
-      gmailThreadId: email.gmailThreadId || '',
-      emailError: email.error || '',
-      manualFollowUpNeeded: email.ok === false,
-      mmsAttendanceSaved: Boolean(result.attendanceSave?.ok || existingDelivery?.mmsAttendanceSaved),
-      mmsAttendanceStatus: attendanceStatus,
-      operationStatus: isAbsentNoMakeup ? 'attendance_only_completed' : email.ok === false ? 'email_failed' : 'completed',
-      completedAt: email.ok === false ? '' : completedAt,
+        try {
+          const logResult = finalNote.errors.length
+            ? { ok: false, error: finalNote.errors.join(', ') }
+            : await upsertPracticeNoteLogRow(finalNote);
+          return {
+            ok: !logResult?.error,
+            ...logResult,
+          };
+        } catch (error) {
+          return {
+            ok: false,
+            error: error.message || 'Practice note log save failed',
+          };
+        }
+      },
     });
 
-    try {
-      const logResult = finalNote.errors.length
-        ? { ok: false, error: finalNote.errors.join(', ') }
-        : await upsertPracticeNoteLogRow(finalNote);
-      practiceNoteLog = {
-        ok: !logResult?.error,
-        ...logResult,
-      };
-    } catch (error) {
-      practiceNoteLog = {
-        ok: false,
-        error: error.message || 'Practice note log save failed',
-      };
+    if (delivery.inProgress) {
+      return Response.json({
+        success: true,
+        mode,
+        inProgress: true,
+        idempotency: {
+          status: 'in_progress',
+          deliveryKey,
+          message: 'This lesson note delivery is already being processed.',
+        },
+        practiceNoteLog: {
+          ok: true,
+          skipped: true,
+          reason: 'in_process',
+          deliveryKey,
+        },
+        ...preview,
+        dryRun: false,
+      }, { headers });
     }
+
+    if (!delivery.ok) {
+      const failure = buildPracticeNoteClaimFailureResponse({
+        mode,
+        deliveryKey,
+        claimResult: delivery.claimResult,
+        preview,
+        isAbsentNoMakeup,
+      });
+      return Response.json(failure.body, { status: failure.status, headers });
+    }
+
+    const result = delivery.deliveryResult;
+    const practiceNoteLog = delivery.finalResult;
+    const deliveryTrackingFailed = practiceNoteLog?.ok === false;
 
     return Response.json({
       success: true,
@@ -290,6 +321,8 @@ export async function POST(request) {
       },
       practiceNoteLog,
       ...result,
+      deliveryTrackingFailed,
+      partialSuccess: Boolean(result.partialSuccess || deliveryTrackingFailed),
     }, { headers });
   } catch (error) {
     return Response.json({

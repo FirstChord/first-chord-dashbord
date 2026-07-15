@@ -22,6 +22,7 @@ Read in this order:
 12. `docs/admin/WHATSAPP_INCOMING_BRIDGE.md` when touching incoming WhatsApp capture, group maps, or message classification
 13. `docs/workflows/06-paying-tutors.md` for the live human payroll run; pair it with `docs/admin/STATE_TABS_SCHEMA.md` + the `CURRENT_STATUS.md` finance section when changing `/admin/finance`, payroll, `Tutor_Pay`, `Tutor_Wise`, statements or `Payroll_Runs`
 14. `docs/admin/PRACTICE_CHAT_DELIVERY_AUDIT.md` when touching Practice Chat Level 2 delivery or rollout
+15. `docs/admin/AGENT_READINESS_AUDIT_OUTCOMES.md` for the July 2026 audit implementation register, verification, privacy note, and remaining risks
 
 `docs/admin/AUDIT_2026-06-10.md` is critique input, not a live plan. Use judgement before implementing its recommendations.
 

@@ -16,6 +16,9 @@ This admin index is the map of durable admin documentation. Older V1/V2 drafts a
   Practical handoff note for a new Codex/AI agent: paths, commands, current direction, source-of-truth rules, and documentation update rules.
 - [CURRENT_STATUS.md](./CURRENT_STATUS.md)
   Current admin direction, recent work, and next recommended slices.
+- [AGENT_READINESS_AUDIT_OUTCOMES.md](./AGENT_READINESS_AUDIT_OUTCOMES.md)
+  Completion register for the 12 agent-readiness/thin-AI improvements, Practice
+  Chat claim hardening, verification, privacy, and remaining risks.
 - [DOCUMENTATION_MAP.md](./DOCUMENTATION_MAP.md)
   Canonical documentation entry points, repo-vs-Obsidian split, and historical-doc rules.
 - [V3_LOOP_ARCHITECTURE.md](./V3_LOOP_ARCHITECTURE.md)

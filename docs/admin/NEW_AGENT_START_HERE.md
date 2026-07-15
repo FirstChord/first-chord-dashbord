@@ -174,14 +174,14 @@ Practice Chat now has a dashboard bridge:
 There is also a narrow Level 2 MMS-write test route:
 
 - route: `POST /api/practice-notes/mms-test`
-- allowed MMS students: dashboard-verified students whose tutor is Finn, Tom, or Fennella, plus Test Studenty for local testing
+- allowed MMS students: dashboard-verified students whose tutor is Finn, Tom, Fennella, or Dean, plus Test Studenty for local testing
 - dry-run mode previews attendance target, candidate attendance records, selected-date reason, preserved price, and recipients
 - execute mode writes attendance/notes to MMS, sends a First Chord Gmail message, and appends/upserts the enriched note/audit row, but only when `confirmLevel2Pilot: true`
-- execute mode is idempotency-aware; do not remove that guard before real tutor rollout
+- execute mode must persist its claim before MMS/Gmail work and has a same-process delivery-key guard; this is not a cross-instance lock or a substitute for a transactional unique constraint
 - local testing proves note write + attendance save; MMS `emailnotes` may fail unless MMS sees the principal as a teacher, so the current test path uses `GMAIL_*` send-only OAuth env vars instead
 - API route guard: no-Origin requests are rejected unless a valid `X-FirstChord-PracticeChat-Secret` header is supplied. For rollout, set matching `PRACTICE_CHAT_API_SECRET` and `NEXT_PUBLIC_PRACTICE_CHAT_API_SECRET`; this is a coarse bridge secret, not per-tutor auth.
 - do not generalise this until lesson targeting is visible/explicit, Gmail delivery has been tested, retry/idempotency is designed, and at least one safe real-student workflow has been verified
-- before widening beyond Finn/Tom/Fenella, update and act on `docs/admin/PRACTICE_CHAT_DELIVERY_AUDIT.md`; caller identity, caller/student authorisation, config-driven rollout, and duplicate-send concurrency are blockers
+- before widening beyond Finn/Tom/Fennella/Dean, update and act on `docs/admin/PRACTICE_CHAT_DELIVERY_AUDIT.md`; caller identity, caller/student authorisation, config-driven rollout, and duplicate-send concurrency are blockers
 
 Do not create a second source of truth unless the user explicitly agrees.
 

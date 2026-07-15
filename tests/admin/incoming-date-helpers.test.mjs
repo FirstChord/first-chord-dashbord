@@ -4,8 +4,8 @@ import assert from 'node:assert/strict';
 import { extractDatesFromMessage, formatFriendlyDate } from '../../lib/admin/incoming-date-helpers.mjs';
 
 // Reference dates are fixed so relative phrases resolve deterministically.
-// Several messages are real parent phrasings from the anonymised
-// firstchord-assistant dataset.
+// Cases are synthetic and use fixed reference dates so relative phrases remain
+// representative without retaining a family's message history.
 
 test('extracts an explicit from/till window with ordinals and month names', () => {
   const result = extractDatesFromMessage(

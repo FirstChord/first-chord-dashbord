@@ -9,6 +9,8 @@ copying it here.
 1. Read `docs/admin/CURRENT_STATUS.md` for the active system state.
 2. Read `docs/admin/STATE_TABS_SCHEMA.md` for data ownership, keys, writers,
    caches, logs, concurrency, and retention limits.
+   For the July 2026 readiness audit outcomes and remaining gaps, use
+   `docs/admin/AGENT_READINESS_AUDIT_OUTCOMES.md`.
 3. Read the focused workflow doc and tests from the map below.
 4. For auth, deployment, credentials, integration health, backups, or recovery,
    read `docs/admin/OPERATIONS_RUNBOOK.md` and
@@ -68,6 +70,7 @@ Do not silently choose a winner for a new conflict type.
 | Practice Chat and notes | `app/api/practice-notes/`, `app/api/admin/practice-notes/` | `lib/admin/practice-*.mjs`, `lib/admin/practice-notes-email.js`, `lib/admin/sheets/practice-notes.mjs` | `PRACTICE_CHAT_DELIVERY_AUDIT.md`, `PRACTICE_CHAT_WHISPER_HARDENING.md` | `practice-*` |
 | Parent understanding and communications | `app/admin/workflows/parent-understanding/`, `app/admin/communications/` | `lib/admin/parent-understanding*`, `lib/admin/communications*` | `WORKFLOW_DESIGN_PRINCIPLES.md`, `COPY_AND_TONE.md` | `parent-understanding-*`, `communications-helpers` |
 | Health and recovery | health panels, cron routes, GitHub workflows | `lib/admin/health*`, integration adapters, `.github/workflows/` | `OPERATIONS_RUNBOOK.md`, `BUG_FIXES.md` | `health-helpers`, adapter/cache tests |
+| Assistant-safe foundations | no route or UI yet | `lib/admin/assistant-context-*`, `lib/admin/operations-guidance-helpers.mjs`, `lib/admin/communication-draft-proposal-helpers.mjs`, `lib/admin/incoming-eval-helpers.mjs` | `AI_TOOL_CONTRACTS.md`, `STATE_TABS_SCHEMA.md`, `HYGIENE_AND_SECRETS.md` | `assistant-context-*`, `operations-guidance-helpers`, `communication-draft-proposal-helpers`, `incoming-classifier-eval`, `evaluation-fixture-privacy` |
 
 Test names in the table refer to `tests/admin/*.test.mjs`.
 

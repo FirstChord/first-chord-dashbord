@@ -1,7 +1,6 @@
 #!/usr/bin/env node
-// Evaluates classifyIncomingMessage against the curated real-message fixture
-// (tests/admin/fixtures/incoming-eval-set.json) and prints accuracy, a
-// confusion summary, and every miss — the tuning loop for the keyword rules.
+// Evaluates classifyIncomingMessage and deterministic date extraction against
+// the synthetic privacy-reviewed fixture and prints every miss.
 //
 //   node scripts/eval-incoming-classifier.mjs
 //
@@ -15,22 +14,35 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { extractDatesFromMessage } from '../lib/admin/incoming-date-helpers.mjs';
 import { classifyIncomingMessage } from '../lib/admin/incoming-message-helpers.mjs';
-import { scoreIncomingClassifier } from '../lib/admin/incoming-eval-helpers.mjs';
+import { scoreIncomingClassifier, scoreIncomingDateExtraction } from '../lib/admin/incoming-eval-helpers.mjs';
 
 const fixturePath = path.join(path.dirname(fileURLToPath(import.meta.url)), '../tests/admin/fixtures/incoming-eval-set.json');
-const { messages } = JSON.parse(readFileSync(fixturePath, 'utf8'));
+const fixture = JSON.parse(readFileSync(fixturePath, 'utf8'));
+const { messages } = fixture;
 
 const report = scoreIncomingClassifier(messages, classifyIncomingMessage);
+const dateReport = scoreIncomingDateExtraction(messages, extractDatesFromMessage);
 
+console.log(`Fixture: schema ${fixture.schemaVersion} · ${fixture.dataOrigin}`);
 console.log(`Messages: ${report.total}`);
 console.log(`Exact accuracy:  ${(report.exactAccuracy * 100).toFixed(1)}% (${report.exactCorrect}/${report.total})`);
 console.log(`Family accuracy: ${(report.familyAccuracy * 100).toFixed(1)}% (${report.familyCorrect}/${report.total})`);
 console.log(`Actionable vs noise: ${(report.actionableAccuracy * 100).toFixed(1)}% (${report.actionableCorrect}/${report.total})`);
+console.log(`Harmful auto-archives: ${report.harmfulAutoArchives}/${report.expectedActionable}`);
+console.log(`Date extraction: ${(dateReport.exactAccuracy * 100).toFixed(1)}% (${dateReport.exactCorrect}/${dateReport.total})`);
 
 console.log('\nPer-label (exact):');
 for (const [label, stats] of Object.entries(report.perLabel)) {
   console.log(`  ${label.padEnd(17)} ${stats.correct}/${stats.total}`);
+}
+
+if (dateReport.misses.length) {
+  console.log('\nDate misses:');
+  for (const miss of dateReport.misses) {
+    console.log(`  ${miss.id} expected ${JSON.stringify(miss.expected)}, got ${JSON.stringify(miss.actual)}`);
+  }
 }
 
 if (report.misses.length) {

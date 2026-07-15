@@ -1,8 +1,9 @@
 # Practice Chat Delivery Audit
 
-Last updated: 2026-07-03
+Last updated: 2026-07-14
 
-This is a read-only audit note for Practice Chat delivery before widening Level 2 beyond Finn, Tom, and Fenella.
+This records the checked delivery boundary before widening Level 2 beyond Finn,
+Tom, Fennella, and Dean.
 
 Do not treat this as an implementation plan by itself. Confirm each point against current code before changing behaviour.
 
@@ -12,15 +13,19 @@ Level 2 Practice Chat currently:
 
 - accepts calls from the Practice Chat PWA through dashboard API routes
 - uses a shared bridge secret plus allowed browser origins
-- is limited to dashboard-verified students whose tutor is Finn, Tom, or Fenella, plus Test Studenty
+- is limited to dashboard-verified students whose tutor is Finn, Tom, Fennella, or Dean, plus Test Studenty
 - allows speech capture or a typed-note fallback before the final human-reviewed action
 - previews the selected MMS attendance target before writing
 - can mark the student `Present`, write the note/attendance to MMS, and send the parent note through First Chord Gmail
 - can mark an on-the-day cancellation as `AbsentNoMakeup` without sending a parent practice-note email
 - upserts delivery/audit state into `Practice_Notes_Log`
 - uses `delivery_key = student + MMS attendance + note hash` to avoid duplicate sends for the same delivery
+- must save an `in_progress`/`retrying_email` claim before MMS attendance or Gmail execution begins; a failed claim returns 503 and explicitly reports that neither provider action was attempted
+- holds a same-process `delivery_key` guard across claim, provider execution, and final logging
+- reports `deliveryTrackingFailed` and `partialSuccess` if provider work succeeds but the final delivery row cannot be saved
 
-This is acceptable for the trusted pilot. It is not yet enough for a full tutor rollout.
+This is safer for the trusted pilot. It is not a transactional claim and is not
+enough for a full tutor rollout.
 
 ## Widening Blockers
 
@@ -39,7 +44,9 @@ Before enabling Level 2 for more tutors:
 
 4. Confirm duplicate-send safety under concurrency.
    - `delivery_key` protects normal retries and duplicate clicks after a row exists.
-   - Google Sheets upsert is not a database transaction; verify two near-simultaneous execute requests cannot send two parent emails before either sees the other's row.
+   - The in-memory guard prevents duplicate execution only inside one running dashboard process.
+   - Google Sheets upsert is not a database transaction or unique constraint. Two Railway instances can both claim and send before either sees the other's row; email-only retries have the same adjacent risk.
+   - Move the claim to a transactional store with a unique `delivery_key` before widening. A Gmail timeout can also be ambiguous after Google accepts a message, so a retry must rely on durable provider/delivery evidence rather than assuming failure means unsent.
 
 ## Fast-Follows During Rollout
 
@@ -64,4 +71,6 @@ Before enabling Level 2 for more tutors:
 - Confirm `Practice_Notes_Log` contains recipient, send status, Gmail ID, MMS attendance ID, and completed status.
 - Confirm an `AbsentNoMakeup` test row records attendance status without sending a parent email.
 - Attempt a duplicate send and confirm it returns the existing delivery rather than emailing again.
+- Force the claim write to fail and confirm the route returns 503 without calling MMS or Gmail.
+- Exercise two same-key requests in one process and confirm only one reaches provider execution.
 - Confirm failed Gmail or MMS paths are visible enough for admin follow-up.
