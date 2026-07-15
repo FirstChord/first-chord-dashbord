@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  ISSUE_AI_BRIEFING_LIMITS,
   IssueAiBriefingError,
   buildIssueAiBriefingInput,
   validateIssueAiBriefing,
@@ -77,6 +78,24 @@ test('accepts only grounded, bounded output with required uncertainty', () => {
   assert.ok(validateIssueAiBriefing({ ...validBriefing(), extra: 'not allowed' }, input).errors.includes('output_shape_invalid'));
   assert.ok(validateIssueAiBriefing(validBriefing({ headline: 123 }), input).errors.includes('headline_invalid'));
   assert.ok(validateIssueAiBriefing(validBriefing({ evidenceRefs: [{ id: 'evidence_1' }] }), input).errors.includes('evidence_refs_invalid'));
+});
+
+test('deterministically bounds overlong wording without bypassing safety checks', () => {
+  const input = buildIssueAiBriefingInput(explanation());
+  const overlong = validateIssueAiBriefing(validBriefing({
+    headline: `A long but otherwise safe explanation ${'needs review '.repeat(20)}`,
+    explanation: `The evidence supports a review. ${'The recorded states do not agree. '.repeat(30)}`,
+  }), input);
+
+  assert.equal(overlong.valid, true);
+  assert.ok(overlong.briefing.headline.length <= ISSUE_AI_BRIEFING_LIMITS.headline);
+  assert.ok(overlong.briefing.explanation.length <= ISSUE_AI_BRIEFING_LIMITS.explanation);
+  assert.match(overlong.briefing.headline, /…$/u);
+
+  const hiddenUnsafeText = validateIssueAiBriefing(validBriefing({
+    explanation: `${'Safe preliminary wording. '.repeat(30)} Contact parent@example.com.`,
+  }), input);
+  assert.ok(hiddenUnsafeText.errors.includes('direct_identifier_not_allowed'));
 });
 
 test('rejects identifier leakage and claims that consequential work was completed', () => {

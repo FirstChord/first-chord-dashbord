@@ -107,6 +107,7 @@ export async function POST(request, { params }) {
       requestId,
       outcome: 'failed',
       errorCode: error instanceof IssueAiBriefingError ? error.code : 'internal_error',
+      validationErrors: error instanceof IssueAiBriefingError ? error.details : [],
     }));
     return noStore({ error: failure.message }, { status: failure.status });
   }
