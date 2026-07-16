@@ -1,6 +1,6 @@
 # Admin Current Status
 
-Last updated: 2026-07-15
+Last updated: 2026-07-16
 
 Tracked current-status entrypoint for agents working from the `music-school-dashboard` repo.
 
@@ -24,7 +24,7 @@ The admin overview is a strict meeting-start surface, not a complete status boar
 
 *Last working arc only — older work is in `git log --oneline` + the Learning Log.*
 
-- **Practice focus + arc folded into the tutor Notes panel (2026-07-16, local):**
+- **Practice focus + arc folded into the tutor Notes panel (2026-07-16, deployed `8d7e3fe`):**
   the Previous Notes panel now opens with a green **"Lesson Focus"** box
   (last lesson's goals, with a carried-over hint when the goal repeats) and one
   compact **"On the go"** line — pieces mined from phrases recurring across the

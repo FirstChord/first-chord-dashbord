@@ -1,7 +1,6 @@
 # Plan: "What to work on" note summary — tutor dashboard
 
-> Status: **built 2026-07-16, final shape differs from this plan** (local, not yet
-> committed/deployed). The tabbed Summary was built (twice: timeline view, then a
+> Status: **built and deployed 2026-07-16 (`8d7e3fe`), final shape differs from this plan.** The tabbed Summary was built (twice: timeline view, then a
 > recurrence-mined arc), then **subtracted the same day**: deterministic prose is
 > verbatim ASR, so a prose summary re-renders the notes — the reorder + arc facts
 > now live *inside* the Notes panel as a green "Lesson Focus" box and one
