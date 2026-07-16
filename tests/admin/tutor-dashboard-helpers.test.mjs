@@ -6,6 +6,7 @@ import {
   getTutorDashboardOptionNames,
   getTutorDashboardOptions,
   resolveTutorTeacherId,
+  stripDuplicatePracticeGoals,
 } from '../../lib/tutor-dashboard-helpers.mjs';
 
 const SAMPLE_TUTORS = {
@@ -68,4 +69,48 @@ test('filterTutorStudentsBySearch matches names and instruments without mutating
   assert.equal(filterTutorStudentsBySearch(students, ''), students);
   assert.deepEqual(filterTutorStudentsBySearch(students, 'alex'), [students[0]]);
   assert.deepEqual(filterTutorStudentsBySearch(students, 'sing'), [students[1]]);
+});
+
+const NOTE_TEXT = `**What we did:**
+Worked on the F chord changes.
+
+**Progress & Challenges:**
+Still buzzing on the high strings.
+
+**Practice Goals:**
+Practise the F chord change slowly at home.`;
+
+test('stripDuplicatePracticeGoals removes the goals section when it matches the focus text', () => {
+  const result = stripDuplicatePracticeGoals(NOTE_TEXT, 'Practise the F chord change slowly at home.');
+  assert.doesNotMatch(result, /Practice Goals/u);
+  assert.doesNotMatch(result, /slowly at home/u);
+  assert.match(result, /What we did/u);
+  assert.match(result, /Progress & Challenges/u);
+});
+
+test('stripDuplicatePracticeGoals ignores whitespace differences when matching', () => {
+  const result = stripDuplicatePracticeGoals(NOTE_TEXT, '  Practise the F chord\nchange slowly at home. ');
+  assert.doesNotMatch(result, /Practice Goals/u);
+});
+
+test('stripDuplicatePracticeGoals never removes a non-matching goals section', () => {
+  const result = stripDuplicatePracticeGoals(NOTE_TEXT, 'Completely different goals text.');
+  assert.equal(result, NOTE_TEXT);
+});
+
+test('stripDuplicatePracticeGoals leaves notes without a goals heading untouched', () => {
+  const mmsNote = 'Plain MMS note with no section headings at all.';
+  assert.equal(stripDuplicatePracticeGoals(mmsNote, 'anything'), mmsNote);
+});
+
+test('stripDuplicatePracticeGoals is a no-op without focus text', () => {
+  assert.equal(stripDuplicatePracticeGoals(NOTE_TEXT, ''), NOTE_TEXT);
+});
+
+test('stripDuplicatePracticeGoals only removes the goals section when it is mid-note', () => {
+  const reordered = `**Practice Goals:**\nDo the scales.\n\n**What we did:**\nScales and a new song.`;
+  const result = stripDuplicatePracticeGoals(reordered, 'Do the scales.');
+  assert.doesNotMatch(result, /Practice Goals/u);
+  assert.match(result, /What we did/u);
+  assert.match(result, /Scales and a new song/u);
 });

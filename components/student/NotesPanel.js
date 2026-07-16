@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 
 import { formatNotesText, speakerNamesFor } from '@/components/shared/notes-formatting';
+import { stripDuplicatePracticeGoals } from '@/lib/tutor-dashboard-helpers.mjs';
 
 export default function NotesPanel({ notes, source, studentName = '', onLoadHistory, onLoadSummary }) {
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -122,7 +123,10 @@ export default function NotesPanel({ notes, source, studentName = '', onLoadHist
           <p className="italic text-gray-500">Student was absent</p>
         ) : (
           <div className="whitespace-pre-wrap">
-            {formatNotesText(notes.notes, speakerNames)}
+            {formatNotesText(
+              stripDuplicatePracticeGoals(notes.notes, summary?.focus?.text),
+              speakerNames,
+            )}
           </div>
         )}
       </div>
