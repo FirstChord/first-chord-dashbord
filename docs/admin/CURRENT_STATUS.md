@@ -30,10 +30,14 @@ The admin overview is a strict meeting-start surface, not a complete status boar
   instrument matches as chips; mismatches and externals shown, never hidden —
   the bank informs, it never restricts) plus a per-candidate **"Copy ask"**
   message built from the affected lessons, logged to `Communication_Log`. A
-  bank read failure degrades to the old picker. Rung 3 (MMS lesson
-  reassignment) is planned and gated in `PLAN_cover-loop.md` — blocked on
-  Finn capturing the MMS reassignment fetch request and a throwaway-lesson
-  test answering its six questions before any write code.
+  bank read failure degrades to the old picker. The Tutor Absence card was
+  then removed from the Workflows nav page — Planning's absence builder is the
+  front door (see Navigation policy below). Rung 3 (MMS lesson reassignment)
+  is **parked by decision**: discovery is done (`PLAN_cover-loop.md` — single
+  event confirmed, substitution first-class, price untouched), but the write
+  endpoint 404s for our ApiKey-profile `MMS_BEARER_TOKEN` and needs a
+  monthly-expiring Teacher-session JWT, so the MMS swap stays a manual UI step
+  until living with rungs 1–2 shows it's worth the token plumbing.
 
 - **Cover Bank workflow (2026-07-16, deployed `2899749`):** a phone-survey
   campaign page at `/admin/workflows/cover-bank`, mirroring the Parent
@@ -146,10 +150,13 @@ Durable rules (don't grow per session). The state-tab map is `docs/admin/STATE_T
 - **Capacity:** `/admin/capacity` reads MMS `Free` calendar slots (don't duplicate into a Sheets tab); `/admin/capacity` + `/admin/waiting` share a short-lived `Free`-slot cache; capacity page also shows schedule-cache health. `/admin/waiting` shows possible slots only where the tutor teaches the parsed instrument — hints only, no auto-assign/onboard.
 - **Navigation is action-led:** Overview = today's operating summary; Issues =
   detected problems + loop actions; Workflows = tutors, waiting, recurring
-  workflows, parent understanding, tutor absence, incoming messages, payroll,
+  workflows, parent understanding, cover bank, incoming messages, payroll,
   and finance; Planning = due work, meeting review, school notes, ideas,
   initiatives, and linked actions. Student records are reached via search/links,
-  not a top-nav mode.
+  not a top-nav mode. **Tutor absence has no nav entry:** it is entered via
+  Planning's Quick-capture absence builder (per-day cards deep-link in with
+  tutor+date) or the Overview open-absence signal — Planning is the front door,
+  the absence page is the per-day decision room.
 - **Overview placement:** top cards = work to do today / needs attention / deliberate school-improvement prompts; background health belongs lower down unless something's wrong; prefer human labels over big counts; don't add a panel just because data exists. (`docs/admin/COPY_AND_TONE.md` records the language layer.)
 - **Planning state is dashboard-owned work state** (`Planning_Items` + append-only `Planning_Progress_Log`), not external truth. Linked student IDs point at `Students` rows. The Friday school-forward + Monday scheduling prompts are seeded planning items, not a workflow engine. Learning/strategic notes are planning items, not finance forecasts.
 - **Pause guardrail:** pause reminders link to a student before billing actions; generic `Done` never changes payment state — **`Mark pause completed`** is the guarded action that logs confirmation, sets `stripe_paused_expected` via the student PATCH route, appends `Event_Log`, and closes the task. The dashboard generates the parent message but does **not** send WhatsApp. Parked pause cards are ignored by the finance forecast.

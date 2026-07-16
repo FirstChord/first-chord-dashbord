@@ -38,12 +38,6 @@ const workflowSections = [
     status: 'Campaign',
   },
   {
-    href: '/admin/workflows/tutor-absence',
-    title: 'Tutor Absence',
-    description: 'Handle a tutor being off: find affected lessons, choose cancel or cover, and track parent messages.',
-    status: 'Action flow',
-  },
-  {
     href: '/admin/incoming-messages',
     title: 'Message Inbox',
     description: 'Review inbound parent messages from paste/starred WhatsApp before turning them into planning or workflow action.',

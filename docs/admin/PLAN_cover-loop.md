@@ -68,24 +68,71 @@ doing properly because **payroll reads MMS by tutor** — the cover tutor should
 appear in their own payroll window without manual fixup. But it is an
 undocumented endpoint, so:
 
-**Finn's capture task (blocks everything below):** reassign one lesson to a
-substitute by hand in MMS with the network console open, and save the fetch
-request (URL, method, full JSON body, and which auth headers it carries) here
-or in a gist. Ideally capture both a single-event change and note what the UI
-offered about the series.
+**Capture done (2026-07-16).** Finn reassigned a real Tom lesson
+(evt_zsGLw6J0, Wed 2026-07-22 14:00, 30 min, sdt_6JyPJn) to Dean by hand and
+captured the request (bearer token redacted, never commit it):
 
-**Open questions the capture + one throwaway-lesson test must answer:**
+```
+POST https://api.mymusicstaff.com/v1/calendar/events/{eventId}/updaterequirements
+Authorization: Bearer <session JWT, same style as MMS_BEARER_TOKEN>
+{
+  "StudentChangeMode": "Delta",
+  "StudentIDs": ["sdt_..."],
+  "ConflictCheckSearchOptions": {
+    "StudentIDs": ["sdt_..."], "Duration": 30, "EventLocationID": null,
+    "EventStartDate": "2026-07-22T14:00:00",
+    "EventIDsToIgnore": ["evt_..."], "RepeatDetails": null,
+    "TeacherID": "tch_<new>"
+  },
+  "RepeatDetailsToUseForUpdate": null,
+  "TeacherID": "tch_<new>",
+  "OriginalTeacherID": "tch_<original>",
+  "UpdateFutureEvents": false
+}
+```
 
-1. Does the request move **one event or the whole series**? (We only ever
-   want single-date. If the endpoint is series-scoped, this rung stops.)
-2. Does it touch the **billing profile** or price? (Must not.)
-3. What does the **parent-facing calendar/portal** show afterwards?
-4. How does the event's teacher attribution land in the **payroll window**
-   (attendance rows by teacher) — original tutor, substitute, or both?
-5. Is there a distinct "substitute" concept in MMS, or is it a plain teacher
-   swap on the event?
-6. Is the bearer token we already hold (`MMS_BEARER_TOKEN`) sufficient, or is
-   this a session-cookie admin call?
+**Answers so far (read-only probes with the dashboard's stored token,
+2026-07-16):**
+
+1. **Single event vs series: SINGLE — confirmed.** `UpdateFutureEvents: false`
+   is the explicit scope switch; after the change, evt_zsGLw6J0 has
+   Teacher = Dean while the next series occurrence (evt_zsGLwcJZ, 29 Jul)
+   still has Tom for both fields.
+2. **Billing/price: no visible change.** The event still shows
+   `PricePerParticipantType: "ParticipantDefaultPrice"`, `PricePerParticipant:
+   null`. (Final confirmation rides on Q4's attendance check.)
+3. **Parent calendar: still to eyeball** — Finn checks what the family portal
+   shows for the reassigned date.
+4. **Payroll attribution: pending** — needs attendance to exist for the
+   covered lesson; then check whose payroll window (Tutor Pay, since-last-paid
+   MMS attendance read) picks it up. `OriginalTeacherID` is retained, so both
+   attributions are visible in the data either way.
+5. **Substitute concept: YES, first-class.** The event keeps
+   `OriginalTeacherID` + a full `OriginalTeacher` object beside the new
+   `Teacher`; the search API has `OriginalTeacherIDs` and
+   `ShowEventsWithSubstituteTeachersOnly` filters, and the dashboard's own
+   `findMatchingCalendarEvent` already matches on either field. Reassignment
+   is a substitution overlay, not a destructive swap — reverting = setting
+   TeacherID back to the original.
+6. **Auth: our stored `MMS_BEARER_TOKEN` works** — same bearer style, and the
+   read probes above succeeded with it from a server context.
+
+**Auth finding that parks this rung (2026-07-16):** replaying the captured
+call with the dashboard's stored `MMS_BEARER_TOKEN` returned **404 with no
+change** — that token decodes as `ProfileMode: "ApiKey"`, and the calendar
+update endpoint evidently only exists for real profile sessions
+(`ProfileMode: "Teacher"`). Reads and the attendance write are unaffected.
+So automated reassignment would need a Teacher-session JWT (~6-week expiry,
+manual refresh chore). **Decision: parked** — the MMS swap stays a 10-second
+manual UI step; revisit only if living with rungs 1–2 shows the manual step
+biting often enough to justify the token plumbing.
+
+**Open items:** (a) revert the test reassignment by hand — evt_zsGLw6J0,
+Wed 2026-07-22 14:00, still shows Dean covering Tom; while reverting, note
+whether the UI fires a second request after `updaterequirements` (answers
+whether it's pre-flight or the mutation, useful if this rung is ever
+unparked). (b) Q3 (parent calendar) + Q4 (payroll attribution) above — only
+matter if unparked.
 
 **Ship shape (only after the answers are clean):** preview → confirm →
 execute → `Event_Log`, per single dated event only, never series; idempotent
