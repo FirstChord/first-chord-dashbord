@@ -34,12 +34,13 @@ function timeAwareGreeting() {
   return 'Good evening';
 }
 
-function notesUrlForStudent(student = {}, { history = false } = {}) {
+function notesUrlForStudent(student = {}, { history = false, summary = false } = {}) {
   const studentId = student.mms_id || student.ID || '';
   const token = student.noteAccessToken || student.note_access_token || '';
   const params = new URLSearchParams();
   if (token) params.set('token', token);
   if (history) params.set('history', '1');
+  if (summary) params.set('summary', '1');
   return `/api/notes/${encodeURIComponent(studentId)}${params.toString() ? `?${params.toString()}` : ''}`;
 }
 
@@ -555,6 +556,11 @@ export default function DashboardClient({ tutorOptions = [] }) {
                           const res = await fetch(notesUrlForStudent(selectedStudent, { history: true }));
                           const data = await res.json();
                           return data.history || [];
+                        }}
+                        onLoadSummary={async () => {
+                          const res = await fetch(notesUrlForStudent(selectedStudent, { summary: true }));
+                          const data = await res.json();
+                          return data.summary || null;
                         }}
                       />
                     )
