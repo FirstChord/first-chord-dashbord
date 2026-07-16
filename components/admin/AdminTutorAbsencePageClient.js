@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, Copy, Loader2, Search, Trash2 } from 'lucide-react';
 import {
+  buildCoverAskMessage,
   buildTutorAbsenceMessage,
   formatTutorAbsenceDate,
   isTutorAbsencePaymentHandled,
@@ -116,7 +117,13 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
   const [groupMessageState, setGroupMessageState] = useState({ pendingKey: '', error: '', markedKey: '' });
   const hasSavedAbsence = Boolean(workflow.state.createdAt || workflow.state.updatedAt || workflow.state.resolvedAt);
 
-  const selectedCoverTutor = workflow.coverOptions.find((tutor) => tutor.shortName === coverTutorShortName) || null;
+  const coverCandidates = workflow.coverCandidates || [];
+  // A cover-bank candidate can sit outside the instrument-matched dropdown
+  // (mismatched instrument, or an external with no MMS identity) but must
+  // still be selectable — the bank informs the choice, it never restricts it.
+  const candidateFallback = coverCandidates.find((candidate) => candidate.tutorKey === coverTutorShortName);
+  const selectedCoverTutor = workflow.coverOptions.find((tutor) => tutor.shortName === coverTutorShortName)
+    || (candidateFallback ? { shortName: candidateFallback.tutorKey, fullName: candidateFallback.tutorName } : null);
   const workflowChecklist = messageState.__workflow || {};
   const cancellationMessageGroups = workflow.cancellationMessageGroups || [];
   const groupedMessageEventIds = useMemo(() => new Set(
@@ -383,6 +390,67 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
           </div>
           {decision === 'cover' ? (
             <div className="mt-5 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4">
+              {coverCandidates.length ? (
+                <div className="mb-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-emerald-900">From the cover bank</p>
+                  <ul className="mt-2 space-y-2">
+                    {coverCandidates.map((candidate) => {
+                      const chosen = coverTutorShortName === candidate.tutorKey;
+                      return (
+                        <li
+                          key={candidate.tutorKey}
+                          className={`flex flex-wrap items-center gap-2 rounded-xl border bg-white px-3 py-2 ${chosen ? 'border-emerald-400' : 'border-emerald-100'} ${candidate.alreadyTeaching ? 'opacity-70' : ''}`}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCoverTutorShortName(chosen ? '' : candidate.tutorKey);
+                              setSaveState({ pending: false, action: '', error: '', savedAt: '' });
+                            }}
+                            className="flex items-center gap-2 text-sm font-semibold text-slate-900"
+                          >
+                            {chosen ? <Check className="h-4 w-4 text-emerald-700" /> : null}
+                            {candidate.tutorName}
+                          </button>
+                          {candidate.notice === 'same_day' ? (
+                            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs text-emerald-800">Same-day OK</span>
+                          ) : null}
+                          {candidate.notice === 'needs_notice' ? (
+                            <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs text-amber-800">Needs notice</span>
+                          ) : null}
+                          {candidate.alreadyTeaching ? (
+                            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">Already teaching that day</span>
+                          ) : null}
+                          {candidate.matchedInstruments.length ? (
+                            <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-800">{candidate.matchedInstruments.join(', ')}</span>
+                          ) : null}
+                          {candidate.tutorType === 'external' ? (
+                            <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs text-violet-800">External</span>
+                          ) : null}
+                          {candidate.notes ? (
+                            <span className="max-w-[16rem] truncate text-xs text-slate-500">{candidate.notes}</span>
+                          ) : null}
+                          <span className="ml-auto">
+                            <MessageButton
+                              label="Copy ask"
+                              copyId={`cover-ask-${candidate.tutorKey}`}
+                              copiedId={copiedId}
+                              onCopy={copyMessage}
+                              context={{ mmsId: '', studentName: candidate.tutorName }}
+                              body={buildCoverAskMessage({
+                                candidateName: candidate.tutorName,
+                                absentTutorName: workflow.selectedTutor?.fullName || '',
+                                absenceDate: workflow.selectedDate,
+                                lessons: workflow.lessons,
+                              })}
+                            />
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              ) : null}
               <label className="text-xs font-semibold uppercase tracking-wide text-emerald-900">Cover tutor</label>
               <select
                 value={coverTutorShortName}

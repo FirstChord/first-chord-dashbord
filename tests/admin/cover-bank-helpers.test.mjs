@@ -4,6 +4,8 @@ import assert from 'node:assert/strict';
 import {
   buildExternalTutorKey,
   deriveTeachingDaysByTeacherId,
+  rankCoverCandidates,
+  weekdayFromDateInput,
   normaliseAvailableDays,
   normaliseCoverBankCallStatus,
   normaliseCoverBankNotice,
@@ -63,6 +65,45 @@ test('deriveTeachingDaysByTeacherId collects weekdays from found schedule rows o
 
   assert.deepEqual([...teachingDays.get('tch_1')], ['Monday', 'Wednesday']);
   assert.equal(teachingDays.has('tch_2'), false);
+});
+
+test('weekdayFromDateInput turns a date input value into a weekday name', () => {
+  assert.equal(weekdayFromDateInput('2026-07-16'), 'Thursday');
+  assert.equal(weekdayFromDateInput('2026-07-19'), 'Sunday');
+  assert.equal(weekdayFromDateInput('16/07/2026'), '');
+  assert.equal(weekdayFromDateInput(''), '');
+});
+
+test('rankCoverCandidates orders same-day free candidates first and never hides mismatches', () => {
+  const record = (tutorKey, state, tutor = {}) => ({
+    tutor: { tutorKey, tutorName: tutorKey, tutorType: 'internal', instruments: [], teachingDays: [], ...tutor },
+    state: { willing: 'yes', availableDays: ['Thursday'], notice: '', notes: '', ...state },
+  });
+
+  const candidates = rankCoverCandidates({
+    coverBankRecords: [
+      record('NeedsNotice', { notice: 'needs_notice' }),
+      record('Teaching', { notice: 'same_day' }, { teachingDays: ['Thursday'] }),
+      record('SameDayGuitar', { notice: 'same_day' }, { instruments: ['guitar'] }),
+      record('SameDayPiano', { notice: 'same_day' }, { instruments: ['piano'] }),
+      record('Absent', { notice: 'same_day' }),
+      record('WrongDay', { availableDays: ['Monday'] }),
+      record('SaidNo', { willing: 'no' }),
+    ],
+    weekday: 'Thursday',
+    neededInstruments: ['guitar', 'Guitar'],
+    absentTutorKey: 'Absent',
+  });
+
+  assert.deepEqual(candidates.map((candidate) => candidate.tutorKey), [
+    'SameDayGuitar',
+    'SameDayPiano',
+    'NeedsNotice',
+    'Teaching',
+  ]);
+  assert.deepEqual(candidates[0].matchedInstruments, ['guitar']);
+  assert.equal(candidates[0].alreadyTeaching, false);
+  assert.equal(candidates[3].alreadyTeaching, true);
 });
 
 test('summariseCoverForDay flags tutors already teaching that day instead of hiding them', () => {

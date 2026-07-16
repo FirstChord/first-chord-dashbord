@@ -5,6 +5,7 @@ import {
   buildTutorAbsenceEarlyNoticePlanningBundle,
   buildTutorAbsenceFinalConfirmationPlanningItems,
   compareTutorAbsenceLessonSnapshots,
+  buildCoverAskMessage,
   buildCoverTutorOptions,
   buildTutorAbsenceMessage,
   buildTutorAbsencePausePlanningBundle,
@@ -88,6 +89,24 @@ test('buildCoverTutorOptions only suggests tutors with matching instruments', ()
 
   assert.deepEqual(options.map((tutor) => tutor.shortName), ['Tom']);
   assert.deepEqual(options[0].matchedInstruments, ['guitar', 'bass']);
+});
+
+test('buildCoverAskMessage addresses the candidate with the day and lesson span', () => {
+  const message = buildCoverAskMessage({
+    candidateName: 'Dean Louden',
+    absentTutorName: 'Kim Grant',
+    absenceDate: '2026-06-04',
+    lessons: [
+      { lessonTime: '17:00', instrument: 'Guitar' },
+      { lessonTime: '16:00', instrument: 'guitar' },
+      { lessonTime: '16:30', instrument: 'piano' },
+    ],
+  });
+
+  assert.match(message, /^Hi Dean!/);
+  assert.match(message, /Kim is off on Thursday 4th June/);
+  assert.match(message, /3 lessons · 16:00–17:00 · guitar, piano/);
+  assert.doesNotMatch(message, /Dean Louden/);
 });
 
 test('buildTutorAbsenceMessage creates cancellation and cover parent copy', () => {

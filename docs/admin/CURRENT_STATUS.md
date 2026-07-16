@@ -24,6 +24,17 @@ The admin overview is a strict meeting-start surface, not a complete status boar
 
 *Last working arc only — older work is in `git log --oneline` + the Learning Log.*
 
+- **Cover loop rungs 1–2 (2026-07-16, deployed):** the tutor-absence "Find
+  cover" choice now shows ranked cover-bank candidates for that date's weekday
+  (same-day-OK free first, needs-notice next, already-teaching greyed;
+  instrument matches as chips; mismatches and externals shown, never hidden —
+  the bank informs, it never restricts) plus a per-candidate **"Copy ask"**
+  message built from the affected lessons, logged to `Communication_Log`. A
+  bank read failure degrades to the old picker. Rung 3 (MMS lesson
+  reassignment) is planned and gated in `PLAN_cover-loop.md` — blocked on
+  Finn capturing the MMS reassignment fetch request and a throwaway-lesson
+  test answering its six questions before any write code.
+
 - **Cover Bank workflow (2026-07-16, deployed `2899749`):** a phone-survey
   campaign page at `/admin/workflows/cover-bank`, mirroring the Parent
   Understanding pattern — Fenella calls each tutor and records the answers
