@@ -24,7 +24,7 @@ The admin overview is a strict meeting-start surface, not a complete status boar
 
 *Last working arc only — older work is in `git log --oneline` + the Learning Log.*
 
-- **Cover Bank workflow (2026-07-16, not yet deployed):** a phone-survey
+- **Cover Bank workflow (2026-07-16, deployed `2899749`):** a phone-survey
   campaign page at `/admin/workflows/cover-bank`, mirroring the Parent
   Understanding pattern — Fenella calls each tutor and records the answers
   (happy to cover, yes/no; which days; OK with a same-day ask or needs notice;
