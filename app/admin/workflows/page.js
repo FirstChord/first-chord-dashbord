@@ -32,6 +32,12 @@ const workflowSections = [
     status: 'Campaign',
   },
   {
+    href: '/admin/workflows/cover-bank',
+    title: 'Cover Bank',
+    description: 'Call workflow for tutor cover availability: who is happy to cover, which days, cross-checked against teaching days.',
+    status: 'Campaign',
+  },
+  {
     href: '/admin/workflows/tutor-absence',
     title: 'Tutor Absence',
     description: 'Handle a tutor being off: find affected lessons, choose cancel or cover, and track parent messages.',

@@ -24,6 +24,19 @@ The admin overview is a strict meeting-start surface, not a complete status boar
 
 *Last working arc only — older work is in `git log --oneline` + the Learning Log.*
 
+- **Cover Bank workflow (2026-07-16, not yet deployed):** a phone-survey
+  campaign page at `/admin/workflows/cover-bank`, mirroring the Parent
+  Understanding pattern — Fenella calls each tutor and records the answers
+  (happy to cover, yes/no; which days; OK with a same-day ask or needs notice;
+  notes) in a new keyed-upsert `Cover_Bank_State` tab. "Maybe" was dropped by
+  decision: every cover is arranged by asking anyway, so it carried no
+  information — notice tolerance is the nuance that matters. External tutors (not teaching at the school) can be added to the bank
+  and exist only as `ext:<slug>` rows. Contract decisions: stated availability
+  is stored; **teaching days are never stored** — they're derived live from
+  `Schedule_Context` per `teacher_id` at read time, and a tutor already
+  teaching a day is *flagged, not hidden* on the per-day cover view (partial
+  days exist). Pure logic in `lib/admin/cover-bank-helpers.mjs` (tested).
+
 - **Practice focus + arc folded into the tutor Notes panel (2026-07-16, deployed `8d7e3fe`):**
   the Previous Notes panel now opens with a green **"Lesson Focus"** box
   (last lesson's goals, with a carried-over hint when the goal repeats) and one
@@ -111,7 +124,7 @@ The admin overview is a strict meeting-start surface, not a complete status boar
   to `Event_Log` with the signed-in admin. It never mutates Stripe.
 - **Every student has a shelf: bass, electric guitar, and 37 missing instruments (2026-07-14, deployed):** three groups were opening the Song panel to nothing. **Bass** (41 entries, Debut–G6, 6 students) and **Electric Guitar** (60 entries, Debut–G6, 4 students — a genuinely separate instrument, not a spelling of Guitar) are seeded; and **38 students had no instrument at all** because the Google Sheet and `students-registry.js` are *both* canonical and **nothing syncs `instrument` between them** — Finn had filled in the Sheet, the dashboard reads the registry. Synced (now 1 blank), which also revealed **Alba McMillan is bass, not guitar** — invisible to a registry scan, because the registry was the thing that was wrong. **New standing guard:** a test fails if any student holds an instrument the catalogue does not know, with an explicit `INSTRUMENTS_WITHOUT_REPERTOIRE` list — the empty-shelf bug shipped *three times in one day* before anything said so out loud. Separately, `students-registry.js` had held **invalid JavaScript** (`lastName: 'O'Neil'`) since April, invisible because every consumer regexes it as text and nothing ever parses it; the admin editor would have added a backslash to that name on every save. Fixed and guarded (the text parser and the JS parser must now agree on every student). **`artist: 'RSL'` now means two things** — needs-curation marker *and* the true artist of a Rockschool Original — and the official RSL Awards syllabus pages settle which, because they group covers separately from originals. Catalogue **310 entries**. **→ Coverage, every known gap, and the ingestion traps now live in [`SONG_CATALOGUE_COVERAGE.md`](SONG_CATALOGUE_COVERAGE.md) — read that before adding grades or paths.** Why: [[2026-07-14 - Bass Gets Its Own Shelf (and a Registry Landmine)]] and [[2026-07-14 - Song Series (John Thompson Joins RSL)]].
 - Bridge arc (2026-07-08, all bridge-side): LID phone-matching fix (`participantPn`/`senderPn` preferred; narrow push-name fallback — verify on next tutor reply in a confirmed group), structurally receive-only enforcement (`outbound-guard.js`), and the stall watchdog (force-exit so launchd relaunches; stale window must exceed the heartbeat). Ban-risk model: `WHATSAPP_INCOMING_BRIDGE.md`; always-on host plan: `PI_OPS_HOST_PLAN.md`. Why: Learning Log entries of 2026-07-08.
-- Tutor replies recognised as school-side via `Tutor_Phones` sheet — stamp reply evidence, never create rows or mark handled (2026-07-07, [[2026-07-07 - Tutor Replies Recognised as School-Side]]); pause conversions open as a structured pause card (2026-07-07); Sheets-vs-database ownership audit + sheet census measurement layer + "no new event-heavy tabs in Sheets" rule in `STATE_TABS_SCHEMA.md` (2026-07-07) → Learning Log entries of those dates. Incoming inbox bridge heartbeat + auto-archive audit filter (`Bridge_Status` tab; `assessBridgeHealth` = down / capturing-nothing / quiet; amber `/admin` card) (2026-07-06); incoming inbox auto-capture from confirmed groups replaces starring (2026-07-06); incoming classifier eval harness + one-tap convert + overview presence (2026-07-06); tutor pay statement Phase 1 + Wise-CSV/window fixes + incoming-inbox loop close/group map (2026-07-01→02), monolith splits (planning + Sheets), finance layer, payroll V1+Wise pay-out, temporal reconciliation L1, roster movement → `git log` + Learning Log. Tutor-facing payroll Phases 2–3 planned in `TUTOR_FACING_PAYROLL_ROADMAP.md`.
+- Earlier July arcs (tutor replies as school-side evidence, incoming inbox auto-capture + bridge heartbeat, tutor pay statements, finance layer, payroll V1) → `git log` + Learning Log. Tutor-facing payroll Phases 2–3 planned in `TUTOR_FACING_PAYROLL_ROADMAP.md`.
 
 ## Standing context & policy
 
