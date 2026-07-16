@@ -1,6 +1,7 @@
 import mmsClient from '@/lib/mms-client-cached';
 import { getPracticeNoteLogRows } from '@/lib/admin/sheets';
 import { selectLatestPortalPracticeNote } from '@/lib/admin/practice-notes-helpers.mjs';
+import { buildPracticeSummary } from '@/lib/admin/practice-summary-helpers.mjs';
 import { getTutorSurfaceTokenSecret, verifyStudentNotesToken } from '@/lib/tutor-surface-token.mjs';
 
 function authorizeNotesRequest(request, studentId) {
@@ -118,6 +119,20 @@ export async function GET(request, { params }) {
   }
 
   const { searchParams } = new URL(request.url);
+  if (searchParams.get('summary')) {
+    // Deterministic practice summary — built only from the owned
+    // Practice_Notes_Log path so the timeline engine gets normalised rows,
+    // never MMS-shaped notes.
+    try {
+      const rows = await getPracticeNoteLogRows(studentId);
+      const summary = buildPracticeSummary(rows);
+      return Response.json({ success: true, summary });
+    } catch (error) {
+      console.error('Notes summary API error:', error);
+      return Response.json({ success: false, summary: null, message: error.message }, { status: 500 });
+    }
+  }
+
   if (searchParams.get('history')) {
     try {
       const result = await mmsClient.getStudentLessonHistory(studentId, 12);
