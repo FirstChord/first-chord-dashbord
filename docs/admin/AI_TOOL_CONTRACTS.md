@@ -1,6 +1,6 @@
 # Approved AI Tool Contracts
 
-Last updated: 2026-07-15
+Last updated: 2026-07-16
 
 This is the allowlist and design boundary for AI assistance inside the
 dashboard. The optional issue-briefing pilot is the only model runtime: it makes
@@ -77,14 +77,21 @@ log an outcome because opening an explanation has no consequential effect.
 
 ### Optional AI issue briefing pilot
 
+The exact runtime architecture, HTTP contracts, OpenAI request, key scope,
+validation, logging, provider-retention caveat, test commands, recovery steps
+and future-integration checklist are canonical in
+`docs/admin/AI_RUNTIME_INTEGRATION.md`. Read that file before changing the
+provider, prompt, model, schema or adding another model-backed feature.
+
 `POST /api/admin/issues/[mmsId]/ai-explanation` accepts only the exact issue
 source and type. The server re-builds the redacted deterministic explanation and
 sends that view model—not the MMS ID, student name, raw rows, provider IDs or
 contact details—to the OpenAI Responses API. The call uses Structured Outputs,
 `store: false`, no tools, a five-second timeout, no retry and a dedicated
 server-only key. Local validation rejects extra fields, unknown evidence
-references, missing caveats, identifiers, unsupported lengths and claims that
-an action was completed or promised.
+references, missing caveats, identifiers and claims that an action was
+completed or promised. Safe overlong wording is bounded deterministically only
+after the complete text has passed identifier and action-claim checks.
 
 The AI summary is labelled as generated wording and never replaces the rule,
 evidence, uncertainty or deterministic next step. Provider, timeout, parsing or

@@ -1,6 +1,6 @@
 # Documentation Map
 
-Last updated: 2026-07-14
+Last updated: 2026-07-16
 
 The docs are useful, but there are many entry points. This map defines the canonical ones so future agents do not treat old drafts as current authority.
 
@@ -23,6 +23,9 @@ Read in this order:
 13. `docs/workflows/06-paying-tutors.md` for the live human payroll run; pair it with `docs/admin/STATE_TABS_SCHEMA.md` + the `CURRENT_STATUS.md` finance section when changing `/admin/finance`, payroll, `Tutor_Pay`, `Tutor_Wise`, statements or `Payroll_Runs`
 14. `docs/admin/PRACTICE_CHAT_DELIVERY_AUDIT.md` when touching Practice Chat Level 2 delivery or rollout
 15. `docs/admin/AGENT_READINESS_AUDIT_OUTCOMES.md` for the July 2026 audit implementation register, verification, privacy note, and remaining risks
+16. `docs/admin/AI_RUNTIME_INTEGRATION.md` before changing the model provider,
+    prompt, output schema, feature flag, AI telemetry, or adding a future AI
+    runtime
 
 `docs/admin/AUDIT_2026-06-10.md` is critique input, not a live plan. Use judgement before implementing its recommendations.
 

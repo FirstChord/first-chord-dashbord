@@ -127,6 +127,9 @@ Do not assume a GitHub deploy to one Railway service means all Railway services 
 
 ### AI issue briefing pilot recovery
 
+For the exact request flow, provider payload, safe log fields and error-code
+map, see `docs/admin/AI_RUNTIME_INTEGRATION.md`.
+
 The AI button is non-consequential and the deterministic explanation is always
 the fallback. If calls fail, become slow, produce validation failures, or show
 materially misleading wording:

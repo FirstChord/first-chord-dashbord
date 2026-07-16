@@ -58,13 +58,17 @@ Practice_Notes_Log (sheet)
   `buildPracticeSummaryInput(timeline)`, output JSON schema,
   `validatePracticeSummary()` with length limits. Copy the shape of
   `lib/admin/issue-explanation-ai-contract.mjs`.
-- `lib/admin/practice-summary-ai-provider.mjs` — reuse the **same provider
-  abstraction** as `lib/admin/issue-explanation-ai-provider.mjs` (OpenAI-compatible
-  via `ADMIN_AI_*` env). Do **not** introduce a second AI provider.
+- `lib/admin/practice-summary-ai-provider.mjs` — mirror the bounded transport
+  controls in `lib/admin/issue-explanation-ai-provider.mjs`, but keep a
+  feature-specific provider and input contract. Do not turn the issue provider
+  into a generic `askOpenAI(anything)` pipe. Reusing the same dedicated project
+  or env names is a separate privacy/cost decision at implementation time.
 - `app/api/tutor/practice-summary/[studentId]/route.js` — route boundary.
 
-**Reused as-is:** `buildStudentPracticeTimeline`, `getPracticeNoteLogRows`, the AI
-feedback route (`app/api/admin/ai/feedback/route.js`).
+**Reusable deterministic inputs:** `buildStudentPracticeTimeline` and
+`getPracticeNoteLogRows`. The admin-only issue feedback route is not reusable
+as-is for a tutor surface; any future feedback endpoint needs a capability tag,
+the correct tutor identity boundary, and its own retention/evaluation contract.
 
 ## AI contract (Layer 2)
 - **Input:** the deterministic timeline object *only* (not raw notes) — bounds

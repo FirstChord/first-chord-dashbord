@@ -19,6 +19,9 @@ This admin index is the map of durable admin documentation. Older V1/V2 drafts a
 - [AGENT_READINESS_AUDIT_OUTCOMES.md](./AGENT_READINESS_AUDIT_OUTCOMES.md)
   Completion register for the 12 agent-readiness/thin-AI improvements, Practice
   Chat claim hardening, verification, privacy, and remaining risks.
+- [AI_RUNTIME_INTEGRATION.md](./AI_RUNTIME_INTEGRATION.md)
+  Exact live model request flow, security boundary, provider configuration,
+  validation, privacy, operations, tests and future-integration checklist.
 - [DOCUMENTATION_MAP.md](./DOCUMENTATION_MAP.md)
   Canonical documentation entry points, repo-vs-Obsidian split, and historical-doc rules.
 - [V3_LOOP_ARCHITECTURE.md](./V3_LOOP_ARCHITECTURE.md)
@@ -63,8 +66,8 @@ This admin index is the map of durable admin documentation. Older V1/V2 drafts a
 - [BRAIN_CAPABILITY_ROADMAP.md](./BRAIN_CAPABILITY_ROADMAP.md)
   Forward-looking roadmap for Brain as an admin assistant and thought partner.
 - [AI_TOOL_CONTRACTS.md](./AI_TOOL_CONTRACTS.md)
-  Design-only allowlist for narrow AI reads/proposals, privacy, evaluation, and
-  prohibited integration access. It does not enable an AI runtime.
+  Governance allowlist for narrow AI reads/proposals, privacy, evaluation, and
+  prohibited integration access. The issue briefing is the only live runtime.
 
 ## Operations
 

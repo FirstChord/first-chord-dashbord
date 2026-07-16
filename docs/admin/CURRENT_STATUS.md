@@ -42,16 +42,19 @@ The admin overview is a strict meeting-start surface, not a complete status boar
   a tutor-facing AI surface needs its own `AI_TOOL_CONTRACTS.md` allowlist
   entry and explicit sign-off first.
 
-- **Optional AI issue briefing pilot (2026-07-15, local):** the deterministic
+- **Optional AI issue briefing pilot (2026-07-15, deployed `a85debf`, hardened
+  `3930535`):** the deterministic
   issue explanation can now be compressed on demand by a server-side model into
   a short headline, explanation, check and caveat. The model receives only the
   already-redacted explanation view model, has no tools, and cannot change or
   resolve an issue. Strict local validation, a five-second timeout, per-admin
   rate limit, deterministic fallback, enum-only feedback and a dedicated
-  feature flag/key keep the integration bounded. It remains disabled until the
-  separate Railway AI key and enable flag are configured.
+  feature flag/key keep the integration bounded. The separate restricted
+  Railway AI key and flag are configured and the production smoke test works.
+  `AI_RUNTIME_INTEGRATION.md` is the canonical implementation, security,
+  provider-retention, testing and reuse reference for future AI slices.
 
-- **Human issue labels + corrected Stripe read contract (2026-07-15, local):**
+- **Human issue labels + corrected Stripe read contract (2026-07-15, deployed):**
   issue cards now expose short deterministic labels such as **Billing stopped
   unexpectedly**, **Pause state mismatch**, and **Practice note not delivered**
   while retaining stable detector types underneath. Railway's restricted Stripe
@@ -60,7 +63,7 @@ The admin overview is a strict meeting-start surface, not a complete status boar
   is now documented as Customers, Subscriptions, Invoices, Prices, and Payment
   Intents Read, with writes and bank-level endpoints still denied.
 
-- **“Why does this issue exist?” deterministic layer (2026-07-15, local):**
+- **“Why does this issue exist?” deterministic layer (2026-07-15, deployed):**
   each Issues card can now load an admin-only explanation of the exact rule,
   redacted evidence, source role, queue workflow state, ambiguity, unqueried
   context, and safe next step. Static record/payment/pause detectors re-run

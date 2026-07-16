@@ -79,6 +79,10 @@ Do not delete external test rows automatically. Keep them explicitly flagged unl
   Railway service. Do not reuse the Practice Chat relay's `OPENAI_API_KEY`: that
   relay key has a documented browser-exposure history and separate rotation
   plan. Never prefix the admin key with `NEXT_PUBLIC_` or return it from a route.
+- Use a dedicated restricted OpenAI project key with Responses Write only and
+  every other endpoint set to None. `store: false` does not remove default
+  provider abuse-monitoring retention; the exact runtime and privacy boundary
+  is documented in `docs/admin/AI_RUNTIME_INTEGRATION.md`.
 
 ## Local Sheets Backups
 
