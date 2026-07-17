@@ -3,10 +3,13 @@ import {
   previewPracticeNoteMmsTestWrite,
 } from '@/lib/admin/mms';
 import {
-  PRACTICE_NOTES_LEVEL_2_PILOT_TUTORS,
-  isPracticeNotesLevel2PilotStudent,
   normalisePracticeNoteAttendanceStatus,
 } from '@/lib/admin/practice-notes-mms-helpers.mjs';
+import {
+  getPracticeNotesEnabledTutors,
+  resolvePracticeNotesStudentTutor,
+  validateSelfAttestedPracticeNotesTutor,
+} from '@/lib/admin/practice-notes-rollout.mjs';
 import {
   buildPracticeNoteDeliveryKey,
   findPracticeNoteDeliveryRecord,
@@ -18,7 +21,11 @@ import {
   buildPracticeNoteClaimFailureResponse,
   executeClaimedPracticeNoteDelivery,
 } from '@/lib/admin/practice-note-delivery-workflow.mjs';
-import { assertPracticeNotesEmailConfigured, sendPracticeNoteEmail } from '@/lib/admin/practice-notes-email';
+import {
+  claimPracticeNoteDelivery,
+  finalisePracticeNoteDeliveryClaim,
+  releasePracticeNoteDeliveryClaim,
+} from '@/lib/admin/practice-note-delivery-claims.mjs';
 import { getPracticeNoteLogRows, upsertPracticeNoteLogRow } from '@/lib/admin/sheets';
 import { authenticatePracticeChatRequest, corsHeaders } from '@/lib/admin/practice-chat-auth.mjs';
 import { getAdminStudentByMmsId } from '@/lib/admin/students';
@@ -58,13 +65,20 @@ export async function POST(request) {
       }, { status: 404, headers });
     }
 
-    const isPilotStudent = isPracticeNotesLevel2PilotStudent(pilotStudent);
+    const enabledTutors = getPracticeNotesEnabledTutors();
+    const studentTutor = resolvePracticeNotesStudentTutor(pilotStudent);
+    const isPilotStudent = studentTutor.ok && enabledTutors.includes(studentTutor.tutor);
 
     if (!isPilotStudent) {
+      const error = studentTutor && !studentTutor.ok
+        ? studentTutor.reason === 'conflicting_student_tutors'
+          ? 'This student has conflicting tutor records. Ask an admin to reconcile the assignment before sending practice notes.'
+          : 'This student does not have one clear tutor assignment, so Practice Chat cannot safely send notes.'
+        : `Practice Chat Level 2 is currently limited to enabled tutor students. Current enabled tutors: ${enabledTutors.join(', ')}.`;
       return Response.json({
-        error: `Practice Chat Level 2 is currently limited to ${PRACTICE_NOTES_LEVEL_2_PILOT_TUTORS.join(', ')} pilot students.`,
-        pilotTutors: PRACTICE_NOTES_LEVEL_2_PILOT_TUTORS,
-      }, { status: 403, headers });
+        error,
+        enabledTutors,
+      }, { status: studentTutor?.reason === 'conflicting_student_tutors' ? 409 : 403, headers });
     }
 
     if (!effectiveNoteText) {
@@ -96,7 +110,28 @@ export async function POST(request) {
     const target = preview.targetAttendance || {};
     const selection = preview.targetSelection || {};
     const recipient = preview.recipients?.[0] || {};
+    const confirmedRecipientEmail = `${body.confirmedRecipientEmail || ''}`.trim();
+    if (!isAbsentNoMakeup && (
+      body.confirmRecipient !== true
+      || !confirmedRecipientEmail
+      || confirmedRecipientEmail !== `${recipient.email || ''}`.trim()
+    )) {
+      return Response.json({
+        error: 'Confirm the exact parent recipient before sending these practice notes.',
+      }, { status: 400, headers });
+    }
     const snapshot = body.noteSnapshot || {};
+    const selfAttestedTutor = validateSelfAttestedPracticeNotesTutor({
+      tutor: body.tutor || snapshot.tutorName || snapshot.tutor || '',
+      student: pilotStudent,
+    });
+    if (mode === 'execute' && !selfAttestedTutor.ok) {
+      return Response.json({
+        error: selfAttestedTutor.reason === 'self_attested_tutor_mismatch'
+          ? 'The selected tutor does not match this student’s assigned tutor. Re-open Practice Chat from the correct tutor dashboard.'
+          : 'Practice Chat needs the selected tutor to confirm this student’s notes.',
+      }, { status: selfAttestedTutor.reason === 'conflicting_student_tutors' ? 409 : 403, headers });
+    }
     const deliveryKey = buildPracticeNoteDeliveryKey({
       studentMmsId: studentId,
       mmsAttendanceId: target.attendanceId || targetAttendanceId,
@@ -112,6 +147,7 @@ export async function POST(request) {
       studentMmsId: studentId,
       studentName: preview.student?.name || snapshot.studentName || '',
       tutorName: target.teacherName || snapshot.tutorName || snapshot.tutor || '',
+      actingTutor: selfAttestedTutor.actingTutor || existingDelivery?.actingTutor || '',
       lessonDate: target.eventStartDate || snapshot.lessonDate || '',
       rawNoteText: effectiveNoteText,
       copiedToClipboard: false,
@@ -227,13 +263,23 @@ export async function POST(request) {
 
     const delivery = await executeClaimedPracticeNoteDelivery({
       deliveryKey,
-      saveClaim: () => upsertPracticeNoteLogRow(claimNote),
+      saveClaim: async () => {
+        const databaseClaim = await claimPracticeNoteDelivery({
+          deliveryKey,
+          actorTutor: selfAttestedTutor.actingTutor || 'Self-attested: unknown',
+        });
+        if (!databaseClaim.ok) return databaseClaim;
+        try {
+          const sheetClaim = await upsertPracticeNoteLogRow(claimNote);
+          if (sheetClaim?.error) throw new Error(sheetClaim.error);
+          return { ...sheetClaim, databaseClaim };
+        } catch (error) {
+          await releasePracticeNoteDeliveryClaim({ deliveryKey });
+          throw error;
+        }
+      },
       executeDelivery: () => existingDelivery?.mmsAttendanceSaved
-        ? executePracticeNoteEmailRetry({
-            preview,
-            noteText: effectiveNoteText,
-            existingDelivery,
-          })
+        ? manualEmailFollowUpResult(existingDelivery)
         : executePracticeNoteMmsTestWrite({
             studentId,
             noteText: effectiveNoteText,
@@ -263,9 +309,18 @@ export async function POST(request) {
           const logResult = finalNote.errors.length
             ? { ok: false, error: finalNote.errors.join(', ') }
             : await upsertPracticeNoteLogRow(finalNote);
+          const finalClaimStatus = finalNote.errors.length || logResult?.error
+            ? 'tracking_failed'
+            : isAbsentNoMakeup
+              ? 'attendance_only_completed'
+              : email.ok === false
+                ? 'email_failed_manual_follow_up'
+                : 'completed';
+          const databaseClaim = await finalisePracticeNoteDeliveryClaim({ deliveryKey, status: finalClaimStatus });
           return {
             ok: !logResult?.error,
             ...logResult,
+            databaseClaim,
           };
         } catch (error) {
           return {
@@ -331,35 +386,14 @@ export async function POST(request) {
   }
 }
 
-async function executePracticeNoteEmailRetry({
-  preview,
-  noteText,
-  existingDelivery,
-} = {}) {
-  const emailConfig = assertPracticeNotesEmailConfigured();
-  const targetAttendance = preview.targetAttendance || {};
-  let practiceNoteEmail;
-
-  try {
-    practiceNoteEmail = await sendPracticeNoteEmail({
-      recipient: preview.recipients?.[0] || {},
-      studentName: preview.student?.name || existingDelivery?.studentName || '',
-      tutorName: targetAttendance.teacherName || existingDelivery?.tutorName || '',
-      noteText,
-      config: emailConfig,
-    });
-  } catch (error) {
-    practiceNoteEmail = {
-      ok: false,
-      channel: 'gmail',
-      toEmail: preview.recipients?.[0]?.email || existingDelivery?.recipientEmail || '',
-      fromEmail: emailConfig.fromEmail,
-      error: error.message || 'Practice note email failed.',
-    };
-  }
-
+function manualEmailFollowUpResult(existingDelivery = {}) {
+  const practiceNoteEmail = {
+    ok: false,
+    channel: 'gmail',
+    toEmail: existingDelivery.recipientEmail || '',
+    error: 'A previous email attempt needs manual follow-up. Practice Chat will not retry an ambiguous Gmail send.',
+  };
   return {
-    ...preview,
     dryRun: false,
     attendanceSave: {
       ok: true,
@@ -368,6 +402,6 @@ async function executePracticeNoteEmailRetry({
     },
     practiceNoteEmail,
     emailNotes: practiceNoteEmail,
-    partialSuccess: practiceNoteEmail.ok === false,
+    partialSuccess: true,
   };
 }

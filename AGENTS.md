@@ -87,13 +87,17 @@ Test names in the table refer to `tests/admin/*.test.mjs`.
   `lib/admin/pause-forecast.mjs`. Copy changes can affect finance forecasts.
 - Sheets updates are generally last-write-wins. Do not assume transactional
   claims or safe concurrent mutation.
-- Practice Chat delivery has a narrow pilot gate, delivery-key idempotency, and
-  retry-email-only behavior. Do not broaden its audience or remove confirmation.
+- Practice Chat Level 2 is a documented trusted-tutor exception: the selected
+  tutor is self-attested and must match the student's one clear recorded tutor
+  assignment; the final screen must name the server-derived recipient and
+  require a human confirmation. Preserve the PostgreSQL delivery-key claim and
+  manual handling of ambiguous Gmail failures.
 - `Communication_Log` means a message was copied to send, not proven sent.
 - Incoming-message classifications and matched students are proposals. They do
   not authorise archive, pause, payment, planning, or messaging actions.
 - Public tutor surfaces deliberately trade stronger identity for low friction.
-  Do not add new sensitive reads or consequential writes before tutor auth exists.
+  Do not add sensitive reads or consequential writes before tutor auth exists,
+  apart from the documented, narrow Practice Chat Level 2 trusted-tutor flow.
 - `npm run test:admin`, `npm run build`, `npm run dev`, and `npm run validate`
   run config generation first. Inspect the generated diff and never commit local
   credentials or unrelated generated churn.

@@ -16,6 +16,7 @@
     "sync-admin-tutors": "node scripts/sync-admin-tutors.js",
     "backup:sheets": "node scripts/backup-sheets-tabs.mjs",
     "ensure:state-tabs": "node scripts/ensure-state-tabs.mjs",
+    "ensure:practice-delivery-claims": "node scripts/ensure-practice-delivery-claims.mjs",
     "hygiene:check": "node scripts/hygiene-check.mjs",
     "eval:incoming": "node scripts/eval-incoming-classifier.mjs",
     "install:backup-schedule": "node scripts/install-sheets-backup-launch-agent.mjs",
@@ -32,6 +33,7 @@
     "lucide-react": "^0.539.0",
     "next": "^15.5.9",
     "next-auth": "^4.24.14",
+    "pg": "^8.16.3",
     "react": "19.1.0",
     "react-dom": "19.1.0"
   },

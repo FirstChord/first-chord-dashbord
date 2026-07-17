@@ -1,19 +1,20 @@
 # Practice Chat Delivery Audit
 
-Last updated: 2026-07-14
+Last updated: 2026-07-17
 
-This records the checked delivery boundary before widening Level 2 beyond Finn,
-Tom, Fennella, and Dean.
+This records the checked delivery boundary for the trusted-tutor Level 2
+rollout beyond Finn, Tom, Fennella, and Dean.
 
 Do not treat this as an implementation plan by itself. Confirm each point against current code before changing behaviour.
 
-## Current Pilot Boundary
+## Trusted-Tutor Delivery Boundary
 
-Level 2 Practice Chat currently:
+Level 2 Practice Chat:
 
 - accepts calls from the Practice Chat PWA through dashboard API routes
 - uses a shared bridge secret plus allowed browser origins
-- is limited to dashboard-verified students whose tutor is Finn, Tom, Fennella, or Dean, plus Test Studenty
+- enables all registered tutors by default (or a temporary explicit allow-list)
+- requires the selected tutor to self-attest and match the student's single, non-conflicting recorded tutor assignment
 - allows speech capture or a typed-note fallback before the final human-reviewed action
 - previews the selected MMS attendance target before writing
 - can mark the student `Present`, write the note/attendance to MMS, and send the parent note through First Chord Gmail
@@ -24,29 +25,62 @@ Level 2 Practice Chat currently:
 - holds a same-process `delivery_key` guard across claim, provider execution, and final logging
 - reports `deliveryTrackingFailed` and `partialSuccess` if provider work succeeds but the final delivery row cannot be saved
 
-This is safer for the trusted pilot. It is not a transactional claim and is not
-enough for a full tutor rollout.
+The PWA final action lists the selected student and first server-derived MMS
+parent recipient, and requires the tutor to tick a statement explicitly
+authorising that student's notes to that parent. This is a human confirmation,
+not proof of identity.
 
-## Widening Blockers
+## Rollout Safeguards
 
-Before enabling Level 2 for more tutors:
+The following controls are active in the trusted-tutor rollout. This is an
+intentional narrow exception to the usual public-tutor no-consequential-write
+rule, accepted by the school on 2026-07-17.
 
-1. Identify the caller.
-   - The shared secret proves the request came through an approved bridge, not which tutor pressed the button.
-   - The delivery row should record the acting tutor/user identity.
+1. Confirm the exact parent recipient.
+   - Before an execute request, the final PWA dialog lists the selected student
+     and the first email-capable recipient returned by the server preview.
+   - The tutor must tick “I confirm these are [student]'s notes and they should
+     be emailed to this parent.” The date confirmation is retained.
 
-2. Authorise the caller for the student.
-   - A tutor should only write/send notes for students they are allowed to teach, unless an admin override is explicit.
-   - The current pilot gate is based on the student's tutor, not authenticated caller identity.
+2. Fail closed on the tutor/student record.
+   - The PWA supplies the selected tutor as a self-attestation. The server loads
+     the student context and rejects a missing, mismatched, or conflicting tutor
+     assignment before any provider action.
+   - `Practice_Notes_Log.acting_tutor` stores `Self-attested: <name>`; it must
+     not be represented as verified identity.
 
-3. Move the allow-list out of code.
-   - The pilot tutor list should be config-driven before staged rollout, so expanding the pilot does not require code edits.
+3. Use a transactional delivery claim.
+   - `practice_note_delivery_claims.delivery_key` is a PostgreSQL primary key.
+     The route inserts its claim before Sheets, MMS, or Gmail work. A second
+     Railway instance sees the existing claim and cannot execute the providers.
+   - If the Sheets audit-claim write fails, the fresh database claim is released
+     before provider work starts. Completed/failed/manual-follow-up claims are
+     never automatically re-acquired.
 
-4. Confirm duplicate-send safety under concurrency.
-   - `delivery_key` protects normal retries and duplicate clicks after a row exists.
-   - The in-memory guard prevents duplicate execution only inside one running dashboard process.
-   - Google Sheets upsert is not a database transaction or unique constraint. Two Railway instances can both claim and send before either sees the other's row; email-only retries have the same adjacent risk.
-   - Move the claim to a transactional store with a unique `delivery_key` before widening. A Gmail timeout can also be ambiguous after Google accepts a message, so a retry must rely on durable provider/delivery evidence rather than assuming failure means unsent.
+4. Make rollout configuration explicit.
+   - `PRACTICE_NOTES_ENABLED_TUTORS` is a comma-separated list of canonical
+     tutor names. When omitted, every registered tutor is enabled; set it only
+     for a temporary operational restriction.
+
+5. Do not retry ambiguous Gmail sends automatically.
+   - After MMS succeeds and Gmail returns an error, the delivery is marked for
+     manual follow-up and the claim becomes terminal. The PWA never assumes a
+     timeout meant “unsent” and never retries that parent email itself.
+
+## Required Production Configuration
+
+Set these only on the canonical admin Railway service, in a no-lessons window:
+
+```text
+DATABASE_URL=<existing PostgreSQL URL>
+PRACTICE_CHAT_API_SECRET=<existing shared PWA handoff secret>
+# Optional temporary restriction; omit to enable the full registered roster.
+PRACTICE_NOTES_ENABLED_TUTORS=Arion,Calum,Chloe,David,Dean,Eléna,Fennella,Finn,Ines,Kenny,Kim,Patrick,Robbie,Scott,Stef,Tom
+```
+
+Run `npm run ensure:practice-delivery-claims` against that database before
+deploying. `PRACTICE_CHAT_API_SECRET` must remain configured for the shared PWA
+handoff; it is a coarse caller guard, not tutor identity.
 
 ## Fast-Follows During Rollout
 
@@ -65,7 +99,9 @@ Before enabling Level 2 for more tutors:
 
 ## Manual Checks Before Widening
 
-- Execute one real Finn/Tom/Fenella pilot note end-to-end.
+- Execute one real note end-to-end.
+- Confirm the final confirmation checkbox names the correct student and exact
+  parent email, and cannot be bypassed by the Finish button.
 - Confirm the parent receives the email.
 - Confirm MMS attendance is present and the note is visible where expected.
 - Confirm `Practice_Notes_Log` contains recipient, send status, Gmail ID, MMS attendance ID, and completed status.
@@ -74,3 +110,5 @@ Before enabling Level 2 for more tutors:
 - Force the claim write to fail and confirm the route returns 503 without calling MMS or Gmail.
 - Exercise two same-key requests in one process and confirm only one reaches provider execution.
 - Confirm failed Gmail or MMS paths are visible enough for admin follow-up.
+- Confirm the two known new-tutor students without an MMS parent email are
+  blocked at preview and no MMS/Gmail action occurs.

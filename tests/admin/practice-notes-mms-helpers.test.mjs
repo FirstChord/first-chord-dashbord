@@ -8,9 +8,8 @@ import {
   buildPracticeNoteEmailRecipients,
   describePracticeNoteAttendanceSelection,
   formatPracticeNoteHtml,
-  isPracticeNotesLevel2PilotStudent,
-  isPracticeNotesLevel2PilotTutor,
   listPracticeNoteAttendanceCandidates,
+  normalisePracticeNotesTutorName,
   selectPracticeNoteAttendanceTarget,
 } from '../../lib/admin/practice-notes-mms-helpers.mjs';
 
@@ -214,14 +213,9 @@ test('buildPracticeNoteEmailPayload serialises recipient IDs for MMS emailnotes'
   });
 });
 
-test('Practice Chat Level 2 pilot gate allows only pilot tutors or Test Studenty', () => {
-  assert.equal(isPracticeNotesLevel2PilotTutor('Finn Le Marinel'), true);
-  assert.equal(isPracticeNotesLevel2PilotTutor('Tom'), true);
-  assert.equal(isPracticeNotesLevel2PilotTutor('Fennella McCallum'), true);
-  assert.equal(isPracticeNotesLevel2PilotTutor('Dean'), true);
-  assert.equal(isPracticeNotesLevel2PilotTutor('Dean Louden'), true);
-
-  assert.equal(isPracticeNotesLevel2PilotStudent({ mmsId: 'sdt_real', tutor: 'Finn' }), true);
-  assert.equal(isPracticeNotesLevel2PilotStudent({ mmsId: 'sdt_real', registryTutor: 'Dean' }), true);
-  assert.equal(isPracticeNotesLevel2PilotStudent({ mmsId: 'sdt_fBg9JN', registryTutor: 'Dean' }), true);
+test('normalisePracticeNotesTutorName recognises every roster name and preserves unknown values', () => {
+  assert.equal(normalisePracticeNotesTutorName('Finn Le Marinel'), 'Finn');
+  assert.equal(normalisePracticeNotesTutorName('Fennella McCallum'), 'Fennella');
+  assert.equal(normalisePracticeNotesTutorName('Elena Esposito'), 'Eléna');
+  assert.equal(normalisePracticeNotesTutorName('Unknown tutor'), 'Unknown tutor');
 });

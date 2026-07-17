@@ -53,5 +53,5 @@ test('corsHeaders allows the Practice Chat secret header', () => {
 
   assert.equal(headers['Access-Control-Allow-Origin'], 'http://localhost:8000');
   assert.match(headers['Access-Control-Allow-Headers'], /X-FirstChord-PracticeChat-Secret/u);
+  assert.match(headers['Access-Control-Allow-Headers'], /Authorization/u);
 });
-
