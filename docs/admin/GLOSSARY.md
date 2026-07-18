@@ -90,3 +90,7 @@ A body of repertoire with its own progression vocabulary (`SONG_SERIES` in `song
 ## INSTRUMENTS_WITHOUT_REPERTOIRE
 
 The explicit, reviewed list (in `tests/admin/songs-catalogue.test.mjs`) of instruments a student may hold that deliberately have **no songs** — currently Voice, Singing, Ukulele Orchestra. Every entry is a person opening the Song panel to an empty shelf, so the list must be a conscious decision. A test fails if a student holds an instrument that is neither seeded in `SONG_INSTRUMENTS` nor named here. It exists because the empty-shelf bug shipped three times in one day (bass, the 38 blank-instrument students, then electric guitar) with nothing anywhere saying so.
+
+## Song outcome
+
+The tutor's optional one-tap answer ("How was it for them?" — *cruised it / about right / a battle*, plus an optional note) when a song assignment reaches `done` or gets parked, appended to the `Song_Outcomes` tab. Opinions with a timestamp, never workflow state — `Song_Assignments.status` stays the only current truth. Sibling tab `Song_Status_Log` records every status transition automatically ("free data before asked data"). Both exist to be distilled later into catalogue `tutorNote`s and path ordering, not to be dashboarded.

@@ -55,6 +55,11 @@ export default function SongBrowser({ student }) {
   const [assignments, setAssignments] = useState(null); // null = not loaded
   const [pendingId, setPendingId] = useState(null);
   const [assignError, setAssignError] = useState(null);
+  // One-tap "how did it go?" after a song hits done/parked. Optional — a chip
+  // tap saves, the X skips; either way the status change already happened.
+  const [outcomePrompt, setOutcomePrompt] = useState(null); // { songId, status }
+  const [outcomeNote, setOutcomeNote] = useState('');
+  const [outcomeSaving, setOutcomeSaving] = useState(false);
 
   const studentId = student?.mms_id || student?.ID || '';
   const token = student?.noteAccessToken || student?.note_access_token || '';
@@ -73,6 +78,8 @@ export default function SongBrowser({ student }) {
     setSelectedLevel(null);
     setSearchOpen(false);
     setSearch('');
+    setOutcomePrompt(null);
+    setOutcomeNote('');
   }, [studentId]);
 
   useEffect(() => {
@@ -138,6 +145,7 @@ export default function SongBrowser({ student }) {
   const callApi = async (id, options) => {
     setPendingId(id);
     setAssignError(null);
+    let saved = false;
     try {
       const res = await fetch('/api/song-assignments', {
         method: options.method,
@@ -146,6 +154,7 @@ export default function SongBrowser({ student }) {
       });
       const data = await res.json();
       if (data.success) {
+        saved = true;
         if (data.assignments) {
           setAssignments(data.assignments);
         } else if (data.assignment) {
@@ -161,12 +170,44 @@ export default function SongBrowser({ student }) {
       setAssignError("Couldn't save that — network error. Try again.");
     }
     setPendingId(null);
+    return saved;
   };
 
   const assignSong = (songId) => callApi(songId, { method: 'POST', body: { songId } });
   const assignPath = (pathId) => callApi(pathId, { method: 'POST', body: { pathId } });
-  const setStatus = (songId, status) =>
-    callApi(songId, { method: 'PATCH', body: { songId, status } });
+  const setStatus = async (songId, status) => {
+    const saved = await callApi(songId, { method: 'PATCH', body: { songId, status } });
+    if (saved && (status === 'done' || status === 'parked')) {
+      setOutcomePrompt({ songId, status });
+      setOutcomeNote('');
+    } else if (saved && outcomePrompt?.songId === songId) {
+      setOutcomePrompt(null);
+    }
+    return saved;
+  };
+
+  const sendOutcome = async (outcome) => {
+    if (!outcomePrompt) return;
+    setOutcomeSaving(true);
+    try {
+      await fetch('/api/song-outcomes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mmsId: studentId,
+          token,
+          songId: outcomePrompt.songId,
+          outcome,
+          note: outcomeNote.trim(),
+        }),
+      });
+    } catch {
+      // Optional telemetry — a lost outcome never blocks the tutor.
+    }
+    setOutcomeSaving(false);
+    setOutcomePrompt(null);
+    setOutcomeNote('');
+  };
   const move = (songId, direction) =>
     callApi(songId, { method: 'PATCH', body: { songId, direction } });
   const cycleStatus = (assignment) => {
@@ -281,9 +322,10 @@ export default function SongBrowser({ student }) {
                   {orderedAssignments.map((assignment, index) => {
                     const isParked = assignment.status === 'parked';
                     const busy = pendingId === assignment.songId;
+                    const prompting = outcomePrompt?.songId === assignment.songId;
                     return (
-                      <li
-                        key={assignment.songId}
+                      <li key={assignment.songId}>
+                      <div
                         className={`flex items-center gap-2 ${isParked ? 'opacity-50' : ''}`}
                       >
                         <span className="w-5 shrink-0 text-right text-sm text-gray-400">
@@ -335,6 +377,66 @@ export default function SongBrowser({ student }) {
                             <Archive className="h-3.5 w-3.5" />
                           )}
                         </button>
+                      </div>
+
+                      {/* One-tap outcome capture — a chip saves (with any note
+                          typed), the X skips. The status change is already in. */}
+                      {prompting && (
+                        <div className="ml-7 mt-1.5 rounded-lg border border-[#2F6B3D]/20 bg-white p-2.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-sm font-medium text-gray-700">
+                              {outcomePrompt.status === 'parked'
+                                ? 'Why the park?'
+                                : 'How was it for them?'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setOutcomePrompt(null)}
+                              className="rounded p-1 text-gray-400 hover:bg-gray-100"
+                              aria-label="Skip"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                            {[
+                              ['cruised', 'Cruised it'],
+                              ['about_right', 'About right'],
+                              ['battle', 'A battle'],
+                            ].map(([value, label]) => (
+                              <button
+                                key={value}
+                                type="button"
+                                disabled={outcomeSaving}
+                                onClick={() => sendOutcome(value)}
+                                className="rounded-full border border-[#2F6B3D]/40 px-2.5 py-0.5 text-xs font-medium text-[#2F6B3D] hover:bg-green-50 disabled:opacity-40"
+                              >
+                                {label}
+                              </button>
+                            ))}
+                          </div>
+                          <div className="mt-1.5 flex items-center gap-1.5">
+                            <input
+                              type="text"
+                              value={outcomeNote}
+                              maxLength={300}
+                              onChange={(e) => setOutcomeNote(e.target.value)}
+                              placeholder="What tripped them up? (optional)"
+                              className="min-w-0 flex-1 rounded-lg border border-gray-200 px-2.5 py-1 text-xs outline-none focus:border-[#2F6B3D]/50"
+                            />
+                            {outcomeNote.trim() && (
+                              <button
+                                type="button"
+                                disabled={outcomeSaving}
+                                onClick={() => sendOutcome('')}
+                                className="rounded-full bg-[#2F6B3D] px-2.5 py-1 text-xs font-medium text-white disabled:opacity-40"
+                              >
+                                Save
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
                       </li>
                     );
                   })}

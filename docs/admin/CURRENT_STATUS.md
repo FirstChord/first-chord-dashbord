@@ -1,6 +1,6 @@
 # Admin Current Status
 
-Last updated: 2026-07-16
+Last updated: 2026-07-18
 
 Tracked current-status entrypoint for agents working from the `music-school-dashboard` repo.
 
@@ -23,6 +23,22 @@ The admin overview is a strict meeting-start surface, not a complete status boar
 ## Recently shipped
 
 *Last working arc only — older work is in `git log --oneline` + the Learning Log.*
+
+- **Song loop telemetry (2026-07-18, built, not yet deployed):** two append-only
+  tabs behind the existing song loop, the first slice of the
+  institutional-learning direction. `Song_Status_Log` records every real
+  assignment status transition as a **best-effort side effect** of the existing
+  assign/status writes (an append failure never fails the tutor's request —
+  evidence, not a complete ledger). `Song_Outcomes` captures the tutor's
+  optional one-tap "How was it for them?" when a song hits done/parked —
+  *cruised it / about right / a battle* chips + optional ≤300-char note, inline
+  in the SongBrowser manage strip; a chip saves, the X skips. Contract
+  decisions: `Song_Assignments.status` stays the only current-state truth; the
+  new tabs are mined later (termly, approval-first distillation into catalogue
+  `tutorNote`s and path ordering), **never** a dashboard panel, action queue,
+  or tutor scoreboard. Pure logic in `lib/songs/outcome-helpers.mjs` (tested);
+  new `POST /api/song-outcomes` uses the same per-student signed-token guard as
+  song-assignments. Why: [[2026-07-18 - Song Loop Telemetry (Free Data Before Asked Data)]].
 
 - **Cover loop rungs 1–2 (2026-07-16, deployed):** the tutor-absence "Find
   cover" choice now shows ranked cover-bank candidates for that date's weekday
@@ -119,27 +135,12 @@ The admin overview is a strict meeting-start surface, not a complete status boar
   verification guide, privacy explanation, and remaining risks are in
   `AGENT_READINESS_AUDIT_OUTCOMES.md`.
 
-- **Agent-readiness improvements 5–8 (2026-07-14, deployed):** Students and Issues
-  now share one deterministic student-context builder with source/conflict/cache
-  provenance; pure payment/pause detectors and the explicitly writable pause
-  workflow are separated from generic issue orchestration; approval and
-  partial-failure behavior has executable contract coverage; and
-  `AI_TOOL_CONTRACTS.md` defines a design-only allowlist for future redacted
-  reads/proposals without adding an AI dependency or action endpoint.
-
-- **Agent-readiness foundation (2026-07-14, deployed):** root `AGENTS.md` is now the
-  repository-contained code/safety/test map; stale portal-era guidance is marked
-  historical and documentation links are clean; PR and `main` CI now performs a
-  clean install, all admin tests, ESLint over application code, and a production
-  build. This changes development guardrails only, not runtime behavior.
-- **Pause expectation writes are explicit (2026-07-14, deployed):** Overview,
-  Issues, and live Stripe scans no longer change `Students.payment_expectation`.
-  `/admin/flags` now previews the exact high-confidence Pause History changes,
-  asks for confirmation, re-evaluates on POST, and logs each applied transition
-  to `Event_Log` with the signed-in admin. It never mutates Stripe.
-- **Every student has a shelf: bass, electric guitar, and 37 missing instruments (2026-07-14, deployed):** three groups were opening the Song panel to nothing. **Bass** (41 entries, Debut–G6, 6 students) and **Electric Guitar** (60 entries, Debut–G6, 4 students — a genuinely separate instrument, not a spelling of Guitar) are seeded; and **38 students had no instrument at all** because the Google Sheet and `students-registry.js` are *both* canonical and **nothing syncs `instrument` between them** — Finn had filled in the Sheet, the dashboard reads the registry. Synced (now 1 blank), which also revealed **Alba McMillan is bass, not guitar** — invisible to a registry scan, because the registry was the thing that was wrong. **New standing guard:** a test fails if any student holds an instrument the catalogue does not know, with an explicit `INSTRUMENTS_WITHOUT_REPERTOIRE` list — the empty-shelf bug shipped *three times in one day* before anything said so out loud. Separately, `students-registry.js` had held **invalid JavaScript** (`lastName: 'O'Neil'`) since April, invisible because every consumer regexes it as text and nothing ever parses it; the admin editor would have added a backslash to that name on every save. Fixed and guarded (the text parser and the JS parser must now agree on every student). **`artist: 'RSL'` now means two things** — needs-curation marker *and* the true artist of a Rockschool Original — and the official RSL Awards syllabus pages settle which, because they group covers separately from originals. Catalogue **310 entries**. **→ Coverage, every known gap, and the ingestion traps now live in [`SONG_CATALOGUE_COVERAGE.md`](SONG_CATALOGUE_COVERAGE.md) — read that before adding grades or paths.** Why: [[2026-07-14 - Bass Gets Its Own Shelf (and a Registry Landmine)]] and [[2026-07-14 - Song Series (John Thompson Joins RSL)]].
-- Bridge arc (2026-07-08, all bridge-side): LID phone-matching fix (`participantPn`/`senderPn` preferred; narrow push-name fallback — verify on next tutor reply in a confirmed group), structurally receive-only enforcement (`outbound-guard.js`), and the stall watchdog (force-exit so launchd relaunches; stale window must exceed the heartbeat). Ban-risk model: `WHATSAPP_INCOMING_BRIDGE.md`; always-on host plan: `PI_OPS_HOST_PLAN.md`. Why: Learning Log entries of 2026-07-08.
-- Earlier July arcs (tutor replies as school-side evidence, incoming inbox auto-capture + bridge heartbeat, tutor pay statements, finance layer, payroll V1) → `git log` + Learning Log. Tutor-facing payroll Phases 2–3 planned in `TUTOR_FACING_PAYROLL_ROADMAP.md`.
+- Earlier arcs (agent-readiness 1–12, explicit pause-expectation writes, the
+  bass/electric shelf + registry-landmine day — song coverage and ingestion
+  traps live in [`SONG_CATALOGUE_COVERAGE.md`](SONG_CATALOGUE_COVERAGE.md) —
+  the WhatsApp bridge arc, finance layer, payroll V1–2) → `git log` + Learning
+  Log. Tutor-facing payroll Phase 3 remains planned in
+  `TUTOR_FACING_PAYROLL_ROADMAP.md`.
 
 ## Standing context & policy
 

@@ -1,7 +1,19 @@
 import { NextResponse } from 'next/server';
-import { getSongAssignmentRows, upsertSongAssignmentRow } from '@/lib/admin/sheets';
+import { appendSongStatusLogRows, getSongAssignmentRows, upsertSongAssignmentRow } from '@/lib/admin/sheets';
 import { buildAssignmentUpsert, buildAssignmentUpdate, buildPathAssignments } from '@/lib/songs/assignment-helpers.mjs';
+import { buildStatusLogEntries } from '@/lib/songs/outcome-helpers.mjs';
 import { getTutorSurfaceTokenSecret, verifyStudentNotesToken } from '@/lib/tutor-surface-token.mjs';
+
+// Status transitions are telemetry (Song_Status_Log, append-only): log them
+// best-effort after the assignment write, never fail the request over them.
+async function logStatusTransitions({ previousRows, changedRows, changedBy }) {
+  try {
+    const entries = buildStatusLogEntries({ previousRows, changedRows, changedBy });
+    await appendSongStatusLogRows(entries);
+  } catch (error) {
+    console.error('Song status log append failed:', error.message);
+  }
+}
 
 // The per-student token minted for the tutor dashboard (same one that guards
 // /api/notes/[studentId]) is the identity here: it proves the caller got this
@@ -66,6 +78,7 @@ export async function POST(request) {
       for (const row of result.rows) {
         await upsertSongAssignmentRow(row);
       }
+      await logStatusTransitions({ previousRows: existingRows, changedRows: result.rows, changedBy: auth.tutor });
       const changed = new Map(result.rows.map((row) => [row.assignmentId, row]));
       const assignments = [
         ...existingRows.map((row) => changed.get(row.assignmentId) || row),
@@ -85,6 +98,7 @@ export async function POST(request) {
     }
 
     await upsertSongAssignmentRow(result.row);
+    await logStatusTransitions({ previousRows: existingRows, changedRows: [result.row], changedBy: auth.tutor });
     return NextResponse.json({ success: true, assignment: result.row, created: result.created });
   } catch (error) {
     console.error('Song assignment write failed:', error.message);
@@ -124,6 +138,7 @@ export async function PATCH(request) {
     for (const row of result.rows) {
       await upsertSongAssignmentRow(row);
     }
+    await logStatusTransitions({ previousRows: existingRows, changedRows: result.rows, changedBy: auth.tutor });
 
     // Return the student's full merged list so the UI can re-render in place.
     const changed = new Map(result.rows.map((row) => [row.assignmentId, row]));
