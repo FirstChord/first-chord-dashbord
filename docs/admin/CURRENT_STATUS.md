@@ -24,7 +24,7 @@ The admin overview is a strict meeting-start surface, not a complete status boar
 
 *Last working arc only — older work is in `git log --oneline` + the Learning Log.*
 
-- **Song requests + `add-song` skill (2026-07-18, built, not yet deployed):** a
+- **Song requests + `add-song` skill (2026-07-18, deployed `8ec6fe4`):** a
   Song Browser search miss now offers one *Request "X"* button, appending a
   `status='new'` row to the new `Song_Requests` tab (query, instrument, tutor
   from token, student context) — the catalogue's intake shifts from "what Finn
