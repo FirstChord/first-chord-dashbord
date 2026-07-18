@@ -1,6 +1,6 @@
 # Song Catalogue — Coverage and Gaps
 
-Last updated: 2026-07-14 · **310 entries**
+Last updated: 2026-07-19 · **311 entries**
 
 The single home for *what repertoire exists, what is missing, and why*. Coverage numbers
 here are a snapshot; the catalogue itself (`lib/config/songs-catalogue.mjs`) is the truth.
@@ -60,14 +60,14 @@ book and are correctly unbadged.
 
 The RSL series runs **Debut → Grade 6**. Levels are only comparable *inside* a series.
 
-### Guitar (acoustic) — 54 entries · 114 students
+### Guitar (acoustic) — 55 entries · 114 students
 | Level | Songs | Exercises |
 |---|---|---|
 | Debut | 9 | 2 |
 | Grade 1 | 6 | 2 |
 | Grade 2 | 6 | 2 |
 | Grade 3 | 8 | 2 |
-| Grade 4 | 5 | — |
+| Grade 4 | 6 | — |
 | Grade 5 | 5 | 2 |
 | Grade 6 | 5 | — |
 
