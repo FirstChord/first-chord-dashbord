@@ -60,6 +60,9 @@ export default function SongBrowser({ student }) {
   const [outcomePrompt, setOutcomePrompt] = useState(null); // { songId, status }
   const [outcomeNote, setOutcomeNote] = useState('');
   const [outcomeSaving, setOutcomeSaving] = useState(false);
+  // "Request this song" on a search miss → Song_Requests curation queue.
+  const [requestedTerm, setRequestedTerm] = useState(null);
+  const [requesting, setRequesting] = useState(false);
 
   const studentId = student?.mms_id || student?.ID || '';
   const token = student?.noteAccessToken || student?.note_access_token || '';
@@ -184,6 +187,29 @@ export default function SongBrowser({ student }) {
       setOutcomePrompt(null);
     }
     return saved;
+  };
+
+  const requestSong = async () => {
+    const queryText = search.trim();
+    if (!queryText) return;
+    setRequesting(true);
+    try {
+      const res = await fetch('/api/song-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mmsId: studentId,
+          token,
+          queryText,
+          instrument: student?.instrument || '',
+        }),
+      });
+      const data = await res.json();
+      if (data.success) setRequestedTerm(queryText);
+    } catch {
+      // Quiet failure — the tutor can just try again.
+    }
+    setRequesting(false);
   };
 
   const sendOutcome = async (outcome) => {
@@ -599,9 +625,27 @@ export default function SongBrowser({ student }) {
                 );
               })}
               {shelfSongs.length === 0 && (
-                <p className="col-span-full text-sm text-gray-500">
-                  {searchTerm ? `Nothing matches “${search}”.` : 'No songs at this grade yet.'}
-                </p>
+                <div className="col-span-full flex flex-wrap items-center gap-2 text-sm text-gray-500">
+                  <span>
+                    {searchTerm ? `Nothing matches “${search}”.` : 'No songs at this grade yet.'}
+                  </span>
+                  {searchTerm && canAssign && (
+                    search.trim() === requestedTerm ? (
+                      <span className="inline-flex items-center gap-1 font-medium text-[#2F6B3D]">
+                        <Check className="h-3.5 w-3.5" /> Requested
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={requesting}
+                        onClick={requestSong}
+                        className="font-medium text-[#2F6B3D] hover:underline disabled:opacity-40"
+                      >
+                        {requesting ? 'Requesting…' : `Request “${search.trim()}”`}
+                      </button>
+                    )
+                  )}
+                </div>
               )}
             </div>
 

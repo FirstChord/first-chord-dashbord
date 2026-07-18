@@ -94,3 +94,7 @@ The explicit, reviewed list (in `tests/admin/songs-catalogue.test.mjs`) of instr
 ## Song outcome
 
 The tutor's optional one-tap answer ("How was it for them?" — *cruised it / about right / a battle*, plus an optional note) when a song assignment reaches `done` or gets parked, appended to the `Song_Outcomes` tab. Opinions with a timestamp, never workflow state — `Song_Assignments.status` stays the only current truth. Sibling tab `Song_Status_Log` records every status transition automatically ("free data before asked data"). Both exist to be distilled later into catalogue `tutorNote`s and path ordering, not to be dashboarded.
+
+## Song request
+
+A tutor's one-tap "Request "X"" on a Song Browser search miss, appended as a `status='new'` row to the `Song_Requests` tab. The catalogue's intake queue — resolved during curation by the `add-song` skill (or a sheet edit), deliberately not via any admin page.

@@ -24,7 +24,19 @@ The admin overview is a strict meeting-start surface, not a complete status boar
 
 *Last working arc only — older work is in `git log --oneline` + the Learning Log.*
 
-- **Song loop telemetry (2026-07-18, built, not yet deployed):** two append-only
+- **Song requests + `add-song` skill (2026-07-18, built, not yet deployed):** a
+  Song Browser search miss now offers one *Request "X"* button, appending a
+  `status='new'` row to the new `Song_Requests` tab (query, instrument, tutor
+  from token, student context) — the catalogue's intake shifts from "what Finn
+  seeded" toward "what tutors reach for". **Deliberately no admin surface:**
+  the machine-level `add-song` skill (`~/.claude/skills/add-song/SKILL.md`) is
+  the curation checklist (secret-link-first, entry shape, every
+  `SONG_CATALOGUE_COVERAGE.md` ingestion trap) *and* the queue's consumer via
+  `node scripts/list-song-requests.mjs`; resolution (`added`/`declined` +
+  `song_id`) is a sheet edit during curation, not a dashboard action. Why:
+  [[2026-07-18 - Song Requests and the Add-Song Skill (Curation as a Queue)]].
+
+- **Song loop telemetry (2026-07-18, deployed `8c98c41`):** two append-only
   tabs behind the existing song loop, the first slice of the
   institutional-learning direction. `Song_Status_Log` records every real
   assignment status transition as a **best-effort side effect** of the existing
