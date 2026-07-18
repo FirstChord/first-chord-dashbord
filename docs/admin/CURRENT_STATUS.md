@@ -33,7 +33,11 @@ The admin overview is a strict meeting-start surface, not a complete status boar
   the curation checklist (secret-link-first, entry shape, every
   `SONG_CATALOGUE_COVERAGE.md` ingestion trap) *and* the queue's consumer via
   `node scripts/list-song-requests.mjs`; resolution (`added`/`declined` +
-  `song_id`) is a sheet edit during curation, not a dashboard action. Why:
+  `song_id`) is a sheet edit during curation, not a dashboard action. The
+  noticing layer is a Monday-morning launchd agent on Finn's Mac
+  (`scripts/check-song-requests.mjs` + installer) that notifies only when open
+  requests exist — automation of attention, while merge and deploy stay
+  supervised. Why:
   [[2026-07-18 - Song Requests and the Add-Song Skill (Curation as a Queue)]].
 
 - **Song loop telemetry (2026-07-18, deployed `8c98c41`):** two append-only
