@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { appendPlanningProgressLogRow, getPlanningItemRows, upsertPlanningItemRow } from '../lib/admin/sheets.js';
 import { buildBackupPlanningItem, buildBackupProgressNote, BACKUP_PLANNING_ID } from '../lib/admin/backup-helpers.mjs';
+import { BACKUP_TABS, OPTIONAL_MISSING_TABS } from '../lib/admin/backup-tabs.mjs';
 import { buildSheetCensus, formatCensusSummary } from '../lib/admin/sheet-census.mjs';
 import { loadLocalEnv } from './script-env.mjs';
 
@@ -10,39 +11,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..');
 
-const BACKUP_TABS = [
-  'Students',
-  'Issue_Queue',
-  'Event_Log',
-  'Waiting_List_State',
-  'Showcase_Task_State',
-  'Holiday_Workflow_State',
-  'Schedule_Context',
-  'Parent_Understanding_State',
-  'Tutor_Absence_State',
-  'Cover_Bank_State',
-  'Tutor_Lifecycle',
-  'Planning_Items',
-  'Planning_Progress_Log',
-  'Practice_Notes_Log',
-  'Communication_Log',
-  'Incoming_Message_Inbox',
-  'WhatsApp_Group_Map',
-  'Tutor_Pay',
-  'Expenses',
-  'Expense_Log',
-  'Finance_Snapshot',
-  'Payroll_Runs',
-  'Tutor_Wise',
-  'Tutor_Phones',
-  'Students_Archive',
-  'Song_Assignments',
-  'Song_Status_Log',
-  'Song_Outcomes',
-  'Song_Requests',
-  'Stripe_Collected_Monthly',
-];
-const OPTIONAL_MISSING_TABS = new Set(['Students_Archive', 'Tutor_Phones']);
 const BACKUP_SET_RETENTION_COUNT = 8;
 
 function timestampForFolder(date = new Date()) {

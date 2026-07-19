@@ -211,6 +211,34 @@ if (hasStateTabTouch(diffText) && !files.includes('docs/admin/STATE_TABS_SCHEMA.
   });
 }
 
+// Contract files paired with the guard test that pins them. Changing the
+// contract without touching its guard is the classic silent-drift move — this
+// prompt (non-blocking, like everything here) asks whether the guard should
+// change too. Contracts documented in STATE_TABS_SCHEMA.md → Format Contracts.
+const CONTRACT_GUARD_PAIRS = [
+  ['lib/admin/backup-tabs.mjs', 'tests/admin/state-tab-contracts.test.mjs'],
+  ['lib/admin/sheets/core.mjs', 'tests/admin/state-tab-contracts.test.mjs'],
+  ['lib/admin/sheets/song-assignments.mjs', 'tests/admin/state-tab-contracts.test.mjs'],
+  ['lib/admin/wise-helpers.mjs', 'tests/admin/wise-helpers.test.mjs'],
+  ['lib/admin/payroll-helpers.mjs', 'tests/admin/payroll-helpers.test.mjs'],
+  ['lib/admin/mms.js', 'tests/admin/mms-payroll-attendance.test.mjs'],
+  ['lib/admin/pause-forecast.mjs', 'tests/admin/pause-forecast.test.mjs'],
+  ['lib/admin/incoming-message-helpers.mjs', 'tests/admin/incoming-message-helpers.test.mjs'],
+  ['lib/songs/assignment-helpers.mjs', 'tests/admin/song-assignment-helpers.test.mjs'],
+  ['lib/songs/outcome-helpers.mjs', 'tests/admin/song-outcome-helpers.test.mjs'],
+  ['lib/songs/request-helpers.mjs', 'tests/admin/song-request-helpers.test.mjs'],
+];
+
+const contractTouchesWithoutGuard = CONTRACT_GUARD_PAIRS.filter(
+  ([contractFile, guardFile]) => files.includes(contractFile) && !files.includes(guardFile)
+);
+if (contractTouchesWithoutGuard.length) {
+  warnings.push({
+    title: 'Contract file changed without its guard test',
+    body: `${contractTouchesWithoutGuard.map(([contractFile, guardFile]) => `  - ${contractFile} (guard: ${guardFile})`).join('\n')}\n  If the contract itself changed (headers, statuses, formats, thresholds), the guard must change with it. A pure refactor may genuinely need no test change.`,
+  });
+}
+
 if (hasRouteOrWorkflowTouch(files) && !files.includes('docs/admin/CURRENT_STATUS.md')) {
   warnings.push({
     title: 'Admin route/workflow changed',

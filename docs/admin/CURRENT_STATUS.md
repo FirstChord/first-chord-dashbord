@@ -24,6 +24,23 @@ The admin overview is a strict meeting-start surface, not a complete status boar
 
 *Last working arc only — older work is in `git log --oneline` + the Learning Log.*
 
+- **Legacy triptych (2026-07-19, committed, deploy pending):** three arcs chosen
+  explicitly for longevity. **(1) Teaching layer:** 115 tutorNotes + 145
+  studentNotes (never invented — RSL originals/exercises stay blank), 12
+  curation fixes, path templates for bass/electric/piano (every instrument now
+  has an entry path), and [`DISTILLATION_PLAYBOOK.md`](DISTILLATION_PLAYBOOK.md)
+  making the termly telemetry→notes rhythm executable. **(2) Disaster
+  recovery:** the first real restore test found five non-rebuildable tabs
+  missing from the backup; fixed, and `npm run restore:drill` now rehearses a
+  full restore into a guarded scratch spreadsheet (run for real: 30 tabs,
+  10,809 rows, PASSED) — SPOF register + cold-start runbook in
+  [`DISASTER_RECOVERY.md`](DISASTER_RECOVERY.md). **(3) Contract guards:**
+  `backup-tabs.mjs` + `state-tab-contracts.test.mjs` pin managed↔backup
+  coverage (exclusions need written reasons), header hygiene, and
+  builder↔header agreement; `hygiene:check` prompts when a contract file
+  changes without its paired guard. Why: the three 2026-07-19 Learning Log
+  entries.
+
 - **Song requests + `add-song` skill (2026-07-18, deployed `8ec6fe4`):** a
   Song Browser search miss now offers one *Request "X"* button, appending a
   `status='new'` row to the new `Song_Requests` tab (query, instrument, tutor

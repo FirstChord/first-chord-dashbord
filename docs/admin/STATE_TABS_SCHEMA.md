@@ -97,6 +97,17 @@ Some source formats are fragile because they come from human-edited external sys
 - **WhatsApp auto-capture gate + school-side numbers.** Auto-ingested group messages (`source = whatsapp_group_auto`) are only written when the chat is `confirmed` in `WhatsApp_Group_Map` — confirming/ignoring a group in the inbox UI is therefore also the on/off switch for its auto-capture. School-side messages are detected three ways and stamp `school_replied_at`/`school_replied_by` on open rows instead of creating new ones: the bridge's `from_me` flag (our own account), the dashboard env `INCOMING_STAFF_PHONES` (comma-separated, any UK format; Tom's personal number), and the **`Tutor_Phones` sheet** (a tutor replying in the lesson group from their own number — `matchTutorPhone` resolves it to the tutor's name). School-side stamping is reply *evidence only*: it never marks an item handled — only Finn/Tom stamping done does. No-signal parent messages (`general`, no dates) are auto-archived as `ignored`. Retention of auto-archived noise rows is an open decision — they accumulate in the sheet until pruned.
 - **WhatsApp bridge placeholder text + capture identity.** The bridge substitutes literal placeholder bodies when it never saw a message's text: `[Message content unavailable - star update arrived before cache]` and `[Media or unsupported message]` (`tools/whatsapp-incoming-bridge/bridge.js`). The dashboard pattern-matches those strings (`isIncomingPlaceholderText`, `lib/admin/incoming-message-helpers.mjs`) to land rows as `needs_review`, offer the paste-to-classify fix-up, and decide replay skip/heal — if the bridge wording changes, update the pattern + tests together. Bridge capture identity is `source + chat_id + external_message_id` (`buildIncomingMessageId`), so WhatsApp's star replays upsert the same row; don't add volatile fields (message text, timestamps) back into that hash.
 
+- **Managed tabs ↔ backup coverage.** `lib/admin/backup-tabs.mjs` is the single home for
+  what the local backup covers: every tab in `buildManagedStateSheetDefinitions` must be
+  in `BACKUP_TABS` or in `NON_BACKED_UP_TABS` with a written rebuildable-from-truth
+  reason (`tests/admin/state-tab-contracts.test.mjs` enforces it). Exists because five
+  non-rebuildable tabs drifted out of the backup unnoticed until the first restore drill
+  (2026-07-19). The same test pins header uniqueness/snake_case and row-builder ↔ header
+  agreement for the Song_* lane; `hygiene:check` prompts when any contract file here
+  changes without its paired guard test. Restore procedure + SPOF register:
+  [`DISASTER_RECOVERY.md`](DISASTER_RECOVERY.md) (`npm run restore:drill` is rehearsed,
+  not aspirational).
+
 ## Setup And Backup Checks
 
 Run this to create/verify dashboard-owned state tabs and required headers:
