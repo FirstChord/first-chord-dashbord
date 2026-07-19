@@ -28,26 +28,36 @@ model touches a real parent message).*
 - **Telemetry from day one:** used-unmodified vs edited vs discarded per proposal.
   Gate for lane 2 / overnight scheduling: ~70%+ used unmodified over ~4 weeks.
 
-## Hard constraints (added by Finn, 2026-07-19)
+## Hard constraints (from Finn's full policy text, 2026-07-19)
 
 **Drafts must enforce the Lesson Cancellation Policy** (canonical: Obsidian
-`05 Policies/Lesson Cancellation Policy.md`):
+`05 Policies/Lesson Cancellation Policy.md` — read it in full; the summary below is
+the classifier spec, not the policy home):
 
-- **Never offer a reschedule or make-up lesson.** This is the #1 failure mode — the
-  natural "helpful" reply is exactly the policy breach (the design conversation's own
-  sample draft made this mistake: "I'll speak to Kenny about a swap" — wrong).
-- Classify by notice window before drafting, using the lesson date from
-  `Schedule_Context` evidence vs the message date:
-  - 7+ days out → cancellation acknowledged, no charge.
-  - Inside 7 days → charged; a practice video will be sent in its place.
-  - Same day → charged; no video.
-- **Ambiguity rule:** if the lesson date or the notice window can't be established
-  from evidence, the draft must be a neutral warm acknowledgement ("thanks for letting
-  us know — I'll come back to you shortly") that commits to nothing — never a guessed
-  policy outcome.
-- Validation (deterministic, not prompt-hope): reject any draft containing
-  reschedule/swap/make-up/move-the-lesson language; reject any charge/no-charge claim
-  that contradicts the computed notice window.
+- **One-off moves never; permanent changes gladly.** The #1 subtlety: "can we miss
+  Thursday?" must never be answered with a swap or make-up — but "can we change our
+  slot going forward?" is *welcomed* and should get a warm "we'll work with you to
+  find a better time" + route to Finn. The classifier's first job is telling these
+  apart; when unsure which is meant, use the ambiguity rule.
+- **The can't-attend options are real and should be offered:** a **Zoom lesson at the
+  scheduled slot**, or a **practice video** (5–10 min with practice notes) — by notice
+  window (lesson date from `Schedule_Context` vs message date):
+  - Cancelled 7+ days out → cancelled, not charged.
+  - Inside 7 days → charged; offer Zoom-at-slot or practice video.
+  - No-show / same-day cancellation → charged; **no video** (and no draft should
+    promise one).
+  - Tutor-side cancellation → payment paused for that lesson.
+- **Ending lessons:** two lessons' notice — acknowledge warmly, route to Finn.
+- **Extended breaks:** 3 weeks free / weeks 4–5 charged / 6+ = step-back conversation;
+  not in July–August. Pause requests route into the existing pause planning flow, not
+  a drafted policy lecture.
+- **Ambiguity rule:** if the lesson date, the notice window, or one-off-vs-permanent
+  can't be established from evidence, the draft must be a neutral warm acknowledgement
+  ("thanks for letting us know — I'll come back to you shortly") that commits to
+  nothing — never a guessed policy outcome.
+- Validation (deterministic, not prompt-hope): reject any draft offering a one-off
+  reschedule/swap/make-up; reject any charge/no-charge/video claim that contradicts
+  the computed notice window; reject a video promise on a same-day cancellation.
 
 ## Build order when green-lit
 
