@@ -24,6 +24,18 @@ The admin overview is a strict meeting-start surface, not a complete status boar
 
 *Last working arc only — older work is in `git log --oneline` + the Learning Log.*
 
+- **Continuity pack + the parked-prompt bug (2026-07-19, committed):** Finn
+  reported the Friday prompt missing — live state showed both the Friday and
+  Monday prompts `parked` and permanently dead, because the recurring-prompt
+  refresh predicates only re-seeded on `done`. **Parked now means "skip one
+  occurrence"** for all three seeded prompts (strictly-past guard so parking on
+  the day is respected; test-pinned); both prompts self-resurrect on the next
+  admin load after deploy. And
+  [`OPERATIONS_CONTINUITY.md`](OPERATIONS_CONTINUITY.md) — the people-side twin
+  of disaster recovery: "if Finn is unreachable, start here", the fortnight
+  rhythm table, the only-Finn list (the one genuine blocker is **Wise
+  approval** — decision 1), what deliberately pauses, five sign-off decisions.
+
 - **Legacy pair two (2026-07-19, deployed):** **(4) Money-path
   hardening:** the documented `limit: 1000` attendance truncation landmine is
   defused — `fetchAllPages` (`lib/admin/mms-pagination.mjs`) pages through
@@ -88,102 +100,7 @@ The admin overview is a strict meeting-start surface, not a complete status boar
   new `POST /api/song-outcomes` uses the same per-student signed-token guard as
   song-assignments. Why: [[2026-07-18 - Song Loop Telemetry (Free Data Before Asked Data)]].
 
-- **Cover loop rungs 1–2 (2026-07-16, deployed):** the tutor-absence "Find
-  cover" choice now shows ranked cover-bank candidates for that date's weekday
-  (same-day-OK free first, needs-notice next, already-teaching greyed;
-  instrument matches as chips; mismatches and externals shown, never hidden —
-  the bank informs, it never restricts) plus a per-candidate **"Copy ask"**
-  message built from the affected lessons, logged to `Communication_Log`. A
-  bank read failure degrades to the old picker. The Tutor Absence card was
-  then removed from the Workflows nav page — Planning's absence builder is the
-  front door (see Navigation policy below). Rung 3 (MMS lesson reassignment)
-  is **parked by decision**: discovery is done (`PLAN_cover-loop.md` — single
-  event confirmed, substitution first-class, price untouched), but the write
-  endpoint 404s for our ApiKey-profile `MMS_BEARER_TOKEN` and needs a
-  monthly-expiring Teacher-session JWT, so the MMS swap stays a manual UI step
-  until living with rungs 1–2 shows it's worth the token plumbing.
-
-- **Cover Bank workflow (2026-07-16, deployed `2899749`):** a phone-survey
-  campaign page at `/admin/workflows/cover-bank`, mirroring the Parent
-  Understanding pattern — Fenella calls each tutor and records the answers
-  (happy to cover, yes/no; which days; OK with a same-day ask or needs notice;
-  notes) in a new keyed-upsert `Cover_Bank_State` tab. "Maybe" was dropped by
-  decision: every cover is arranged by asking anyway, so it carried no
-  information — notice tolerance is the nuance that matters. External tutors (not teaching at the school) can be added to the bank
-  and exist only as `ext:<slug>` rows. Contract decisions: stated availability
-  is stored; **teaching days are never stored** — they're derived live from
-  `Schedule_Context` per `teacher_id` at read time, and a tutor already
-  teaching a day is *flagged, not hidden* on the per-day cover view (partial
-  days exist). Pure logic in `lib/admin/cover-bank-helpers.mjs` (tested).
-
-- **Practice focus + arc folded into the tutor Notes panel (2026-07-16, deployed `8d7e3fe`):**
-  the Previous Notes panel now opens with a green **"Lesson Focus"** box
-  (last lesson's goals, with a carried-over hint when the goal repeats) and one
-  compact **"On the go"** line — pieces mined from phrases recurring across the
-  student's own lessons (Title-Cased recurrence = piece; no vocabulary, no AI),
-  with lesson counts and same-sentence tempo %. A separate Summary *tab* was
-  built first and deliberately subtracted the same day: deterministic prose is
-  verbatim ASR, so a prose summary just re-renders the notes — compression is
-  the (unapproved) AI layer's job, and the reorder + arc facts fit inside the
-  Notes view. Engine: `buildPracticeSummary` in
-  `lib/admin/practice-summary-helpers.mjs` (pure, tested), served via
-  `?summary=1` on the existing token-gated `/api/notes/[studentId]` route, fed
-  only by the owned Practice-Notes path (boundary test guards this). Evidence
-  base is thin mid-summer (~¼ of students have 3+ notes) — revisit mining rules
-  as notes accumulate. AI rephrasing remains **deliberately not started** —
-  a tutor-facing AI surface needs its own `AI_TOOL_CONTRACTS.md` allowlist
-  entry and explicit sign-off first.
-
-- **Optional AI issue briefing pilot (2026-07-15, deployed `a85debf`, hardened
-  `3930535`):** the deterministic
-  issue explanation can now be compressed on demand by a server-side model into
-  a short headline, explanation, check and caveat. The model receives only the
-  already-redacted explanation view model, has no tools, and cannot change or
-  resolve an issue. Strict local validation, a five-second timeout, per-admin
-  rate limit, deterministic fallback, enum-only feedback and a dedicated
-  feature flag/key keep the integration bounded. The separate restricted
-  Railway AI key and flag are configured and the production smoke test works.
-  `AI_RUNTIME_INTEGRATION.md` is the canonical implementation, security,
-  provider-retention, testing and reuse reference for future AI slices.
-
-- **Human issue labels + corrected Stripe read contract (2026-07-15, deployed):**
-  issue cards now expose short deterministic labels such as **Billing stopped
-  unexpectedly**, **Pause state mismatch**, and **Practice note not delivered**
-  while retaining stable detector types underneath. Railway's restricted Stripe
-  key now has—and a no-PII live check verified—Payment Intents Read, required by
-  the 12 July `latest_invoice.payment_intent` expansion. The operational minimum
-  is now documented as Customers, Subscriptions, Invoices, Prices, and Payment
-  Intents Read, with writes and bank-level endpoints still denied.
-
-- **“Why does this issue exist?” deterministic layer (2026-07-15, deployed):**
-  each Issues card can now load an admin-only explanation of the exact rule,
-  redacted evidence, source role, queue workflow state, ambiguity, unqueried
-  context, and safe next step. Static record/payment/pause detectors re-run
-  through the strict read-only context service; Practice Chat, finance and live
-  Stripe claims are explicitly shown as recorded-only, and opening the panel
-  never refreshes a provider, syncs the issue queue, changes a record, resolves
-  an issue, or calls a model. This is the first useful runtime consumer of the
-  assistant-safe foundation while remaining entirely deterministic.
-
-- **Agent-readiness improvements 9–12 + Practice Chat claim hardening
-  (2026-07-15, deployed):** Practice Chat now fails closed when its delivery claim
-  cannot be saved, so an MMS/Gmail action cannot start behind a failed audit
-  write; a same-process key guard narrows duplicate execution while the existing
-  Sheets cross-instance race remains an explicit rollout blocker. Future
-  assistant work now has non-mutating strict readers, redacted student/issue
-  projections, and a server-only context service with no route or model. The
-  incoming-message regression set is 48 independent synthetic cases with
-  privacy checks and date/abstention/harmful-archive scoring. Fixed cited
-  operations guidance and a low-risk, human-approval-required communication
-  proposal contract were implemented as pure seams. The later issue-briefing
-  pilot is the sole model consumer; it adds no broad tool access, sending, or
-  consequential action. The previous real-family fixture is removed from HEAD but still exists
-  in git history; do not reuse it and do not rewrite history without an explicit
-  repository-wide decision. The complete 1–12 implementation register,
-  verification guide, privacy explanation, and remaining risks are in
-  `AGENT_READINESS_AUDIT_OUTCOMES.md`.
-
-- Earlier arcs (agent-readiness 1–12, explicit pause-expectation writes, the
+- Earlier arcs (cover bank + cover-loop rungs 1–2, agent-readiness 1–12, explicit pause-expectation writes, the
   bass/electric shelf + registry-landmine day — song coverage and ingestion
   traps live in [`SONG_CATALOGUE_COVERAGE.md`](SONG_CATALOGUE_COVERAGE.md) —
   the WhatsApp bridge arc, finance layer, payroll V1–2) → `git log` + Learning

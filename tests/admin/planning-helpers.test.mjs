@@ -28,6 +28,7 @@ import {
   isReflectionIntentionDismissed,
   normaliseReflectionIntentionKey,
   shouldRefreshMondaySchedulePlanningItem,
+  shouldRefreshSchoolForwardPlanningItem,
   MONDAY_SCHEDULE_PLANNING_ID,
   buildPlanningDueSummary,
   buildPlanningSummary,
@@ -126,6 +127,26 @@ test('builds the Monday scheduling item dated to Monday', () => {
   assert.equal(item.targetDate, '2026-06-08');
   assert.equal(item.area, 'workflow');
   assert.equal(item.status, 'waiting');
+});
+
+// Parking a recurring system prompt means "skip this occurrence", never "kill
+// the prompt" — the Friday and Monday prompts both died silently in July 2026
+// because a park was read as never-again. Strictly past (not <=): a prompt
+// parked on its own day stays parked that day and re-arms from the next.
+test('a parked recurring prompt re-arms once its date has passed — for all three prompts', () => {
+  const cases = [
+    ['school-forward', shouldRefreshSchoolForwardPlanningItem, 'planning_weekly_school_forward_review'],
+    ['monday', shouldRefreshMondaySchedulePlanningItem, MONDAY_SCHEDULE_PLANNING_ID],
+    ['month-end', shouldRefreshMonthEndExpensesPlanningItem, MONTH_END_EXPENSES_PLANNING_ID],
+  ];
+  for (const [label, shouldRefresh, planningId] of cases) {
+    // Parked with a past date (the July 2026 live state) → must refresh.
+    assert.equal(shouldRefresh({ planningId, targetDate: '2026-05-29', status: 'parked' }, NOW), true, `${label}: parked past`);
+    // Parked today → respected today, no same-day resurrection.
+    assert.equal(shouldRefresh({ planningId, targetDate: '2026-06-03', status: 'parked' }, NOW), false, `${label}: parked today`);
+    // Parked with a future date → stays parked until that date passes.
+    assert.equal(shouldRefresh({ planningId, targetDate: '2026-06-05', status: 'parked' }, NOW), false, `${label}: parked future`);
+  }
 });
 
 test('refreshes the Monday item when missing or completed-and-past', () => {
