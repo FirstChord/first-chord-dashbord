@@ -1,6 +1,6 @@
 # Song Catalogue — Coverage and Gaps
 
-Last updated: 2026-07-19 · **311 entries**
+Last updated: 2026-07-19 · **311 entries** · Teaching layer: 243 entries carry a `tutorNote`, 160 a `studentNote` (every *song* by a known artist is covered; Rockschool Originals and technical exercises are deliberately blank rather than invented — write those only from the actual scores)
 
 The single home for *what repertoire exists, what is missing, and why*. Coverage numbers
 here are a snapshot; the catalogue itself (`lib/config/songs-catalogue.mjs`) is the truth.
@@ -180,15 +180,21 @@ Also: **Claire McGinniss** has no instrument in the registry *or* the Sheet.
 
 ## Paths
 
-`lib/config/path-templates.mjs` — **only 2 templates exist, both acoustic guitar:**
+`lib/config/path-templates.mjs` — **5 templates, every instrument covered** (bass, electric
+and piano added 2026-07-19; orderings are FC pilot orderings, revisit with Tom after
+~2026-08-03 only if they feel wrong in use):
 
 | Path | Instrument | Level | Steps |
 |---|---|---|---|
 | `fc_path_guitar_debut` | Guitar | Debut | 6 |
 | `fc_path_guitar_grade_1` | Guitar | Grade 1 | 6 |
+| `fc_path_bass_grade_1` | Bass | Grade 1 | 6 |
+| `fc_path_electric_debut` | Electric Guitar | Debut | 6 |
+| `fc_path_piano_debut` | Piano | Debut | 6 |
 
-**Nothing for bass, electric guitar, or piano.** Now that those shelves exist, they are the
-obvious next templates. Two standing decisions to respect:
+Bass enters at Grade 1 because Debut still holds a single orphan song (see gap A). RSL
+originals are kept off templates (covers keep beginners motivated) but stay on the shelf.
+Two standing decisions to respect:
 
 - **No path templates for John Thompson's books.** A 23-step path would dump 23 songs onto a
   child's practice page at once. The numbered shelf carries the sequence instead.
