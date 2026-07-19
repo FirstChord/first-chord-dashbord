@@ -163,6 +163,17 @@ Open candidates (the Obsidian `08 Operations/Active Roadmap` is the fuller list)
   self-attested tutor and unblocks payroll Phase 3. Prerequisite: collect each
   tutor's login email. Full finding + the portal-notes sibling decision:
   [`DATA_PROTECTION_MAP.md`](DATA_PROTECTION_MAP.md).
+- **Proposals inbox V1 (designed 2026-07-19, not built):** drafted replies to
+  incoming messages — machine prepares, human commits; approval = clipboard +
+  `Communication_Log`, never sending. Full agreed design + the hard
+  cancellation-policy constraints (never offer reschedules; notice-window
+  classification; ambiguity → neutral acknowledgement):
+  [`PLAN_proposals-inbox.md`](PLAN_proposals-inbox.md). Gate: an
+  `AI_TOOL_CONTRACTS.md` allowlist entry with Finn sign-off before any model
+  sees a real parent message. The cancellation policy itself now has a
+  canonical home: Obsidian `05 Policies/Lesson Cancellation Policy.md`
+  (captured 2026-07-19 — it previously existed only in Finn's head and the
+  payroll attendance mapping).
 - Contact-role model before any message automation.
 - Communication draft→approve layer before any WhatsApp Cloud API (no auto-send).
 - **Incoming/WhatsApp groups — deferred (from the 2026-07 build):** (a) **PII/retention + lawful-basis note** for stored parent/child message content — not yet written; (b) **capture a student's WhatsApp group at onboarding** rather than relying only on the weekly re-sync; (c) **sibling groups are add-only in the UI** — removing a mis-added student means editing `WhatsApp_Group_Map.additional_mms_ids` directly (add a remove affordance if it bites); (d) **"open the group from a planning card" — explored and shelved:** desktop invite-link (browser interstitial + "Open WhatsApp?" handoff) is clunkier than just searching the predictable group name, so we surface nothing; a phone-only invite-link button is possible later at a one-time ~189 **admin-gated** `groupInviteCode` fetch (codes are revocable) — only worth it if the phone flow specifically annoys; (e) the **last-active/inactivity filter is inert** (Baileys history doesn't deliver `conversationTimestamp` in the sync window; `skippedInactive` stays 0) — roster bucketing covers old-student removal, so the timestamp path is prunable dead-ish code.
