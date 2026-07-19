@@ -20,6 +20,7 @@ const BACKUP_TABS = [
   'Schedule_Context',
   'Parent_Understanding_State',
   'Tutor_Absence_State',
+  'Cover_Bank_State',
   'Tutor_Lifecycle',
   'Planning_Items',
   'Planning_Progress_Log',
@@ -35,6 +36,11 @@ const BACKUP_TABS = [
   'Tutor_Wise',
   'Tutor_Phones',
   'Students_Archive',
+  'Song_Assignments',
+  'Song_Status_Log',
+  'Song_Outcomes',
+  'Song_Requests',
+  'Stripe_Collected_Monthly',
 ];
 const OPTIONAL_MISSING_TABS = new Set(['Students_Archive', 'Tutor_Phones']);
 const BACKUP_SET_RETENTION_COUNT = 8;
