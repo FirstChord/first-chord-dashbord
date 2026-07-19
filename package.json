@@ -16,6 +16,7 @@
     "sync-admin-tutors": "node scripts/sync-admin-tutors.js",
     "backup:sheets": "node scripts/backup-sheets-tabs.mjs",
     "restore:drill": "node scripts/restore-drill.mjs",
+    "retention:report": "node scripts/retention-report.mjs",
     "ensure:state-tabs": "node scripts/ensure-state-tabs.mjs",
     "ensure:practice-delivery-claims": "node scripts/ensure-practice-delivery-claims.mjs",
     "hygiene:check": "node scripts/hygiene-check.mjs",

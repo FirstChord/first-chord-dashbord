@@ -24,6 +24,21 @@ The admin overview is a strict meeting-start surface, not a complete status boar
 
 *Last working arc only — older work is in `git log --oneline` + the Learning Log.*
 
+- **Legacy pair two (2026-07-19, committed, deploy pending):** **(4) Money-path
+  hardening:** the documented `limit: 1000` attendance truncation landmine is
+  defused — `fetchAllPages` (`lib/admin/mms-pagination.mjs`) pages through
+  offsets and **throws rather than truncates** past its cap (in money code,
+  loud failure beats graceful degradation), plus seeded property tests
+  (`money-path-invariants.test.mjs`): pagination completeness, payroll-window
+  tiling across DST, Wise batch total = CSV sum exactly, disputed runs never
+  payable. **(5) Data protection:**
+  [`DATA_PROTECTION_MAP.md`](DATA_PROTECTION_MAP.md) — every PII store ×
+  lawful basis × proposed retention × leaver deletion path, the two URL-shaped
+  exposure findings (open tutor dashboard; portal notes at guessable
+  first-name URLs) as decisions with recommended shapes, and Finn's sign-off
+  list (privacy notice is the big one). `npm run retention:report` measures
+  reality against the proposals, read-only (first run: all clean).
+
 - **Legacy triptych (2026-07-19, committed, deploy pending):** three arcs chosen
   explicitly for longevity. **(1) Teaching layer:** 115 tutorNotes + 145
   studentNotes (never invented — RSL originals/exercises stay blank), 12
@@ -224,6 +239,13 @@ Open candidates (the Obsidian `08 Operations/Active Roadmap` is the fuller list)
 
 - **Tutor-facing payroll — Phase 2 shipped; Phase 3 deferred:** reviewed figures produce a signed no-login statement link; tutors can confirm or query; confirmation-required rows wait, disputes are held out of Wise, and the same printable record becomes a dated receipt after payment. The live operating sequence is `docs/workflows/06-paying-tutors.md`; design history and the remaining cadence/scheduled-delivery work are in `docs/admin/TUTOR_FACING_PAYROLL_ROADMAP.md`. Only Phase 3 needs persistent tutor auth/contact email.
 - Pause-loop maturity — make pause issue cards clearer about whether a mismatch is from `Pause History`, sheet expectation, or live Stripe (Stripe mutation stays out of scope).
+- **Tutor dashboard OAuth (agreed in principle 2026-07-19, not started):** put
+  `/dashboard` behind the existing NextAuth setup + a `TUTOR_ALLOWED_EMAILS`
+  whitelist (~90-day sessions; one login per term per lesson-room Mac profile).
+  Not a shared account — per-tutor identity is what upgrades Practice Chat's
+  self-attested tutor and unblocks payroll Phase 3. Prerequisite: collect each
+  tutor's login email. Full finding + the portal-notes sibling decision:
+  [`DATA_PROTECTION_MAP.md`](DATA_PROTECTION_MAP.md).
 - Contact-role model before any message automation.
 - Communication draft→approve layer before any WhatsApp Cloud API (no auto-send).
 - **Incoming/WhatsApp groups — deferred (from the 2026-07 build):** (a) **PII/retention + lawful-basis note** for stored parent/child message content — not yet written; (b) **capture a student's WhatsApp group at onboarding** rather than relying only on the weekly re-sync; (c) **sibling groups are add-only in the UI** — removing a mis-added student means editing `WhatsApp_Group_Map.additional_mms_ids` directly (add a remove affordance if it bites); (d) **"open the group from a planning card" — explored and shelved:** desktop invite-link (browser interstitial + "Open WhatsApp?" handoff) is clunkier than just searching the predictable group name, so we surface nothing; a phone-only invite-link button is possible later at a one-time ~189 **admin-gated** `groupInviteCode` fetch (codes are revocable) — only worth it if the phone flow specifically annoys; (e) the **last-active/inactivity filter is inert** (Baileys history doesn't deliver `conversationTimestamp` in the sync window; `skippedInactive` stays 0) — roster bucketing covers old-student removal, so the timestamp path is prunable dead-ish code.
