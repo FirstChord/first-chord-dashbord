@@ -24,7 +24,7 @@ The admin overview is a strict meeting-start surface, not a complete status boar
 
 *Last working arc only — older work is in `git log --oneline` + the Learning Log.*
 
-- **Legacy pair two (2026-07-19, committed, deploy pending):** **(4) Money-path
+- **Legacy pair two (2026-07-19, deployed):** **(4) Money-path
   hardening:** the documented `limit: 1000` attendance truncation landmine is
   defused — `fetchAllPages` (`lib/admin/mms-pagination.mjs`) pages through
   offsets and **throws rather than truncates** past its cap (in money code,
@@ -39,7 +39,7 @@ The admin overview is a strict meeting-start surface, not a complete status boar
   list (privacy notice is the big one). `npm run retention:report` measures
   reality against the proposals, read-only (first run: all clean).
 
-- **Legacy triptych (2026-07-19, committed, deploy pending):** three arcs chosen
+- **Legacy triptych (2026-07-19, deployed):** three arcs chosen
   explicitly for longevity. **(1) Teaching layer:** 115 tutorNotes + 145
   studentNotes (never invented — RSL originals/exercises stay blank), 12
   curation fixes, path templates for bass/electric/piano (every instrument now
