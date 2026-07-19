@@ -20,6 +20,7 @@ anything today.
 | **Sheet · `Practice_Notes_Log`** | Child progress notes, parent email, Gmail message ids | Children/parents | Contract (the lesson-note service) | **2 years after the student leaves**, then prune |
 | **Sheet · `Incoming_Message_Inbox` + `WhatsApp_Group_Map`** | Parent/child WhatsApp message content, phone numbers, group names | Families | Legitimate interests (lesson admin) — **needs the transparency fix below** | **12 months rolling** for `handled`/`ignored` rows; open rows exempt |
 | **Sheet · `Communication_Log`** | Message bodies sent to parents | Families | Contract / legitimate interests | 2 years rolling |
+| **Sheet · `Proposals`** | Drafted reply bodies (parent/student first names) + redacted evidence of what the model saw | Families | Legitimate interests (lesson admin) | **12 months rolling** (same rhythm as the inbox); decided rows are the telemetry record, keep no longer |
 | **Sheet · `Parent_Understanding_State`** | Call notes and staff impressions of families | Parents | Legitimate interests | Review yearly; prune stale opinion rows — impressions age badly and are the most sensitive text we hold |
 | **Sheet · `Event_Log`, `Issue_Queue`, `Planning_*`** | Student names in operational/audit rows | Families | Legitimate interests (running the school) | `Event_Log` 2 years rolling; others live with their workflow |
 | **Sheet · `Students_Archive`** | Full student row snapshot at removal | Leavers | Legitimate interests (billing disputes, re-enrolment) | **2 years after `date_left`**, then prune |
@@ -79,6 +80,11 @@ store table top to bottom; `brain.py lookup` finds the ids; erasure exceptions a
 5. Confirm both GitHub repos are private and audit who has access; the removed
    real-family fixture in git history stays per the existing no-rewrite decision.
 6. Confirm FileVault is on for this Mac (backups + bridge cache live here).
+7. **Reply drafting sends redacted parent message text to OpenAI** — the
+   proposals-inbox lane (`ADMIN_AI_REPLY_DRAFT_ENABLED`, off until you say so).
+   Redaction is roster-name + email/phone/URL based, so unknown names can
+   survive; provider abuse-monitoring retention up to 30 days. Full terms:
+   `AI_TOOL_CONTRACTS.md` → "Incoming reply drafting — sign-off notes".
 
 ---
 

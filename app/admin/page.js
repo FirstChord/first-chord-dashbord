@@ -10,6 +10,7 @@ import { getPlanningDashboard } from '@/lib/admin/planning';
 import { getAdminIssues } from '@/lib/admin/issues';
 import { getWaitingWorkflowStudents } from '@/lib/admin/waiting-workflow';
 import { getBridgeStatus, getIncomingMessageInbox } from '@/lib/admin/incoming-messages';
+import { getIncomingReplyProposals } from '@/lib/admin/incoming-reply-proposals';
 import { assessBridgeHealth } from '@/lib/admin/incoming-message-helpers.mjs';
 import { labelPlanningArea, labelPlanningType } from '@/lib/admin/planning-helpers.mjs';
 
@@ -259,7 +260,7 @@ export default async function AdminHomePage() {
   // Health is intentionally NOT in this blocking fetch — it makes 3 uncached
   // external calls (MMS + 2 GitHub), so it's streamed separately (see OverviewHealth)
   // and the rest of the page renders immediately.
-  const [students, issuesResult, tutorAbsenceSummary, parentUnderstandingRows, planningDashboard, waitingStudents, incomingInbox, bridgeStatus] = await Promise.all([
+  const [students, issuesResult, tutorAbsenceSummary, parentUnderstandingRows, planningDashboard, waitingStudents, incomingInbox, bridgeStatus, replyProposalsResult] = await Promise.all([
     getOperationalAdminStudents(),
     getAdminIssues(),
     getTutorAbsenceOverviewSummary(),
@@ -268,7 +269,11 @@ export default async function AdminHomePage() {
     getSafeWaitingWorkflowStudents(),
     getSafeIncomingMessageInbox(),
     getBridgeStatus().catch(() => null),
+    // Existing suggestions remain visible/countable when drafting is rolled
+    // back via the feature flag.
+    getIncomingReplyProposals().catch(() => ({ openByIncomingId: {} })),
   ]);
+  const pendingReplyProposals = Object.keys(replyProposalsResult.openByIncomingId || {}).length;
   const issues = issuesResult.issues || [];
   const activeIssues = issues.filter((issue) => ['open', 'acknowledged'].includes(issue.status));
   const paymentSummary = buildPaymentOperationsSummary(students);
@@ -311,7 +316,10 @@ export default async function AdminHomePage() {
       label: 'Message inbox',
       value: openIncomingMessages,
       href: '/admin/incoming-messages',
-      helper: openIncomingMessages === 1 ? 'One parent message to review' : 'Parent messages to review',
+      helper: [
+        openIncomingMessages === 1 ? 'One parent message to review' : 'Parent messages to review',
+        pendingReplyProposals > 0 ? `${pendingReplyProposals} suggested ${pendingReplyProposals === 1 ? 'reply' : 'replies'} ready` : '',
+      ].filter(Boolean).join(' · '),
       tone: 'border-blue-100 bg-blue-50/60',
     } : null,
     bridgeHealth.state === 'warn' ? {

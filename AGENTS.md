@@ -70,7 +70,7 @@ Do not silently choose a winner for a new conflict type.
 | Practice Chat and notes | `app/api/practice-notes/`, `app/api/admin/practice-notes/` | `lib/admin/practice-*.mjs`, `lib/admin/practice-notes-email.js`, `lib/admin/sheets/practice-notes.mjs` | `PRACTICE_CHAT_DELIVERY_AUDIT.md`, `PRACTICE_CHAT_WHISPER_HARDENING.md` | `practice-*` |
 | Parent understanding and communications | `app/admin/workflows/parent-understanding/`, `app/admin/communications/` | `lib/admin/parent-understanding*`, `lib/admin/communications*` | `WORKFLOW_DESIGN_PRINCIPLES.md`, `COPY_AND_TONE.md` | `parent-understanding-*`, `communications-helpers` |
 | Health and recovery | health panels, cron routes, GitHub workflows | `lib/admin/health*`, integration adapters, `.github/workflows/` | `OPERATIONS_RUNBOOK.md`, `BUG_FIXES.md` | `health-helpers`, adapter/cache tests |
-| Assistant-safe foundations | deterministic issue explanation plus optional tool-free AI briefing; no model actions | `app/api/admin/issues/[mmsId]/explanation/`, `app/api/admin/issues/[mmsId]/ai-explanation/`, `components/admin/issues/IssueExplanationPanel.js`, `lib/admin/issue-explanation-*`, `lib/admin/assistant-context-*`, `lib/admin/operations-guidance-helpers.mjs`, `lib/admin/communication-draft-proposal-helpers.mjs`, `lib/admin/incoming-eval-helpers.mjs` | `AI_RUNTIME_INTEGRATION.md`, `AI_TOOL_CONTRACTS.md`, `STATE_TABS_SCHEMA.md`, `HYGIENE_AND_SECRETS.md` | `issue-explanation-*`, `assistant-context-*`, `operations-guidance-helpers`, `communication-draft-proposal-helpers`, `incoming-classifier-eval`, `evaluation-fixture-privacy` |
+| Assistant-safe foundations | deterministic issue explanation plus optional tool-free AI briefing and reply proposals; no model actions or sending | `app/api/admin/issues/[mmsId]/explanation/`, `app/api/admin/issues/[mmsId]/ai-explanation/`, `app/api/admin/incoming-messages/reply-proposals/`, `components/admin/issues/IssueExplanationPanel.js`, `lib/admin/issue-explanation-*`, `lib/admin/assistant-context-*`, `lib/admin/incoming-reply-*`, `lib/admin/proposal-helpers.mjs`, `lib/admin/operations-guidance-helpers.mjs`, `lib/admin/communication-draft-proposal-helpers.mjs`, `lib/admin/incoming-eval-helpers.mjs` | `AI_RUNTIME_INTEGRATION.md`, `AI_TOOL_CONTRACTS.md`, `STATE_TABS_SCHEMA.md`, `HYGIENE_AND_SECRETS.md` | `issue-explanation-*`, `assistant-context-*`, `incoming-reply-*`, `proposal-helpers`, `operations-guidance-helpers`, `communication-draft-proposal-helpers`, `incoming-classifier-eval`, `evaluation-fixture-privacy` |
 
 Test names in the table refer to `tests/admin/*.test.mjs`.
 
@@ -93,8 +93,10 @@ Test names in the table refer to `tests/admin/*.test.mjs`.
   require a human confirmation. Preserve the PostgreSQL delivery-key claim and
   manual handling of ambiguous Gmail failures.
 - `Communication_Log` means a message was copied to send, not proven sent.
-- Incoming-message classifications and matched students are proposals. They do
-  not authorise archive, pause, payment, planning, or messaging actions.
+- Incoming-message classifications, matched students, and reply drafts are
+  proposals. They do not authorise archive, pause, payment, planning, or
+  messaging actions. Existing reply decisions must remain reviewable when the
+  AI draft feature flag is disabled.
 - Public tutor surfaces deliberately trade stronger identity for low friction.
   Do not add sensitive reads or consequential writes before tutor auth exists,
   apart from the documented, narrow Practice Chat Level 2 trusted-tutor flow.

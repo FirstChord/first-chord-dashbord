@@ -1,13 +1,15 @@
 # Approved AI Tool Contracts
 
-Last updated: 2026-07-16
+Last updated: 2026-07-19
 
 This is the allowlist and design boundary for AI assistance inside the
-dashboard. The optional issue-briefing pilot is the only model runtime: it makes
-one server-side, tool-free call over the already-redacted deterministic issue
-explanation. It does not grant an agent access to an integration or action.
-Other capabilities remain unavailable to a model or user until their privacy
-review, tests, UI boundary, provider/retention decision, and logging exist.
+dashboard. The optional issue-briefing pilot is the only enabled model runtime:
+it makes one server-side, tool-free call over the already-redacted deterministic
+issue explanation. A second tool-free reply-proposal runtime is built but stays
+disabled pending the explicit privacy and policy sign-off below. Neither grants
+an agent access to an integration or action. Other capabilities remain
+unavailable to a model or user until their privacy review, tests, UI boundary,
+provider/retention decision, and logging exist.
 
 ## Core Pattern
 
@@ -60,6 +62,7 @@ These names reserve narrow contracts; they are not callable tools today.
 | `operations_guidance.read` | Find the right policy or recovery step quickly | Fixed allowlist of runbook/policy document IDs and sections | Quoted-short guidance, source link, and whether human escalation is needed | Read arbitrary repository files, use shell, inspect secrets, or invent recovery steps | Read-only. Retrieval tests require citations, bounded results, and abstention when the allowlist has no answer | Pure fixed index/search implemented; no arbitrary file read, route, UI, or model |
 | `incoming_classification.propose` | Reduce manual triage of captured WhatsApp messages | Redacted message text, existing classification enum, deterministic date candidates, and bounded student candidates | Proposed category/dates/student, evidence spans, ambiguity flags, and `needs_review` abstention | Create a pause, planning item, archive decision, payment change, message, or new student match outside supplied candidates | Human reviews before any conversion/archive. Evaluate against corrected classifications/dates and false-auto-archive cases. Remove names/phones from evaluation fixtures | Synthetic classification/date/abstention/privacy harness implemented; proposal runtime and production holdout do not exist |
 | `communication_draft.propose` | Prepare a reply from confirmed context and policy | Confirmed student/workflow facts, approved policy snippets, audience/tone chosen by the admin | Draft text plus cited facts and unresolved placeholders | Select or reveal a recipient, send/copy/log as sent, claim delivery, or invent a promise/date | Human edits and approves in the existing communication workflow. Evaluate approved edits, unsupported claims, tone, and safeguarding leakage | Pure low-risk context/proposal validator implemented for acknowledgement cases; no contact-role lookup, UI, provider, copy, log, or send |
+| `incoming_reply_draft.propose` | Draft a suggested WhatsApp reply for an open `Incoming_Message_Inbox` row, enforcing the Lesson Cancellation Policy | Redacted parent message text (known names → placeholders; emails/phones/URLs stripped; bounded length) plus a deterministic policy context: policy case (one-off vs permanent vs ending vs break), computed notice window (lesson date from message extraction or `Schedule_Context` vs message date), and the fixed allowed policy facts for that case/window | A draft reply citing only allowed policy facts, with `[PARENT_FIRST]`/`[STUDENT_FIRST]` placeholders the server substitutes after validation. Ambiguous cases never reach the model: a deterministic neutral acknowledgement is proposed instead | Offer a one-off reschedule/swap/make-up; state a charge/no-charge/video outcome the computed notice window does not support; promise a video on a same-day cancellation; send, copy, log-as-sent, or reveal a recipient; open with anything but Hi/Hello/Hey | Human decides on the inbox row: **Use this** (clipboard + `Communication_Log`), **Edit then approve** (edited text logged; diff is telemetry), or **Discard**. Deterministic validator (`validateIncomingReplyDraft`) runs on the complete model text before anything is stored or rendered; the cancellation-policy rules are its test cases. Telemetry: used-unmodified vs edited vs discarded per proposal in the `Proposals` tab | Built 2026-07-19 behind `ADMIN_AI_REPLY_DRAFT_ENABLED` (default off). **Status: PROPOSED — Finn sign-off required before the flag is enabled and any model reads a real parent message.** See sign-off notes below |
 
 ### Live deterministic issue explanation
 
@@ -100,6 +103,36 @@ only an opaque request ID and fixed helpful/not-helpful enums in runtime logs;
 it cannot correct issue truth or workflow state. Routine prompts, model output,
 student identifiers and context are not logged. Disable
 `ADMIN_AI_ISSUE_BRIEFING_ENABLED` to remove the model path immediately.
+
+### Incoming reply drafting — sign-off notes (PROPOSED, 2026-07-19)
+
+The proposals-inbox V1 lane (`incoming_reply_draft.propose`) is implemented but
+**not enabled**. Before setting `ADMIN_AI_REPLY_DRAFT_ENABLED=true` on Railway,
+Finn must explicitly accept:
+
+1. **Parent message text reaches OpenAI.** Unlike the issue pilot, the model
+   input includes the (redacted) free-text parent message. Redaction replaces
+   the matched student's name, the stored parent name and the sender's push
+   name with placeholders and strips emails/phones/URLs — but names the roster
+   does not know (a sibling, a relative, a nickname) can survive. Provider
+   abuse-monitoring retention (up to 30 days) applies as documented in
+   `AI_RUNTIME_INTEGRATION.md`.
+2. **Key scope.** V1 reuses the restricted `ADMIN_AI_OPENAI_API_KEY`
+   (Responses-write-only). A separate OpenAI project/key for this lane is a
+   sign-off option, not a code change.
+3. **The cancellation-policy interpretation** encoded in
+   `lib/admin/incoming-reply-policy.mjs` (summarised in
+   `PLAN_proposals-inbox.md`; canonical policy: Obsidian `05 Policies/Lesson
+   Cancellation Policy.md`) — especially: same-day drafts state charged with no
+   video and no Zoom offer; 7-plus-day drafts offer free cancellation or Zoom;
+   inside-the-week drafts offer Zoom or a practice video; permanent slot
+   changes get a warm welcome and route to Finn; ambiguity always produces a
+   neutral acknowledgement that commits to nothing.
+4. **Retention.** `Proposals` rows hold the redacted evidence and the proposal
+   body; 12-month rolling prune proposed in `DATA_PROTECTION_MAP.md`.
+
+Producer is human-triggered only (no cron), fails closed on validation, and the
+UI works identically with the flag off (buttons simply absent).
 
 ## Explicitly Not Allowlisted
 

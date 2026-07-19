@@ -407,6 +407,60 @@ function ReplyPanel({ conversion }) {
   );
 }
 
+// The quiet suggested-reply block for an open inbox row: one editable draft,
+// one approve button (label flips to "Approve edited" when the text diverges —
+// the diff is the telemetry), one discard. Nothing sends; approving copies to
+// the clipboard and the server logs it to Communication_Log.
+function SuggestedReplyBlock({ entry, proposal, onDecideReply, isPending }) {
+  const [text, setText] = useState(proposal.proposalBody || '');
+  const edited = text.trim() !== (proposal.proposalBody || '').trim();
+
+  async function handleApprove() {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      window.alert('The reply was not approved because the browser could not copy it. Try again or copy the text manually.');
+      return;
+    }
+    onDecideReply(entry, proposal, edited ? { decision: 'edit', finalBody: text } : { decision: 'use' });
+  }
+
+  function handleDiscard() {
+    const reason = window.prompt('Discard this suggestion — why? (optional)') ?? '';
+    onDecideReply(entry, proposal, { decision: 'discard', rejectionReason: reason });
+  }
+
+  return (
+    <div className="mt-4 rounded-2xl border border-violet-100 bg-violet-50/40 px-3 py-3">
+      <p className="text-xs font-semibold text-violet-900">Suggested reply</p>
+      <textarea
+        value={text}
+        onChange={(event) => setText(event.target.value)}
+        rows={4}
+        className="mt-2 w-full rounded-xl border border-violet-200 bg-white px-3 py-2 text-sm leading-6 text-slate-800 outline-none focus:border-violet-300"
+      />
+      <div className="mt-2 flex flex-wrap gap-2">
+        <button
+          type="button"
+          disabled={isPending || !text.trim()}
+          onClick={handleApprove}
+          className="rounded-full bg-violet-700 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition active:scale-[0.97] disabled:opacity-60"
+        >
+          {isPending ? 'Saving…' : edited ? 'Approve edited' : 'Use this'}
+        </button>
+        <button
+          type="button"
+          disabled={isPending}
+          onClick={handleDiscard}
+          className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 disabled:opacity-60"
+        >
+          Discard
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // Shown when the bridge captured a star without the original text (the message
 // predates its cache): paste the message from WhatsApp and it re-classifies.
 function PlaceholderFixPanel({ entry, onUpdateText, isPending }) {
@@ -481,9 +535,15 @@ function BridgeStatusStrip({ bridgeStatus, inbox = [] }) {
   );
 }
 
-function MessageCard({ entry, studentOptions, onReview, onDelete, onCorrect, onConvert, onUpdateText, conversion, pendingId }) {
+function MessageCard({ entry, studentOptions, onReview, onDelete, onCorrect, onConvert, onUpdateText, conversion, pendingId, replyProposal, decidedReply, replyDraftingAvailable, onDraftReply, onDecideReply }) {
   const isPending = pendingId === entry.incomingId;
   const spottedDates = describeSpottedDates(entry);
+  const isOpen = ['inbox', 'needs_review'].includes(entry.status);
+  const canDraftReply = replyDraftingAvailable
+    && isOpen
+    && !replyProposal
+    && !decidedReply
+    && !isIncomingPlaceholderText(entry.messageText);
   return (
     <article className="rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-[0_12px_36px_rgba(15,23,42,0.05)]">
       <div className="flex flex-wrap items-center gap-2">
@@ -556,7 +616,32 @@ function MessageCard({ entry, studentOptions, onReview, onDelete, onCorrect, onC
         </p>
       ) : null}
 
+      {replyProposal ? (
+        <SuggestedReplyBlock
+          entry={entry}
+          proposal={replyProposal}
+          onDecideReply={onDecideReply}
+          isPending={isPending}
+        />
+      ) : null}
+
+      {decidedReply?.status === 'approved' ? (
+        <p className="mt-3 text-xs font-semibold text-violet-800">
+          ✓ Reply copied — send it in WhatsApp. It's in the communication log.
+        </p>
+      ) : null}
+
       <div className="mt-4 flex flex-wrap gap-2">
+        {canDraftReply ? (
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={() => onDraftReply(entry)}
+            className="rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-semibold text-violet-800 disabled:opacity-60"
+          >
+            {isPending ? 'Drafting…' : 'Draft reply'}
+          </button>
+        ) : null}
         {entry.createdPlanningId && !conversion ? (
           <Link
             href={`/admin/planning?focus=${encodeURIComponent(entry.createdPlanningId)}`}
@@ -614,9 +699,11 @@ function MessageCard({ entry, studentOptions, onReview, onDelete, onCorrect, onC
   );
 }
 
-export default function AdminIncomingMessagesPageClient({ initialInbox = [], initialGroupMap = [], studentOptions = [], bridgeStatus = null, error = '' }) {
+export default function AdminIncomingMessagesPageClient({ initialInbox = [], initialGroupMap = [], studentOptions = [], bridgeStatus = null, error = '', initialReplyProposals = {}, replyDraftingAvailable = false }) {
   const [inbox, setInbox] = useState(initialInbox);
   const [groupMap, setGroupMap] = useState(initialGroupMap);
+  const [replyProposals, setReplyProposals] = useState(initialReplyProposals);
+  const [decidedReplies, setDecidedReplies] = useState({});
   const [messageText, setMessageText] = useState('');
   const [senderName, setSenderName] = useState('');
   const [senderPhone, setSenderPhone] = useState('');
@@ -641,8 +728,79 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
         setInbox(data.inbox || []);
         if (Array.isArray(data.groupMap)) setGroupMap(data.groupMap);
       }
+      if (replyDraftingAvailable) {
+        const proposalsResponse = await fetch('/api/admin/incoming-messages/reply-proposals');
+        const proposalsData = await proposalsResponse.json().catch(() => ({}));
+        if (proposalsResponse.ok && proposalsData.success) {
+          setReplyProposals(proposalsData.openByIncomingId || {});
+        }
+      }
     } catch {} finally {
       setIsRefreshing(false);
+    }
+  }
+
+  async function handleDraftReply(entry) {
+    setSubmitError('');
+    setPendingId(entry.incomingId);
+    try {
+      const response = await fetch('/api/admin/incoming-messages/reply-proposals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'draft', incomingId: entry.incomingId }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Reply drafting failed');
+      }
+      setReplyProposals((current) => ({ ...current, [entry.incomingId]: data.proposal }));
+      return true;
+    } catch (caught) {
+      setSubmitError(caught.message || 'Reply drafting failed');
+      return false;
+    } finally {
+      setPendingId('');
+    }
+  }
+
+  async function handleDecideReply(entry, proposal, { decision, finalBody = '', rejectionReason = '' }) {
+    setSubmitError('');
+    setPendingId(entry.incomingId);
+    try {
+      const response = await fetch('/api/admin/incoming-messages/reply-proposals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'decide', proposalId: proposal.proposalId, decision, finalBody, rejectionReason }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Proposal decision failed');
+      }
+      setReplyProposals((current) => {
+        const next = { ...current };
+        delete next[entry.incomingId];
+        return next;
+      });
+      if (data.proposal?.status === 'approved') {
+        setDecidedReplies((current) => ({ ...current, [entry.incomingId]: { status: 'approved' } }));
+      }
+    } catch (caught) {
+      setSubmitError(caught.message || 'Proposal decision failed');
+    } finally {
+      setPendingId('');
+    }
+  }
+
+  // Sequential on purpose: one model call at a time, and the server's
+  // per-admin rate limit (10/min) is the natural stop.
+  async function handleDraftAllOpen() {
+    const eligible = inbox.filter((entry) => ['inbox', 'needs_review'].includes(entry.status)
+      && !replyProposals[entry.incomingId]
+      && !decidedReplies[entry.incomingId]
+      && !isIncomingPlaceholderText(entry.messageText));
+    for (const entry of eligible) {
+      const ok = await handleDraftReply(entry);
+      if (!ok) break;
     }
   }
 
@@ -841,16 +999,28 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
             {openCount ? `${openCount} unread${absenceCount ? ` · ${absenceCount} likely absence` : ''}` : '0 unread'}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={refreshInbox}
-          disabled={isRefreshing}
-          aria-label="Refresh inbox"
-          title="Refresh"
-          className="mt-1 rounded-full p-2.5 text-slate-500 transition-colors hover:bg-white/80 hover:text-[#2F6B3D] disabled:opacity-60"
-        >
-          <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-        </button>
+        <div className="flex items-center gap-2">
+          {replyDraftingAvailable && openCount > 0 ? (
+            <button
+              type="button"
+              onClick={handleDraftAllOpen}
+              disabled={Boolean(pendingId)}
+              className="mt-1 rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-semibold text-violet-800 disabled:opacity-60"
+            >
+              Draft all open
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={refreshInbox}
+            disabled={isRefreshing}
+            aria-label="Refresh inbox"
+            title="Refresh"
+            className="mt-1 rounded-full p-2.5 text-slate-500 transition-colors hover:bg-white/80 hover:text-[#2F6B3D] disabled:opacity-60"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
       </section>
 
       {submitError ? (
@@ -964,6 +1134,11 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
               onCorrect={handleCorrect}
               onConvert={handleConvert}
               onUpdateText={handleUpdateText}
+              replyProposal={replyProposals[entry.incomingId]}
+              decidedReply={decidedReplies[entry.incomingId]}
+              replyDraftingAvailable={replyDraftingAvailable}
+              onDraftReply={handleDraftReply}
+              onDecideReply={handleDecideReply}
             />
           ))}
         </div>

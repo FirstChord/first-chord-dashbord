@@ -1,5 +1,7 @@
 import AdminIncomingMessagesPageClient from '@/components/admin/AdminIncomingMessagesPageClient';
 import { getBridgeStatus, getIncomingMessageInbox, getWhatsappGroupMap } from '@/lib/admin/incoming-messages';
+import { getIncomingReplyProposals } from '@/lib/admin/incoming-reply-proposals';
+import { isIncomingReplyDraftingConfigured } from '@/lib/admin/incoming-reply-ai-provider.mjs';
 import { getOperationalAdminStudents } from '@/lib/admin/students';
 
 export default async function AdminIncomingMessagesPage() {
@@ -7,14 +9,22 @@ export default async function AdminIncomingMessagesPage() {
   let groupMap = [];
   let students = [];
   let bridgeStatus = null;
+  let replyProposals = {};
   let error = '';
+  const replyDraftingAvailable = isIncomingReplyDraftingConfigured();
   try {
-    [inbox, groupMap, students, bridgeStatus] = await Promise.all([
+    let proposalsResult;
+    [inbox, groupMap, students, bridgeStatus, proposalsResult] = await Promise.all([
       getIncomingMessageInbox(),
       getWhatsappGroupMap(),
       getOperationalAdminStudents(),
       getBridgeStatus().catch(() => null),
+      // Always load existing proposals. Turning the model flag off is the
+      // rollback path for new drafts; it must not strand suggestions that
+      // still need a human use/edit/discard decision.
+      getIncomingReplyProposals().catch(() => ({ openByIncomingId: {} })),
     ]);
+    replyProposals = proposalsResult.openByIncomingId || {};
   } catch (caught) {
     error = caught.message || 'Could not load incoming messages';
   }
@@ -35,6 +45,8 @@ export default async function AdminIncomingMessagesPage() {
       studentOptions={studentOptions}
       bridgeStatus={bridgeStatus}
       error={error}
+      initialReplyProposals={replyProposals}
+      replyDraftingAvailable={replyDraftingAvailable}
     />
   );
 }

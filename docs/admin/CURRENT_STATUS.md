@@ -1,6 +1,6 @@
 # Admin Current Status
 
-Last updated: 2026-07-18
+Last updated: 2026-07-19
 
 Tracked current-status entrypoint for agents working from the `music-school-dashboard` repo.
 
@@ -23,6 +23,27 @@ The admin overview is a strict meeting-start surface, not a complete status boar
 ## Recently shipped
 
 *Last working arc only — older work is in `git log --oneline` + the Learning Log.*
+
+- **Proposals inbox V1 (2026-07-19, built — flag off pending sign-off):** the
+  first "machine prepares, human commits" lane: suggested WhatsApp replies on
+  open inbox rows. Generic `Proposals` tab (keyed upsert, one open proposal per
+  message — redrafts supersede; 7-day expiry and message-edit supersession
+  derived at read time); deterministic cancellation-policy classifier + notice
+  window (lesson date from the message or `Schedule_Context` vs message date)
+  in `incoming-reply-policy.mjs`, whose validator rejects any one-off
+  reschedule offer, any charge/video claim contradicting the window, and any
+  video promise on a same-day cancellation — the policy rules are literally the
+  test cases. Ambiguity → deterministic neutral draft, **no model call**.
+  Producer mirrors the issue-briefing runtime (redacted projection in — parent
+  message text with roster names → placeholders — restricted key, 5s timeout,
+  10/min limit, fail-closed). UI is a quiet block on the inbox card: one
+  approve button whose label flips to "Approve edited" when the text diverges
+  (the diff is the telemetry), plus Discard; approving copies to clipboard and
+  logs to `Communication_Log` — the dashboard still never sends. **Nothing
+  reaches a model until Finn accepts the sign-off terms and sets
+  `ADMIN_AI_REPLY_DRAFT_ENABLED`** (`AI_TOOL_CONTRACTS.md` →
+  `incoming_reply_draft.propose`). Why: the 2026-07-19 proposals-inbox Learning
+  Log entry.
 
 - **Continuity pack + the parked-prompt bug (2026-07-19, committed):** Finn
   reported the Friday prompt missing — live state showed both the Friday and
@@ -68,39 +89,8 @@ The admin overview is a strict meeting-start surface, not a complete status boar
   changes without its paired guard. Why: the three 2026-07-19 Learning Log
   entries.
 
-- **Song requests + `add-song` skill (2026-07-18, deployed `8ec6fe4`):** a
-  Song Browser search miss now offers one *Request "X"* button, appending a
-  `status='new'` row to the new `Song_Requests` tab (query, instrument, tutor
-  from token, student context) — the catalogue's intake shifts from "what Finn
-  seeded" toward "what tutors reach for". **Deliberately no admin surface:**
-  the machine-level `add-song` skill (`~/.claude/skills/add-song/SKILL.md`) is
-  the curation checklist (secret-link-first, entry shape, every
-  `SONG_CATALOGUE_COVERAGE.md` ingestion trap) *and* the queue's consumer via
-  `node scripts/list-song-requests.mjs`; resolution (`added`/`declined` +
-  `song_id`) is a sheet edit during curation, not a dashboard action. The
-  noticing layer is a Monday-morning launchd agent on Finn's Mac
-  (`scripts/check-song-requests.mjs` + installer) that notifies only when open
-  requests exist — automation of attention, while merge and deploy stay
-  supervised. Why:
-  [[2026-07-18 - Song Requests and the Add-Song Skill (Curation as a Queue)]].
-
-- **Song loop telemetry (2026-07-18, deployed `8c98c41`):** two append-only
-  tabs behind the existing song loop, the first slice of the
-  institutional-learning direction. `Song_Status_Log` records every real
-  assignment status transition as a **best-effort side effect** of the existing
-  assign/status writes (an append failure never fails the tutor's request —
-  evidence, not a complete ledger). `Song_Outcomes` captures the tutor's
-  optional one-tap "How was it for them?" when a song hits done/parked —
-  *cruised it / about right / a battle* chips + optional ≤300-char note, inline
-  in the SongBrowser manage strip; a chip saves, the X skips. Contract
-  decisions: `Song_Assignments.status` stays the only current-state truth; the
-  new tabs are mined later (termly, approval-first distillation into catalogue
-  `tutorNote`s and path ordering), **never** a dashboard panel, action queue,
-  or tutor scoreboard. Pure logic in `lib/songs/outcome-helpers.mjs` (tested);
-  new `POST /api/song-outcomes` uses the same per-student signed-token guard as
-  song-assignments. Why: [[2026-07-18 - Song Loop Telemetry (Free Data Before Asked Data)]].
-
-- Earlier arcs (cover bank + cover-loop rungs 1–2, agent-readiness 1–12, explicit pause-expectation writes, the
+- Earlier arcs (song requests + the `add-song` skill, song loop telemetry,
+  cover bank + cover-loop rungs 1–2, agent-readiness 1–12, explicit pause-expectation writes, the
   bass/electric shelf + registry-landmine day — song coverage and ingestion
   traps live in [`SONG_CATALOGUE_COVERAGE.md`](SONG_CATALOGUE_COVERAGE.md) —
   the WhatsApp bridge arc, finance layer, payroll V1–2) → `git log` + Learning
@@ -163,15 +153,15 @@ Open candidates (the Obsidian `08 Operations/Active Roadmap` is the fuller list)
   self-attested tutor and unblocks payroll Phase 3. Prerequisite: collect each
   tutor's login email. Full finding + the portal-notes sibling decision:
   [`DATA_PROTECTION_MAP.md`](DATA_PROTECTION_MAP.md).
-- **Proposals inbox V1 (designed 2026-07-19, not built):** drafted replies to
-  incoming messages — machine prepares, human commits; approval = clipboard +
-  `Communication_Log`, never sending. Full agreed design + the hard
-  cancellation-policy constraints (never offer reschedules; notice-window
-  classification; ambiguity → neutral acknowledgement):
-  [`PLAN_proposals-inbox.md`](PLAN_proposals-inbox.md). Gate: an
-  `AI_TOOL_CONTRACTS.md` allowlist entry with Finn sign-off before any model
-  sees a real parent message. The cancellation policy itself now has a
-  canonical home: Obsidian `05 Policies/Lesson Cancellation Policy.md`
+- **Proposals inbox V1 — BUILT, flag off, awaiting Finn sign-off (2026-07-19):**
+  the code is live but `ADMIN_AI_REPLY_DRAFT_ENABLED` stays unset until Finn
+  accepts the sign-off terms in `AI_TOOL_CONTRACTS.md` → "Incoming reply
+  drafting — sign-off notes" (headline: redacted parent message text reaches
+  OpenAI; roster-unknown names can survive redaction). To go live: accept the
+  terms, set the flag on Railway, redeploy. The cancellation policy's canonical
+  home: Obsidian `05 Policies/Lesson Cancellation Policy.md`. Gate for lane 2 /
+  overnight scheduling: ~70%+ used-unmodified over ~4 weeks
+  (`summariseProposalTelemetry` on the `Proposals` tab).
   (captured 2026-07-19 — it previously existed only in Finn's head and the
   payroll attendance mapping).
 - Contact-role model before any message automation.

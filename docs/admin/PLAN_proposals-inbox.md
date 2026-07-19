@@ -1,6 +1,7 @@
 # PLAN: Proposals Inbox — V1 (drafted replies to incoming messages)
 
-*Designed 2026-07-19 in conversation with Finn; agreed in principle, NOT yet built.
+*Designed and built 2026-07-19; feature flag remains off pending Finn's
+privacy/policy sign-off in `AI_TOOL_CONTRACTS.md`.
 This is the first lane of the "machine prepares, human commits" pattern. Read
 `AI_RUNTIME_INTEGRATION.md` (the issue-briefing pilot is the architectural template)
 and `AI_TOOL_CONTRACTS.md` (this needs a new allowlist entry + sign-off before any
@@ -59,9 +60,9 @@ the classifier spec, not the policy home):
   reschedule/swap/make-up; reject any charge/no-charge/video claim that contradicts
   the computed notice window; reject a video promise on a same-day cancellation.
 
-## Build order when green-lit
+## Implemented build order
 
-1. `AI_TOOL_CONTRACTS.md` allowlist entry → **Finn sign-off gate**.
+1. `AI_TOOL_CONTRACTS.md` allowlist entry → **Finn sign-off gate remains open**.
 2. `Proposals` tab + pure helpers (+ contract guard pair + STATE_TABS_SCHEMA row).
 3. Producer route (assembled from the existing redacted projections + AI runtime).
 4. Policy classifier + deterministic draft validator (pure, tested — the cancellation

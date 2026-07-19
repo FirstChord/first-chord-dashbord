@@ -4,6 +4,14 @@ Plain-English explanations of technical terms used in the admin dashboard. This 
 
 - **Path template** — a named ordered list of catalogue song IDs (`lib/config/path-templates.mjs`, canonical hand-edited). "Assign path" instantiates it into per-student `Song_Assignments` rows; the student copy is personal from then on.
 
+## Proposals inbox
+
+The "machine prepares, human commits" pattern made concrete: a machine-produced suggestion (a **proposal**) sits in the generic `Proposals` tab until a human uses, edits or discards it — the machine never acts. A **lane** is one kind of proposal; V1's only lane is `incoming_reply` (suggested WhatsApp replies on open incoming messages). Proposals expire after 7 days and are **superseded** if the message under them changes or a fresh draft is made. Telemetry is derived, not stored: an approved proposal whose applied text matches the proposed text was *used unmodified* — the gate metric for adding a second lane.
+
+## Notice window
+
+Which band of the Lesson Cancellation Policy a one-off absence falls in, computed from the lesson date (from the message's own dates, else `Schedule_Context`) minus the message date: `seven_plus` (cancelled, not charged), `inside_week` (charged; Zoom-at-slot or practice video), `same_day` (charged; no video). If the window can't be computed, the ambiguity rule applies: a neutral acknowledgement that commits to nothing.
+
 ## Cover bank
 
 The pool of tutors who have said (in a phone survey run by Fenella) whether they're happy to cover other tutors' shifts (yes/no — every cover is arranged by asking, so "maybe" carries nothing), on which days, and whether a same-day ask is OK or they need notice. Answers live in the `Cover_Bank_State` tab; the `/admin/workflows/cover-bank` page cross-references them live against teaching days from `Schedule_Context`, flagging (not hiding) tutors who already teach that day. External tutors — people not currently teaching at the school — can be added to the bank and exist only as `ext:<slug>` rows in that tab.

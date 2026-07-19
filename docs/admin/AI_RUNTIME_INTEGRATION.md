@@ -1,11 +1,19 @@
 # AI Runtime Integration
 
-Last verified against code and production behaviour: 2026-07-16
+Last verified against code and production behaviour: 2026-07-19
 
 This is the canonical engineering reference for the dashboard's model runtime.
 Read it before adding or changing any dashboard AI feature. The issue briefing
-is the only live model integration today. It is a deliberately thin,
-tool-free layer over deterministic context; it is not an agent framework.
+is the reference integration described in detail below. It is a deliberately
+thin, tool-free layer over deterministic context; it is not an agent framework.
+
+A second integration built on the same pattern exists as of 2026-07-19: the
+proposals-inbox reply lane (`lib/admin/incoming-reply-ai-{contract,provider}.mjs`,
+flag `ADMIN_AI_REPLY_DRAFT_ENABLED`, off pending sign-off). Its contract, its
+free-text redaction decision and its deterministic cancellation-policy
+validator are documented in `AI_TOOL_CONTRACTS.md` under
+`incoming_reply_draft.propose`; everything below about key scope, provider data
+handling, cost controls and rollback applies to it unchanged.
 
 The durable rule is:
 

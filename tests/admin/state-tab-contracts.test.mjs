@@ -9,6 +9,7 @@ import assert from 'node:assert/strict';
 
 import {
   buildManagedStateSheetDefinitions,
+  PROPOSALS_HEADERS,
   SONG_ASSIGNMENTS_HEADERS,
   SONG_OUTCOMES_HEADERS,
   SONG_REQUESTS_HEADERS,
@@ -20,6 +21,7 @@ import {
   buildSongRequestSheetRow,
   buildSongStatusLogSheetRow,
 } from '../../lib/admin/sheets/song-assignments.mjs';
+import { buildProposalSheetRow } from '../../lib/admin/sheets/proposals.mjs';
 import { BACKUP_TABS, NON_BACKED_UP_TABS } from '../../lib/admin/backup-tabs.mjs';
 
 // Students headers are external truth, so the definitions accept them as a
@@ -85,6 +87,7 @@ const BUILDER_CONTRACTS = [
   ['Song_Status_Log', SONG_STATUS_LOG_HEADERS, buildSongStatusLogSheetRow],
   ['Song_Outcomes', SONG_OUTCOMES_HEADERS, buildSongOutcomeSheetRow],
   ['Song_Requests', SONG_REQUESTS_HEADERS, buildSongRequestSheetRow],
+  ['Proposals', PROPOSALS_HEADERS, buildProposalSheetRow],
 ];
 
 test('row builders emit exactly their sheet headers', () => {
