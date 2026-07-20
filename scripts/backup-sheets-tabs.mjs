@@ -196,7 +196,7 @@ async function main() {
 
   // Sheet census: measure growth of the event-heavy lanes so the Sheets->DB
   // migration decision is triggered by data, not a hunch (see
-  // docs/admin/SHEETS_VS_DB_AUDIT.md). Read-only; never blocks the backup.
+  // docs/architecture/data/storage-boundary.md). Read-only; never blocks the backup.
   const previousManifest = await readPreviousManifest({ backupRoot, currentDirName: timestamp });
   const census = buildSheetCensus({ currentManifest: manifest, previousManifest });
   await writeFile(path.join(outputDir, 'census.json'), `${JSON.stringify(census, null, 2)}\n`, 'utf8');

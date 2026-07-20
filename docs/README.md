@@ -1,102 +1,76 @@
-# FirstChord Dashboard Documentation
+---
+status: canonical
+audience: [human, agent]
+last_verified: 2026-07-20
+---
 
-## Overview
+# First Chord documentation
 
-This repository now contains three connected surfaces:
+This is the single documentation router for the repository. It points to the
+current authority for each kind of question; it is not a second current-status
+or architecture document.
 
-- **Student portal**: individual student pages, friendly URLs, portal registry, Soundslice and Theta links.
-- **Tutor dashboard**: teacher-facing student views and teaching resources.
-- **Admin operating dashboard**: internal `/admin` system for closing operational loops and adding V4 context layers.
+Coding agents start with [AGENTS.md](../AGENTS.md), then read
+[CURRENT_STATUS.md](./CURRENT_STATUS.md). Humans can start from the task they
+are trying to complete below.
 
-For current admin-dashboard work, always start with:
+## What are you trying to do?
 
-- [../AGENTS.md](../AGENTS.md)
-- [admin/CURRENT_STATUS.md](./admin/CURRENT_STATUS.md)
-- [admin/INDEX.md](./admin/INDEX.md)
+| Need | Start here |
+|---|---|
+| See what is live, recent, next, or deliberately parked | [Current status](./CURRENT_STATUS.md) |
+| Understand the system, its data, AI, or security boundaries | [Architecture](./architecture/README.md) |
+| Check a school, payment, privacy, UX, or workflow rule | [Policies](./policies/README.md) |
+| Deploy, diagnose, recover, or operate an integration | [Operations](./operations/README.md) |
+| Carry out a recurring school process | [Workflows](./workflows/README.md) |
+| Review work that is proposed, active, or parked | [Plans](./plans/README.md) |
+| Look up a term, registry rule, catalogue fact, or environment detail | [Reference](./reference/README.md) |
+| Understand an old decision, audit, spec, or portal-era process | [History](./history/README.md) |
 
-Older portal docs and the implementation log are useful history, but they are
-not the authority for the current admin direction, deployment process, or
-source-of-truth boundaries.
+## Authority order
 
-## Current Admin Model
+When documents disagree, use this order:
 
-V3 established the loop-closing pattern:
+1. Current code and focused tests.
+2. [AGENTS.md](../AGENTS.md) for repository-wide safety and validation routing.
+3. [CURRENT_STATUS.md](./CURRENT_STATUS.md) for active direction.
+4. The focused architecture, policy, operations, or workflow document.
+5. Plans and reference material.
+6. Historical documents only as background.
 
-```text
-Detected -> Guided -> Actioned -> Logged -> Resolved / Kept Active
-```
+Do not silently ignore a conflict between code and a canonical document. Fix
+the document, fix the implementation, or call out the unresolved difference.
 
-V4 is adding lightweight context layers:
+## Documentation lifecycle
 
-- lifecycle status
-- schedule context
-- payment value context
-- capacity context
-- waiting-list placement context
-- scalable navigation
+Active documents use one of these statuses:
 
-The admin top nav is intentionally short:
+- `canonical` — the authority for a named contract or operating rule.
+- `supporting` — useful current explanation, but not the sole authority.
+- `active-plan` — approved direction with remaining work.
+- `parked` — deliberately not current work; a new decision is required to resume.
+- `historical` — retained for context and never current instruction.
 
-```text
-Overview | Issues | Workflows | Planning
-```
+The folder communicates the document's primary purpose; its status communicates
+its lifecycle. Plans do not become truth because they are detailed, and history
+does not override current code because it once described production.
 
-Student records remain important, but they are reached through header search, issue links, workflow links, or `/admin/students` rather than being a primary top-nav mode.
+## Repository docs versus Obsidian
 
-## Documentation Index
+Repository documentation owns implementation handoff, source-of-truth rules,
+schemas, safety boundaries, workflows, integration operation, and recovery.
+The Obsidian vault owns higher-level operating memory, decision history, product
+lessons, and material written for Finn, Tom, or Fenella. Safety-critical rules
+must remain usable from this repository alone.
 
-### Current Admin Work
+## Maintenance rules
 
-- [Admin Current Status](./admin/CURRENT_STATUS.md)
-- [Admin Docs Index](./admin/INDEX.md)
-- [Admin Implementation Log](./admin/ADMIN_IMPLEMENTATION_LOG.md)
-- [Learning Log](./LEARNING_LOG.md)
-- [Operating Dashboard Build Blueprint](./admin/OPERATING_DASHBOARD_BUILD_BLUEPRINT.md)
-- [V3 Loop Architecture](./admin/V3_LOOP_ARCHITECTURE.md)
-- [Ownership Matrix](./admin/OWNERSHIP_MATRIX.md)
-- [Payments Rules](./admin/PAYMENTS_RULES.md)
-
-### Student Portal And Registry
-
-- [Student Portal System](./STUDENT_PORTAL_SYSTEM.md)
-- [Student Registry Guide](./STUDENT_REGISTRY_GUIDE.md)
-- [Adding New Students — legacy manual workflow](./workflows/01-adding-students.md)
-- [Validation Guide](./VALIDATION_GUIDE.md)
-- [WordPress Redirect Setup](./WORDPRESS_REDIRECT_SETUP.md)
-
-### Operations And Setup
-
-- [Troubleshooting Guide](./TROUBLESHOOTING_GUIDE.md)
-- [Current Operations Runbook](./admin/OPERATIONS_RUNBOOK.md)
-- [Legacy Portal Deployment Checklist](./workflows/04-deployment-checklist.md)
-- [Google Sheets Setup](./guides/GOOGLE_SHEETS_SETUP_GUIDE.md)
-- [Google Sheets Schema](./guides/GOOGLE_SHEETS_SCHEMA.md)
-- [API Usage Guide](./guides/EFFICIENT_API_USAGE_GUIDE.md)
-- [MMS Token Bookmarklet](./guides/MMS-Token-Bookmarklet.md)
-
-## Source Of Truth Summary
-
-- Google Sheets `Students` = operational school truth
-- `lib/config/students-registry.js` = portal/dashboard registry truth
-- MMS = lesson, waiting-list, billing-profile, and calendar operational truth
-- MMS calendar category `Free` = real current free-slot truth
-- Stripe = payment-provider truth
-- `Issue_Queue` = persistent issue workflow state
-- `Event_Log` = append-only issue/action history
-- `Schedule_Context` = dashboard cache of selected MMS lesson context
-- `Pause History` = intentional pause-window truth
-
-## Maintenance Notes
-
-- Keep `admin/CURRENT_STATUS.md` current after each meaningful admin slice.
-- Use `admin/ADMIN_IMPLEMENTATION_LOG.md` for chronological implementation detail.
-- Suggest a short `LEARNING_LOG.md` entry for meaningful architectural changes.
-- Treat old V1/V2 admin docs and older student-portal docs as background unless current docs explicitly point to them.
-- Before deployment, run:
-
-```bash
-npm run test:admin
-npm run build
-```
-
-**Last Updated**: July 2026
+- Keep only this file as the broad documentation index.
+- Update the focused canonical document when a change affects architecture,
+  ownership, policy, security, workflow state, deployment, or recovery.
+- Update [the state-tab contract](./architecture/data/state-tabs.md) whenever a
+  dashboard-owned Sheet tab, header, key, writer, retention rule, or backup
+  disposition changes.
+- Use Git history and the Obsidian Learning Log for chronology; do not restart a
+  repository changelog.
+- Run `npm run docs:check` after moving or linking documentation.

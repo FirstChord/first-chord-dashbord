@@ -40,7 +40,7 @@ test('operations guidance abstains for unknown and overlong queries', () => {
 
 test('operations guidance section lookup accepts ids, never paths', () => {
   const section = getOperationsGuidanceSection('payments_rules', 'pause_expectation_reconciliation');
-  assert.equal(section.citation.sourcePath, 'docs/admin/PAYMENTS_RULES.md');
+  assert.equal(section.citation.sourcePath, 'docs/policies/payments.md');
   assert.equal(getOperationsGuidanceSection('../../.env', 'anything'), null);
   assert.equal(getOperationsGuidanceSection('operations_runbook', '../../../secret'), null);
 });
@@ -51,7 +51,10 @@ test('operations guidance catalog contains bounded fixed source metadata only', 
     const id = `${section.documentId}:${section.sectionId}`;
     assert.ok(!ids.has(id), `duplicate guidance id ${id}`);
     ids.add(id);
-    assert.match(section.sourcePath, /^docs\/(?:admin|workflows)\/[A-Za-z0-9_\-.]+\.md$/u);
+    assert.match(
+      section.sourcePath,
+      /^docs\/(?:architecture\/data|operations(?:\/integrations)?|policies|workflows\/finance)\/[a-z0-9-]+\.md$/u,
+    );
     assert.ok(section.snippet.length <= OPERATIONS_GUIDANCE_MAX_SNIPPET_LENGTH);
     assert.ok(Array.isArray(section.keywords) && section.keywords.length > 0);
   }

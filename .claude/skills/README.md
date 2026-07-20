@@ -1,59 +1,12 @@
-# Claude Skills - Quick Reference Guide
+# Legacy Claude skill pointers
 
-Lightweight, focused guides for recurring dashboard tasks.
+These compatibility filenames remain so old Claude prompts fail safely into
+current guidance. Start with [`AGENTS.md`](../../AGENTS.md) and
+[`docs/README.md`](../../docs/README.md).
 
-## Available Skills
-
-### 🎓 [Add Student](add-student.md)
-Complete workflow for onboarding a new student to the dashboard.
-
-**When to use**: Adding new students to teacher rosters
-
-**Quick command**: `npm run generate-configs` after updating CSV
-
----
-
-### 🚀 [Deploy](deploy.md)
-Safe deployment procedures for pushing updates to production.
-
-**When to use**: After making changes, before going live
-
-**Quick command**: `git push origin main` (auto-deploys to Railway)
-
----
-
-### 🔧 [Troubleshoot](troubleshoot.md)
-Fast diagnostics for common dashboard issues.
-
-**When to use**: Portal not loading, API failures, build errors
-
-**Quick command**: `npm run validate` (first step for most issues)
-
----
-
-## Skill Philosophy
-
-These skills are intentionally:
-- ✅ **Concise** - One page or less
-- ✅ **Action-focused** - Commands and checklists
-- ✅ **Quick reference** - Not comprehensive docs
-- ✅ **Recurring tasks** - Things done frequently
-
-## For Detailed Documentation
-
-See the main [Documentation Index](../docs/INDEX.md) for:
-- Complete guides
-- Architecture explanations
-- Edge case protocols
-- Full API references
-
-## Creating New Skills
-
-Keep skills under 100 lines. If longer, it belongs in `/docs` instead.
-
-Structure:
-1. Purpose (1-2 sentences)
-2. Quick commands
-3. Step-by-step process
-4. Common issues
-5. Link to full docs
+- Adding/onboarding a student: use the **Waiting and onboarding** row in
+  `AGENTS.md` and the live `/admin/onboard` implementation.
+- Deploying: use the validation section in `AGENTS.md` and the
+  [operations runbook](../../docs/operations/runbook.md).
+- Troubleshooting: use the [operations runbook](../../docs/operations/runbook.md)
+  and [incident notes](../../docs/operations/incidents/bug-fixes.md).

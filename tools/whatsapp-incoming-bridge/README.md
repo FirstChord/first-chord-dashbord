@@ -2,7 +2,7 @@
 
 Local helper that captures WhatsApp messages into the dashboard `Incoming_Message_Inbox`.
 
-This is optional tooling. It is not part of the Railway dashboard build. Full semantics live in `docs/admin/WHATSAPP_INCOMING_BRIDGE.md` (the authoritative doc); this README is setup/ops only.
+This is optional tooling. It is not part of the Railway dashboard build. Full semantics live in `docs/operations/integrations/whatsapp-incoming-bridge.md` (the authoritative doc); this README is setup/ops only.
 
 ## What It Does
 
@@ -13,7 +13,7 @@ This is optional tooling. It is not part of the Railway dashboard build. Full se
 
 ## What It Must Not Do
 
-- **send any WhatsApp message** — the bridge is receive-only. This is enforced in code, not just by convention: `outbound-guard.js` blocks `sock.sendMessage`/`relayMessage` on every socket, so a send throws loudly instead of messaging a parent (`tests/admin/whatsapp-bridge-outbound-guard.test.mjs` locks it in). Never sending is also the biggest lever for staying off WhatsApp's ban radar — see `docs/admin/WHATSAPP_INCOMING_BRIDGE.md` → Ban-Risk Posture.
+- **send any WhatsApp message** — the bridge is receive-only. This is enforced in code, not just by convention: `outbound-guard.js` blocks `sock.sendMessage`/`relayMessage` on every socket, so a send throws loudly instead of messaging a parent (`tests/admin/whatsapp-bridge-outbound-guard.test.mjs` locks it in). Never sending is also the biggest lever for staying off WhatsApp's ban radar — see `docs/operations/integrations/whatsapp-incoming-bridge.md` → Ban-Risk Posture.
 - ingest chats outside the human-confirmed group map (no DMs, no personal groups — the dashboard re-checks the map on every capture)
 - auto-create pause/payment actions
 - treat WhatsApp as source truth

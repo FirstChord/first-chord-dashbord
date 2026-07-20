@@ -204,10 +204,10 @@ if (hasMeaningfulCodeChange(files) && !hasRepoDocChange(files)) {
   });
 }
 
-if (hasStateTabTouch(diffText) && !files.includes('docs/admin/STATE_TABS_SCHEMA.md')) {
+if (hasStateTabTouch(diffText) && !files.includes('docs/architecture/data/state-tabs.md')) {
   warnings.push({
     title: 'Sheets/state-layer code changed',
-    body: 'If a tab/header/write pattern changed, update docs/admin/STATE_TABS_SCHEMA.md. If this was only a refactor, no doc change may be needed.',
+    body: 'If a tab/header/write pattern changed, update docs/architecture/data/state-tabs.md. If this was only a refactor, no doc change may be needed.',
   });
 }
 
@@ -242,10 +242,10 @@ if (contractTouchesWithoutGuard.length) {
   });
 }
 
-if (hasRouteOrWorkflowTouch(files) && !files.includes('docs/admin/CURRENT_STATUS.md')) {
+if (hasRouteOrWorkflowTouch(files) && !files.includes('docs/CURRENT_STATUS.md')) {
   warnings.push({
     title: 'Admin route/workflow changed',
-    body: 'If this changed a live workflow or surfaced a new operating layer, update docs/admin/CURRENT_STATUS.md or the relevant workflow doc.',
+    body: 'If this changed a live workflow or surfaced a new operating layer, update docs/CURRENT_STATUS.md or the relevant workflow doc.',
   });
 }
 
@@ -293,7 +293,7 @@ const addedJargonLabels = hasAddedLine(fileDiffs, (file, lines) => (
 if (addedJargonLabels.length) {
   warnings.push({
     title: 'Possible internal jargon in new UI copy',
-    body: `${addedJargonLabels.map(([file]) => `  - ${file}`).join('\n')}\n  Button/label copy should predict the outcome without internal state names — see docs/admin/COPY_AND_TONE.md → Buttons.`,
+    body: `${addedJargonLabels.map(([file]) => `  - ${file}`).join('\n')}\n  Button/label copy should predict the outcome without internal state names — see docs/policies/copy-and-tone.md → Buttons.`,
   });
 }
 

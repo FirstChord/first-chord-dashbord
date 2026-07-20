@@ -2,12 +2,12 @@
 
 Next.js app for the First Chord student portal, tutor dashboard, and internal admin operating dashboard.
 
-Coding agents should start with [`AGENTS.md`](AGENTS.md). For current active
+Coding agents should start with [`AGENTS.md`](./AGENTS.md). For current active
 admin-dashboard work, continue with:
 
 ```text
-docs/admin/CURRENT_STATUS.md
-docs/admin/V3_LOOP_ARCHITECTURE.md
+docs/CURRENT_STATUS.md
+docs/architecture/system/admin-loop.md
 ```
 
 ## 🚀 Quick Start
@@ -23,14 +23,13 @@ Visit `http://localhost:3000`
 
 **All documentation has been organized in the `/docs` directory.**
 
-👉 **[Start here: Documentation Index](docs/INDEX.md)**
+👉 **[Start here: Documentation Index](./docs/README.md)**
 
 ### Quick Links
-- [Coding Agent Guide](AGENTS.md)
-- [Admin Docs Index](docs/admin/INDEX.md)
-- [Legacy Manual Student Setup](docs/workflows/01-adding-students.md)
-- [Troubleshooting Guide](docs/TROUBLESHOOTING_GUIDE.md)
-- [Operations and Recovery Runbook](docs/admin/OPERATIONS_RUNBOOK.md)
+- [Coding Agent Guide](./AGENTS.md)
+- [Documentation Router](./docs/README.md)
+- [Current System Status](./docs/CURRENT_STATUS.md)
+- [Operations and Recovery Runbook](./docs/operations/runbook.md)
 
 ## 🛠️ Key Features
 
@@ -54,6 +53,7 @@ Visit `http://localhost:3000`
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
 - `npm run test:admin` - Generate configs and run the deterministic admin suite
+- `npm run docs:check` - Validate documentation structure, lifecycle metadata, and links
 - `npm run lint` - Lint the Next application surface
 - `npm run hygiene:check` - Report repository maintenance signals
 - `npm run validate` - Validate student registry
@@ -73,7 +73,9 @@ Visit `http://localhost:3000`
 
 ## 🆘 Need Help?
 
-See the [Troubleshooting Guide](docs/TROUBLESHOOTING_GUIDE.md) or [Documentation Index](docs/INDEX.md)
+See the [Operations Runbook](./docs/operations/runbook.md),
+[Incident Notes](./docs/operations/incidents/bug-fixes.md), or
+[Documentation Router](./docs/README.md).
 
 ---
 

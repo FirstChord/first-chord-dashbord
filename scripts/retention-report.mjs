@@ -1,5 +1,5 @@
 // Read-only retention report: measures each dated tab against the PROPOSED
-// retention policies in docs/admin/DATA_PROTECTION_MAP.md. Prints counts only —
+// retention policies in docs/policies/data-protection.md. Prints counts only —
 // this script never deletes anything; pruning stays a human-run action.
 //   npm run retention:report
 import path from 'node:path';
@@ -27,7 +27,7 @@ function monthsAgo(months) {
   return d;
 }
 
-console.log('Retention report (read-only) — policies from docs/admin/DATA_PROTECTION_MAP.md\n');
+console.log('Retention report (read-only) — policies from docs/policies/data-protection.md\n');
 let anyOutside = false;
 
 for (const policy of POLICIES) {

@@ -19,6 +19,7 @@
     "retention:report": "node scripts/retention-report.mjs",
     "ensure:state-tabs": "node scripts/ensure-state-tabs.mjs",
     "ensure:practice-delivery-claims": "node scripts/ensure-practice-delivery-claims.mjs",
+    "docs:check": "node scripts/check-docs.mjs",
     "hygiene:check": "node scripts/hygiene-check.mjs",
     "eval:incoming": "node scripts/eval-incoming-classifier.mjs",
     "install:backup-schedule": "node scripts/install-sheets-backup-launch-agent.mjs",

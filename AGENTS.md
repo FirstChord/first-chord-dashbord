@@ -6,15 +6,15 @@ copying it here.
 
 ## Before Making A Change
 
-1. Read `docs/admin/CURRENT_STATUS.md` for the active system state.
-2. Read `docs/admin/STATE_TABS_SCHEMA.md` for data ownership, keys, writers,
+1. Read `docs/CURRENT_STATUS.md` for the active system state.
+2. Read `docs/architecture/data/state-tabs.md` for data ownership, keys, writers,
    caches, logs, concurrency, and retention limits.
    For the July 2026 readiness audit outcomes and remaining gaps, use
-   `docs/admin/AGENT_READINESS_AUDIT_OUTCOMES.md`.
+   `docs/history/audits/agent-readiness-2026-07.md`.
 3. Read the focused workflow doc and tests from the map below.
 4. For auth, deployment, credentials, integration health, backups, or recovery,
-   read `docs/admin/OPERATIONS_RUNBOOK.md` and
-   `docs/admin/HYGIENE_AND_SECRETS.md`.
+   read `docs/operations/runbook.md` and
+   `docs/policies/hygiene-and-secrets.md`.
 5. Inspect the current implementation before trusting historical docs. Current
    code and tests beat stale snapshots, but a conflict with a canonical doc must
    be resolved or called out rather than silently ignored.
@@ -31,7 +31,8 @@ must not be the only source of a safety-critical implementation rule.
 - `lib/admin/*-helpers.mjs`: preferably pure business rules.
 - `lib/admin/sheets/`: Google Sheets lane adapters.
 - `tests/admin/`: focused Node tests, usually matching helper names.
-- `docs/admin/`: current architecture, workflow, policy, and recovery docs.
+- `docs/`: intent-led architecture, policy, operations, workflow, plan,
+  reference, and historical documentation; start at `docs/README.md`.
 - `lib/config/students-registry.js`: portal configuration source.
 - `lib/student-url-mappings.js`, `lib/student-helpers.js`,
   `lib/soundslice-mappings.js`, `lib/config/instruments.js`, and the ignored
@@ -40,7 +41,7 @@ must not be the only source of a safety-critical implementation rule.
 
 ## Truth And State Boundaries
 
-`docs/admin/STATE_TABS_SCHEMA.md` is authoritative for dashboard-owned Sheets
+`docs/architecture/data/state-tabs.md` is authoritative for dashboard-owned Sheets
 lanes. The compact model is:
 
 - MMS owns lessons, calendar events, attendance, and MMS student state.
@@ -60,17 +61,17 @@ Do not silently choose a winner for a new conflict type.
 
 | Area | Main UI / API | Domain and storage code | Read before changing | Focused tests |
 |---|---|---|---|---|
-| Students and issues | `app/admin/students/`, `app/admin/flags/`, `app/api/admin/students/`, `app/api/admin/issues/` | `lib/admin/student-context*`, `lib/admin/students.js`, `lib/admin/issues.js`, `lib/admin/issue-detectors.mjs`, `lib/admin/issue-queue.js`, `lib/admin/sheets/students.mjs`, `lib/admin/sheets/issues.mjs` | `OWNERSHIP_MATRIX.md`, `V3_LOOP_ARCHITECTURE.md` | `student-context-helpers`, `student-detail-helpers`, `issue-detectors`, `issues-helpers`, `issue-queue*`, `student-archive-helpers` |
-| Waiting and onboarding | `app/admin/waiting/`, `app/admin/onboard/`, `app/api/admin/waiting/`, `app/api/admin/onboard/` | `lib/admin/waiting-workflow.js`, `lib/admin/onboarding.js`, `lib/admin/registry.js`, `lib/admin/mms.js` | `SCHOOL_POLICY.md`, `OWNERSHIP_MATRIX.md` | `waiting-workflow`, `onboarding-helpers`, `registry-helpers`, `mms-helpers` |
-| Payments and finance | `app/admin/finance/`, student Stripe routes | `lib/admin/stripe.js`, `lib/admin/payment-*.mjs`, `lib/admin/finance-*.mjs`, `lib/admin/sheets/finance.mjs` | `PAYMENTS_RULES.md`, finance section of `CURRENT_STATUS.md` | `payments-helpers`, `payment-*`, `finance-*`, `stripe-*` |
-| Payroll | `app/admin/finance/payroll/`, `app/api/admin/payroll/` | `lib/admin/payroll-*.mjs`, `lib/admin/tutor-statement*`, `lib/admin/wise-helpers.mjs`, `lib/admin/mms.js` | `docs/workflows/06-paying-tutors.md`, `STATE_TABS_SCHEMA.md` | `payroll-*`, `mms-payroll-attendance`, `tutor-statement-*`, `wise-helpers` |
-| Pauses and tutor absence | `app/admin/workflows/tutor-absence/`, planning pause actions | `lib/admin/tutor-absence*`, `lib/admin/pause-*.mjs`, `lib/admin/planning*` | `TUTOR_ABSENCE_PAUSE_BRIDGE.md`, `TUTOR_ABSENCE_SAFETY_AND_UX.md`, `PAYMENTS_RULES.md` | `tutor-absence-helpers`, `pause-*`, `planning-helpers` |
-| Planning and recurring workflows | `app/admin/planning/`, `app/admin/showcase/`, `app/admin/holidays/` | `lib/admin/planning*`, `lib/admin/showcase*`, `lib/admin/holiday-workflow*`, `lib/admin/sheets/workflows.mjs` | `WORKFLOW_DESIGN_PRINCIPLES.md` | `planning-*`, `showcase`, `holiday-workflow` |
-| Incoming WhatsApp intake | `app/admin/incoming-messages/`, `app/api/admin/incoming-messages/` | `lib/admin/incoming-messages.js`, `lib/admin/incoming-*.mjs`, `lib/admin/sheets/incoming-messages.mjs`, `tools/whatsapp-incoming-bridge/` | `WHATSAPP_INCOMING_BRIDGE.md` | `incoming-*`, `whatsapp-bridge-outbound-guard` |
-| Practice Chat and notes | `app/api/practice-notes/`, `app/api/admin/practice-notes/` | `lib/admin/practice-*.mjs`, `lib/admin/practice-notes-email.js`, `lib/admin/sheets/practice-notes.mjs` | `PRACTICE_CHAT_DELIVERY_AUDIT.md`, `PRACTICE_CHAT_WHISPER_HARDENING.md` | `practice-*` |
-| Parent understanding and communications | `app/admin/workflows/parent-understanding/`, `app/admin/communications/` | `lib/admin/parent-understanding*`, `lib/admin/communications*` | `WORKFLOW_DESIGN_PRINCIPLES.md`, `COPY_AND_TONE.md` | `parent-understanding-*`, `communications-helpers` |
-| Health and recovery | health panels, cron routes, GitHub workflows | `lib/admin/health*`, integration adapters, `.github/workflows/` | `OPERATIONS_RUNBOOK.md`, `BUG_FIXES.md` | `health-helpers`, adapter/cache tests |
-| Assistant-safe foundations | deterministic issue explanation plus optional tool-free AI briefing and reply proposals; no model actions or sending | `app/api/admin/issues/[mmsId]/explanation/`, `app/api/admin/issues/[mmsId]/ai-explanation/`, `app/api/admin/incoming-messages/reply-proposals/`, `components/admin/issues/IssueExplanationPanel.js`, `lib/admin/issue-explanation-*`, `lib/admin/assistant-context-*`, `lib/admin/incoming-reply-*`, `lib/admin/proposal-helpers.mjs`, `lib/admin/operations-guidance-helpers.mjs`, `lib/admin/communication-draft-proposal-helpers.mjs`, `lib/admin/incoming-eval-helpers.mjs` | `AI_RUNTIME_INTEGRATION.md`, `AI_TOOL_CONTRACTS.md`, `STATE_TABS_SCHEMA.md`, `HYGIENE_AND_SECRETS.md` | `issue-explanation-*`, `assistant-context-*`, `incoming-reply-*`, `proposal-helpers`, `operations-guidance-helpers`, `communication-draft-proposal-helpers`, `incoming-classifier-eval`, `evaluation-fixture-privacy` |
+| Students and issues | `app/admin/students/`, `app/admin/flags/`, `app/api/admin/students/`, `app/api/admin/issues/` | `lib/admin/student-context*`, `lib/admin/students.js`, `lib/admin/issues.js`, `lib/admin/issue-detectors.mjs`, `lib/admin/issue-queue.js`, `lib/admin/sheets/students.mjs`, `lib/admin/sheets/issues.mjs` | `docs/architecture/data/ownership.md`, `docs/architecture/system/admin-loop.md` | `student-context-helpers`, `student-detail-helpers`, `issue-detectors`, `issues-helpers`, `issue-queue*`, `student-archive-helpers` |
+| Waiting and onboarding | `app/admin/waiting/`, `app/admin/onboard/`, `app/api/admin/waiting/`, `app/api/admin/onboard/` | `lib/admin/waiting-workflow.js`, `lib/admin/onboarding.js`, `lib/admin/registry.js`, `lib/admin/mms.js` | `docs/policies/school.md`, `docs/architecture/data/ownership.md` | `waiting-workflow`, `onboarding-helpers`, `registry-helpers`, `mms-helpers` |
+| Payments and finance | `app/admin/finance/`, student Stripe routes | `lib/admin/stripe.js`, `lib/admin/payment-*.mjs`, `lib/admin/finance-*.mjs`, `lib/admin/sheets/finance.mjs` | `docs/policies/payments.md`, finance section of `docs/CURRENT_STATUS.md` | `payments-helpers`, `payment-*`, `finance-*`, `stripe-*` |
+| Payroll | `app/admin/finance/payroll/`, `app/api/admin/payroll/` | `lib/admin/payroll-*.mjs`, `lib/admin/tutor-statement*`, `lib/admin/wise-helpers.mjs`, `lib/admin/mms.js` | `docs/workflows/finance/paying-tutors.md`, `docs/architecture/data/state-tabs.md` | `payroll-*`, `mms-payroll-attendance`, `tutor-statement-*`, `wise-helpers` |
+| Pauses and tutor absence | `app/admin/workflows/tutor-absence/`, planning pause actions | `lib/admin/tutor-absence*`, `lib/admin/pause-*.mjs`, `lib/admin/planning*` | `docs/workflows/tutors/absence-to-pause.md`, `docs/workflows/tutors/absence-safety-contract.md`, `docs/policies/payments.md` | `tutor-absence-helpers`, `pause-*`, `planning-helpers` |
+| Planning and recurring workflows | `app/admin/planning/`, `app/admin/showcase/`, `app/admin/holidays/` | `lib/admin/planning*`, `lib/admin/showcase*`, `lib/admin/holiday-workflow*`, `lib/admin/sheets/workflows.mjs` | `docs/policies/workflow-design.md` | `planning-*`, `showcase`, `holiday-workflow` |
+| Incoming WhatsApp intake | `app/admin/incoming-messages/`, `app/api/admin/incoming-messages/` | `lib/admin/incoming-messages.js`, `lib/admin/incoming-*.mjs`, `lib/admin/sheets/incoming-messages.mjs`, `tools/whatsapp-incoming-bridge/` | `docs/operations/integrations/whatsapp-incoming-bridge.md` | `incoming-*`, `whatsapp-bridge-outbound-guard` |
+| Practice Chat and notes | `app/api/practice-notes/`, `app/api/admin/practice-notes/` | `lib/admin/practice-*.mjs`, `lib/admin/practice-notes-email.js`, `lib/admin/sheets/practice-notes.mjs` | `docs/workflows/practice-chat/delivery.md`, `docs/plans/parked/practice-chat-whisper-hardening.md` | `practice-*` |
+| Parent understanding and communications | `app/admin/workflows/parent-understanding/`, `app/admin/communications/` | `lib/admin/parent-understanding*`, `lib/admin/communications*` | `docs/policies/workflow-design.md`, `docs/policies/copy-and-tone.md` | `parent-understanding-*`, `communications-helpers` |
+| Health and recovery | health panels, cron routes, GitHub workflows | `lib/admin/health*`, integration adapters, `.github/workflows/` | `docs/operations/runbook.md`, `docs/operations/incidents/bug-fixes.md` | `health-helpers`, adapter/cache tests |
+| Assistant-safe foundations | deterministic issue explanation plus optional tool-free AI briefing and reply proposals; no model actions or sending | `app/api/admin/issues/[mmsId]/explanation/`, `app/api/admin/issues/[mmsId]/ai-explanation/`, `app/api/admin/incoming-messages/reply-proposals/`, `components/admin/issues/IssueExplanationPanel.js`, `lib/admin/issue-explanation-*`, `lib/admin/assistant-context-*`, `lib/admin/incoming-reply-*`, `lib/admin/proposal-helpers.mjs`, `lib/admin/operations-guidance-helpers.mjs`, `lib/admin/communication-draft-proposal-helpers.mjs`, `lib/admin/incoming-eval-helpers.mjs` | `docs/architecture/ai/runtime-integration.md`, `docs/architecture/ai/tool-contracts.md`, `docs/architecture/data/state-tabs.md`, `docs/policies/hygiene-and-secrets.md` | `issue-explanation-*`, `assistant-context-*`, `incoming-reply-*`, `proposal-helpers`, `operations-guidance-helpers`, `communication-draft-proposal-helpers`, `incoming-classifier-eval`, `evaluation-fixture-privacy` |
 
 Test names in the table refer to `tests/admin/*.test.mjs`.
 
@@ -117,7 +118,7 @@ boundary, executed by the existing workflow, and logged.
 
 Never expose broad Sheets, MMS, Stripe, Gmail, shell, filesystem, or arbitrary
 HTTP access to an assistant. Prefer narrow read models and typed action proposals.
-`docs/admin/AI_TOOL_CONTRACTS.md` is the design allowlist for future dashboard AI
+`docs/architecture/ai/tool-contracts.md` is the design allowlist for future dashboard AI
 capabilities. A model-supplied confirmation is never human approval.
 
 ## Validation By Change Type
@@ -172,6 +173,6 @@ Before finishing:
 6. Update the focused canonical doc when ownership, workflow, security, recovery,
    or an integration contract changes.
 7. For rollback, revert the code/deploy first, then follow
-   `docs/admin/OPERATIONS_RUNBOOK.md`. Do not reverse append-only logs or repair
+   `docs/operations/runbook.md`. Do not reverse append-only logs or repair
    provider/Sheets state by guesswork; reconcile from authoritative evidence and
    record the recovery action.

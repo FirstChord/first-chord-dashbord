@@ -1,0 +1,119 @@
+---
+status: canonical
+audience: [human, agent]
+last_verified: null
+---
+# FirstChord Admin Ownership Matrix
+
+Last updated: 2026-07-14
+
+This document defines which layer currently owns each major action and field in the admin system.
+
+Use it to reduce drift when implementing new features, resolving issues, or handing work between agents.
+
+## Core Rule
+
+- Many read surfaces, one admin write path.
+- Google Sheets owns core operational student data.
+- `students-registry.js` owns portal-specific configuration.
+- MMS owns student status, billing profiles, and calendar lesson state.
+- Stripe owns provider-side customer, subscription, invoice, and payment facts.
+- Dashboard onboarding generates an FC ID for a new student and persists it in
+  Sheets and the registry. A persisted ID must not be regenerated in the UI.
+- `first-chord-brain` may still provide external batch reconciliation and
+  `Review_Flags` generation, but it is not the sole owner of dashboard-created
+  FC identity.
+- Generated outputs should not be manually edited.
+
+This matrix is detailed for student/onboarding actions. For the complete current
+Sheets lane inventory, including finance, payroll, incoming messages, Practice
+Chat, and planning, use `docs/architecture/data/state-tabs.md`.
+
+## State Labels
+
+- `authoritative`: the source of truth for the field or action in current operation
+- `derived`: generated from another canonical source and not meant to be edited directly
+- `transitional split ownership`: current V1 compromise where two systems hold related truth for different purposes and deliberate alignment is required
+
+## Action Ownership
+
+| Action | State | Canonical owner | Write method | Admin write surface | Downstream effect | Failure mode / conflict rule | Notes |
+|---|---|---|---|---|---|---|---|
+| Add student | transitional split ownership | `Students` sheet + MMS + registry | onboarding workflow + external APIs | `/admin/onboard` | Creates Sheets row, registry entry, MMS activation, billing profile, first lesson | If Sheets write succeeds but later MMS steps fail, onboarding completes with warning and needs manual follow-up; this action should be prioritised for step tracking, retry logic, idempotency, and recovery rules | Current V1 onboarding flow and highest-value hardening target |
+| Update student contact details | authoritative | `Students` sheet | manual dashboard edit | `/admin/students/[mmsId]` | Updates admin views and future sync consumers | If Sheets update fails, no partial registry fallback is attempted | Includes name, parent, email, phone |
+| Update tutor assignment | transitional split ownership | `Students` sheet for operational truth, registry for portal truth | manual dashboard edit | `/admin/students/[mmsId]` | Resolves tutor conflicts, updates portal/admin consistency | If Sheets and registry differ, retain review flag until both are deliberately aligned | Current V1 reality is a transitional dual-write action; both lanes may need intentional updates |
+| Update lesson length | authoritative | `Students` sheet | manual dashboard edit or onboarding workflow | `/admin/students/[mmsId]`, `/admin/onboard` | Affects operational lesson configuration | If MMS lesson state later differs, dashboard does not auto-reconcile | |
+| Update instrument | transitional split ownership | `Students` sheet for operational display + registry for portal display | dashboard dual-write or onboarding workflow | `/admin/students/[mmsId]`, `/admin/onboard` | Affects admin context and portal behavior | Admin reads prefer the Sheet and fall back to registry; a partial dual-write must remain visible as a conflict rather than being silently merged | Both lanes are intentionally written today; field-level provenance is a future hardening target |
+| Update Soundslice URL/code | authoritative | Registry | manual dashboard edit or onboarding workflow | `/admin/students/[mmsId]`, `/admin/onboard` | Affects student portal content | If registry write fails, do not silently fall back to Sheets | Not a Sheets field |
+| Update Theta username | authoritative | Registry | manual dashboard edit or onboarding workflow | `/admin/students/[mmsId]`, `/admin/onboard` | Affects portal/login context | If registry write fails, do not silently fall back to Sheets | Not a Sheets field |
+| Activate student in MMS | authoritative | MMS | external API via onboarding workflow | `/admin/onboard` | Moves student from waiting to active | If activation fails, keep onboarding warning visible; do not assume later MMS steps are safe | Done via API now |
+| Create billing profile | authoritative | MMS | external API via onboarding workflow | `/admin/onboard` | Enables lesson creation and billing linkage | If billing profile creation fails, lesson creation may fail; surface warning and preserve prior successful writes | Done via API now |
+| Create first lesson | authoritative | MMS | external API via onboarding workflow | `/admin/onboard` | Places lesson on calendar | Best-effort in V1; onboarding can still succeed without lesson creation | Done via API now |
+| Resolve tutor conflict | transitional split ownership | Sheets + registry | manual dashboard edit | `/admin/students/[mmsId]` | Removes active issue from `/admin/flags` | Issue remains active until current live state matches across both sides | Dashboard now supports both tutor lanes |
+| Delete orphaned portal entry | authoritative | Registry | manual dashboard edit | `/admin/flags` | Removes `REGISTRY ONLY` issue and registry entry | Only allowed for `REGISTRY ONLY`; do not delete MMS or Sheets records here | Safe delete only; does not touch MMS |
+| Run external FC reconciliation / flag generation | derived | `first-chord-brain` batch tooling | terminal process outside this dashboard | No browser surface | May update FC exports and `Review_Flags` | Must not replace an existing persisted FC ID; resolve underlying mismatches rather than editing a derived flag | External compatibility path, not the dashboard onboarding owner |
+| Regenerate dashboard configs | derived | Dashboard repo generation scripts | terminal/admin script | Manual terminal step | Updates derived config files and portal deployment path | Do not hand-edit derived config output to compensate for upstream errors | Not browser-triggered in V1 |
+
+## Field Ownership
+
+| Field | State | Canonical owner | Write method | Edited where | Derived / synced to | Failure mode / conflict rule | Notes |
+|---|---|---|---|---|---|---|---|
+| Student first/last name | authoritative | `Students` sheet + MMS | manual dashboard edit + onboarding workflow + external API | Student detail, onboarding | Admin views, future sync logic | If systems diverge, treat it as a sync problem to fix deliberately rather than auto-overwriting | Keep aligned across systems |
+| Parent/contact name | authoritative | `Students` sheet | manual dashboard edit + onboarding workflow | Student detail, onboarding | Admin use | If missing in MMS, do not infer from unrelated fields | |
+| Email | authoritative | `Students` sheet + MMS | manual dashboard edit + onboarding workflow + external API | Student detail, onboarding | Admin use, future messaging | If different across systems, prefer deliberate correction over silent sync | |
+| Phone number | authoritative | `Students` sheet + MMS | manual dashboard edit + onboarding workflow + external API | Student detail, onboarding | Admin use, future WhatsApp | Messaging workflows should not assume the number is valid without explicit confidence | |
+| Tutor (operational) | authoritative | `Students` sheet | manual dashboard edit + onboarding workflow | Student detail, onboarding | Admin workflows | Dashboard display should continue to prefer Sheets tutor | Current display truth |
+| Tutor (portal) | transitional split ownership | Registry | manual dashboard edit | Student detail | Student portal | Keep review flag active until Sheets and registry intentionally match | Can differ temporarily until resolved |
+| Lesson length | authoritative | `Students` sheet | manual dashboard edit or onboarding workflow | Student detail, onboarding | Operational workflows | If later MMS billing/lesson state differs, treat as follow-up, not auto-rewrite | |
+| Instrument | transitional split ownership | `Students` sheet for operational display; registry for portal display | dashboard dual-write or onboarding workflow | Student detail, onboarding | Admin context and student portal | Reads prefer the Sheet and fall back to registry; differences require deliberate reconciliation | Both lanes are written by current admin flows |
+| `fcStudentId` | authoritative after generation | Persisted `Students` row + registry entry | dashboard `generateFcStudentId` during onboarding or missing-registry creation | Not manually editable in dashboard | Registry, FC exports, FC tabs | Never recompute an existing value; if persisted lanes disagree, stop and reconcile deliberately | Dashboard now owns generation for its onboarding path |
+| `friendlyUrl` | authoritative | Registry | onboarding workflow, future manual dashboard edit if allowed | Onboarding, future admin editing if allowed | Student portal route | Must remain unique; collisions should be resolved intentionally | Portal-specific |
+| `soundsliceUrl` | authoritative | Registry | manual dashboard edit or onboarding workflow | Student detail, onboarding | Student portal | If absent, portal can still exist but follow-up may be needed | |
+| `thetaUsername` | authoritative | Registry | manual dashboard edit or onboarding workflow | Student detail, onboarding | Student portal | If absent or changed, do not infer from unrelated values after first save | |
+| MMS status | authoritative | MMS | external API | Onboarding, future admin action | Waiting vs active workflows | If activation fails, keep student in follow-up state rather than pretending they are live | |
+| Billing profile | authoritative | MMS | external API | Onboarding, future billing actions | Lesson creation | If billing profile is missing, lesson creation may fail and should surface clearly | |
+| First lesson event | authoritative | MMS | external API | Onboarding | Calendar | Best-effort in V1; absence should surface as follow-up, not silent success | |
+| Stripe customer/subscription IDs | authoritative | `Students` sheet currently | external system + trusted workflow only | Not exposed for editing in admin V1 | Payment workflows | Do not edit directly in V1 dashboard; any future repair path should be an explicit narrow admin tool | Keep tightly controlled |
+| Review flags | derived | `first-chord-brain` generated into Sheets `Review_Flags` | generated by terminal/admin script | Not manually edited | `/admin/flags` | Resolve the underlying live mismatch; do not edit the generated flag row | Dashboard filters resolved issues live |
+
+## Current V1 Boundaries
+
+- Do not edit generated dashboard config files manually.
+- Do not generate or recompute FC IDs in the UI except through the existing onboarding flow where already implemented.
+- Do not delete MMS records from the flags page.
+- `REGISTRY ONLY` deletes are currently the only destructive issue action exposed in the dashboard.
+- Production onboarding writes the registry through the repository GitHub path;
+  the registry workflow and deploy prebuild validate/regenerate derived config.
+  Local registry changes still require `npm run generate-configs` before local
+  portal verification.
+
+## Shared Student Context Read Model
+
+`lib/admin/student-context-helpers.mjs` is the shared deterministic composition
+boundary used by Students, Issues, live Stripe issue scans, and explicit pause
+reconciliation. It preserves the existing Sheet-first registry fallbacks and
+adds runtime-only provenance for source role, cache freshness, inferred payment
+fields, and Sheet/registry conflicts.
+
+- Provenance describes how the current value was selected; it owns no truth and
+  is never written back to Sheets or the registry.
+- `Students` remains operational truth. Registry fallback does not silently
+  repair a missing Sheet field.
+- `Schedule_Context` remains a cached MMS projection. `checkedAt`, confidence,
+  and freshness travel with the context; a `found` row is not live MMS truth.
+- Lifecycle, payment value, pause coverage, and pause-expectation decisions are
+  derived values.
+- Raw student context includes sensitive contact and provider identifiers. Any
+  future assistant read must use a separate redacted projection defined in
+  `docs/architecture/ai/tool-contracts.md`.
+
+## Future Direction
+
+- Keep the admin dashboard as the main human write surface.
+- Keep reusable business rules in tested deterministic modules with narrow
+  integration boundaries; do not move ownership merely to create an AI layer.
+- Keep specialist tools like Payment Pause and future messaging flows on top of the same shared ownership model.
+- Expand this matrix when adding:
+  - payments issue detection
+  - WhatsApp-triggered workflows
+  - agent-assisted triage or recommendations
