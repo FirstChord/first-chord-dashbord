@@ -1,123 +1,102 @@
 ---
-status: supporting
+status: canonical
 audience: [human, agent]
-last_verified: null
+last_verified: 2026-07-20
 ---
-# Sheets vs App Database — Ownership Audit
+# Sheets and database boundary
 
-Last updated: 2026-07-07
+This document answers one question: where should new dashboard-owned state live?
+The per-lane mechanical contract remains
+[State tabs](./state-tabs.md).
 
-This note records the read-only audit of where First Chord OS data lives today, the
-ownership boundary it establishes, and the trigger-based migration plan. It is the
-durable home for **"which data belongs in Sheets, which should move to a database,
-and what should stay derived."** The per-tab mechanical map is `docs/architecture/data/state-tabs.md`;
-this note is the *judgement* over that map.
+## Current position
 
-## Core principle
+Google Sheets is the general application state store. It is intentionally useful
+for human-paced records that Finn/Tom can inspect and correct directly.
 
-- **Sheets** for data humans maintain, inspect, and correct. Low-volume, human-paced writes.
-- **App database (when one exists)** for data the system *observes, generates, timestamps, dedupes, audits, or reconciles* at machine volume.
-- **Derived / cache** for anything recomputable from source facts — never promote it to stored truth.
+PostgreSQL has one narrow production responsibility:
+`practice_note_delivery_claims` atomically claims a unique Practice Chat
+`delivery_key` before MMS or Gmail work. It exists because a last-write-wins
+Sheet cannot safely prevent duplicate delivery across Railway instances. Sheets
+still holds the note/delivery audit and portal read model.
 
-There is **no production database today.** So the real decision is not "rebalance Sheets vs DB"
-but "introduce a *first* database only when a measured lane justifies it, and for which lanes."
-The census (below) exists so that decision is triggered by a number.
+There is no general-purpose application database and no plan to replace working
+Sheets lanes wholesale.
 
-## Current data-store map
+## Placement rubric
 
-| Store | Holds |
-|---|---|
-| Google Sheets `Students` | Canonical school roster (Stripe ID columns owned by Payment Pause) |
-| Google Sheets — 24 dashboard state tabs | All workflow state, logs, caches, finance config (`docs/architecture/data/state-tabs.md`) |
-| `lib/config/students-registry.js` (git) | Portal/registry truth; 5 derived config files regenerate from it |
-| MMS | Lesson/schedule/attendance/waiting-list truth (external) |
-| Stripe | Payment truth (external, restricted read key) |
-| Bridge local files | Baileys session + `cache/recent-messages.json` (replaceable machine state) |
-| In-memory / localStorage caches | Sheets read cache, API cache, tutor-list cache |
+Choose Sheets when:
 
-## Ownership boundary (the decision)
+- humans create, review, or correct the record;
+- writes are low-volume and human-paced;
+- direct inspection is an operational advantage;
+- last-write-wins conflict risk is understood and acceptable;
+- sensitive configuration is safer in the private Sheet than Git.
 
-### Stay in Sheets — a strength, do not move
+Choose PostgreSQL or another transactional store when:
 
-Students / registry, `Tutor_Pay`, `Tutor_Wise`, `Expenses`, `Expense_Log`, manual payers,
-`Waiting_List_State`, `Planning_Items` + `Planning_Progress_Log`, showcase/holiday checklists,
-`Parent_Understanding_State`, `Tutor_Absence_State`, `Communication_Log`, `Students_Archive`,
-`Finance_Snapshot`, `Schedule_Context`, `Stripe_Amounts_Cache`, `Stripe_Collected_Monthly`,
-`Bridge_Status`, `WhatsApp_Group_Map`.
+- correctness requires a unique claim, transaction, or concurrent compare/write;
+- machine-generated events grow without human pacing;
+- races can cause duplicate external action or lost human decisions;
+- retention/query volume makes a Sheet materially unreliable;
+- a concrete backup, restore, correction, and operator-inspection path is designed.
 
-Common thread: humans are the writers or correctors, writes are human-paced, and for the
-sensitive finance tabs **Sheets is deliberately the not-in-git security boundary**. The
-"just fix the row in the sheet" correction path is a feature here, not debt.
+Keep data derived or cached when it can be rebuilt from an authoritative source.
+Do not promote lifecycle summaries, forecasts, capacity views, or reconciliation
+results into truth merely to make querying convenient.
 
-### Move soon — trigger-based, not yet
+## Current disposition
 
-**`Incoming_Message_Inbox`.** The only lane where a *machine* now generates unbounded writes
-(auto-capture from ~170 confirmed groups). Dedupe is read-modify-write over the whole tab;
-bridge posts and admin review actions can race the same row (last-write-wins can drop a
-`reviewed_by` stamp); auto-archived noise accumulates with no retention policy; it holds the
-most PII. Not a measured bottleneck yet — but the one tab whose risk grows on its own.
+- **Stay in Sheets:** human-owned workflow/configuration, planning, finance review,
+  payroll review, issue state, append-only operating logs, and bounded caches.
+- **Already transactional:** Practice Chat's delivery claim only.
+- **Watch first:** machine-written inbound-message/event lanes, especially where
+  bridge writes and admin review can race or retention remains undecided.
+- **Reassess later:** event/audit lanes when measured growth or query needs make
+  their current store costly—not because a database feels architecturally neater.
 
-### Move eventually
+Moving a lane does not change its authority. A database copy of Stripe, MMS, or
+Gmail facts remains a cache/audit record, not provider truth.
 
-`Event_Log`, `Issue_Queue`, `Payroll_Runs`, and **`Practice_Notes_Log` delivery records**.
-The last is *gated, not optional*: the Level 2 delivery audit already names duplicate-send
-concurrency as a blocker to widening — a DB unique constraint on `delivery_key` is the real fix,
-so this moves **before** Practice Chat Level 2 widens beyond the pilot.
+## Migration trigger
 
-### Derived / cache only — never store as truth
+The fortnightly Sheets backup writes a `census.json` using
+`lib/admin/sheet-census.mjs`. Watched lanes are ranked by row growth. Execute a
+storage move only when evidence shows at least one:
 
-Student lifecycle status, finance run-rate, break-even, pause forecast, open attention items,
-reconciliation outcomes, `source_present`, capacity/free-slot views.
+- sustained growth that harms reads, quotas, or recovery;
+- a demonstrated race/lost-update problem;
+- a required uniqueness/transaction boundary;
+- reporting needs that cannot be met safely from the current lane;
+- a retention or privacy obligation the Sheet cannot enforce.
 
-## Risks
+Before moving state, document:
 
-**Current setup:** last-write-wins on keyed upserts (bridge vs admin on an inbox row is the live
-example); no row-level history on workflow tabs; Sheets API quota if capture volume climbs; the
-pause-forecast regex contract (prose dates as schema); unbounded noise-row growth; manual
-querying/joining for reporting.
+1. the authoritative source and stable identifiers;
+2. write/read cutover and rollback;
+3. dual-write or mirror duration, if any;
+4. correction/reconciliation UX;
+5. backup, restore, retention, and deletion;
+6. concurrency/idempotency behaviour;
+7. health signals and named operator response.
 
-**Moving too early:** it's summer (recorded rule: don't ship complex automation mid-summer); a
-database means new backup/restore ops, losing the in-sheet correction path (every fixup then
-needs an admin UI), hidden data, dual-write drift, and destabilising an inbox loop that only
-shipped in early July. `docs/CURRENT_STATUS.md` lists "a new database to replace Sheets" under
-do-not-do-next, and `docs/architecture/data/state-tabs.md` says don't harden until Sheets is a *measured*
-bottleneck. The audit confirms that: nothing is measurably broken today.
+## PostgreSQL claim boundary
 
-## Staged migration plan
+`DATABASE_URL` is required by the Practice Chat execute route and
+`npm run ensure:practice-delivery-claims` creates/verifies the claim table.
+Claim failure returns `503` before MMS attendance or Gmail email is attempted.
 
-1. **Now (no DB):** this boundary is policy (below + `docs/architecture/data/state-tabs.md`); write the inbox
-   retention/prune policy (bounds the sheet cheaply); **stop adding new event-heavy tabs to Sheets**.
-   Orphaned `data/school.db` + `data/students.json` + the Kenny one-off script removed.
-2. **Instrument, don't guess:** the **sheet census** (see below) rides the fortnightly
-   `npm run backup:sheets`, so "measured bottleneck" becomes a tracked number.
-3. **Trigger (autumn earliest, or when census/races bite):** Railway Postgres; move *new writes*
-   for `Incoming_Message_Inbox` + `Event_Log` there, mirror read-only to Sheets during a settling
-   window, then drop the inbox mirror (its admin UI already replaces sheet visibility).
-4. **Before widening Practice Chat Level 2:** delivery records to the DB with a `delivery_key`
-   unique constraint.
-5. **At tutor-facing payroll Phase 3:** reassess `Payroll_Runs`.
-6. **Never:** human config tabs, sensitive tabs, `Students`, `Finance_Snapshot`.
+Terminal claim rows are safety state. Do not delete or recreate them to force a
+retry: an ambiguous Gmail result can mean the parent already received the email.
+Recovery must reconcile the PostgreSQL claim, Sheets audit, MMS attendance, and
+Gmail evidence without guessing. See
+[Practice Chat delivery](../../workflows/practice-chat/delivery.md) and
+[the operations runbook](../../operations/runbook.md).
 
-## The sheet census (measurement layer)
+## Open decisions
 
-`lib/admin/sheet-census.mjs`, run inside `scripts/backup-sheets-tabs.mjs`. Each fortnightly
-backup writes `census.json` beside the manifest and folds a one-line summary into the backup
-planning card's progress note. It reads the previous backup set's manifest and reports:
-
-- total rows across all tabs and delta since the last backup,
-- per-tab row counts and deltas,
-- `fastestGrowing`: the **watched** event-heavy tabs (`CENSUS_WATCH_TABS`) ranked by growth.
-
-The watch set is deliberately scoped to the move-soon/eventually lanes
-(`Incoming_Message_Inbox`, `Event_Log`, `Issue_Queue`, `Practice_Notes_Log`, `Payroll_Runs`,
-`WhatsApp_Group_Map`) — human-paced config tabs are ignored because their growth never triggers
-a migration. It is read-only and fail-safe: a census hiccup never affects the backup.
-
-**Reading it:** when a watched tab shows sustained fortnight-on-fortnight growth (esp. the
-inbox), that is the signal to execute step 3, not before.
-
-## For Finn to verify manually
-
-- After a full week of auto-capture, eyeball `Incoming_Message_Inbox` growth — the census tracks it.
-- Decide the auto-archived noise retention window (recorded open decision; ~90 days is a sane default).
-- Glance once at the Google Cloud console Sheets API quota usage to establish headroom as fact.
+- Retention/pruning for auto-archived incoming-message noise.
+- Whether/when an off-device PostgreSQL backup is available and rehearsed.
+- The census/race threshold that would trigger moving the incoming inbox.
+- A human-correctable admin path before any Sheet lane loses its direct correction
+  surface.

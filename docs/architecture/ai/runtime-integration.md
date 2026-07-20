@@ -1,7 +1,7 @@
 ---
-status: supporting
+status: canonical
 audience: [human, agent]
-last_verified: null
+last_verified: 2026-07-19
 ---
 # AI Runtime Integration
 

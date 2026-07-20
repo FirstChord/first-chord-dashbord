@@ -1,251 +1,110 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: null
+last_verified: 2026-07-20
 ---
 # Payments Rules
 
 ## Purpose
 
-This document defines the payment-state model for the First Chord admin dashboard.
-
-It exists to keep Stripe-related issue detection:
-
-- cheap to evaluate
-- explicit enough for smaller/local agents
-- safe around pauses, manual-payment exceptions, and setup edge cases
-
-This is the policy layer that should sit between:
-
-- canonical admin data in the `Students` sheet
-- live or cached Stripe state
-- issues shown in `/admin/flags`
-
----
-
-## Core Principle
-
-Do not flag raw Stripe facts by themselves.
-
-Only flag a Stripe issue when:
-
-1. the student is expected to be Stripe-managed, and
-2. the live or cached Stripe state disagrees with that expectation
-
-This prevents false alarms for:
-
-- approved manual-payment exceptions
-- intentionally paused subscriptions
-- inactive/stopped students
-- onboarding/setup periods
-
----
-
-## Canonical Admin Fields
-
-### `payment_mode`
-
-Canonical payment-intent field stored in the `Students` sheet.
-
-Allowed values:
-
-- `stripe`
-- `manual`
-- `unknown`
-
-Current meaning:
-
-- `stripe`
-  - normal student who should be evaluated against Stripe rules
-- `manual`
-  - approved cash or bank-transfer exception
-  - suppress Stripe alarms
-- `unknown`
-  - incomplete or transitional case
-  - should only raise low-confidence review issues
-
-### `payment_expectation`
-
-Canonical field for expected Stripe/payment behavior in the `Students` sheet.
-
-Recommended values:
-
-- `setup_pending`
-- `stripe_active_expected`
-- `stripe_paused_expected`
-- `inactive_or_stopped`
-
-This should be used alongside `payment_mode`, not instead of it.
-
-If `payment_mode` resolves to `stripe`, `payment_expectation` is blank, and both Stripe linkage IDs are blank, the dashboard should treat the student as `setup_pending`. If one or both Stripe IDs are present, the student should still be treated as active-expected unless an explicit expectation says otherwise, so incomplete or stale linkage remains visible.
-
----
-
-## Expected Payment States
-
-| Expected state | When to use it | Stripe should look like | Flag? | Notes |
-|---|---|---|---|---|
-| `manual_payment` | Cash or bank transfer exceptions | Ignore Stripe state | No | Katrina Caldwell, Kenny, Hayleigh, Hudson, Anji Godard |
-| `setup_pending` | New student not fully set up yet | Customer/subscription may be missing | No by itself | Keep visible in the payment setup queue until setup is completed |
-| `stripe_active_expected` | Normal active paying student | Active subscription, not intentionally paused | Yes if broken | Main default state |
-| `stripe_paused_expected` | Payment intentionally paused | Subscription paused or equivalent expected state | Yes only if mismatch | Should suppress failure alarms |
-| `inactive_or_stopped` | Left, stopped, or no longer operational | Stripe may be canceled or absent | Usually no | Only flag if obviously contradictory |
-
----
-
-## Pause Expectation Reconciliation
-
-Normal Overview, Issues, and live Stripe-check reads never update
-`payment_expectation`.
-
-`/admin/flags` has an explicit `Sync pause expectations` action:
-
-1. an authenticated GET previews the exact proposed changes
-2. the admin confirms after seeing the affected students and transitions
-3. an authenticated POST requires `confirm: true` and reloads the current
-   deterministic Sheets, pause, registry, waiting-list, and schedule context
-4. only then may it update `Students.payment_expectation`
-5. every planned write first appends
-   `payment_expectation_reconciliation_attempted`; every applied change then
-   appends `payment_expectation_reconciled` to `Event_Log`
-   with the signed-in admin and deterministic reason
-
-Eligibility remains deliberately narrow: Stripe-managed student,
-subscription-ID Pause History match, high confidence, and usual-lesson coverage.
-`setup_pending`, `inactive_or_stopped`, low-confidence matches, missing schedule,
-invalid windows, and pauses that cover no usual lesson are never reconciled by
-this action. The action never changes Stripe itself.
-
----
-
-## Stripe Snapshot Model
-
-Do not query Stripe on every admin page view for every student.
-
-Instead, aim for a normalized Stripe snapshot per Stripe-managed student.
-
-Recommended snapshot fields:
-
-| Snapshot field | Meaning | Source |
-|---|---|---|
-| `customer_found` | Stripe customer exists | Stripe API |
-| `subscription_found` | Subscription exists | Stripe API |
-| `subscription_status` | Active/canceled/etc | Stripe API |
-| `pause_state` | Paused or not | Stripe API and/or Payment Pause state |
-| `last_invoice_status` | Paid/failed/open/etc | Stripe API |
-| `last_checked_at` | When snapshot was refreshed | Internal cached state |
-
-### Restricted key permission contract
-
-`STRIPE_API_KEY` is a live restricted read key. Keep Read access for Customers,
-Subscriptions, Invoices, Prices, and Payment Intents; keep write permissions
-disabled. The amounts cache uses the first four. Manual/live issue refreshes
-expand `latest_invoice.payment_intent`, so Stripe also requires Payment Intents
-Read. Without it Stripe returns HTTP 403 and the refresh fails loudly rather
-than silently classifying incomplete evidence.
-
-Charges, payouts, and balance transactions remain deliberately unavailable to
-the dashboard. Editing permissions on the existing restricted key does not
-require a Railway variable change; rotating the key value does.
-
----
-
-## Stripe Issue Rules
-
-| Expected state | Stripe condition | Issue | Severity |
-|---|---|---|---|
-| `manual_payment` | Any | None | — |
-| `setup_pending` | Missing customer/subscription or expectation still pending | None | — |
-| `setup_pending` | Both customer and subscription IDs are recorded | `SETUP PENDING STRIPE LINKED` | Warning |
-| `stripe_active_expected` | No customer and no subscription | `STRIPE_SETUP_INCOMPLETE` | Warning |
-| `stripe_active_expected` | Customer missing | `STRIPE_CUSTOMER_MISSING` | Warning |
-| `stripe_active_expected` | Subscription missing | `STRIPE_SUBSCRIPTION_MISSING` | Warning |
-| `stripe_active_expected` | Subscription canceled | `SUBSCRIPTION_CANCELLED_UNEXPECTEDLY` | Needs action |
-| `stripe_active_expected` | Recent payment failed | `PAYMENT_FAILED` | Needs action |
-| `stripe_active_expected` | Latest invoice void with remaining balance and subscription past_due/unpaid | `PAYMENT_FAILED` | Needs action |
-| `stripe_active_expected` | Subscription paused | `SUBSCRIPTION_STATE_MISMATCH` | Warning |
-| `stripe_paused_expected` | Subscription paused correctly | None | — |
-| `stripe_paused_expected` | Subscription active instead of paused | `SUBSCRIPTION_STATE_MISMATCH` | Warning |
-| `stripe_paused_expected` | Normal paused invoice voiding while subscription otherwise healthy | None | — |
-| `stripe_paused_expected` | Latest invoice void with remaining balance and subscription past_due/unpaid | `PAYMENT_FAILED` | Needs action |
-| `inactive_or_stopped` | Missing/canceled subscription | None | — |
-| `inactive_or_stopped` | Active subscription still billing | `ACTIVE_WITH_SUBSCRIPTION` | Warning |
-
----
-
-## Cheap vs Expensive Checks
-
-Keep the expensive checks out of normal admin rendering.
-
-| Check | Cost | When |
-|---|---|---|
-| `payment_mode` missing/invalid | Cheap | Every admin read |
-| Missing Stripe IDs | Cheap | Every admin read |
-| Active/manual/pending classification | Cheap | Every admin read |
-| Live subscription status | Expensive | Scheduled sync or manual refresh |
-| Live invoice failure state | Expensive | Webhook or scheduled sync |
-| Pause-state verification | Medium | Prefer cached Payment Pause state |
-
----
-
-## Cost Strategy
-
-Avoid:
-
-- querying Stripe for every student on every page load
-- putting Stripe API calls in list views by default
-- letting agents reason directly from raw Stripe responses
-
-Prefer:
-
-- cheap local checks from Sheets/admin state on every read
-- scheduled or webhook-based Stripe snapshot refresh
-- issue rules running against normalized state
-
----
-
-## Agent-Safe Rule Shape
-
-Smaller/local agents should only need to:
-
-1. read `payment_mode`
-2. read `payment_expectation`
-3. read cached Stripe snapshot
-4. apply deterministic issue rules
-5. emit issue / no issue
-
-Agents should not need to:
-
-- reason from raw Stripe API payloads
-- infer intent from scattered exception logic
-- guess whether a pause is intentional
-
----
-
-## Relationship to Payment Pause PWA
-
-The Payment Pause PWA is the natural future source of pause intent.
-
-Short-term:
-
-- use current admin payment intent and Stripe setup fields
-- avoid flagging manual-payment exceptions
-
-Medium-term:
-
-- treat pause state from Payment Pause as authoritative intent for `stripe_paused_expected`
-
-Long-term:
-
-- the admin dashboard should consume normalized pause/payment state, not re-implement pause logic independently
-
----
-
-## Current Implementation Position
-
-- `payment_mode` and `payment_expectation` are live canonical intent fields.
-- Static issue rules run on ordinary reads; live Stripe checks are explicit or scheduled.
-- Stripe amount snapshots are cached and labelled as non-authoritative.
-- Pause History reconciliation is explicit, previewed, confirmed, and audited.
-- Future work should improve provenance and transactional safety without moving
-  Stripe mutation into the Issues page.
+This is the policy boundary between dashboard-owned payment intent and Stripe
+provider facts. It governs issue detection and reconciliation; it does not
+authorise Stripe mutation.
+
+## Ownership
+
+- `Students.payment_mode` and `Students.payment_expectation` express First
+  Chord's operational intent.
+- Stripe owns customers, subscriptions, invoices, payment intents, and whether
+  provider-side money movement occurred.
+- Stripe snapshot tabs are timestamped caches, not provider truth.
+- Pause History is evidence used only by the explicit reconciliation workflow.
+
+Allowed payment modes are `stripe`, `manual`, and `unknown`. Approved manual
+payment students are not evaluated as broken Stripe students.
+
+Allowed expectations are:
+
+- `setup_pending`: Stripe setup is not yet expected to be complete
+- `stripe_active_expected`: normal active billing is expected
+- `stripe_paused_expected`: an intentional payment pause is expected
+- `inactive_or_stopped`: billing should no longer be active
+
+For a Stripe-managed student with a blank expectation, no Stripe IDs means
+setup-pending. Existing linkage means active-expected unless explicit evidence
+says otherwise; stale or incomplete linkage must remain visible.
+
+## Deterministic Issue Rules
+
+Issue type names are API/storage contracts. Search every consumer and update
+tests before changing one.
+
+| Intent/evidence | Current issue |
+| --- | --- |
+| local links: neither Stripe customer nor subscription ID recorded | `STRIPE SETUP INCOMPLETE` |
+| local links: customer ID absent but subscription ID recorded | `STRIPE CUSTOMER MISSING` |
+| local links: customer ID recorded but subscription ID absent | `STRIPE SUBSCRIPTION MISSING` |
+| live check: active-expected but no subscription found | `ACTIVE_WITHOUT_SUBSCRIPTION` |
+| active-expected, subscription cancelled | `SUBSCRIPTION_CANCELLED_UNEXPECTEDLY` |
+| expected state disagrees with provider pause/activity state | `SUBSCRIPTION_STATE_MISMATCH` |
+| inactive/stopped but subscription remains active | `INACTIVE_STILL_BILLING` |
+| latest payment evidence has failed and no retry is scheduled | `PAYMENT_FAILED` |
+| failed payment has a Stripe retry scheduled | `PAYMENT_RETRYING` |
+| setup-pending but both Stripe links exist | `SETUP PENDING STRIPE LINKED` |
+
+Manual-payment cases suppress Stripe mismatch alarms. Setup-pending is normally
+workflow work, not a payment failure. A paused subscription's normal void invoice
+must not be misclassified as failure; a remaining balance combined with
+`past_due`/`unpaid` evidence may still be a failure.
+
+Unknown, stale, missing, or conflicting evidence must produce a reviewable
+unknown/warning state—not a guessed provider fact or a consequential action.
+
+The implementation authority is `lib/admin/stripe-snapshot-helpers.mjs`,
+`lib/admin/issue-detectors.mjs`, and their focused tests. This table describes
+intent; code and tests win if a new condition has been deliberately introduced.
+
+## Read And Refresh Rules
+
+Ordinary page reads use cheap local state and cached normalized snapshots. Live
+Stripe checks are explicit or scheduled; list rendering must not query Stripe
+once per student.
+
+Every Stripe-derived display must retain `checked_at` and clearly distinguish
+cached from live evidence. Agents and UI helpers consume normalized projections,
+not arbitrary raw Stripe responses.
+
+`STRIPE_API_KEY` is a restricted read key. Customers, Subscriptions, Invoices,
+Prices, and Payment Intents require Read; write permissions stay disabled.
+Missing Payment Intents Read must fail the refresh visibly rather than silently
+classifying partial invoice evidence.
+
+## Pause-Expectation Reconciliation
+
+Overview, Issue Queue, and Stripe reads never update
+`Students.payment_expectation`.
+
+`/admin/flags` provides the only high-confidence Pause History reconciliation:
+
+1. authenticated GET builds an exact preview
+2. the admin reviews affected students and transitions
+3. authenticated POST requires `confirm: true` and reloads current evidence
+4. only eligible changes write `Students.payment_expectation`
+5. each attempt and applied change appends an `Event_Log` record
+
+Eligibility is deliberately narrow: Stripe-managed student, subscription-ID
+Pause History match, high confidence, and coverage of a usual lesson.
+Setup-pending, inactive/stopped, low-confidence, missing-schedule, invalid-window,
+and no-usual-lesson cases are excluded. This action never changes Stripe.
+
+## Action Boundary
+
+- Issue Queue state is not payment truth.
+- Marking an issue handled does not prove provider repair.
+- Drafts, summaries, or AI output never authorise payment action.
+- No dashboard workflow auto-pays, auto-pauses, resumes, or cancels Stripe.
+- Provider changes require their established human preview/confirmation path and
+  audit evidence.
+
+Relevant tests include `payments-helpers`, `payment-*`, `stripe-*`,
+`issue-detectors`, and `issue-queue*` under `tests/admin/`.

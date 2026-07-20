@@ -1,160 +1,66 @@
 ---
 status: supporting
 audience: [human, agent]
-last_verified: null
+last_verified: 2026-07-20
 ---
-# Bug Fixes And Recovery Notes
+# Known Failure Signatures
 
-Short notes for production issues we have already seen and how to recover them.
+Use this for recurring production signatures whose diagnosis is not obvious.
+Git history owns the incident chronology.
 
-## Active student missing from a tutor's dashboard
+## Active MMS Student Missing From Tutor Roster
 
-**Date:** 18 Jun 2026
+**Signature:** a student is active in MMS/registry/Sheets but absent from the
+tutor's `/dashboard` roster.
 
-**Symptom**
+The roster is derived live by `getStudentsForTeacher()` in
+`lib/mms-client.js`. MMS can express the teacher relationship through either
+`StudentGroups` or `BillingProfiles`; an empty object in `StudentGroups` is not
+proof that the student belongs to no tutor.
 
-- An active student is present in the registry, the Google Sheet, MMS, and Stripe, but does **not** appear on their tutor's `/dashboard` roster. First seen with Santi Freeth (Finn) — and it was simultaneously hiding 7 of Finn's 32 active students.
+Diagnosis:
 
-**Root cause**
+1. verify the MMS student is Active and the tutor ID/date are correct
+2. inspect both `StudentGroups` and `BillingProfiles`
+3. confirm either lane links the expected teacher
 
-- The roster comes live from MMS via `getStudentsForTeacher()` in `lib/mms-client.js`. Its post-fetch filter checked `StudentGroups` first and `return`ed on it, skipping the `BillingProfiles` fallback. Students whose MMS teacher link lives only in `BillingProfiles`, but who also carry an empty `StudentGroups` entry (`[{}]`, `length === 1`), matched nothing in `StudentGroups` and were dropped before `BillingProfiles` was ever checked.
+The filter must retain a student linked through either lane. Do not edit the
+registry or Sheet to compensate when they are already correct. Add a focused
+fixture if MMS introduces a new relationship shape.
 
-**How to confirm**
+## Railway Domain Returns 502
 
-```bash
-# 1. Prove it's not a deletion — student should be active across systems:
-python3 brain.py lookup "Student Name"     # from first-chord-brain/
+**Signature:** Railway edge responds but one dashboard domain returns 502 while
+another service/domain may be healthy.
 
-# 2. Inspect their MMS record. The signature is a teacher link in BillingProfiles
-#    with an empty StudentGroups. Query /search/students with
-#    Statuses:["Active"], TeacherIDs:[<teacherId>] and read the student's
-#    StudentGroups vs BillingProfiles (teacher IDs map is in lib/mms-client.js).
-```
-
-**Fix (applied 18 Jun 2026)**
-
-- Keep the student if **either** `StudentGroups` **or** `BillingProfiles` links to the teacher (no early return). Do **not** edit the registry/Sheet to "add them back" — those are already correct; the bug is in the MMS-derived roster filter only.
-
-## Railway 502 on tutor dashboard
-
-**Date:** 20 May 2026
-
-**Symptom**
-
-- `https://efficient-sparkle-production.up.railway.app/dashboard` returned `502 Bad Gateway`.
-- Railway edge responded, but the app service did not return a healthy response.
-- Railway UI also showed `Limited Access` / deploys paused temporarily.
-
-**What was checked**
-
-```bash
-curl -I https://efficient-sparkle-production.up.railway.app/dashboard
-npm run build
-railway whoami
-railway status
-railway logs
-railway domain
-```
-
-**Findings**
-
-- Local production build passed.
-- Local production start path was healthy.
-- The repo was not initially linked to Railway locally.
-- Railway project `efficient-sparkle` had two relevant services:
-  - `efficient-sparkle`
-  - `first-chord-dashbord`
-- The old public URL was attached to service `efficient-sparkle`:
-  - `https://efficient-sparkle-production.up.railway.app`
-- The other service had a separate healthy domain:
-  - `https://first-chord-dashbord-production-d599.up.railway.app`
-- `first-chord-dashbord` was serving `/dashboard` with `200`.
-- `efficient-sparkle` stayed at `502` until Railway access/deploy state was cleared and the service was redeployed/uploaded again.
-
-**Recovery steps**
-
-1. Clear any Railway `Limited Access` / paused deploy state in the Railway web dashboard.
-2. Link the local repo if needed:
-
-```bash
-cd ~/Desktop/FirstChord/music-school-dashboard
-railway login
-railway link
-```
-
-3. Select:
-   - Project: `efficient-sparkle`
-   - Environment: `production`
-   - Service for old public URL: `efficient-sparkle`
-
-4. Confirm the linked service and domain:
+First establish ownership before redeploying:
 
 ```bash
 railway status
 railway domain
+curl -I https://<affected-domain>/dashboard
 ```
 
-5. If the app code builds locally:
+Then:
 
-```bash
-npm run build
-```
+1. confirm the correct project/environment/service from
+   [repository environment](../../reference/repository-environment.md)
+2. clear any Railway Limited Access or paused-deploy state
+3. run the local production build
+4. redeploy the last known-good commit to the service that owns the domain
+5. verify the affected URL and the canonical admin URL separately
 
-6. Try redeploying the latest deployment:
+A successful GitHub push or a healthy sibling Railway service does not prove the
+domain-owning service deployed. Avoid changing application code until service,
+domain, deployment, and environment mapping have been checked.
 
-```bash
-railway redeploy
-```
+## Wrong Runtime For Practice Chat Writes
 
-7. If the old domain still returns `502`, upload the current repo:
+The full admin/API service owns Practice Chat writeback, Gmail, Sheets, Stripe,
+and admin auth. The legacy public tutor/student service does not carry that full
+environment. Production Practice Chat API calls must target the canonical admin
+base URL from [repository environment](../../reference/repository-environment.md),
+not whichever public dashboard domain generated a link.
 
-```bash
-railway up --detach
-```
-
-8. Verify:
-
-```bash
-curl -I https://efficient-sparkle-production.up.railway.app/dashboard
-curl -I https://first-chord-dashbord-production-d599.up.railway.app/dashboard
-```
-
-Both should return `200`.
-
-**Likely cause**
-
-This was not a dashboard code bug. It looked like a Railway service/domain/deployment state issue: the old public domain was attached to a service that was not serving traffic, while another service in the same project was healthy.
-
-**Watch out for**
-
-- Do not assume a successful GitHub push has affected the Railway service that owns the public URL.
-- Check which Railway service owns the domain before redeploying.
-- If Railway says deploys are paused, clear that in the web UI before expecting CLI redeploys to work.
-- Keep the current public URL and service mapping documented:
-  - Public legacy URL: `efficient-sparkle-production.up.railway.app`
-  - Owning service: `efficient-sparkle`
-  - Secondary healthy service URL: `first-chord-dashbord-production-d599.up.railway.app`
-
-## Railway project split
-
-**Date:** 13 June 2026
-
-**Finding**
-
-The Railway account currently has three relevant projects:
-
-- `pure-spontaneity`: full admin/API runtime, domain `https://first-chord-dashbord-production.up.railway.app`.
-- `efficient-sparkle`: legacy/public tutor-student dashboard runtime, domains `https://efficient-sparkle-production.up.railway.app` and `https://first-chord-dashbord-production-d599.up.railway.app`.
-- `awake-connection`: Practice Chat speech relay, domain `https://enhanced-music-lesson-notes-production.up.railway.app`.
-
-`efficient-sparkle` serves `/dashboard`, but it does not have the full admin/Gmail/Sheets/Stripe env set. `/admin` on the old public domain can therefore fail with auth configuration errors. Practice Chat Level 2 writebacks should target `pure-spontaneity`, not whichever dashboard domain happened to generate the link.
-
-**Fix**
-
-Practice Chat quick links now use the canonical admin/API app for production writebacks:
-
-```text
-https://first-chord-dashbord-production.up.railway.app
-```
-
-Local links still use the local dashboard origin, so `localhost:3000` plus local Practice Chat remains testable.
+When adding a durable signature, keep only symptom, distinguishing evidence,
+safe recovery, and the invariant that prevents recurrence.

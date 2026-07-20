@@ -1,33 +1,57 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: null
+last_verified: 2026-07-20
 ---
-# Tutor and Student Surface Security
+# Tutor And Student Surface Security
 
-The admin dashboard remains Google-auth protected. The tutor and student-facing surfaces are intentionally lower-friction, but raw operational APIs should still avoid exposing broad data by MMS ID alone.
+## Current Trust Boundaries
 
-## Current Boundary
+| Surface | Current gate | Treat as |
+| --- | --- | --- |
+| `/admin/*`, `/api/admin/*` | allowed Google account | authenticated admin |
+| `/dashboard` tutor roster | low-friction public route | staff-convenience surface, not durable tutor identity |
+| raw student notes API | short-lived per-student capability issued with roster | narrow capability, not general account auth |
+| student friendly URL | guessable public path/server rendering | public surface; avoid contact/provider secrets |
+| MMS proxy/admin routes | admin session before server token use | privileged integration boundary |
+| Practice Chat handoff | shared secret/origin plus self-attested tutor/student check | narrow accepted write exception, not verified identity |
 
-- `/admin/*` and `/api/admin/*` require an allowed admin Google account.
-- Student portal pages use friendly URLs and render notes server-side.
-- Tutor dashboard access is intentionally frictionless for now.
-- Raw notes access now requires a short-lived per-student token issued with the tutor roster response.
-- MMS proxy routes require an admin session before using the server MMS bearer token.
+The tutor dashboard intentionally avoids individual login today. A roster or
+capability token therefore proves only possession/context, not which tutor is at
+the device. Do not represent `acting_tutor` as verified.
 
-## Accepted Trade-Off
+## Guardrails
 
-The tutor dashboard does not yet have individual tutor login. This keeps lessons fast and avoids rollout friction, but it means tutor-facing roster endpoints are not a full identity boundary. Treat them as a low-friction staff surface, not as a secure admin surface.
+- Never expose server credentials, broad Sheets/MMS/Stripe reads, or arbitrary
+  provider proxies to a public client.
+- Prefer server-rendered projections or short-lived resource-scoped capabilities
+  over arbitrary MMS IDs.
+- Keep parent contacts, provider identifiers, payroll, payment, and broad student
+  context off unauthenticated responses unless a separately reviewed narrow
+  contract requires them.
+- Capability tokens must be scoped, expiring, validated server-side, and must not
+  become reusable general tutor credentials.
+- A shared browser secret is coarse caller protection; it is not human identity.
 
-## Guardrail
+## Practice Chat Exception
 
-Do not expose server secrets or broad external-system proxies to unauthenticated clients. If a low-friction page needs data, prefer narrow, scoped tokens or server-rendered friendly URLs over raw IDs.
+Practice Chat may update the selected MMS attendance and send one reviewed
+lesson-note email only through the contract in
+[Practice Chat delivery](../../workflows/practice-chat/delivery.md). The server
+requires one unambiguous recorded tutor matching the self-attestation, shows the
+server-derived student/recipient, requires recipient-specific human
+confirmation, and claims the delivery key before provider work.
 
-## Future Direction
+This exception does not permit other tutor-surface MMS writes, general Gmail or
+WhatsApp sending, payment/registry changes, or broader sensitive reads.
 
-The next stronger step is a proper tutor role/session, especially before adding more tutor-owned write actions. Until then:
+## Next Security Step
 
-- keep MMS proxy/admin routes behind admin auth
-- keep raw student notes behind per-student tokens
-- avoid adding new unauthenticated routes that accept arbitrary MMS IDs
-- document any deliberate low-friction exception
+Add tutor-scoped Google login/allow-list before persistent tutor preferences,
+cross-period payroll history, broader student data, or new consequential writes.
+Then migrate self-attested audit labels only after the authenticated identity is
+actually bound to the action.
+
+Any new low-friction exception must document data projection, capability scope,
+expiry, consequence, confirmation, audit, failure path, and why tutor auth was
+not first.

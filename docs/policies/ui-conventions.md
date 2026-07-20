@@ -56,7 +56,10 @@ Action labels should describe the work in plain English:
 - Good: `Save progress`, `Mark parents messaged`, `Resolve absence`
 - Avoid vague labels like `Submit`, `Process`, or `Execute` unless the surrounding context is obvious.
 
-**Button language rules live in `COPY_AND_TONE.md` → Buttons** (label predicts outcome without internal state names; one completion verb per family; disabled buttons say why; pending `…` → success `✓`). This file owns the interaction mechanics; that file owns the words.
+**Button language rules live in [Copy and tone](./copy-and-tone.md) → Buttons**
+(label predicts outcome without internal state names; one completion verb per
+family; disabled buttons say why; pending `…` → success `✓`). This file owns the
+interaction mechanics; that file owns the words.
 
 Keep helper copy short. If a line does not help Finn, Tom, or Fenella decide what to do next, it probably does not belong on the daily surface.
 

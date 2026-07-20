@@ -1,9 +1,13 @@
 ---
-status: supporting
+status: historical
 audience: [human, agent]
 last_verified: null
 ---
 # V3 Architecture
+
+> Historical direction document. V3 has shipped; use
+> [the admin-loop architecture](../../architecture/system/admin-loop.md) and
+> [Current status](../../CURRENT_STATUS.md) for present behaviour and direction.
 
 ## Purpose
 

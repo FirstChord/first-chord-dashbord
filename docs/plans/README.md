@@ -11,16 +11,16 @@ policy, or workflow contracts.
 
 ## Active
 
-- [Cover loop](./active/cover-loop.md)
+- [Practice Chat Whisper hardening](./active/practice-chat-whisper-hardening.md)
 - [Monolith split](./active/monolith-split.md)
 - [Tutor-facing payroll](./active/tutor-payroll.md)
 
 ## Parked
 
 - [Always-on operations host](./parked/always-on-ops-host.md)
-- [Practice summary](./parked/practice-summary.md)
+- [Cover loop](./parked/cover-loop.md)
 - [Inbox reply proposals](./parked/proposals-inbox.md)
-- [Practice Chat Whisper hardening](./parked/practice-chat-whisper-hardening.md)
+- [Song-loop distillation](./parked/song-loop-distillation.md)
 
 Parked means deliberately off the active path. Resume only after the decision or
 sign-off named in the document.

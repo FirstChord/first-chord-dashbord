@@ -7,7 +7,8 @@
 // restores every tab from the backup set into it, reads everything back, and
 // verifies headers and row counts. Prints the scratch URL at the end; bin it
 // from Drive when done. Run this at least once a term so "we have backups"
-// stays a tested claim instead of a hope. Full procedure: DISASTER_RECOVERY.md.
+// stays a tested claim instead of a hope. Full procedure:
+// docs/operations/disaster-recovery.md.
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';

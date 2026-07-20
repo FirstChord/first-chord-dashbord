@@ -1,216 +1,133 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: null
+last_verified: 2026-07-20
 ---
-# V3 Loop Architecture
+# Admin loop architecture
 
-## Purpose
+The dashboard closes recurring operating loops without pretending to own facts
+that belong to MMS, Stripe, Gmail, or another provider.
 
-V3 is about closing operational loops.
+```text
+Detect or capture
+-> show source, evidence, freshness, and uncertainty
+-> guide a bounded human decision
+-> execute through a deterministic workflow
+-> store workflow state
+-> log consequential outcomes
+-> resolve, keep active, or reappear from source evidence
+```
 
-A loop means:
+The architectural risk is not missing one universal state machine; it is letting
+each new feature invent incompatible state, action, and audit semantics.
 
-1. detect or surface a recurring admin problem
-2. show enough context to make the right decision
-3. provide a bounded action path
-4. store the outcome
-5. log the action when the outcome affects operational truth
+## Choose the lightest loop
 
-This document defines the current loop pattern so future work can extend the system without creating separate, incompatible workflow models.
+### Issue loop
 
-## Current Assessment
+Use when a detected problem can reappear and source presence matters.
 
-The architecture is sound enough to keep building.
+- Stable identity and human review state live in `Issue_Queue`.
+- Current detection remains separate from queue state.
+- Meaningful actions append `Event_Log`.
+- A read may synchronise issue workflow state but must not change underlying
+  payment/student/provider truth.
+- Reappearance should restore visibility rather than create unrelated duplicates.
 
-The important foundation is already in place:
+Examples: payment setup, live Stripe mismatch, pause expectation, registry/data
+quality issues.
 
-- `/admin/flags` has persistent issue state through `Issue_Queue`
-- sensitive issue actions append audit rows to `Event_Log`
-- payment issues now have explicit `payment_mode` and `payment_expectation`
-- pause intent is visible through `Pause History`
-- waiting-list, showcase, and holiday workflows have persistent state
-- expensive vendor reads, especially Stripe, are manual or bounded rather than automatic on every page load
+### Workflow loop
 
-The main architectural risk is not a broken foundation.
-The risk is allowing each new loop to invent its own state, action, and audit semantics.
+Use for recurring operations whose main state is progress rather than a defect.
+Static definitions/guidance live in code; per-instance state lives in the focused
+state lane. Do not promote checklist toggles into issues or audit events unless
+they become consequential.
 
-## Loop Types
+Examples: showcase, holidays, parent understanding, tutor absence, payroll.
 
-Not every loop needs the same weight.
+### Queue loop
 
-### 1. Issue loops
+Use for lightweight human progression through externally sourced items. Keep
+status and notes narrow; add owners, deadlines, or issue semantics only when use
+proves they are needed.
 
-Use for detected problems that should remain visible until cleared or intentionally ignored.
+Examples: MMS waiting list and incoming-message review.
 
-Current examples:
+### Vendor-truth loop
 
-- review flags
-- payment setup issues
-- live Stripe mismatches
-- pause expectation issues
+Use when live truth is externally authoritative, expensive, or risky to fetch.
+Prefer explicit refresh, scheduled snapshot, bounded cache, or webhook. Normalise
+facts before UI/business rules and never silently overwrite school intent from a
+provider response.
 
-Pattern:
+Examples: Stripe status, MMS schedule/attendance, Gmail delivery evidence.
 
-- generated/current source creates an issue
-- `Issue_Queue` stores status and source presence
-- `Event_Log` stores meaningful actions
-- issue remains active until source state changes or a human explicitly resolves/ignores it
+## State and audit rules
 
-This is the right pattern for high-friction or high-risk problems.
+Use `Issue_Queue` when source presence, reappearance, keep-active/ignore/resolved
+state, and persistence across refreshes all matter.
 
-### 2. Workflow loops
+Use a dedicated workflow state lane when task/decision progress is the primary
+fact and source presence is not an issue concept. Reuse an existing lane when its
+ownership and lifecycle fit.
 
-Use for recurring operations where the main state is task progress.
+Use `Event_Log` when an action changes school-owned operational truth, confirms a
+consequential decision, or resolves/ignores a detected issue. Append-only logs are
+history, not the current state record. A log write must not be reversed to make a
+recovery look tidy.
 
-Current examples:
+Exact tabs, keys, writers, and concurrency limits live in
+[the state-tab contract](../data/state-tabs.md).
 
-- `/admin/showcase`
-- `/admin/holidays`
+## Mature boundaries
 
-Pattern:
+### Payments and pauses
 
-- static workflow definition lives in code
-- per-instance task state lives in Sheets
-- checklist items represent true done/not-done actions
-- guidance, timings, and message templates stay separate from checklist state
+Sheets owns payment mode/expectation; Stripe owns provider payment state; Pause
+History and structured plans are evidence of school intent; Issues owns review
+state. Ordinary issue reads and scans never align expectation automatically.
 
-These do not need `Issue_Queue` unless a task becomes a detected operational problem.
+High-confidence reconciliation is previewed, explicitly confirmed, re-evaluated
+server-side, written through the existing student path, and appended to
+`Event_Log`. Stripe mutation remains outside Issues. See
+[payments](../../policies/payments.md) and
+[tutor absence to pause](../../workflows/tutors/absence-to-pause.md).
 
-### 3. Queue loops
+### Communications
 
-Use for lightweight progression through a human process.
+The communication layer records copy-to-send history, inbound review state, and
+optional reply proposals. Copy does not prove send. Captured messages,
+classifications, student matches, and drafts are proposals and never directly
+authorise payments, pauses, archive, planning, or outbound messaging.
 
-Current example:
-
-- `/admin/waiting`
-
-Pattern:
-
-- source list comes from MMS
-- admin state lives in a narrow state sheet
-- status and note are enough for now
-- notable status changes can append `Event_Log`
-
-This should stay lighter than the issue system.
-
-### 4. Vendor truth loops
-
-Use for systems where live truth is expensive, risky, or externally authoritative.
-
-Current examples:
-
-- Stripe live status
-- MMS lesson and billing profile state
-
-Pattern:
-
-- do not poll on every page load
-- prefer explicit refresh, scheduled snapshot, or webhook later
-- normalize raw vendor state before showing it to agents or workflow logic
-- never let raw vendor facts override school intent automatically
-
-## State And Audit Rules
-
-### Use `Issue_Queue` when
-
-- the item can reappear
-- source presence matters
-- humans need keep-active / ignore / resolved states
-- the issue should survive page reloads and source refreshes
-
-### Use a dedicated workflow state sheet when
-
-- the work is a recurring checklist or queue
-- task completion is the main state
-- source presence is not meaningful
-- the work is operational but not a detected defect
-
-### Use `Event_Log` when
-
-- an admin action changes operational truth
-- an issue is acknowledged, ignored, resolved, reopened, or acted on
-- a payment expectation or payment mode changes
-- a waiting-list status changes
-- future communication is drafted, approved, or sent
-
-Routine checklist toggles do not need full audit rows unless they become consequential.
-
-## Payment Loop Position
-
-The payment loop is now correctly positioned as an issue loop plus bounded action layer.
-
-Current boundary:
-
-- Sheets owns `payment_mode`, `payment_expectation`, and stored Stripe IDs
-- Stripe owns live customer/subscription/invoice truth
-- `Pause History` owns intentional pause windows
-- `/admin/flags` owns issue review and action state
-
-The recent audit change was the right direction:
-
-- bounded, reversible payment-expectation toggles on the issues page auto-record an audit note (action + issue type + summary); a free-text human note is no longer required for these self-documenting actions, but every action is still logged. (Updated 2026-06-22 — the old blanket "require a note" was friction without information gain when the action *is* the reason, e.g. "set active expected" on a `PAUSE EXPECTATION STALE` flag. A free-text note is still warranted for less-bounded/consequential actions.)
-- payment field changes are logged
-- issue-level payment actions are logged
-- the issue is not auto-resolved simply because a field changed
-
-Keep this conservative.
-Do not add Stripe mutation commands until the internal action trail is consistently useful.
-
-## Pause Loop Position
-
-Pause handling is ready to become the next mature loop.
-
-Current state:
-
-- pause intent is read from `Pause History`
-- payment expectation mismatches are visible as issues
-- student detail gives guidance and quick expectation fixes
-- live Stripe refresh can confirm whether billing agrees
-
-Recommended next slice:
-
-- make pause issues clearer as a closed loop
-- add explicit audit notes to pause expectation quick actions where they originate from an issue
-- clarify whether the source of truth is Pause History, payment expectation, or live Stripe for each mismatch
-- keep Stripe pause/resume API commands out of scope for now
-
-## Communication Layer Gate
-
-Do not wire WhatsApp sending yet.
-
-Before sending exists, the system needs:
-
-- reusable message draft records
-- approval state
-- event log entries for draft / approve / send
-- clear category policy for payment, pause, onboarding, and waiting-list messages
-- a way to distinguish copy-ready text from actual communication history
-
-Drafting can come before WhatsApp Cloud API integration.
-Auto-send should remain out of scope until approval state is working.
-
-## Near-Term Recommendations
-
-1. Keep extending `/admin/flags` as the high-risk issue workbench, but avoid making it the home for every workflow.
-2. Mature the pause loop next, using the same conservative action/audit pattern as payment.
-3. Add a reusable communication draft layer before any WhatsApp integration.
-4. Add cached Stripe snapshots before any broad payment automation or finance planning.
-5. Keep recurring workflows lightweight unless they generate real issues.
-
-## Non-Goals For The Next Few Slices
-
-- no new database just to replace Sheets
-- no automatic parent messaging
-- no Stripe mutation commands from `/admin/flags`
-- no broad assignment/owner system until issue volume proves it is needed
-- no generic workflow engine unless the third or fourth recurring workflow exposes real duplication
-
-## Implementation Guardrails
-
-- Use normalized helper functions for issue, payment, pause, and workflow state.
-- Keep raw vendor payloads out of UI decisions where possible.
-- Prefer small, typed payloads in `payload_json` over new Sheets columns unless filtering/reporting requires columns.
-- Log every issue-originated action that changes operational truth. Require a free-text human note for less-bounded/consequential actions; bounded reversible toggles (e.g. payment-expectation flips) may auto-record the note since the action is self-documenting.
-- Keep checklist completion fast and low-friction.
-- Let source refresh clear issues; do not resolve them just because an admin clicked a field fix.
+The optional AI reply producer is feature-flagged off pending a later pilot.
+Regardless of the flag, the dashboard does not send WhatsApp. Practice Chat's
+tutor-approved lesson-note email has its own narrow delivery contract.
+
+### Planning
+
+Planning holds human-created actions, initiatives, reflections, and school notes.
+It is not a generic workflow engine or a second issue queue. A linked planning
+item may guide an existing deterministic action; its generic status change cannot
+perform that action implicitly.
+
+## Implementation guardrails
+
+- Keep truth, validation, permissions, calculations, and consequential actions
+  deterministic.
+- Preserve identifiers, source, freshness, and uncertainty when combining data.
+- Keep raw provider payloads out of UI decisions; use bounded normalisers.
+- Assume Sheets writes are last-write-wins unless the focused workflow implements
+  a stronger claim/idempotency mechanism.
+- Use typed payloads in `payload_json` for sparse audit detail; add columns only
+  when filtering, reporting, or a stable contract requires them.
+- Never resolve an issue merely because a local field was edited; source evidence
+  controls whether the underlying problem is still present.
+- Keep routine checklist completion fast; require notes only when the action itself
+  does not explain the decision.
+- AI may explain or propose but never supplies source truth or human approval.
+
+UI and approval design details live in
+[workflow design](../../policies/workflow-design.md). Repository-wide forbidden
+actions and validation routing live in [AGENTS.md](../../../AGENTS.md).

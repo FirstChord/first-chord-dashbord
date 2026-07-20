@@ -1,7 +1,7 @@
 ---
-status: parked
+status: historical
 audience: [human, agent]
-last_verified: null
+last_verified: 2026-07-20
 ---
 # Plan: "What to work on" note summary — tutor dashboard
 

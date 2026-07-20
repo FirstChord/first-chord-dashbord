@@ -1,320 +1,144 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: null
+last_verified: 2026-07-20
 ---
-# Workflow Design Principles
+# Workflow design principles
 
-This is the shared design note for First Chord admin workflows. Read this before adding a new workflow page or changing an existing one.
+Read this before adding or materially changing an admin workflow. A workflow
+earns its place when it reduces repeated mental juggling and leaves the next
+person able to understand what happened.
 
-## Purpose
-
-Workflows should reduce admin cognitive load.
-
-The dashboard should help Finn, Tom, and Fenella move from "I need to remember/check/decide several things" to a calm sequence of:
+## Core pattern
 
 ```text
-understand context -> choose a safe action -> complete the loop -> leave an audit trail
+Context and evidence
+-> recommended safe action
+-> explicit human confirmation where required
+-> deterministic write
+-> progress/audit record
+-> clear open or closed state
 ```
 
-The aim is not to add forms. The aim is to make recurring admin work easier to trust, delegate, and finish.
-
-The broader aim is to reduce the energy cost of keeping the school running, so leadership attention can be spent improving the school.
-
-## Core Rule
-
-A workflow earns its place when it removes mental juggling.
-
-Good workflow pages:
-
-- show only the context needed for the next decision
-- make the safest next action obvious
-- keep vendor/source-of-truth boundaries visible
-- reduce copy/paste and tab-switching where possible
-- log meaningful progress automatically
-- keep risky actions human-approved
-- show what remains unfinished
-
-Weak workflow pages:
-
-- ask admins to re-enter data the dashboard already knows
-- show every possible field before the user needs it
-- create another list that must be remembered separately
-- hide whether an action actually changed Sheets, MMS, Stripe, Gmail, or registry
-- make "Done" mean something vague
-
-## Workflow Pattern
-
-Most admin workflows should follow this shape:
+This is the operating loop in workflow form:
 
 ```text
-Context
-Evidence/source
-Recommended action
-Human confirmation
-System write
-Progress/audit log
-Closed/open follow-up state
+Detected / captured -> Guided -> Actioned -> Logged -> Resolved / Kept Active
 ```
 
-This is the V3 loop pattern in workflow form:
+The goal is not more forms. It is a calm path from “I need to remember several
+things” to a completed, inspectable outcome.
 
-```text
-Detected / captured -> guided -> actioned -> logged -> resolved / kept active
-```
+## Cognitive-load test
 
-## Cognitive Load Principles
+A strong workflow:
 
-Use these questions when designing a workflow:
+- shows only the context needed for the current decision;
+- makes source, freshness, uncertainty, and the safest next action clear;
+- reuses known data instead of asking for it again;
+- separates review from consequential action;
+- reports partial success and what remains unfinished;
+- logs meaningful outcomes without creating another inbox;
+- can be followed by Tom or Fenella without relying on Finn's memory.
 
-- What does the admin need to know right now?
-- What can the system infer safely?
-- What action is irreversible, payment-affecting, parent-facing, or vendor-facing?
-- Can one explicit button replace several remembered manual steps?
-- Does the final state clearly say what happened and what is still open?
-- Would Tom or Fenella know what to do without asking Finn?
-- Does this reduce the energy cost of running the school, or create another thing to manage?
+A weak workflow exposes every field, hides which system changed, makes `Done`
+ambiguous, or creates another list someone must remember to check.
 
-Do not make workflows dense just because more data exists. Details can live behind panels, links, or student pages.
+## Source-of-truth boundary
 
-## Hygiene Check
+Workflows must name what they read and write. MMS owns lesson/calendar facts;
+Stripe owns provider payment facts; the registry owns portal configuration;
+Sheets owns First Chord operating records and workflow state; Gmail and WhatsApp
+are delivery channels.
 
-Before meaningful commits, run:
+Derived context, issue queues, classifications, and proposals never become
+underlying truth merely because they are displayed or stored. Use
+[ownership](../architecture/data/ownership.md) and
+[state tabs](../architecture/data/state-tabs.md) before adding a source or lane.
 
-```bash
-npm run hygiene:check
-```
+Avoid live vendor reads on ordinary page load. Prefer an explicit or scheduled
+refresh and show freshness where it affects a decision.
 
-This is a non-blocking prompt, not a gate. It scans for signals that future agents struggle with:
+## Approval boundary
 
-- large code files that may be becoming context-heavy
-- large docs that may be turning into changelogs
-- meaningful code changes without repo docs
-- state-tab/Sheets changes without the schema map
-- admin route/workflow changes without a current-status note
+Keep these deterministic and explicitly human-approved:
 
-Use judgement. Tiny styling changes usually do not need docs. Behaviour, source-of-truth, workflow, safety, or state changes usually do.
+- payment-expectation or Stripe changes;
+- parent-facing messages, except the narrow tutor-approved Practice Chat email;
+- WhatsApp sending;
+- student archive/deletion;
+- MMS student, attendance, or lesson changes;
+- issue resolution when the source still disagrees.
 
-## Overview / Meeting Surface Rule
+The server must revalidate consequential input rather than trust a preview or a
+model-supplied confirmation. Existing workflow code performs the action and logs
+the outcome. AI output may explain or propose; it never supplies human approval.
 
-The `/admin` overview is not a full status board. It is the place Finn and Tom start a meeting or admin session.
+Communication-specific rules:
 
-Front-page cards should earn attention by answering one of these:
+- `Communication_Log` records copied-to-send, not proven delivery.
+- Inbound messages and classifications are evidence for review, not commands.
+- Reply drafts remain proposals even when policy-validated.
+- Practice Chat's lesson-note email exception does not authorise payment,
+  onboarding, pause, marketing, or general-message automation.
+
+## Page and navigation rules
+
+The `/admin` overview is a meeting-start surface, not a complete status board.
+A front-page card should answer at least one:
 
 - What must be done today?
 - What needs attention soon?
-- What loop is open and actionable?
-- What prompt helps us work on the school after the admin is clear?
+- Which actionable loop is open?
+- Which prompt protects time for improving the school?
 
-Background context, health checks, and useful-but-passive numbers should stay lower on the page or inside their own workflow pages unless something is wrong. Big numbers should be used sparingly; prefer human labels and smaller count pills when the number is supporting detail.
-
-## Signals Are for System Learning, Not Another Inbox
-
-`/admin/insights` is intentionally a read-only, rolling view of existing practice-note, parent-understanding, incoming-message, and communication records. It is useful only when it closes one of two different loops:
-
-- **Individual loop:** a particular family needs help. Close it in the student record, inbox, Parent Understanding, or a linked Planning task.
-- **System loop:** a pattern recurs across families. Turn it into one small Planning experiment: name the observation, choose an owner, make a bounded change, and set a review date.
-
-The Signals page must not become a list that someone feels obliged to clear. It does not add alerts, score tutors, infer delivery from a copy action, or claim causality. Use it for a short weekly/fortnightly review, choose at most one or two worthwhile improvements, then compare the same signal after the intervention and keep, revise, or stop it.
-
-## Source-Of-Truth Boundaries
-
-Workflows should be explicit about what they read and write:
-
-- Sheets = operational school truth
-- MMS = lesson/calendar/billing-profile truth
-- Stripe = payment-provider truth
-- Registry = portal config truth
-- Gmail/WhatsApp = communication delivery channels
-- Dashboard state tabs = workflow state and audit memory
-
-A workflow should not silently promote derived context into truth.
-
-Before adding a new state tab or external read, check `docs/architecture/data/state-tabs.md`. It is the canonical lane map for dashboard-owned state: truth, cache, workflow state, append-only log, and derived context.
-
-Do not add page-load MMS calls casually. MMS should be read on explicit refresh, scheduled refresh, or when the workflow genuinely needs live vendor truth. If a page can use `Schedule_Context`, cached free-slot context, or existing state rows, prefer that.
-
-## Approval Boundaries
-
-Keep these approval-first:
-
-- payment expectation changes
-- Stripe pause/resume/cancel actions
-- parent-facing messages, except the narrow Practice Chat lesson-note email category
-- WhatsApp sending
-- deleting/archive actions
-- MMS status or lesson changes
-
-Pause expectation reconciliation follows that boundary: `/admin/flags` previews
-the exact high-confidence changes, the admin confirms them, the server
-re-evaluates rather than trusting the preview, and the existing Sheets/Event Log
-path applies the result. Loading Overview, Issues, or a Stripe scan must not
-change a student's payment expectation.
-
-The dashboard can prepare, prefill, copy, and log. The human approves the consequential step.
-
-Communication boundary:
-
-- `Communication_Log` records messages copied to send.
-- Copied is not the same as sent.
-- `Incoming_Message_Inbox` records inbound messages that need review.
-- Captured inbound messages are not instructions by themselves; they are prompts for human review.
-- The dashboard currently does not send WhatsApp messages.
-- Practice Chat lesson-note email is the narrow automated-email exception; do not treat it as precedent for payment, pause, onboarding, WhatsApp, marketing, or general parent messaging.
-
-## Current Workflow Surfaces
-
-### Issues
-
-`/admin/flags` manages system-detected problems. Issues are operational objects with state, not just warnings.
-
-State:
-
-- `Issue_Queue`
-- `Event_Log`
-
-### Waiting List
-
-`/admin/waiting` is the placement/contact decision surface. It shows contact details, MMS sign-up context, waiting state, and possible free slots.
-
-State:
-
-- `Waiting_List_State`
-- MMS `Free` calendar slots are source context, not reservations
-
-### Onboarding
-
-`/admin/onboard` is the execution workflow after a waiting-list student is ready.
-
-It writes across Sheets, registry, MMS, and generated portal config paths. Because it is multi-system, it needs visible step status and recovery clarity.
-
-### Parent Understanding
-
-`/admin/workflows/parent-understanding` is a campaign workflow for parent check-ins.
-
-It is deliberately manual/approval-first:
-
-- records understanding and feedback
-- copies follow-up templates
-- captures risk/follow-up state
-- does not auto-send WhatsApp
-- does not edit MMS contact details
-
-State:
-
-- `Parent_Understanding_State`
-- consequential closes/escalations append to `Event_Log`
-
-### Tutor Absence
-
-`/admin/workflows/tutor-absence` turns "tutor is off" into a visible cover/cancel workflow.
-
-The workflow should answer:
-
-- which lessons are affected?
-- can they be covered by a same-instrument tutor?
-- which parents still need a message?
-- what remains unfinished?
-
-State:
-
-- `Tutor_Absence_State`
-
-Important distinction:
-
-- the system stores one dated absence record per tutor/day because cover, payment pauses, finance forecasting, and audit trails need exact lesson dates
-- for repeated cancellations affecting the same student, the parent message should be grouped into one period message where possible, then mark all included dated records messaged
-- do not replace per-date absence state with a single broad absence record unless the downstream payment and finance assumptions are redesigned
-
-The same "detail underneath, simple action on top" rule applies to payment-pause planning created from tutor absences:
-
-- each saved absence day remains a separate `Tutor_Absence_State` row
-- each affected student gets structured pause Planning only when the decision is cancellation, not cover
-- one missed lesson starts as a single-date pause card
-- repeated weekly missed lessons collapse into one away-period pause card
-- older single-date or shorter-period cards are parked automatically when a better grouped card exists
-
-This is intentionally not a destructive cleanup. Parking keeps the audit trail while preventing duplicate active work and duplicate finance forecasting.
-
-### Planning / Brain Inbox
-
-`/admin/planning` captures human-created work: ideas, initiatives, and actions.
-
-Planning is not project management. It exists to stop useful operational thoughts disappearing in WhatsApp, and to make meeting actions visible by owner/date/status.
-
-Planning should stay scoped to capture, ownership, due work, meeting rhythm, initiatives, and student-linked operational tasks. Do not turn it into full project management, a generic ticketing system, or a second issue queue.
-
-Planning has a `Meeting` view that separates the meeting rhythm into:
-
-- keep things running
-- move the school forward
-
-It includes due work, waiting items, unassigned items, stalled/no-next-action items, tutor absence work, and the weekly Friday prompt: `Friday: what moved the school forward?`
-
-The Friday prompt is intentionally a reflection record, not just a task. Writing into it appends dated entries to `Planning_Progress_Log`; the Meeting view shows recent reflections so future monthly or quarterly summaries can be built from real operating history.
-
-Planning also supports lightweight school notes:
-
-- `Learning note` = books, podcasts, courses, conversations, or teaching/leadership ideas being worked through
-- `Strategic note` = bigger scratchpad thinking that is not yet a task
-- the body can be open and messy: transcript summary, rough notes, bullets, or copied ChatGPT summary
-- the wrapper should stay structured enough to retrieve later: title, area, owner, status, key ideas, First Chord applications, optional next action
-- when something becomes executable, create a linked `Action` rather than replacing the original note
-
-Finance can appear as an area label, but a real finance/forecasting layer should be designed separately. Do not turn school notes into an unreliable finance model.
-
-State:
-
-- `Planning_Items`
-- `Planning_Progress_Log`
-
-### Pause Planning
-
-Pause planning is a good example of cognitive-load reduction.
-
-Old mental load:
+Background health and passive numbers stay lower or inside their workflow unless
+something is wrong. Navigation represents modes of work, not every data object:
 
 ```text
-remember student/date -> open pause PWA -> copy/send message -> return to dashboard -> mark confirmation -> set expectation -> mark task done
+Overview | Issues | Workflows | Planning
 ```
 
-Current intended flow:
+Use [copy and tone](./copy-and-tone.md) and [UI conventions](./ui-conventions.md)
+for action wording, async feedback, density, and error states.
 
-```text
-structured pause task -> open prefilled pause PWA -> copy dashboard-generated parent message -> confirm two checks -> Mark pause completed
-```
+## Existing workflow boundaries
 
-Older unstructured pause captures can be repaired from the card by adding the linked student and structured pause dates. This updates the existing planning item rather than creating a second task.
+| Surface | Distinctive boundary | Focused document |
+|---|---|---|
+| Issues | Detected problems have workflow state; reads do not change payment truth | [Admin loop](../architecture/system/admin-loop.md) |
+| Waiting/onboarding | Placement hints do not reserve; multi-system onboarding preserves partial results | [School policy](./school.md) |
+| Parent understanding | Manual campaign state; copies follow-up text but does not send or edit MMS | AGENTS workflow map |
+| Tutor absence | Per-date decisions remain auditable; repeated cancellations may group parent/pause work without deleting source rows | [Absence bridge](../workflows/tutors/absence-to-pause.md) |
+| Planning | Human work, reflection, and notes; not project management or a second issue queue | [State tabs](../architecture/data/state-tabs.md) |
+| Pause completion | Requires confirmation, logs progress and `Event_Log`, then aligns expectation through the existing route | [Payments](./payments.md) |
+| Payroll | Review and export prepare provider work; a human pays in Wise | [Paying tutors](../workflows/finance/paying-tutors.md) |
+| Incoming messages | Capture, match, classify, and draft are proposals; no automatic school action or send | [WhatsApp bridge](../operations/integrations/whatsapp-incoming-bridge.md) |
+| Practice Chat | Recipient-specific confirmation, narrow tutor/student check, and delivery-key claim precede MMS/Gmail work | [Delivery contract](../workflows/practice-chat/delivery.md) |
 
-`Mark pause completed` is guarded. It only runs after the admin confirms:
+`/admin/insights` is a read-only learning surface, not another queue. Individual
+family concerns close in their existing workflow; recurring patterns may become
+one bounded Planning experiment with an owner and review date.
 
-- the payment pause tool was run
-- the parent confirmation was sent/copied
+## What not to build yet
 
-Then it:
+- a generic workflow engine or full CRM;
+- heavy owner/permission/project-management layers;
+- automatic WhatsApp or Stripe actions;
+- AI as the reason an operational action occurs;
+- a new state tab where an existing lane safely fits;
+- passive dashboards without a decision or action they improve.
 
-- logs the confirmation to `Planning_Progress_Log`
-- sets `payment_expectation` to `stripe_paused_expected` through the student update route if needed
-- writes the payment-affecting action to `Event_Log`
-- marks the planning task `done`
+## Shipping test
 
-The dashboard still does not run the Stripe pause directly from Planning.
+Before shipping, ask:
 
-## What Not To Build Yet
-
-- a generic workflow engine
-- heavy owner/assignment systems
-- automatic WhatsApp sending
-- automatic Stripe mutation from Planning or Issues
-- AI as the reason a workflow action happens
-- new Sheets tabs when an existing state lane can safely hold the workflow
-
-## Design Test
-
-Before shipping a workflow change, ask:
-
-1. Does this reduce a real repeated admin burden?
-2. Is the source of truth clear?
-3. Is the risky step explicit and human-approved?
-4. Is the final state inspectable later?
-5. Would this still make sense to a new agent reading the docs?
+1. Does this remove a real repeated burden?
+2. Is every source and owner clear?
+3. Are missing, stale, and conflicting facts fail-safe?
+4. Is the risky step explicit and human-approved?
+5. Can the final state be inspected and recovered later?
+6. Does the UI handle loading, success, failure, empty state, narrow screens, and
+   keyboard/focus use without relying on a reload?
+7. Are the focused tests, state contract, current status, and recovery notes
+   updated where the behaviour actually changed?

@@ -214,7 +214,7 @@ if (hasStateTabTouch(diffText) && !files.includes('docs/architecture/data/state-
 // Contract files paired with the guard test that pins them. Changing the
 // contract without touching its guard is the classic silent-drift move — this
 // prompt (non-blocking, like everything here) asks whether the guard should
-// change too. Contracts documented in STATE_TABS_SCHEMA.md → Format Contracts.
+// change too. Contracts are documented in docs/architecture/data/state-tabs.md.
 const CONTRACT_GUARD_PAIRS = [
   ['lib/admin/backup-tabs.mjs', 'tests/admin/state-tab-contracts.test.mjs'],
   ['lib/admin/sheets/core.mjs', 'tests/admin/state-tab-contracts.test.mjs'],

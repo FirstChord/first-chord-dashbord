@@ -1,63 +1,48 @@
 ---
 status: active-plan
 audience: [human, agent]
-last_verified: null
+last_verified: 2026-07-20
 ---
-# Monolith Split — Live Map
+# Admin Client Decomposition
 
-**Read this before touching any of the big admin client components.** It maps where each file's logic now lives, what's been extracted, and what's *deliberately* still inline — so you don't have to re-read 3,000-line files to orient. Concept + rationale: Obsidian `03 Architecture/Monolith Split — Why and How`.
+## Purpose
 
-This is a **snapshot** — update the row when you extract more (and keep it honest about line counts).
+Keep large client components as orchestration shells while moving reusable pure
+rules and coherent UI features into focused modules. Use current code size and
+coupling—not historical line counts—to choose the next extraction.
 
-## Status by file
+## Completed Structure
 
-| Component | Lines | Extracted to (tested) | Still inline (by design / pending) | Phase |
-|---|---|---|---|---|
-| `components/admin/AdminIssuesPageClient.js` | **835** (was ~1,375) | `lib/admin/issues-client-helpers.mjs` — issue classification, view filtering, story/what-to-do copy, hints, labels, quick-action payloads (`getPaymentQuickActions`), Stripe-snapshot summary · `components/admin/issues/IssueCard.js` — the per-issue card (fade state, primary action, Details) · `components/admin/ui/fields.js` — `SelectField` · `components/admin/ui/SlideOverPanel.js` — the student-record slide-over shell | the orchestrator: state, fetch handlers, filters, layout | 1 ✓ helpers · 2 ✓ fields/panel · 3 ✓ card — **complete** |
-| `components/admin/AdminPlanningPageClient.js` | **1,140** (was 3,732) | `lib/admin/planning-client-helpers.mjs` — date/format, pause-date parsing, pause prefill-URL + confirmation message, planning classification (`getPlanningStory`/`dueChipLabel`/`isPausePlanningItem`…), student search/inference, deep-link builders, school-note classifiers/builder, quick-capture trio, review-board filter (`filterPlanningItems`) · `components/admin/planning/fields.js` — the 7 shared form fields · `components/admin/planning/` — all 6 feature components (`PlanningCard`, `QuickBrainCapture`, `DueTodayCard`, `ItemForm`, `SchoolNoteCapture`, `MondayIntentionRow`) · `components/admin/ui/SlideOverPanel.js` — the 3 slide-over shells (edit plan / pause tool / workflow) | — now a thin orchestrator: state, handlers, layout, composition | 1b ✓ helpers · 2 ✓ fields · 3 ✓ components — **complete** |
-| `components/admin/AdminStudentDetailClient.js` | **1,174** | `lib/admin/student-detail-helpers.mjs` — date/lifecycle/note-status formatters, payment-expectation label + option list · `components/admin/ui/fields.js` — `Field`/`Input`/`Select` | the component + `ReadOnlyField` (single consumer) | 1 ✓ helpers · 2 ✓ fields |
-| `components/admin/AdminParentUnderstandingPageClient.js` | ~950 | `lib/admin/parent-understanding-client-helpers.mjs` — record scoring, workflow-activity/assessment detection, risk signals, status patches, queue search, next-action derivation | `hasCompleteUnderstandingAssessment`/`effectiveWorkflowStatus`/`workflowStatusLabel` (need `UNDERSTANDING_AREAS`) + `buildTemplates` (message-content consts); field/feature components | 1 ✓ helpers |
-| `lib/admin/sheets.js` | **8** (was ~2,470) | `lib/admin/sheets/core.mjs` — low-level Google Sheets client, managed headers, tab/header constants, generic reads/upserts · domain accessors under `lib/admin/sheets/` (`students`, `issues`, `workflows`, `planning`, `practice-notes`, `finance`, `communication`) · `lib/admin/swr-cache.mjs` — the read-cache policy (TTL/SWR/coalescing/scope invalidation), shared with the MMS payroll attendance cache in `lib/admin/mms.js`, unit-tested | `sheets.js` is now only a barrel re-export; existing call sites still import `@/lib/admin/sheets` unchanged | **Phase 4 ✓ complete** · 5 ✓ swr-cache |
+- Issues: rule/copy/filter helpers, issue card, fields, and slide-over extracted
+- Planning: helpers, fields, feature cards/forms, and slide-over extracted
+- Sheets: `lib/admin/sheets.js` is a compatibility barrel over domain adapters;
+  SWR/cache policy is separately tested
+- Student detail: reusable pure helpers and common fields extracted
+- Parent understanding: scoring, filters, signals, and next-action helpers
+  extracted
 
-## Planning client — target structure (the guided path)
+## Remaining Candidates
 
-The planning client is the deepest split. Target layout under `components/admin/planning/`:
+`AdminStudentDetailClient` and `AdminParentUnderstandingPageClient` still contain
+substantial component-specific UI. Extract only when a change would otherwise
+require loading or modifying an unrelated region. Keep one-use helpers that are
+tightly coupled to local UI configuration inline.
 
-```
-components/admin/
-  AdminPlanningPageClient.js   ← thin orchestrator: state, server-action handlers, layout, composition
-  planning/
-    fields.js                  ✓ SelectField, TextField, DateField, StudentSearchField, TextAreaField, ExpandableText, LinkPill
-    PlanningCard.js            ✓ the per-item card — the big one
-    DueTodayCard.js            ✓ wraps PlanningCard in compact mode
-    QuickBrainCapture.js       ✓ quick-capture box (capture trio now in planning-client-helpers.mjs)
-    SchoolNoteCapture.js       ✓ learning/strategic note form
-    ItemForm.js                ✓ the edit form
-    MondayIntentionRow.js      ✓ the Friday→Monday intention row
-lib/admin/
-    planning-client-helpers.mjs  ✓ pure helpers (date/pause/classification/search/links/notes)
-```
-Feature components receive props (data + handlers) from the orchestrator — no behaviour change. Extract one at a time, build green between each. `☐` = pending.
+## Extraction Contract
 
-## The extraction pattern (apply per file)
+1. Move framework-free rules to `*-helpers.mjs` and add focused Node tests.
+2. Move reusable client fields/shells only when there are real multiple consumers.
+3. Move coherent feature components behind explicit data/handler props.
+4. Keep hooks/JSX in `'use client'` `.js` modules and pure logic in `.mjs`.
+5. Preserve the existing public imports; a barrel is acceptable during migration.
+6. Extract one coherent concern per commit and build before continuing.
 
-1. **Pure helpers → `*-client-helpers.mjs` (or `*-helpers.mjs`) + a co-located test.** Framework-free functions only.
-2. **Generic field components → a shared `fields.js`** (Phase 2).
-3. **Big feature components → their own files**, receiving props (Phase 3) — this is what turns the page client into a thin orchestrator.
-4. `'use client'` boundary: anything with hooks/JSX → `.js` client file; pure functions → `.mjs` (importable by server *and* tests).
+Do not extract merely to lower a line count. A thin orchestrator may still be
+long if it honestly owns page state and composition.
 
-### Discipline that keeps it clean
-- **Module-internal helpers stay unexported**; the component imports only what it *uses directly*. Run `npx next lint --file <component>` after each move — it flags imports the component doesn't use (those were module-internal); trim them. (Lint won't catch a *missing* import — only the build does, so build every step.)
-- **Deliberate stopping lines:** helpers tightly coupled to component-state/UI-config consts (form defaults, UI option lists, message content) **stay in the component**. Extracting them would drag UI config into a "helpers" module — the wrong abstraction. Better a smaller, honest module than a leaky one.
-- **One extraction per commit, green between each.** Never let two unverified extractions ride on one state.
+## Verification
 
-### Verify every step
-```bash
-npm run test:admin   # pure-helper extractions should RAISE the count (that's the point)
-npm run build        # the real check for missing/duplicate symbols — stop the dev server first
-npx next lint --file <changed files>
-```
-Baseline at the start of the split: **382 tests**. As of the last extraction: **433**.
-
-## Why (one line)
-A 3,000-line file can't be held in context; you load the whole thing to change one card. Focused modules mean you load only what you touch — cheaper, safer edits — and the trapped pure logic (date parsing, classification, scoring) finally gets unit tests. Full rationale: the Obsidian note.
+For each extraction, run the focused helper tests, full admin suite, lint, and a
+production build. Search changed exports and remove unused imports. The build is
+the contract check for missing/duplicate JSX symbols that Node helper tests
+cannot cover.

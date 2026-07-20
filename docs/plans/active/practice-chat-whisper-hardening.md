@@ -1,11 +1,13 @@
 ---
-status: parked
+status: active-plan
 audience: [human, agent]
-last_verified: null
+last_verified: 2026-07-20
 ---
 # Practice Chat / Whisper Flow — Hardening Checklist
 
-Status: **planned, deferred** (Practice Chat is in active tutor use; do the staged rollout in a no-lessons window). Created 2026-06-18.
+Status: **security remediation awaiting a no-lessons deployment window**. The
+browser-visible OpenAI key is a current confidentiality/cost exposure, not a
+future enhancement. Created 2026-06-18; re-triaged 2026-07-20.
 
 This is the execute-later checklist for securing the Practice Chat transcription ("Whisper") flow. Investigated 2026-06-18; agreed to defer the code changes so live tutor sessions aren't interrupted.
 

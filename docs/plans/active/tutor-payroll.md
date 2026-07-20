@@ -1,162 +1,65 @@
 ---
 status: active-plan
 audience: [human, agent]
-last_verified: null
+last_verified: 2026-07-20
 ---
-# Tutor-facing payroll — Phase 2 & 3 roadmap
+# Tutor Payroll: Remaining Phase 3
 
-Design home for the "tutors confirm what they're owed, then get paid" loop.
-Phase 1 shipped 2026-07-02; **Phase 2 shipped 2026-07-05** (see below). **Phase 3
-is the remaining unbuilt work.**
+## Shipped Foundation
 
-**Key correction (2026-07-05):** Phase 2 did **not** need the tutor-auth layer
-after all — the signed statement link already proves identity ("this tutor, this
-reviewed row"), so a Confirm button on the link works with no login (option 1
-below). Only **Phase 3** genuinely needs a persistent tutor login.
+Payroll review produces a frozen tutor statement from `Payroll_Runs`. A signed,
+30-day bearer link at `/pay/statement/<token>` lets the named tutor confirm or
+raise a query without login. Responses are idempotently stored on the payroll
+row; disputes stay out of the Wise batch. Confirmation never moves money and
+paid runs lock further responses.
 
-Read first: the Phase 1 Learning Log entry (why + the frozen-statement design) and
-the code — `lib/admin/tutor-statement-helpers.mjs`, `lib/admin/tutor-statement.js`,
-`app/pay/statement/[token]/page.js`. This doc records *decisions and open
-questions*, not code behaviour.
+Do not rebuild the shipped Phase 1/2 flow. Current behaviour lives in
+`lib/admin/tutor-statement*`, `app/pay/statement/[token]/`, payroll helpers, and
+focused tests.
 
-## Where Phase 1 left off (the foundation)
+## Remaining Goal
 
-- A read-only pay statement exists per reviewed/paid tutor, with a **signed,
-  no-login share link** `/pay/statement/<token>` (HMAC via `NEXTAUTH_SECRET`,
-  30-day expiry, carries only the `payroll_id`; the view re-derives from the
-  sheet). `/pay/*` is outside the auth middleware matcher.
-- The statement's total is **frozen** from the reviewed `Payroll_Runs` row — the
-  same source `selectPayableReviewedRuns` feeds into the Wise CSV.
-- **No money moves and nothing auto-sends.** The admin pastes the link/text.
+Phase 3 would let tutors manage pay cadence and receive statement links with less
+admin chasing. It is gated by authenticated tutor identity; a statement bearer
+link proves access to one run, not persistent authority over `Tutor_Pay`.
 
-## Identity decision: Phase 2 resolved; Phase 3 still gated
+### 3a: cadence self-service
 
-There is **no persistent tutor login today** — `isAdmin` (an allow-listed email)
-is the only account role (`lib/admin/auth.js`, `middleware.js`). Phase 2 shipped
-using the statement bearer token; Phase 3 still needs persistent tutor identity:
+- add tutor authentication and authorization for the tutor's own record
+- expose weekly/biweekly/three-weekly `Tutor_Pay.invoice_cadence`
+- preview the effective next pay window and require confirmation
+- consider admin review for a mid-window change
+- log actor, before/after value, and effective timing
 
-1. **Magic-link identity via the statement token (implemented for Phase 2).**
-   The signed `/pay/statement/<token>` link *already* proves "this tutor, this
-   row". A Confirm button can POST that same token back — no accounts, no login
-   UI, matches a ~15-person team. Bind confirmation to the token's `pid`/`t`.
-   - Trade-off: it's a **bearer** link — whoever holds the URL can confirm. Fine
-     for a low-stakes "yes this looks right" gesture (it does **not** move money;
-     the admin still approves the batch). Tighten with shorter expiry + a
-     one-time confirm (once confirmed, the token can't re-confirm/redispute
-     without a fresh link).
-2. **Google login + `isTutor` allow-list (needed for Phase 3 / a real portal).**
-   Mirror the admin pattern: an allow-list of tutor emails, `session.user.isTutor`,
-   a `/tutor/*` area outside the admin matcher. Heavier, but required once tutors
-   self-serve cadence or see history across periods.
+### 3b: statement delivery
 
-**Decision:** keep Phase 2 on the magic-link; introduce option 2 only if Phase 3
-earns the cost of a persistent tutor portal.
+- add a real `Tutor_Pay.contact_email`; do not use
+  `Tutor_Wise.recipient_email` as a contact address
+- start with an admin-triggered batch preview/send using the existing Gmail
+  pattern
+- retain the signed statement link and tutor confirm/query surface
+- schedule only after the manual batch path has representative evidence
 
----
+## Decisions Still Needed
 
-## Phase 2 — tutor confirms (or disputes) their statement — ✅ SHIPPED 2026-07-05
+- whether cadence changes require admin approval or only tutor confirmation
+- how a mid-period cadence change affects the next since-last-paid window
+- what evidence is required before admin-triggered delivery becomes scheduled
+- tutor statement/link retention and session duration
 
-*Built as described below, on the magic-link (no login). Confirm/"Something's off"
-on `/pay/statement/<token>` → `recordTutorStatementResponse` writes
-`tutor_response`/`tutor_responded_at`/`tutor_note`; the payroll board shows a
-per-card banner + confirmations tally; disputed rows are held out of the Wise
-batch until the tutor confirms the resolved statement. Details in the 2026-07-05 Learning Log entry.*
+## Guardrails
 
-Original design (kept for reference; shipped outcomes below are authoritative):
+- no auto-pay and no Wise API mutation
+- tutor confirmation is a review signal, not payment approval
+- all outbound batches are previewed before the first send
+- statements contain student names and tutor pay; enforce tutor-scoped access,
+  short-lived links, minimal logs, and the data-protection policy
+- update `Tutor_Pay`/`Payroll_Runs` schema docs and recovery notes with any new
+  field or write
 
+## Done When
 
-**Goal:** replace "chase the invoice" with the tutor actively agreeing the figure,
-and surface disagreements *before* payment.
-
-**Flow:** reviewed → statement link sent → tutor opens it → **Confirm** ("Yes,
-this is right") or **Something's off** (free-text note) → admin sees the
-confirmed/disputed state on the payroll card → admin still does the final batch
-approve → Wise CSV. **Confirm ≠ auto-pay** (keep the approval-first guardrail).
-
-**Surface:** add Confirm / dispute controls to `/pay/statement/[token]` (Phase 1
-built it read-only for exactly this). POST to a new action/route that:
-- re-verifies the token (`verifyStatementToken`) and loads the row by `pid`;
-- writes the tutor response idempotently;
-- is safe against double-submit and a stale/expired link.
-
-**Data (new `Payroll_Runs` columns — update `docs/architecture/data/state-tabs.md` when built):**
-- `tutor_response` ∈ `''` / `confirmed` / `disputed`
-- `tutor_responded_at` (ISO)
-- `tutor_note` (free text, dispute reason)
-
-  Keep it on the existing row (not a new tab) — it's per-run state, alongside
-  `reviewed_by`/`paid_by`. A dispute is visibly held out of the Wise batch until
-  the tutor confirms the resolved statement.
-
-**Payroll page changes:** show `confirmed ✓ by tutor` / `disputed — see note` on
-each card. `Tutor confirmation required` is a hard readiness gate; the
-transitional `Pay normally` route can enter the batch without confirmation.
-
-**Decisions shipped:**
-- A dispute removes the row from the Wise batch; there is no silent force-pay.
-- The tutor can move between Confirmed and Query raised until the run is paid;
-  payment locks further responses.
-- The tutor confirms that the displayed lesson breakdown and frozen amount look
-  right. MMS remains attendance truth; confirmation never moves money.
-- The shared record is a Payment statement before payment and a Payment receipt
-  after the batch is marked paid, with Print/Save PDF for retention. It is not a
-  substitute for a freelancer invoice.
-
----
-
-## Phase 3 — tutors self-select cadence + scheduled delivery
-
-**Goal:** "ask tutors weekly or bi-weekly", then statements arrive automatically
-each pay period.
-
-**3a — cadence self-service.** Tutor sets weekly / biweekly / three-weekly →
-writes `Tutor_Pay.invoice_cadence` (already the field that drives the pay
-window). Needs tutor auth (option 2 above) and a small write path to `Tutor_Pay`
-(operational config — treat writes carefully; it changes everyone's pay window
-logic). Consider admin confirmation on a cadence change rather than silent.
-
-**3b — scheduled statement delivery.** A cron per cadence generates + delivers
-each tutor's statement on their pay day. Pattern already exists
-(`app/api/cron/*`, e.g. `refresh-schedules`, `finance-snapshot`).
-- **Prerequisite: a real tutor contact email.** `Tutor_Pay` has none;
-  `Tutor_Wise.recipient_email` is the **banking payee** address, not a contact
-  field. Add `contact_email` to `Tutor_Pay` before any dashboard send.
-- **Email infra exists** — reuse the Gmail sender pattern
-  (`lib/admin/practice-notes-email.js`). Transactional lesson-note email is
-  already the one approved automated-email exception; a tutor pay statement is
-  similar-risk and defensible, but **start behind an admin trigger** (a "send all
-  statements for this run" button) before fully scheduling.
-- Keep the signed-link body so scheduled emails still lead to the confirm surface.
-
-**Open decisions:**
-- Fully scheduled vs admin-triggered batch send? (Lean: admin-triggered first,
-  schedule once trusted — matches the Practice Chat Level 2 caution.)
-- Does a cadence change mid-period need a proration / window guard? (Reuse the
-  existing since-last-paid window logic — it already catches up.)
-
----
-
-## Cross-cutting guardrails (do not regress)
-
-- **No auto-pay, ever.** Tutor confirm and scheduled statements never move money;
-  the admin approves the Wise batch and uploads to Wise manually. No Wise API
-  mutation.
-- **Approval-first for outbound.** Automated email only extends the existing
-  narrow exception; WhatsApp stays copy-paste; marketing/payment stay manual.
-- **PII.** Statements contain student names + a tutor's pay. The bearer link and
-  any stored/sent statement are personal data — fold into the same
-  PII/retention note still owed for incoming messages (see `docs/CURRENT_STATUS.md`
-  → Next / Not now). Prefer short link expiry and no long-term statement storage.
-- **Auth is the real cost.** Everything downstream (compute, freeze, statement,
-  Wise CSV, audit stamps) already exists — budget Phase 2/3 mostly as the
-  tutor-identity surface, not payroll logic.
-
-## Definition of done (per phase)
-
-- **Phase 2:** tutor can confirm/dispute from the link; state shows on the payroll
-  card; disputes are visible and held out of the default batch; idempotent +
-  token-verified; `docs/architecture/data/state-tabs.md` updated for the new columns; Learning
-  Log entry.
-- **Phase 3:** `Tutor_Pay.contact_email` added; cadence self-service writes safely;
-  admin-triggered (then scheduled) statement send via Gmail; schema + Learning
-  Log updated.
+An authenticated tutor can safely propose/confirm their cadence; admins can
+preview and send statement links to verified contact emails; failures are
+visible and retry-safe; scheduling, if enabled later, preserves the same human
+payment approval boundary.

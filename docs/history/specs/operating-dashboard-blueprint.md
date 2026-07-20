@@ -1,9 +1,13 @@
 ---
-status: supporting
+status: historical
 audience: [human, agent]
 last_verified: null
 ---
 # Operating Dashboard Build Blueprint
+
+> Historical synthesis/case-study draft. It informed the current system but is
+> not implementation guidance. Use
+> [workflow design](../../policies/workflow-design.md) for current rules.
 
 ## Purpose
 

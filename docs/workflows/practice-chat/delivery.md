@@ -1,119 +1,126 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: null
+last_verified: 2026-07-20
 ---
-# Practice Chat Delivery Audit
+# Practice Chat Delivery Contract
 
-Last updated: 2026-07-17
+## Boundary
 
-This records the checked delivery boundary for the trusted-tutor Level 2
-rollout beyond Finn, Tom, Fennella, and Dean.
+Practice Chat may update MMS attendance and email a reviewed lesson note to a
+parent only after the tutor completes the recipient-specific confirmation. This
+is an accepted narrow exception on the low-friction tutor surface; it is not a
+general permission for public tutor routes to perform consequential writes.
 
-Do not treat this as an implementation plan by itself. Confirm each point against current code before changing behaviour.
+The selected tutor is self-attested, not authenticated identity. Before any
+provider call the server must load the student context and require one clear
+recorded tutor assignment matching that self-attestation. Missing, conflicting,
+or mismatched records fail closed.
 
-## Trusted-Tutor Delivery Boundary
+All registered tutors are enabled when `PRACTICE_NOTES_ENABLED_TUTORS` is absent.
+The variable may temporarily restrict the roster; it must not be treated as the
+canonical tutor registry.
 
-Level 2 Practice Chat:
+## Human Confirmation
 
-- accepts calls from the Practice Chat PWA through dashboard API routes
-- uses a shared bridge secret plus allowed browser origins
-- enables all registered tutors by default (or a temporary explicit allow-list)
-- requires the selected tutor to self-attest and match the student's single, non-conflicting recorded tutor assignment
-- allows speech capture or a typed-note fallback before the final human-reviewed action
-- previews the selected MMS attendance target before writing
-- can mark the student `Present`, write the note/attendance to MMS, and send the parent note through First Chord Gmail
-- can mark an on-the-day cancellation as `AbsentNoMakeup` without sending a parent practice-note email
-- upserts delivery/audit state into `Practice_Notes_Log`
-- uses `delivery_key = student + MMS attendance + note hash` to avoid duplicate sends for the same delivery
-- must save an `in_progress`/`retrying_email` claim before MMS attendance or Gmail execution begins; a failed claim returns 503 and explicitly reports that neither provider action was attempted
-- holds a same-process `delivery_key` guard across claim, provider execution, and final logging
-- reports `deliveryTrackingFailed` and `partialSuccess` if provider work succeeds but the final delivery row cannot be saved
+The final screen must show:
 
-The PWA final action lists the selected student and first server-derived MMS
-parent recipient, and requires the tutor to tick a statement explicitly
-authorising that student's notes to that parent. This is a human confirmation,
-not proof of identity.
+- the selected student
+- lesson date/attendance target previewed from MMS
+- the exact first email-capable recipient derived server-side from that
+  student's MMS family/contact data
 
-## Rollout Safeguards
+The tutor must affirm that these are the named student's notes and should be
+emailed to that named recipient. A generic date-only confirmation is
+insufficient. The server revalidates the selection; a model- or client-supplied
+confirmation is never human approval.
 
-The following controls are active in the trusted-tutor rollout. This is an
-intentional narrow exception to the usual public-tutor no-consequential-write
-rule, accepted by the school on 2026-07-17.
+Typed notes remain available if speech capture fails. `AbsentNoMakeup` records
+the on-the-day cancellation without sending a parent practice-note email.
 
-1. Confirm the exact parent recipient.
-   - Before an execute request, the final PWA dialog lists the selected student
-     and the first email-capable recipient returned by the server preview.
-   - The tutor must tick “I confirm these are [student]'s notes and they should
-     be emailed to this parent.” The date confirmation is retained.
+## Delivery And Idempotency
 
-2. Fail closed on the tutor/student record.
-   - The PWA supplies the selected tutor as a self-attestation. The server loads
-     the student context and rejects a missing, mismatched, or conflicting tutor
-     assignment before any provider action.
-   - `Practice_Notes_Log.acting_tutor` stores `Self-attested: <name>`; it must
-     not be represented as verified identity.
+`delivery_key = student + MMS attendance + note hash` identifies one delivery.
+The execute path must:
 
-3. Use a transactional delivery claim.
-   - `practice_note_delivery_claims.delivery_key` is a PostgreSQL primary key.
-     The route inserts its claim before Sheets, MMS, or Gmail work. A second
-     Railway instance sees the existing claim and cannot execute the providers.
-   - If the Sheets audit-claim write fails, the fresh database claim is released
-     before provider work starts. Completed/failed/manual-follow-up claims are
-     never automatically re-acquired.
+1. validate origin/shared-secret, tutor/student assignment, attendance target,
+   recipient, note, and confirmation
+2. atomically insert `practice_note_delivery_claims.delivery_key` in PostgreSQL
+3. save the corresponding Sheets audit claim
+4. only then call MMS and Gmail
+5. finalize both the database claim and `Practice_Notes_Log` audit row
 
-4. Make rollout configuration explicit.
-   - `PRACTICE_NOTES_ENABLED_TUTORS` is a comma-separated list of canonical
-     tutor names. When omitted, every registered tutor is enabled; set it only
-     for a temporary operational restriction.
+The database primary key is the cross-instance execution lock. The in-process
+guard only complements it. Sheets is the audit/read model, not a transactional
+lock.
 
-5. Do not retry ambiguous Gmail sends automatically.
-   - After MMS succeeds and Gmail returns an error, the delivery is marked for
-     manual follow-up and the claim becomes terminal. The PWA never assumes a
-     timeout meant “unsent” and never retries that parent email itself.
+If the database claim cannot be saved, return 503 and call neither MMS nor
+Gmail. If the initial Sheets claim fails, release only that fresh pre-provider
+claim and do no provider work. Terminal completed, failed, or manual-follow-up
+claims are never automatically reacquired or deleted to force a retry.
 
-## Required Production Configuration
+A duplicate request returns the existing result instead of repeating provider
+work. If MMS succeeds and Gmail errors or times out, mark manual follow-up and
+do not retry the ambiguous email automatically. If provider work succeeds but
+final logging fails, report explicit partial success; never imply the provider
+action did not happen.
 
-Set these only on the canonical admin Railway service, in a no-lessons window:
+## Sources And Visibility
+
+- MMS remains attendance/payroll continuity truth.
+- Gmail owns whether it accepted the outbound email and its message/thread IDs.
+- PostgreSQL owns the unique delivery execution claim.
+- `Practice_Notes_Log` owns dashboard delivery audit and parent-visible note
+  memory.
+
+Only sent/completed note rows may be parent-visible. Draft, snapshot,
+in-progress, failed, and absence-only rows are not proof of parent delivery.
+Rows with `manual_follow_up_needed = TRUE` surface as Practice Delivery issues;
+clearing that flag is a narrow cell update, not a full-row rewrite.
+
+`Practice_Notes_Log.acting_tutor` must remain labelled
+`Self-attested: <name>` until tutor authentication exists.
+
+## Required Configuration And Bootstrap
+
+On the canonical Railway admin service:
 
 ```text
-DATABASE_URL=<existing PostgreSQL URL>
-PRACTICE_CHAT_API_SECRET=<existing shared PWA handoff secret>
-# Optional temporary restriction; omit to enable the full registered roster.
-PRACTICE_NOTES_ENABLED_TUTORS=Arion,Calum,Chloe,David,Dean,Eléna,Fennella,Finn,Ines,Kenny,Kim,Patrick,Robbie,Scott,Stef,Tom
+DATABASE_URL=<Railway PostgreSQL URL>
+PRACTICE_CHAT_API_SECRET=<shared PWA handoff secret>
+# Optional emergency/temporary restriction only:
+PRACTICE_NOTES_ENABLED_TUTORS=<comma-separated canonical names>
 ```
 
-Run `npm run ensure:practice-delivery-claims` against that database before
-deploying. `PRACTICE_CHAT_API_SECRET` must remain configured for the shared PWA
-handoff; it is a coarse caller guard, not tutor identity.
+Before first use against a database, run:
 
-## Fast-Follows During Rollout
+```bash
+npm run ensure:practice-delivery-claims
+```
 
-- Add an admin view for failed or manual-follow-up Practice Chat deliveries.
-- Surface Gmail-sent/MMS-failed cases clearly, because that creates a payroll/attendance gap even if the parent received the note.
-- Validate that the chosen recipient email belongs to the target student's MMS family/contact data.
-- Document secret rotation and basic rate limiting for the Practice Chat bridge.
+The shared PWA secret is a coarse caller guard, not tutor identity. Keep allowed
+browser origins narrow and never expose database or provider credentials to the
+PWA.
 
-## Source-Of-Truth Notes
+## Recovery
 
-- `Practice_Notes_Log` is dashboard-owned learning/delivery memory.
-- MMS remains attendance/payroll continuity until payroll no longer depends on MMS attendance.
-- Sent/completed First Chord notes can be parent-visible in portals.
-- Absence-only rows are attendance evidence, not parent-note delivery evidence.
-- Draft, in-progress, failed, and snapshot-only rows are not proof of delivery.
+- Failure before provider work: inspect the selected lesson/recipient and retry
+  only if no terminal claim exists.
+- Gmail ambiguity after MMS success: verify Gmail/provider evidence and follow
+  up manually; retain the claim and audit trail.
+- Gmail success with MMS failure: preserve delivery evidence and repair
+  attendance/payroll from MMS truth rather than resending the email.
+- Final log failure: treat as partial success and reconcile from PostgreSQL,
+  Gmail, MMS, and existing Sheets evidence. Never guess or erase history.
 
-## Manual Checks Before Widening
+## Verification
 
-- Execute one real note end-to-end.
-- Confirm the final confirmation checkbox names the correct student and exact
-  parent email, and cannot be bypassed by the Finish button.
-- Confirm the parent receives the email.
-- Confirm MMS attendance is present and the note is visible where expected.
-- Confirm `Practice_Notes_Log` contains recipient, send status, Gmail ID, MMS attendance ID, and completed status.
-- Confirm an `AbsentNoMakeup` test row records attendance status without sending a parent email.
-- Attempt a duplicate send and confirm it returns the existing delivery rather than emailing again.
-- Force the claim write to fail and confirm the route returns 503 without calling MMS or Gmail.
-- Exercise two same-key requests in one process and confirm only one reaches provider execution.
-- Confirm failed Gmail or MMS paths are visible enough for admin follow-up.
-- Confirm the two known new-tutor students without an MMS parent email are
-  blocked at preview and no MMS/Gmail action occurs.
+Focused tests are `tests/admin/practice-*.test.mjs`. Any delivery change must
+cover validation, recipient/student scoping, tutor mismatch/conflict, claim
+failure before providers, duplicate/concurrent execution, absence-without-email,
+ambiguous Gmail failure, and final-log partial success.
+
+After a deployment, use one explicitly approved real end-to-end note and verify
+the confirmation copy, parent receipt, MMS attendance, audit row, database claim,
+and duplicate response. Do not create a real delivery merely for an automated
+smoke test.

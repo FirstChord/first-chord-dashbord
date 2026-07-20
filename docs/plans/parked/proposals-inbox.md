@@ -1,80 +1,57 @@
 ---
 status: parked
 audience: [human, agent]
-last_verified: null
+last_verified: 2026-07-20
 ---
-# PLAN: Proposals Inbox — V1 (drafted replies to incoming messages)
+# Experiment Later: Policy-Guarded Inbox Reply Proposals
 
-*Designed and built 2026-07-19; deliberately parked for a later experiment on
-2026-07-20. The feature flag remains off, and Finn's privacy/policy sign-off in
-`docs/architecture/ai/tool-contracts.md` is still required before any pilot.
-This is the first lane of the "machine prepares, human commits" pattern. Read
-`docs/architecture/ai/runtime-integration.md` (the issue-briefing pilot is the architectural template)
-and `docs/architecture/ai/tool-contracts.md` (the allowlist entry remains gated by sign-off before
-any model touches a real parent message).*
+The implementation exists but `ADMIN_AI_REPLY_DRAFT_ENABLED` remains off. Do
+not enable it until Finn explicitly accepts the privacy/policy conditions in
+[AI tool contracts](../../architecture/ai/tool-contracts.md). Stored proposals
+remain reviewable while generation is disabled.
 
-## The shape (agreed)
+## Pilot Shape
 
-- **One lane only:** suggested replies for `Incoming_Message_Inbox` rows. Chosen
-  because the execute step is already manual by design — the dashboard never sends
-  WhatsApp; approving copies to clipboard + logs to `Communication_Log`.
-- **Storage:** one generic `Proposals` tab (keyed upsert): `proposal_id · lane ·
-  created_at · created_by · status (proposed/approved/rejected/expired/superseded) ·
-  linked_id · mms_id · evidence_json (exactly what the model saw, redacted) ·
-  proposal_body · decided_by · decided_at · rejection_reason · applied_at`.
-  Proposals expire after 7 days; superseded if the underlying message changes.
-- **Producer:** human-triggered button ("Draft reply" / "Draft all open") — no cron in
-  V1. Server-side mirrors the issue-briefing pilot: redacted projections in, restricted
-  AI key, 5s timeout, strict validation, rate limit, feature flag. Drafts follow the
-  parent message tone (open Hi/Hello/Hey; calm, warm, British).
-- **Surface:** NO new page, NO new nav. A quiet "Suggested reply" block on the inbox
-  row: **Use this** (clipboard + Communication_Log + stamp) / **Edit then approve**
-  (edited text is logged; the diff is telemetry) / **Discard** (optional reason). At
-  most one Overview line when proposals are pending. A standalone page earns its
-  existence only when a second lane exists.
-- **Telemetry from day one:** used-unmodified vs edited vs discarded per proposal.
-  Gate for lane 2 / overnight scheduling: ~70%+ used unmodified over ~4 weeks.
+- one lane: draft a reply for one selected `Incoming_Message_Inbox` row
+- human-triggered only; no cron or automatic Draft All
+- server sends a bounded, redacted projection through the dedicated restricted
+  AI runtime, validates the result deterministically, and stores it in
+  `Proposals`
+- inline review offers use, edit, or discard
+- use/edit copies to clipboard and logs `Communication_Log`; it never sends
+- proposals expire after seven days and are superseded when underlying evidence
+  changes
 
-## Hard constraints (from Finn's full policy text, 2026-07-19)
+## Policy Guard
 
-**Drafts must enforce the Lesson Cancellation Policy** (canonical: Obsidian
-`05 Policies/Lesson Cancellation Policy.md` — read it in full; the summary below is
-the classifier spec, not the policy home):
+The deterministic cancellation classifier/validator—not the prompt—must reject
+drafts that:
 
-- **One-off moves never; permanent changes gladly.** The #1 subtlety: "can we miss
-  Thursday?" must never be answered with a swap or make-up — but "can we change our
-  slot going forward?" is *welcomed* and should get a warm "we'll work with you to
-  find a better time" + route to Finn. The classifier's first job is telling these
-  apart; when unsure which is meant, use the ambiguity rule.
-- **The can't-attend options are real and should be offered:** a **Zoom lesson at the
-  scheduled slot**, or a **practice video** (5–10 min with practice notes) — by notice
-  window (lesson date from `Schedule_Context` vs message date):
-  - Cancelled 7+ days out → cancelled, not charged.
-  - Inside 7 days → charged; offer Zoom-at-slot or practice video.
-  - No-show / same-day cancellation → charged; **no video** (and no draft should
-    promise one).
-  - Tutor-side cancellation → payment paused for that lesson.
-- **Ending lessons:** two lessons' notice — acknowledge warmly, route to Finn.
-- **Extended breaks:** 3 weeks free / weeks 4–5 charged / 6+ = step-back conversation;
-  not in July–August. Pause requests route into the existing pause planning flow, not
-  a drafted policy lecture.
-- **Ambiguity rule:** if the lesson date, the notice window, or one-off-vs-permanent
-  can't be established from evidence, the draft must be a neutral warm acknowledgement
-  ("thanks for letting us know — I'll come back to you shortly") that commits to
-  nothing — never a guessed policy outcome.
-- Validation (deterministic, not prompt-hope): reject any draft offering a one-off
-  reschedule/swap/make-up; reject any charge/no-charge/video claim that contradicts
-  the computed notice window; reject a video promise on a same-day cancellation.
+- offer a one-off reschedule, swap, or make-up
+- contradict the computed notice boundary on charge/no-charge wording
+- promise a video lesson for a same-day cancellation
+- invent a policy outcome when evidence is unknown
 
-## Implemented build order
+Permanent schedule changes remain welcome and route to a human. Unknown cases
+use neutral acknowledgement that commits to nothing.
 
-1. `docs/architecture/ai/tool-contracts.md` allowlist entry → **Finn sign-off gate remains open**.
-2. `Proposals` tab + pure helpers (+ contract guard pair + STATE_TABS_SCHEMA row).
-3. Producer route (assembled from the existing redacted projections + AI runtime).
-4. Policy classifier + deterministic draft validator (pure, tested — the cancellation
-   rules above are the test cases).
-5. Inline UI block + telemetry.
-6. Data-protection map row; docs ritual.
+## Privacy Gate
 
-Estimated: one session. Prerequisite decisions: none beyond the sign-off — the
-cancellation policy interpretation notes in the policy file should be confirmed first.
+The feature may send redacted parent message text to OpenAI. Roster-name,
+phone/email, and URL redaction cannot guarantee removal of unknown names or
+indirect identifiers. Before enabling, confirm provider project/key isolation,
+retention expectations, logging limits, representative synthetic evaluation,
+and the parent-facing privacy position.
+
+## Pilot And Stop Conditions
+
+1. Enable only on the canonical admin service for a small, time-bounded pilot.
+2. Draft individual low-risk messages; compare evidence, policy result, and copy.
+3. Record used-unmodified, edited, discarded, latency, validation failure, and
+   generation failure without storing extra message content in logs.
+4. Disable immediately for policy leakage, misleading wording, privacy concern,
+   or unacceptable latency. Existing deterministic/manual inbox work continues.
+
+Do not widen to another proposal lane or background generation based only on a
+small anecdotal sample. The execute boundary stays human copy/send regardless of
+draft quality.

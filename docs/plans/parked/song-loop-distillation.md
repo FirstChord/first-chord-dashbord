@@ -1,7 +1,7 @@
 ---
-status: supporting
+status: parked
 audience: [human, agent]
-last_verified: null
+last_verified: 2026-07-20
 ---
 # Song-Loop Distillation Playbook
 

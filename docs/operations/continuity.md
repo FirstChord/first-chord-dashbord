@@ -5,7 +5,7 @@ last_verified: null
 ---
 # Operations Continuity — the school without Finn
 
-*Created 2026-07-19. The machine-side twin is [`DISASTER_RECOVERY.md`](./disaster-recovery.md)
+*Created 2026-07-19. The machine-side twin is [disaster recovery](./disaster-recovery.md)
 (the school survives the Mac dying); this file is the people side: **the school runs for
 a fortnight with Finn unreachable.** Deputies: **Tom** (money, decisions), **Fenella**
 (phones, families, admin workflows — currently via the shared admin identity).
@@ -29,9 +29,9 @@ quietly. This file exists so a person notices.
    exist?" panel is written for exactly this moment) and **Workflows → Incoming
    messages** (mark handled; convert anything with dates to a planning card).
 4. **Weekly:** the seeded planning prompts (Monday scheduling, Friday reflection) say
-   what day it is. Follow **[`06-paying-tutors.md`](../workflows/finance/paying-tutors.md)**
+   what day it is. Follow the **[paying tutors workflow](../workflows/finance/paying-tutors.md)**
    on Wednesday — it is current, complete, and safe to follow literally.
-5. **When something breaks:** `DISASTER_RECOVERY.md` for data/machine incidents;
+5. **When something breaks:** [disaster recovery](./disaster-recovery.md) for data/machine incidents;
    `docs/operations/runbook.md` for per-credential "what breaks if" and recovery.
 6. **When in doubt, choose the action that can wait.** Every irreversible action in
    the dashboard (payment, pause completion, batch paid) is deliberately behind an
@@ -80,7 +80,7 @@ catalogue/Soundslice curation, brain-side onboarding, bridge surgery, anything i
    agreed fallback (e.g. tutors paid one cycle late with an explanation — say which).
 2. **Confirm Tom's email is in `ADMIN_ALLOWED_EMAILS`** (and decide whether Fenella
    keeps working through the shared identity until tutor/admin auth work happens —
-   already flagged in `DATA_PROTECTION_MAP.md`).
+   already flagged in the [data-protection map](../policies/data-protection.md)).
 3. **Fill the runbook's `FINN TO FILL IN` blanks** — each one (token sources, console
    locations, rotation procedures) is knowledge that currently exists only in your
    head; they are literally labelled continuity gaps. One session with the runbook

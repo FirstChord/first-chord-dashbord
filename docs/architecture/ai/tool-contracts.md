@@ -136,7 +136,8 @@ later; this is not an immediate enablement task. Before any future pilot sets
    changes get a warm welcome and route to Finn; ambiguity always produces a
    neutral acknowledgement that commits to nothing.
 4. **Retention.** `Proposals` rows hold the redacted evidence and the proposal
-   body; 12-month rolling prune proposed in `DATA_PROTECTION_MAP.md`.
+   body; a 12-month rolling prune is proposed in the
+   [data-protection map](../../policies/data-protection.md).
 
 Producer is human-triggered only (no cron), fails closed on validation, and the
 UI works identically with the flag off (buttons simply absent).

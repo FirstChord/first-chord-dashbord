@@ -62,9 +62,12 @@ Real billing amounts read from Stripe subscriptions, as opposed to the price-tab
 
 Comparing what Stripe actually collected in a month (`Stripe_Collected_Monthly`) against what the estimate said Stripe-managed students should bill. A growing gap means the model is drifting from reality — the "Estimate vs reality" panel on `/admin/finance`.
 
-## Placeholder healing (incoming inbox)
+## Capture replay identity (incoming inbox)
 
-A starred WhatsApp message captured without its text (older than the bridge cache) lands as a `needs_review` placeholder row. "Healing" replaces the placeholder with the real text — via a later bridge replay that recovered it, or the paste box on the inbox card — re-running classification/matching while keeping every human review decision.
+An inbound row is identified by `source + chat_id + external_message_id`. A
+repeated bridge post is therefore a no-op. Placeholder healing remains only as
+legacy compatibility; the active confirmed-group bridge does not create or
+recover starred-message placeholders.
 
 ## Eval fixture (incoming classifier)
 
@@ -72,11 +75,18 @@ The privacy-reviewed set of independent synthetic message cases (`tests/admin/fi
 
 ## Auto-capture (incoming inbox)
 
-The bridge posts every live text message from a dashboard-confirmed FC lesson group automatically (`source: whatsapp_group_auto`) — starring is no longer required for capture. Confirming/ignoring a group in the inbox UI is also its capture switch. School-side messages (own account or `INCOMING_STAFF_PHONES`) stamp open items as "Replied in WhatsApp" instead of creating rows; no-signal messages land pre-archived.
+The bridge posts live text/caption notifications from dashboard-confirmed FC
+lesson groups (`source: whatsapp_group_auto`). Starring is not a capture path.
+School-side messages stamp open items as reply evidence instead of creating
+rows; no-signal parent messages land pre-archived.
 
 ## Sheet census (data governance)
 
-A per-tab row-count reading taken during the fortnightly `npm run backup:sheets` run (`lib/admin/sheet-census.mjs` → `census.json` beside the manifest). It reports total rows, deltas since the last backup, and ranks the *watched* event-heavy tabs (`Incoming_Message_Inbox`, `Event_Log`, `Issue_Queue`, `Practice_Notes_Log`, `Payroll_Runs`, `WhatsApp_Group_Map`) by growth. Its purpose is to make the eventual Sheets→database migration an evidence-triggered decision: sustained growth on a watched tab is the signal to move that lane off Sheets. See `SHEETS_VS_DB_AUDIT.md`.
+A per-tab row-count reading taken during `npm run backup:sheets`
+(`lib/admin/sheet-census.mjs` → `census.json` beside the manifest). It reports
+row totals/deltas and ranks watched event-heavy tabs. Its purpose is to make any
+future store migration evidence-led. See
+[storage boundaries](../architecture/data/storage-boundary.md).
 
 ## Group-only student (tutor dashboard)
 
@@ -84,7 +94,7 @@ A student whose registry `instrument` is a group ensemble (currently `Ukulele Or
 
 ## Song object / song catalogue (student paths)
 
-A song as a reusable structured object in `lib/config/songs-catalogue.mjs` — title, artist, instruments, level, contentType, tags, tutor/student notes, and a nested `soundslice.scorehash` as the only Soundslice reference. The catalogue is **canonical and hand-curated** (not generated; edit it directly, unlike the 5 registry-derived config files). It ships in the client bundle, so it must never contain student names — a test enforces this. Soundslice URLs are derived exclusively in `lib/songs/catalogue-helpers.mjs`. Plan: `STUDENT_PATHS_PLAN.md`.
+A song as a reusable structured object in `lib/config/songs-catalogue.mjs` — title, artist, instruments, level, contentType, tags, tutor/student notes, and a nested `soundslice.scorehash` as the only Soundslice reference. The catalogue is **canonical and hand-curated** (not generated; edit it directly, unlike the five registry-derived config files). It ships in the client bundle, so it must never contain student names — a test enforces this. Soundslice URLs are derived exclusively in `lib/songs/catalogue-helpers.mjs`. See [student paths](../architecture/system/student-paths.md).
 
 ## Scorehash (Soundslice)
 

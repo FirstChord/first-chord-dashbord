@@ -143,6 +143,36 @@ for (const file of exactPathSources) {
   }
 }
 
+// Catch pre-migration bare filenames that ordinary Markdown-link checking
+// cannot resolve. History may quote old names; current-facing docs and source
+// comments should route readers to the intent-led tree.
+const retiredBareReferences = new Map([
+  ['STATE_TABS_SCHEMA.md', 'docs/architecture/data/state-tabs.md'],
+  ['OWNERSHIP_MATRIX.md', 'docs/architecture/data/ownership.md'],
+  ['OPERATIONS_RUNBOOK.md', 'docs/operations/runbook.md'],
+  ['AI_TOOL_CONTRACTS.md', 'docs/architecture/ai/tool-contracts.md'],
+  ['DATA_PROTECTION_MAP.md', 'docs/policies/data-protection.md'],
+  ['STUDENT_PATHS_PLAN.md', 'docs/architecture/system/student-paths.md'],
+  ['WHATSAPP_INCOMING_BRIDGE.md', 'docs/operations/integrations/whatsapp-incoming-bridge.md'],
+  ['06-paying-tutors.md', 'docs/workflows/finance/paying-tutors.md'],
+  ['SHEETS_VS_DB_AUDIT.md', 'docs/architecture/data/storage-boundary.md'],
+  ['DISASTER_RECOVERY.md', 'docs/operations/disaster-recovery.md'],
+  ['UI_CONVENTIONS.md', 'docs/policies/ui-conventions.md'],
+  ['COPY_AND_TONE.md', 'docs/policies/copy-and-tone.md'],
+  ['SONG_CATALOGUE_COVERAGE.md', 'docs/reference/song-catalogue-coverage.md'],
+  ['AI_RUNTIME_INTEGRATION.md', 'docs/architecture/ai/runtime-integration.md'],
+]);
+
+for (const file of exactPathSources) {
+  if (relative(file).startsWith('docs/history/')) continue;
+  const source = fs.readFileSync(file, 'utf8');
+  for (const [retiredName, replacement] of retiredBareReferences) {
+    if (source.includes(retiredName)) {
+      errors.push(`${relative(file)}: retired reference ${retiredName}; use ${replacement}`);
+    }
+  }
+}
+
 if (errors.length > 0) {
   console.error(`Documentation check failed with ${errors.length} issue${errors.length === 1 ? '' : 's'}:`);
   for (const error of [...new Set(errors)].sort()) console.error(`- ${error}`);

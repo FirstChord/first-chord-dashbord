@@ -1,114 +1,71 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: null
+last_verified: 2026-07-20
 ---
 # Hygiene And Secrets
 
-Last updated: 2026-06-11
+## Repository Boundary
 
-This note tracks trust-floor issues that affect deployment safety, future public writing, and new-agent continuity.
+Use `/Users/finnlemarinel/Desktop/FirstChord/music-school-dashboard` as the real
+repository. `/Users/finnlemarinel` is also a Git working tree with an old remote;
+a broad add/commit there could include unrelated personal files. Never commit
+from or alter that home-directory repository without Finn's explicit approval.
 
-## Home Directory Git Repo
+Before every commit, inspect `git status --short` and the staged diff. Never add
+`.env*`, provider tokens, OAuth files, local WhatsApp state/logs, or Sheets
+backups.
 
-`/Users/finnlemarinel` is currently also a git repository with remote:
+## Known Historical Exposures
 
-`https://github.com/FirstChord/first-chord-dashbord.git`
+- `lib/config/theta-credentials.js` used to be tracked. It is now generated,
+  ignored, and derived from the student registry, but old values remain in Git
+  history. Decide whether portal credentials/password policy require rotation.
+- `lib/mms-client.js` used to contain an MMS bearer/API-key token. Runtime now
+  reads `MMS_BEARER_TOKEN`, but the historical token should be rotated when
+  integrations can be smoke-tested safely.
+- the Practice Chat transcription relay currently returns its raw OpenAI key to
+  browsers. Treat the key as exposed and complete the staged server-side
+  transcription/rotation plan in a no-lessons window.
 
-This is risky because the home directory contains many unrelated personal/work files and nested project folders. A broad `git add`, `commit`, or `push` from `/Users/finnlemarinel` could accidentally stage sensitive or irrelevant files.
+Do not rewrite repository history casually. Rotate affected credentials and
+record the operational decision.
 
-Current recommendation:
+## Secret Rules
 
-- keep using `/Users/finnlemarinel/Desktop/FirstChord/music-school-dashboard` as the real repo
-- do not commit from `/Users/finnlemarinel`
-- remove or disable the home-directory remote only after Finn confirms nothing there needs preserving
+- Railway/provider consoles and the password manager own secret values; docs own
+  only variable names, scopes, symptoms, and recovery routes.
+- Keep local runtime values in ignored `.env.local`/tool-specific files.
+- Never expose a server secret through `NEXT_PUBLIC_*`, browser JSON, logs,
+  screenshots, fixtures, or error messages.
+- Provider keys use the minimum permissions required by their focused workflow.
+- A shared ingest/PWA secret is a coarse caller gate, not a user identity.
+- OpenAI pilots use a dedicated budget-capped project key. Do not reuse the
+  exposed Practice Chat relay key; understand that `store: false` does not remove
+  provider abuse-monitoring retention.
+- Suspected exposure means disable/rotate first, then inspect privacy-safe
+  metadata. Do not paste the secret into an incident note.
 
-Do not alter the home-directory git repo without explicit confirmation.
+The current variable inventory and rotation/smoke routes are in the
+[operations runbook](../operations/runbook.md). AI-specific scope and retention
+are in [runtime integration](../architecture/ai/runtime-integration.md).
 
-## Theta Credentials
+## Generated And Local Data
 
-`lib/config/theta-credentials.js` is generated and no longer tracked. It maps MMS IDs to Theta usernames, and the student portal treats username and password as the same value.
+Do not edit generated registry artifacts to mask upstream problems. Change
+`lib/config/students-registry.js` through the normal onboarding/archive path and
+regenerate. `lib/config/theta-credentials.js` stays ignored.
 
-Risk level: not banking-level, but still student login credentials in git. This also blocks clean future case-study/productisation work.
+Operational surfaces use explicit `is_test_student`/`isTestStudent` flags. Do
+not infer test records from names or delete provider/Sheets records automatically.
 
-Current state:
+`npm run backup:sheets` writes personal data under ignored `backups/sheets/`.
+WhatsApp auth/cache/log directories also contain credentials or parent content.
+Keep them private, apply the data-protection retention window, and use
+[disaster recovery](../operations/disaster-recovery.md) for restore handling.
 
-- `npm run generate-configs` writes `lib/config/theta-credentials.js` locally.
-- `predev`, `prebuild`, and `prevalidate` regenerate config from `lib/config/students-registry.js`.
-- `lib/config/theta-credentials.js` and `lib/config/theta-credentials.local.js` are ignored.
-- Git history still contains the old generated file; history was not rewritten.
+## Pre-Deploy Hygiene
 
-Remaining decision:
-
-- Decide whether Theta credential rotation or a student portal password-policy change is needed because old values remain in git history.
-
-Do not manually edit `lib/config/theta-credentials.js`; regenerate it from the registry.
-
-## MMS API Token Exposure
-
-`lib/mms-client.js` previously contained a hardcoded MMS bearer token/API-key JWT. That token is more sensitive than the Theta username file because it can grant API access to the MMS account.
-
-Current state:
-
-- the hardcoded token has been removed from code
-- MMS code now reads from `MMS_BEARER_TOKEN` / legacy `MMS_DEFAULT_TOKEN`
-- the old token remains in git history
-
-Pre-push/deploy blocker:
-
-1. Add `MMS_BEARER_TOKEN` to Railway before pushing. This may be the existing token if Finn has deliberately deferred rotation.
-2. Confirm local `.env.local` also has `MMS_BEARER_TOKEN`.
-3. Strongly recommended when operationally safe: rotate the exposed MMS API key/token in MMS, then update Railway/local env.
-4. After deploy, smoke-check `/admin/waiting`, `/admin/capacity`, schedule refresh, onboarding MMS actions, and one student portal page.
-
-## Test Students
-
-Operational surfaces now use an explicit test-student flag instead of name-based exclusions.
-
-Current state:
-
-- supported flags include `is_test_student` on the `Students` sheet and `isTestStudent` in the registry
-- `Test Studenty` is flagged in both the registry and the `Students` sheet
-- `Finn Le Marinel` is flagged in the `Students` sheet
-- overview, students list, issues, capacity cache health, planning student options, parent understanding, tutor absence, and the admin students API use the shared helper
-
-Do not delete external test rows automatically. Keep them explicitly flagged unless Finn decides to remove them from MMS/Sheets.
-
-## Secret Handling Rules
-
-- `.env*` files are ignored and should stay local/Railway-only.
-- Google OAuth/token files in the home directory are not repo artifacts.
-- Never paste live tokens, Stripe secrets, OAuth refresh tokens, or private sheet IDs into docs.
-- For docs and handovers, describe the variable name and owner, not the value.
-- The admin AI pilot uses `ADMIN_AI_OPENAI_API_KEY` only on the canonical admin
-  Railway service. Do not reuse the Practice Chat relay's `OPENAI_API_KEY`: that
-  relay key has a documented browser-exposure history and separate rotation
-  plan. Never prefix the admin key with `NEXT_PUBLIC_` or return it from a route.
-- Use a dedicated restricted OpenAI project key with Responses Write only and
-  every other endpoint set to None. `store: false` does not remove default
-  provider abuse-monitoring retention; the exact runtime and privacy boundary
-  is documented in `docs/architecture/ai/runtime-integration.md`.
-
-## Local Sheets Backups
-
-Operational Sheets backups now run through:
-
-```bash
-npm run backup:sheets
-```
-
-The backup writes ignored local CSV/JSON files under `backups/sheets/` and updates a dated Planning reminder for the next backup 14 days later.
-
-The local macOS schedule is installed with:
-
-```bash
-npm run install:backup-schedule
-```
-
-It creates:
-
-```text
-~/Library/LaunchAgents/com.firstchord.sheets-backup.plist
-```
-
-This keeps backup data local/private while still surfacing the next backup through the dashboard's Planning layer.
+Run `npm run hygiene:check`, inspect generated diffs after any config-generating
+command, and smoke every integration affected by a credential/config change.
+Never weaken a hygiene check to ship a secret-bearing diff.

@@ -1,209 +1,133 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: null
+last_verified: 2026-07-20
 ---
-# Tutor Absence To Pause Bridge
+# Tutor Absence And Pause Contract
 
 ## Purpose
 
-This document maps the workflow that turns cancelled tutor absences into structured pause planning.
+Tutor absences retain exact per-date evidence underneath while presenting the
+smallest safe human action above it. Cover, cancellation notice, payment work,
+and final confirmation remain distinct decisions.
 
-It exists because this logic is valuable and easy to misunderstand: a tutor can be away for a period, the dashboard stores exact dated absence records, but Finn/Tom should see one clear payment-pause action per affected student where possible.
+This guided notice flow applies to newly captured cards marked
+`Tutor absence notice planning: v1`; older records are not silently backfilled.
 
-## Operating Principle
+## State Ownership
 
-Keep precise operational records underneath, but collapse the visible action into the simplest safe shape.
-
-```text
-exact dated records underneath
-  -> grouped human-facing action on top
-  -> parked superseded cards, not deleted history
-```
-
-## Data Lanes
-
-| Lane | Owner | What It Means Here |
-| --- | --- | --- |
-| MMS calendar | MMS truth | Which lessons exist on which tutor/date. |
-| `Planning_Items` tutor absence cards | Dashboard workflow state | Human-captured "Tom is away on this date" work. |
-| `Tutor_Absence_State` | Dashboard workflow state | Per tutor/date decision: cover or cancel, affected lessons, message state. |
-| `Planning_Items` pause cards | Dashboard workflow state | Structured pause work for each affected student. |
-| `Planning_Progress_Log` | Dashboard append-only log | Evidence that a card was created, parked, or completed. |
-| `Event_Log` | Dashboard append-only log | Consequential payment expectation changes after human completion. |
-| Finance pause forecast | Derived context | Reads structured pause cards; ignores parked cards. |
-
-## End-To-End Flow
-
-```text
-Tutor away period
-  -> Planning previews MMS date range
-  -> keeps actual teaching dates only
-  -> writes one tutor-absence Planning card per teaching date
-
-Tutor-absence card
-  -> choose cover or cancel directly in Planning
-
-Newly captured tutor-absence card (notice plan v1)
-  -> becomes actionable about two weeks before the teaching date
-  -> cancellation creates an early parent-notice card for each affected student/block
-
-If cover
-  -> no pause Planning card is created
-  -> the dated absence stays in the short cover checklist for tutor/calendar/parent confirmation
-
-If cancel
-  -> writes/updates one Tutor_Absence_State row for that tutor/date
-  -> bridge scans that tutor's cancelled rows
-  -> creates structured pause Planning for affected students
-  -> dated absence leaves the direct-attention list
-
-Early notice card
-  -> copy/send the advance absence message manually
-  -> record that the initial notice was sent
-  -> does not change payment, the absence decision, or reconciliation
-
-One cancelled lesson for a student
-  -> single-date pause card
-
-Repeated weekly cancelled lessons for same student
-  -> grouped away-period pause card
-  -> older single-date/shorter-period cards parked
-
-Grouped pause card completed
-  -> human confirms pause tool was run
-  -> human confirms parent message was sent/copied
-  -> dashboard aligns payment_expectation if needed
-  -> Event_Log + Planning_Progress_Log record the completion
-  -> every linked dated tutor absence is marked resolved automatically
-  -> its original tutor-absence Planning capture card is marked done automatically
-```
-
-## Superseding Rule
-
-The dashboard only reshapes **still-active** generated cards. Completed, parked, or deliberately deferred cards are historical records and are never reopened or overwritten by a later tutor absence.
-
-When a better grouped card exists, it:
-
-1. creates a missing grouped away-period pause card, or refreshes the existing active one
-2. parks smaller **active** card(s)
-3. writes progress log notes explaining the parking
-4. leaves all rows visible in history
-
-Example:
-
-```text
-Pause Rosie Ward lesson on Mon, 6 Jul 2026
-  -> parked
-
-Pause Rosie Ward from Mon, 6 Jul 2026; returning Mon, 20 Jul 2026
-  -> parked
-
-Pause Rosie Ward from Mon, 6 Jul 2026; returning Mon, 27 Jul 2026
-  -> active
-```
-
-This is expected. The active card is the one Finn/Tom should complete.
-
-## Finance Rule
-
-Finance reads structured pause windows from `Planning_Items`.
-
-- active pause cards count
-- done pause cards still count, because done means the admin action was completed, not that the future pause is over
-- parked pause cards do not count
-
-This prevents old single cards and old shorter-period cards from double-counting the same absence.
-
-## Important Invariants
-
-- `Tutor_Absence_State` stays per dated tutor absence.
-- Parent messages can group by period, but the stored workflow state remains per date.
-- Cover decisions must not create pause cards.
-- Cancellation decisions can create pause cards.
-- The early notice and final payment confirmation are distinct messages: the former says what will happen; the latter is available only after payment handling is complete.
-- Only newly captured cards carrying `Tutor absence notice planning: v1` create early-notice cards. Existing absences are not backfilled or changed.
-- Cancelled dates are a hand-off to grouped pause cards, not a second payment/message checklist in the Tutor Absence workflow.
-- A cancelled date resolves only when every current linked pause card is done; a missing card is never treated as completion.
-- A student already marked `stripe_paused_expected` or explicitly marked payment-not-needed is skipped.
-- Parked cards are retained for audit; they are not active work and should not drive finance.
-- `Returning from date` means the first lesson/date back, not the last date to pause.
-
-## Code Map
-
-| Concern | File/function |
+| Lane | Meaning |
 | --- | --- |
-| Save tutor absence decision | `saveTutorAbsenceWorkflow()` in `lib/admin/tutor-absence.js` |
-| Bridge cancellation to pause cards | `createStructuredPausePlanningFromCancellation()` in `lib/admin/tutor-absence.js` |
-| Build single/grouped pause plans | `buildTutorAbsencePausePlanningBundle()` in `lib/admin/tutor-absence-helpers.mjs` |
-| Split repeated lessons into blocks | `splitCandidatesIntoBlocks()` in `lib/admin/tutor-absence-helpers.mjs` |
-| Single pause ID | `buildTutorAbsencePausePlanningId()` in `lib/admin/tutor-absence-helpers.mjs` |
-| Period pause ID | `buildTutorAbsencePausePeriodPlanningId()` in `lib/admin/tutor-absence-helpers.mjs` |
-| Parent message grouping | `buildTutorAbsenceCancellationMessageGroups()` in `lib/admin/tutor-absence-helpers.mjs` |
-| Finance forecast parser | `parsePauseWindowsFromPlanning()` in `lib/admin/pause-forecast.mjs` |
-| Planning card remove/park | `handleArchiveItem()` in `components/admin/AdminPlanningPageClient.js` |
+| MMS calendar | Lessons and current tutor/date truth |
+| `Planning_Items` tutor-absence cards | Human capture and dated work |
+| `Tutor_Absence_State` | Per-tutor/per-date cover or cancellation decision |
+| `Planning_Items` pause/notice cards | Grouped human-facing communication and payment work |
+| `Planning_Progress_Log` | Append-only workflow history |
+| `Event_Log` | Consequential payment-expectation audit |
+| Finance pause forecast | Derived view of structured, non-parked pause cards |
 
-## Tests
+## Normal Flow
 
-Relevant focused tests live in:
+```text
+capture tutor-away period
+  -> preview MMS and retain actual teaching dates
+  -> one absence record per tutor/date
+  -> around 14 days before: choose cover or cancel
 
-- `tests/admin/tutor-absence-helpers.test.mjs`
-- `tests/admin/pause-forecast.test.mjs`
+cover
+  -> confirm tutor, briefing, calendar and initial parent message
+  -> no payment-pause card
 
-The important behaviours to keep covered:
+cancel
+  -> send early notice that says what will happen
+  -> create/refresh structured student pause work
+  -> group repeated weekly cancellations where safe
+  -> nearer the lesson, complete payment action
+  -> send final confirmation saying what happened
+  -> close every linked dated absence only when its work is complete
+```
 
-- single cancelled lesson creates a single-date pause card
-- repeated weekly cancelled lessons create one away-period card
-- superseded single/shorter period cards are parked
-- fortnightly-looking or widely spaced gaps do not become one broad period accidentally
-- finance ignores parked pause cards
+The dashboard never sends the parent message or changes Stripe automatically.
+Copy/send, payment execution, and final confirmation are explicit human actions.
 
-## Live Verification
+## Timing
 
-Verified on 2026-06-25 with Tom's July 2026 cancellations.
+| Window | Expected work |
+| --- | --- |
+| 21+ days | quiet planning visibility |
+| 16–14 days | cover/cancel decision and initial parent notice |
+| 10 days or fewer | notice is overdue and shown as an exception |
+| about 5 days before first missed lesson | payment and final-confirmation work |
 
-Rosie Ward had:
+One-off, repeated, and summer absences use the same rules.
 
-- `Tutor_Absence_State` rows for 2026-07-06, 2026-07-13, and 2026-07-20
-- an original single pause card for 2026-07-06, now parked
-- an interim 2026-07-06 to 2026-07-20 card, now parked
-- an active grouped card: `Pause Rosie Ward from Mon, 6 Jul 2026; returning Mon, 27 Jul 2026`
+## Grouping And Superseding
 
-That is the intended behaviour.
+`Tutor_Absence_State` always stays per date. Consecutive weekly cancellations
+for the same student may become one away-period pause card. Widely spaced or
+fortnightly-looking dates must not be stretched into a broad period.
 
-## Manual Operating Guidance
+When a better active grouped card is created, smaller active cards are parked
+and a progress-log explanation is appended. Completed, parked, or deliberately
+deferred cards are never reopened or overwritten. History is not deleted.
 
-For a multi-week tutor absence:
+Finance counts active and done structured pause cards because `done` means the
+admin action occurred, not that the future pause ended. It ignores parked cards.
+`Returning from date` means the first lesson/date back.
 
-1. Capture the tutor absence period from Planning.
-2. Around two weeks before each actual teaching date, choose **Cover lessons** or **Cancel lessons → pause cards**.
-3. For cover, finish the short cover checklist and initial parent message in Tutor Absence.
-4. For cancellation, send and record the new early parent notice. It says the lesson will not run and that payment will be confirmed later.
-5. Let the dashboard build/park pause cards automatically, but complete their final payment/confirmation work closer to the missed lesson.
-6. Complete the final grouped pause card for each affected student, not the early single-date card. The dated absence cards then close themselves.
+## Fail-Loud Exceptions
 
-## Notice Timing and Rollout
+| Exception | Required behaviour |
+| --- | --- |
+| MMS cannot load | block capture/decision; never convert failure into “no lessons” |
+| MMS changed after capture | block notice/payment/final confirmation until the real date is reviewed |
+| multi-student MMS event | block automatic cover/cancel; verify every household and record manual completion |
+| payment already paused or not needed | create a non-pause final-confirmation card with no finance effect |
+| dates expand after notice | park the earlier open notice; label a replacement `Update:` if the old notice was completed |
+| cover changes to cancellation | create normal notice/pause work and check whether a cover correction is owed |
+| cancellation changes to cover | manually park/remove related pause work until a reconciliation tool exists |
 
-- **Target:** prepare/send the initial notice 14 days before the student's first affected lesson.
-- **Escalation:** treat 10 days as the latest normal notice point; this is an operating rule, not an automated payment action.
-- **Final payment action:** stays on the existing pause card, close to the missed lesson and subject to the payment tool's safe timing.
-- **No seasonal mode:** long summer absences use the same grouped-period rules as all other absences.
-- **Safe adoption:** only future capture cards carry the v1 marker. Current absence records, existing pause cards, payment expectations, and reconciliation inputs are deliberately left alone.
+No missing linked card is treated as completion. Cover never creates pause work.
+Students already `stripe_paused_expected` or explicitly payment-not-needed are
+excluded from new pause work.
 
-For the complete operating policy, fail-loud exceptions, reconciliation boundary and UI rules, see [Tutor Absence Safety and UX Contract](./absence-safety-contract.md).
+## Reconciliation Boundary
 
-If a cancellation later changes to cover, manually park/remove the related pause card until a reconciliation tool exists.
+Finance/reconciliation uses only dated cancellation/cover state, structured
+pause cards, and the student's own pause coverage. Early notices, manual
+group-event records, and no-payment final confirmations have `isPause: false`
+and cannot alter payment expectation or finance maths.
 
-### Reverse-order overlap (student's own pause arrives after the absence)
+If the student's own pause is recorded after a tutor cancellation, the earlier
+tutor-absence pause card can become redundant. Reconciliation remains
+order-independent and shows the student as covered. Use **Close redundant card**
+on `/admin/finance/reconciliation`; it is offered only after date coverage is
+established. Do not auto-retire it from incoming text or inferred overlap.
 
-If a tutor absence is recorded first and the student *then* says they're away for that period (and maybe longer), the bridge already created a "pause them for the absence dates" card for that student (the at-entry `payment_expectation` snapshot said active). The bridge does **not** auto-retire that card when the student later pauses on their own — it only fires on the tutor-absence save, and only drops/aligns students already paused *at entry time*.
+## UX And Safety Rules
 
-The reconciliation maths is unaffected (it recomputes from live state, order-independent — the student shows as "covered", net-new £0). To tidy the now-redundant card: open `/admin/finance/reconciliation`, filter to the tutor, and use **Close redundant card** on the covered student (`selectRedundantTutorAbsencePauseCards` + the page's guarded server action). It only appears for covered students, so the date-coverage is already guaranteed. Fully-automatic retirement (a sweep wired into the pause auto-sync) was considered and deferred — this one-click on the verification surface was preferred.
+1. One card asks for one thing: decide, tell early, complete payment, or confirm
+   the final outcome.
+2. Message-evidence cards cannot be completed by a generic status button.
+3. Every block names the reason and one safe next action.
+4. Early notice never claims payment happened; final copy appears only after the
+   payment/no-payment outcome is known.
+5. Later sync may create missing work or refresh an active generated card, but
+   never reopens completed, parked, or deferred work.
+6. Parent-facing grouping never replaces exact dated workflow truth.
 
-## What Not To Change Casually
+## Code And Verification
 
-- Do not replace per-date `Tutor_Absence_State` with one broad range row.
-- Do not make finance read `Tutor_Absence_State` directly unless you redesign payment-handling assumptions.
-- Do not hard-delete superseded planning cards.
-- Do not make grouped parent messages the only source of truth.
-- Do not auto-run Stripe from this bridge.
+- orchestration: `lib/admin/tutor-absence.js`
+- rules/IDs/grouping: `lib/admin/tutor-absence-helpers.mjs`
+- forecast parser: `lib/admin/pause-forecast.mjs`
+- focused tests: `tests/admin/tutor-absence-helpers.test.mjs`,
+  `tests/admin/pause-*.test.mjs`, and planning helper tests
+
+Coverage must include two-week/overdue targeting, schedule mismatch,
+multi-student blocks, single versus grouped dates, parked superseded cards,
+no-payment cards outside finance semantics, expanded-date update notices, and
+reverse-order overlap.
+
+Do not change the exact structured pause labels without checking
+`lib/admin/pause-forecast.mjs` and every parser consumer.
