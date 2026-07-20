@@ -9,7 +9,8 @@ thin, tool-free layer over deterministic context; it is not an agent framework.
 
 A second integration built on the same pattern exists as of 2026-07-19: the
 proposals-inbox reply lane (`lib/admin/incoming-reply-ai-{contract,provider}.mjs`,
-flag `ADMIN_AI_REPLY_DRAFT_ENABLED`, off pending sign-off). Its contract, its
+flag `ADMIN_AI_REPLY_DRAFT_ENABLED`, parked for a later experiment; sign-off is
+still required before enabling). Its contract, its
 free-text redaction decision and its deterministic cancellation-policy
 validator are documented in `AI_TOOL_CONTRACTS.md` under
 `incoming_reply_draft.propose`; everything below about key scope, provider data

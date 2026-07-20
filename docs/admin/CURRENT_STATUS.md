@@ -24,7 +24,8 @@ The admin overview is a strict meeting-start surface, not a complete status boar
 
 *Last working arc only — older work is in `git log --oneline` + the Learning Log.*
 
-- **Proposals inbox V1 (2026-07-19, built — flag off pending sign-off):** the
+- **Proposals inbox V1 (2026-07-19, built — deliberately parked for a later
+  experiment on 2026-07-20):** the
   first "machine prepares, human commits" lane: suggested WhatsApp replies on
   open inbox rows. Generic `Proposals` tab (keyed upsert, one open proposal per
   message — redrafts supersede; 7-day expiry and message-edit supersession
@@ -40,7 +41,8 @@ The admin overview is a strict meeting-start surface, not a complete status boar
   approve button whose label flips to "Approve edited" when the text diverges
   (the diff is the telemetry), plus Discard; approving copies to clipboard and
   logs to `Communication_Log` — the dashboard still never sends. **Nothing
-  reaches a model until Finn accepts the sign-off terms and sets
+  reaches a model unless a later pilot begins after Finn accepts the sign-off
+  terms and sets
   `ADMIN_AI_REPLY_DRAFT_ENABLED`** (`AI_TOOL_CONTRACTS.md` →
   `incoming_reply_draft.propose`). Why: the 2026-07-19 proposals-inbox Learning
   Log entry.
@@ -153,15 +155,16 @@ Open candidates (the Obsidian `08 Operations/Active Roadmap` is the fuller list)
   self-attested tutor and unblocks payroll Phase 3. Prerequisite: collect each
   tutor's login email. Full finding + the portal-notes sibling decision:
   [`DATA_PROTECTION_MAP.md`](DATA_PROTECTION_MAP.md).
-- **Proposals inbox V1 — BUILT, flag off, awaiting Finn sign-off (2026-07-19):**
-  the code is live but `ADMIN_AI_REPLY_DRAFT_ENABLED` stays unset until Finn
-  accepts the sign-off terms in `AI_TOOL_CONTRACTS.md` → "Incoming reply
-  drafting — sign-off notes" (headline: redacted parent message text reaches
-  OpenAI; roster-unknown names can survive redaction). To go live: accept the
-  terms, set the flag on Railway, redeploy. The cancellation policy's canonical
-  home: Obsidian `05 Policies/Lesson Cancellation Policy.md`. Gate for lane 2 /
-  overnight scheduling: ~70%+ used-unmodified over ~4 weeks
-  (`summariseProposalTelemetry` on the `Proposals` tab).
+- **Proposals inbox V1 — BUILT, deliberately parked for a later experiment
+  (decision 2026-07-20):** Finn chose to leave
+  `ADMIN_AI_REPLY_DRAFT_ENABLED` unset. This is not an immediate sign-off task.
+  The experiment is pinned in Obsidian `08 Operations/Active Roadmap.md`:
+  revisit as a small one-by-one pilot, initially avoid **Draft all open**, and
+  accept the privacy/policy terms in `AI_TOOL_CONTRACTS.md` before enabling.
+  The cancellation policy's canonical home is Obsidian `05 Policies/Lesson
+  Cancellation Policy.md`. Gate for any lane 2 / overnight scheduling remains
+  ~70%+ used-unmodified over ~4 weeks (`summariseProposalTelemetry` on the
+  `Proposals` tab).
   (captured 2026-07-19 — it previously existed only in Finn's head and the
   payroll attendance mapping).
 - Contact-role model before any message automation.

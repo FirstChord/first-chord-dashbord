@@ -1,11 +1,12 @@
 # PLAN: Proposals Inbox — V1 (drafted replies to incoming messages)
 
-*Designed and built 2026-07-19; feature flag remains off pending Finn's
-privacy/policy sign-off in `AI_TOOL_CONTRACTS.md`.
+*Designed and built 2026-07-19; deliberately parked for a later experiment on
+2026-07-20. The feature flag remains off, and Finn's privacy/policy sign-off in
+`AI_TOOL_CONTRACTS.md` is still required before any pilot.
 This is the first lane of the "machine prepares, human commits" pattern. Read
 `AI_RUNTIME_INTEGRATION.md` (the issue-briefing pilot is the architectural template)
-and `AI_TOOL_CONTRACTS.md` (this needs a new allowlist entry + sign-off before any
-model touches a real parent message).*
+and `AI_TOOL_CONTRACTS.md` (the allowlist entry remains gated by sign-off before
+any model touches a real parent message).*
 
 ## The shape (agreed)
 
