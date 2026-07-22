@@ -8,7 +8,7 @@ import { useState } from 'react';
 // (useFormStatus), and once saved the button reflects the persisted state with a
 // tick ("Reviewed ✓" / "Paid ✓") — the component remounts on revalidation, so
 // the tick is driven by the actual saved status, not a transient toast.
-export default function PayrollSaveButtons({ status, blocked = false }) {
+export default function PayrollSaveButtons({ status, blocked = false, attendanceChanged = false }) {
   const { pending } = useFormStatus();
   const [clicked, setClicked] = useState('');
 
@@ -36,6 +36,8 @@ export default function PayrollSaveButtons({ status, blocked = false }) {
       >
         {pending && clicked === 'reviewed' ? (
           <><Spinner /> Saving…</>
+        ) : attendanceChanged ? (
+          'Save corrected amount'
         ) : isReviewed ? (
           'Save changes'
         ) : (

@@ -11,6 +11,7 @@ export default function WisePayoutPanel({
   missingNames = [],
   amountConflicts = [],
   disputed = [],
+  mmsChanges = [],
   confirmations = null,
   payDate,
   downloadHref,
@@ -97,6 +98,21 @@ export default function WisePayoutPanel({
             ))}
           </ul>
           Resolve it with them, update and resend the statement if the figure changed, then ask them to confirm it.
+        </div>
+      ) : null}
+
+      {mmsChanges.length ? (
+        <div className="mt-3 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-950">
+          <p className="font-semibold">Held out of this batch — refreshed MMS attendance changed:</p>
+          <ul className="mt-1 list-disc pl-5">
+            {mmsChanges.map((entry) => (
+              <li key={entry.tutor}>
+                {entry.tutor}: {entry.reviewedAmount.toLocaleString('en-GB', { style: 'currency', currency: 'GBP' })}
+                {' → '}{entry.recalculatedAmount.toLocaleString('en-GB', { style: 'currency', currency: 'GBP' })}
+              </li>
+            ))}
+          </ul>
+          Check the lessons and save the corrected amount to include the tutor again.
         </div>
       ) : null}
 

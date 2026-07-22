@@ -6,9 +6,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { fetchAllPages } from '../../lib/admin/mms-pagination.mjs';
-import { buildPayrollPeriod } from '../../lib/admin/payroll-helpers.mjs';
+import { buildPayrollPeriod, buildPayrollPreview } from '../../lib/admin/payroll-helpers.mjs';
 import { buildWiseBatch, selectPayableReviewedRuns } from '../../lib/admin/wise-helpers.mjs';
-import { isPayrollRunReadyForPayment } from '../../lib/admin/payroll-workflow-helpers.mjs';
+import { getPayrollWorkflowState, isPayrollRunReadyForPayment } from '../../lib/admin/payroll-workflow-helpers.mjs';
 
 // Small deterministic PRNG (mulberry32) so property failures reproduce exactly.
 function rng(seed) {
@@ -97,6 +97,35 @@ test('consecutive payroll windows tile perfectly: no lost days, no double-counte
     assert.equal(next.periodStart, addDaysIso(window.periodEnd, 1),
       `${cadence} windows must tile across ${window.periodEnd} (DST-safe)`);
   }
+});
+
+test('fresh MMS corrections never silently replace a reviewed payroll amount', () => {
+  const preview = buildPayrollPreview({
+    payDate: '2026-07-01',
+    attendanceRows: [{
+      ID: 'atn_1',
+      EventID: 'evt_1',
+      TeacherID: 'tch_zMX5Jc',
+      AttendanceStatus: 'Present',
+      EventStartDate: '2026-06-24T16:00:00',
+      EventDuration: 60,
+      StudentID: 'sdt_1',
+    }],
+    savedRuns: [{
+      payroll_id: 'payroll_calum_2026-06-24_2026-06-30',
+      status: 'reviewed',
+      lesson_count: '0',
+      teaching_minutes: '0',
+      expected_amount: '0',
+      final_amount: '0',
+    }],
+  });
+  const calum = preview.rows.find((row) => row.tutorShortName === 'Calum');
+
+  assert.equal(calum.attendanceChanged, true);
+  assert.equal(calum.finalAmount, 0, 'the reviewed ledger amount stays frozen until an explicit save');
+  assert.ok(calum.recalculatedFinalAmount > 0, 'fresh MMS attendance still produces the corrected calculation');
+  assert.equal(getPayrollWorkflowState(calum).readyForPayment, false, 'the UI must return the corrected run to review');
 });
 
 // ---------- Wise batch ----------

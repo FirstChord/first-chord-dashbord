@@ -300,7 +300,8 @@ function CollapsibleSlotList({ title, slots = [], empty = 'None', note = '' }) {
 }
 
 function PayrollTutorCard({ row, payDate }) {
-  const calculatedFinal = Math.round((row.expectedAmount + row.adjustmentAmount) * 100) / 100;
+  const calculatedFinal = row.recalculatedFinalAmount
+    ?? Math.round((row.expectedAmount + row.adjustmentAmount) * 100) / 100;
   const owed = row.owedAmount ?? (row.status === 'paid' ? 0 : (row.finalAmount || calculatedFinal));
   const basisLabel = { since_paid: 'since last paid', first_run: 'default window', override: 'custom window' }[row.windowBasis] || row.windowBasis || '';
   const reviewPast = (row.reviewSlots || []).filter((slot) => slot.timing === 'past');
@@ -383,6 +384,15 @@ function PayrollTutorCard({ row, payDate }) {
           {reviewUpcoming.length ? ` (${reviewUpcoming.length} more upcoming — those resolve themselves.)` : ''}
         </div>
       ) : null}
+      {row.attendanceChanged ? (
+        <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-950">
+          <p className="font-semibold">MMS attendance changed after this amount was reviewed.</p>
+          <p className="mt-1">
+            Reviewed amount: {formatMoney(row.finalAmount)} · refreshed calculation: {formatMoney(calculatedFinal)}.
+            Check the lesson detail, then save the corrected amount before paying or resending the statement.
+          </p>
+        </div>
+      ) : null}
       {row.tutorResponse === 'confirmed' ? (
         <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800">
           Confirmed ✓ by tutor{row.tutorRespondedAt ? ` · ${formatPayrollDate(row.tutorRespondedAt)}` : ''}.
@@ -454,7 +464,11 @@ function PayrollTutorCard({ row, payDate }) {
               <option value="confirmation">Tutor confirmation required</option>
             </select>
           </label>
-          <PayrollSaveButtons status={row.status} blocked={row.status === 'draft' && Boolean(reviewPast.length || row.overlapsPaid)} />
+          <PayrollSaveButtons
+            status={row.status}
+            attendanceChanged={row.attendanceChanged}
+            blocked={row.status === 'draft' && Boolean(reviewPast.length || row.overlapsPaid)}
+          />
         </div>
         <details className="group mt-3 border-t border-slate-200 pt-3">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-slate-500">
@@ -550,7 +564,8 @@ export default async function AdminPayrollPage({ searchParams }) {
   // time — exactly the cost the cache exists to avoid. Must sit outside the try:
   // redirect() signals by throwing, and the catch above would swallow it.
   if (forceRefresh && !loadError) {
-    redirect(`/admin/finance/payroll?${buildPayrollQuery(params)}`);
+    const cleanQuery = buildPayrollQuery(params);
+    redirect(`/admin/finance/payroll?${[cleanQuery, 'refreshed=1'].filter(Boolean).join('&')}`);
   }
 
   const preview = buildPayrollPreview({
@@ -565,10 +580,24 @@ export default async function AdminPayrollPage({ searchParams }) {
   // the Wise batch already exclude salary, so this is display-only.
   const activeRows = addPauseEvidenceToPayrollRows(preview.rows, studentRows, pauseRows)
     .filter((row) => row.payModel !== 'salary');
+  // A refreshed correction must go back through the existing human save step.
+  // Hold every saved row for that tutor out of this rendered Wise batch so an
+  // older duplicate window cannot become the fallback payment by accident.
+  const attendanceChangedRows = activeRows.filter((row) => row.attendanceChanged);
+  const heldTutorKeys = new Set(attendanceChangedRows.map((row) => `${row.tutorShortName || row.tutor}`.trim().toLowerCase()));
+  const heldPayrollIds = savedRuns
+    .filter((row) => heldTutorKeys.has(`${row.tutor_short_name ?? row.tutorShortName ?? row.tutor ?? row.Tutor ?? ''}`.trim().toLowerCase()))
+    .map((row) => `${row.payroll_id ?? row.payrollId ?? ''}`.trim())
+    .filter(Boolean);
+  const heldPayrollIdSet = new Set(heldPayrollIds);
   // Wise batch comes straight from saved reviewed rows (window-independent), so
   // a tutor reviewed under an adjusted window still lands in the CSV.
-  const { rows: payableRows, amountConflicts, disputed } = selectPayableReviewedRuns(savedRuns);
+  const { rows: payableRows, amountConflicts, disputed } = selectPayableReviewedRuns(
+    savedRuns.filter((row) => !heldPayrollIdSet.has(`${row.payroll_id ?? row.payrollId ?? ''}`.trim())),
+  );
   const wiseBatch = buildWiseBatch({ rows: payableRows, wiseByKey: parseTutorWise(tutorWiseRows) });
+  const wiseCsvParams = new URLSearchParams({ payDate });
+  if (heldPayrollIds.length) wiseCsvParams.set('excludePayrollIds', heldPayrollIds.join(','));
   // Tutor confirmation tally across reviewed (unpaid) rows — the "am I informed" surface.
   const reviewedRows = preview.rows.filter((row) => row.status === 'reviewed');
   const confirmationRows = reviewedRows.filter((row) => row.paymentRoute === 'confirmation');
@@ -610,16 +639,23 @@ export default async function AdminPayrollPage({ searchParams }) {
         </div>
       </header>
 
-      <div className="flex justify-end">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs text-slate-500">Changed attendance in MMS? Refresh before reviewing the amount.</p>
         <Link
           href={`/admin/finance/payroll?${[buildPayrollQuery(params), 'refresh=1'].filter(Boolean).join('&')}`}
           prefetch={false}
-          className="text-sm font-medium text-slate-500 hover:text-slate-900"
+          className="inline-flex items-center rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-semibold text-blue-800 shadow-sm hover:bg-blue-100"
           title="Use after recording attendance in MMS"
         >
-          Refresh from MMS
+          ↻ Refresh MMS &amp; recalculate
         </Link>
       </div>
+
+      {`${params.refreshed || ''}` === '1' ? (
+        <section className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900" role="status">
+          MMS attendance refreshed. Draft totals are recalculated; any reviewed amount affected by a correction is marked below for you to check and save.
+        </section>
+      ) : null}
 
       {loadError ? (
         <section className="rounded-[1.6rem] border border-rose-200 bg-rose-50 p-5 text-sm text-rose-900">
@@ -650,10 +686,15 @@ export default async function AdminPayrollPage({ searchParams }) {
             totalLabel={formatMoney(wiseBatch.totalAmount)}
             missingNames={wiseBatch.missing.map((entry) => entry.tutor).filter(Boolean)}
             payDate={payDate}
-            downloadHref={`/admin/finance/payroll/wise-csv?payDate=${payDate}`}
+            downloadHref={`/admin/finance/payroll/wise-csv?${wiseCsvParams.toString()}`}
             payrollIds={wiseBatch.includedPayrollIds}
             amountConflicts={amountConflicts}
             disputed={disputed}
+            mmsChanges={attendanceChangedRows.map((row) => ({
+              tutor: row.tutor,
+              reviewedAmount: row.finalAmount,
+              recalculatedAmount: row.recalculatedFinalAmount,
+            }))}
             confirmations={confirmations}
             markBatchPaidAction={markBatchPaidAction}
             embedded

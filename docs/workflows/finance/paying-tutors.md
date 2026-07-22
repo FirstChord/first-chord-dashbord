@@ -40,8 +40,15 @@ Nothing on the payroll page sends money or WhatsApp messages automatically.
      payroll may prioritise the £0 choice. This is still a human decision.
 
    These buttons write to the exact MMS attendance row, invalidate the payroll
-   attendance cache and refresh the figure. Use **Refresh from MMS** after an
-   attendance change made outside the dashboard.
+   attendance cache and refresh the figure. After an attendance change made
+   outside the dashboard, use **Refresh MMS & recalculate**. The page confirms
+   when fresh MMS data has loaded. Draft figures update immediately; if a run
+   was already reviewed, the frozen amount remains visible alongside the new
+   calculation until **Save corrected amount** is clicked. That explicit save
+   preserves the review boundary and clears any stale tutor confirmation when
+   the statement changed. A reviewed tutor with detected MMS changes is held
+   out of the visible Wise batch and its generated CSV until the correction is
+   checked and saved.
 4. Check the period, lesson detail, total, adjustment, notes and invoice status.
 5. Choose the payment route:
    - **Pay normally · confirmation optional** lets a reviewed row enter the Wise

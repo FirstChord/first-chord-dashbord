@@ -21,13 +21,24 @@ export async function GET(request) {
 
   const { searchParams } = new URL(request.url);
   const payDate = `${searchParams.get('payDate') || nextWednesday()}`.slice(0, 10);
+  // The payroll review page supplies the saved IDs held because an explicit MMS
+  // refresh found attendance drift. Exclusion-only input cannot add an unreviewed
+  // row; it keeps the downloaded CSV aligned with the visible reviewed batch.
+  const excludedPayrollIds = new Set(
+    `${searchParams.get('excludePayrollIds') || ''}`
+      .split(',')
+      .map((id) => id.trim())
+      .filter(Boolean),
+  );
 
   const [savedRuns, tutorWiseRows] = await Promise.all([
     getPayrollRunRows(),
     getTutorWiseRows(),
   ]);
 
-  const { rows } = selectPayableReviewedRuns(savedRuns);
+  const { rows } = selectPayableReviewedRuns(savedRuns.filter((row) => (
+    !excludedPayrollIds.has(`${row.payroll_id ?? row.payrollId ?? ''}`.trim())
+  )));
   const { csvRows } = buildWiseBatch({
     rows,
     wiseByKey: parseTutorWise(tutorWiseRows),

@@ -29,6 +29,12 @@ test('disputes and attendance exceptions take precedence over payment readiness'
   assert.equal(getPayrollWorkflowState({ status: 'paid' }).key, 'paid');
 });
 
+test('a refreshed MMS correction sends a reviewed run back for an explicit save', () => {
+  const state = getPayrollWorkflowState({ status: 'reviewed', paymentRoute: 'normal', attendanceChanged: true });
+  assert.equal(state.key, 'mms_changed');
+  assert.equal(state.readyForPayment, false);
+});
+
 test('material statement changes require a fresh tutor response', () => {
   const existing = {
     period_start: '2026-07-01',

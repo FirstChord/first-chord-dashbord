@@ -264,6 +264,64 @@ test('buildPayrollPreview overlays saved reviewed/paid state', () => {
   assert.equal(calum.invoiceStatus, 'received');
 });
 
+test('a reviewed run exposes corrected MMS attendance without silently replacing the frozen amount', () => {
+  const preview = buildPayrollPreview({
+    payDate: '2026-07-01',
+    tutorPay: parseTutorPay([{ tutor: 'Calum', hourly_rate: '24', pay_model: 'hourly' }]),
+    attendanceRows: [
+      attendance({ EventID: 'evt_1', EventDuration: 30 }),
+      attendance({ EventID: 'evt_2', EventStartDate: '2026-06-25T16:00:00', EventDuration: 30 }),
+    ],
+    savedRuns: [{
+      payroll_id: 'payroll_calum_2026-06-24_2026-06-30',
+      status: 'reviewed',
+      lesson_count: '1',
+      teaching_minutes: '30',
+      expected_amount: '12',
+      final_amount: '12',
+    }],
+  });
+  const calum = preview.rows.find((row) => row.tutorShortName === 'Calum');
+  assert.equal(calum.attendanceChanged, true);
+  assert.equal(calum.expectedAmount, 24);
+  assert.equal(calum.recalculatedFinalAmount, 24);
+  assert.equal(calum.finalAmount, 12, 'the reviewed amount remains frozen until the admin saves it');
+});
+
+test('matching reviewed attendance and paid historical runs are not marked as changed', () => {
+  const base = {
+    payDate: '2026-07-01',
+    tutorPay: parseTutorPay([{ tutor: 'Calum', hourly_rate: '24', pay_model: 'hourly' }]),
+    attendanceRows: [attendance({ EventDuration: 30 })],
+  };
+  const matching = buildPayrollPreview({
+    ...base,
+    savedRuns: [{
+      payroll_id: 'payroll_calum_2026-06-24_2026-06-30',
+      status: 'reviewed',
+      lesson_count: '1',
+      teaching_minutes: '30',
+      expected_amount: '12',
+      final_amount: '12',
+    }],
+  }).rows.find((row) => row.tutorShortName === 'Calum');
+  assert.equal(matching.attendanceChanged, false);
+
+  const paid = buildPayrollPreview({
+    ...base,
+    attendanceRows: [],
+    savedRuns: [{
+      payroll_id: 'payroll_calum_2026-06-24_2026-06-30',
+      status: 'paid',
+      lesson_count: '1',
+      teaching_minutes: '30',
+      expected_amount: '12',
+      final_amount: '12',
+    }],
+  }).rows.find((row) => row.tutorShortName === 'Calum');
+  assert.equal(paid.attendanceChanged, false);
+});
+
 test('normalisePayrollRunRow parses sheet rows', () => {
   const row = normalisePayrollRunRow({
     payroll_id: 'p1',
@@ -275,4 +333,3 @@ test('normalisePayrollRunRow parses sheet rows', () => {
   assert.equal(row.expectedAmount, 12);
   assert.equal(row.status, 'paid');
 });
-
