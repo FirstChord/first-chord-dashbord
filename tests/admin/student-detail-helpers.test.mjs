@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  STUDENT_INSTRUMENT_OPTIONS,
   formatDateTime,
   formatTargetDate,
   lifecycleClasses,
@@ -10,6 +11,11 @@ import {
   noteStatusClasses,
   notePreview,
 } from '../../lib/admin/student-detail-helpers.mjs';
+
+test('student profile offers electric guitar as a distinct registry instrument', () => {
+  assert.ok(STUDENT_INSTRUMENT_OPTIONS.includes('Electric Guitar'));
+  assert.ok(STUDENT_INSTRUMENT_OPTIONS.includes('Guitar'));
+});
 
 test('formatDateTime: blank → em dash, invalid → input, valid → includes year', () => {
   assert.equal(formatDateTime(''), '—');

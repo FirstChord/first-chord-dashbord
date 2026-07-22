@@ -5,14 +5,22 @@ import {
   generateFcStudentId,
   normaliseExperienceLevel,
   normaliseInstrument,
+  normaliseTeachingInstrument,
 } from '../../lib/admin/fc-helpers.mjs';
 
 test('normaliseInstrument maps common aliases into canonical labels', () => {
   assert.equal(normaliseInstrument('Keyboard lessons'), 'Piano');
   assert.equal(normaliseInstrument('Uke starter'), 'Ukulele');
   assert.equal(normaliseInstrument('Electric bass'), 'Bass');
+  assert.equal(normaliseInstrument('Electric Guitar lessons'), 'Electric Guitar');
   assert.equal(normaliseInstrument('Voice and performance'), 'Singing');
   assert.equal(normaliseInstrument('Acoustic Guitar'), 'Guitar');
+});
+
+test('electric guitar keeps its song-shelf identity but uses the guitar tutor lane', () => {
+  assert.equal(normaliseInstrument('Electric Guitar'), 'Electric Guitar');
+  assert.equal(normaliseTeachingInstrument('Electric Guitar'), 'Guitar');
+  assert.equal(normaliseTeachingInstrument('Acoustic Guitar'), 'Guitar');
 });
 
 test('normaliseExperienceLevel handles user-friendly onboarding language', () => {
@@ -29,4 +37,3 @@ test('generateFcStudentId is deterministic for trimmed, case-insensitive inputs'
   assert.equal(a, b);
   assert.match(a, /^fc_std_[a-f0-9]{8}$/);
 });
-

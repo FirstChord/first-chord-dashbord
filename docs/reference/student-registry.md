@@ -79,6 +79,12 @@ Escape apostrophes and backslashes using the same rules as
 `lib/admin/registry-helpers.mjs`; do not hand-invent an FC ID or friendly URL when
 the onboarding helpers can generate them.
 
+For an existing student, edit **Instrument** on `/admin/students/[mmsId]`. That
+single save deliberately aligns the Students sheet and this registry field. Use
+the exact `Electric Guitar` option for the electric song catalogue; `Guitar`
+selects the acoustic catalogue. The production registry commit triggers the
+normal deployment path, whose prebuild regenerates `lib/config/instruments.js`.
+
 ## Tutor changes
 
 Changing `tutor` in the registry does not move lessons or alter the live tutor

@@ -8,6 +8,7 @@ import { labelCommunicationCategory } from '@/lib/admin/communications-helpers.m
 import PracticeTimelineSection from '@/components/admin/PracticeTimelineSection';
 import {
   PAYMENT_EXPECTATION_OPTIONS,
+  STUDENT_INSTRUMENT_OPTIONS,
   formatDateTime,
   formatTargetDate,
   lifecycleClasses,
@@ -17,7 +18,6 @@ import {
   notePreview,
 } from '@/lib/admin/student-detail-helpers.mjs';
 
-const INSTRUMENT_OPTIONS = ['Guitar', 'Piano', 'Bass', 'Singing', 'Ukulele', 'Ukulele Orchestra'];
 const PAYMENT_MODE_OPTIONS = [
   { value: 'stripe', label: 'Stripe' },
   { value: 'manual', label: 'Manual' },
@@ -104,6 +104,8 @@ export default function AdminStudentDetailClient({
   function handleSubmit(event) {
     event.preventDefault();
     setServerState({ error: '', success: '' });
+    const instrumentChanged = form.instrument !== student.instrument
+      || form.instrument !== (student.registry?.instrument || '');
 
     startTransition(async () => {
       const response = await fetch(`/api/admin/students/${student.mmsId}`, {
@@ -137,7 +139,12 @@ export default function AdminStudentDetailClient({
         soundsliceUrl: data.student.registry?.soundsliceUrl || '',
         thetaUsername: data.student.registry?.thetaUsername || '',
       });
-      setServerState({ error: '', success: 'Student details saved.' });
+      setServerState({
+        error: '',
+        success: instrumentChanged
+          ? 'Instrument saved. The tutor song shelf will update after the dashboard finishes updating.'
+          : 'Student details saved.',
+      });
     });
   }
 
@@ -1061,10 +1068,13 @@ export default function AdminStudentDetailClient({
                   ))}
                 </Select>
               </Field>
-              <Field label="Instrument">
+              <Field
+                label="Instrument"
+                hint="Updates the student record and controls which songs appear on the tutor dashboard."
+              >
                 <Select value={form.instrument} onChange={(event) => updateField('instrument', event.target.value)}>
                   <option value="">Select instrument</option>
-                  {INSTRUMENT_OPTIONS.map((instrument) => (
+                  {STUDENT_INSTRUMENT_OPTIONS.map((instrument) => (
                     <option key={instrument} value={instrument}>
                       {instrument}
                     </option>

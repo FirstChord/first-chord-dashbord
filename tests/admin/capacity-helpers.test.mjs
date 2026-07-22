@@ -259,6 +259,29 @@ test('buildWaitingCapacityMatches suggests only instrument-compatible free slots
   ]);
 });
 
+test('electric-guitar students match tutors in the general guitar teaching lane', () => {
+  const guitarSlot = normaliseFreeCalendarSlot({
+    ID: 'evt_electric_guitar',
+    StartDate: '2026-05-18T16:30:00',
+    Duration: 30,
+    TeacherID: 'tch_guitar',
+    Teacher: { DisplayName: 'Scott Brice' },
+    EventCategory: { Name: 'Free' },
+  });
+
+  const [student] = buildWaitingCapacityMatches({
+    waitingStudents: [{ mmsId: 'sdt_electric', instruments: ['Electric Guitar'] }],
+    freeSlots: [guitarSlot],
+    tutors: [
+      { fullName: 'Scott Brice', teacherId: 'tch_guitar', instruments: ['guitar'] },
+    ],
+  });
+
+  assert.equal(student.capacityMatchStatus, 'matched');
+  assert.equal(student.capacityMatches.length, 1);
+  assert.deepEqual(student.capacityMatches[0].matchedInstruments, ['guitar']);
+});
+
 test('buildWaitingCapacityMatches includes Fennella for singing free slots', () => {
   const [fennellaSlot] = [
     normaliseFreeCalendarSlot({
