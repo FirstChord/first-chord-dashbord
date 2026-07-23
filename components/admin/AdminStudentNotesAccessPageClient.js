@@ -449,7 +449,7 @@ export default function AdminStudentNotesAccessPageClient({
                   <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
                     <h3 className="font-semibold text-emerald-950">5. Activate and complete</h3>
                     <p className="mt-2 text-sm text-emerald-900">
-                      Activation locks only Student Voice notes. The profile link and everything else stay unchanged.
+                      Activation locks only Practice Chat notes. The profile link and everything else stay unchanged.
                     </p>
                     <button
                       type="button"

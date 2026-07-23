@@ -5,7 +5,7 @@ export default function StudentNotes({ notes, notesSuccess, studentName = '' }) 
     return (
       <div className="bg-white rounded-xl p-6 shadow-md border border-[#2F6B3D]/25">
         <h2 className="text-xl font-bold text-gray-800 mb-4">
-          Your Recent Lesson Notes
+          Practice Chat
         </h2>
         <p className="text-gray-600">
           No lesson notes available yet.
@@ -31,7 +31,7 @@ export default function StudentNotes({ notes, notesSuccess, studentName = '' }) 
   return (
     <div className="bg-white rounded-xl p-6 shadow-md border border-[#2F6B3D]/25">
       <h2 className="text-xl font-bold text-gray-800 mb-4">
-        Your Recent Lesson Notes
+        Practice Chat
       </h2>
 
       <div className="border-l-4 border-[#2F6B3D] pl-4">

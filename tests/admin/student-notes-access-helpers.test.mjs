@@ -26,6 +26,7 @@ test('builds the WhatsApp description and family message with the code', () => {
   });
   assert.equal(buildNotesGroupDescription('otter-27'), 'First Chord notes code: otter-27');
   assert.match(message, /Ayla’s First Chord dashboard/);
+  assert.match(message, /Practice Chat lesson notes/);
   assert.match(message, /otter-27/);
   assert.match(message, /WhatsApp group’s description/);
 });

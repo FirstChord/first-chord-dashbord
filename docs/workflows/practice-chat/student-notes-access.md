@@ -6,7 +6,7 @@ last_verified: 2026-07-23
 # Student notes access rollout
 
 Student profile URLs remain unchanged and their songs, links, and practice
-resources remain public. Only the Student Voice lesson-note panel is gated.
+resources remain public. Only the Practice Chat lesson-note panel is gated.
 
 ## Staff campaign
 

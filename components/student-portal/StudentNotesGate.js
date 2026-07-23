@@ -84,7 +84,7 @@ export default function StudentNotesGate({ studentId, studentName = '' }) {
   if (state.status === 'loading') {
     return (
       <section className="rounded-2xl bg-white/90 p-6 shadow-xl">
-        <h2 className="text-xl font-bold text-gray-900">Student Voice</h2>
+        <h2 className="text-xl font-bold text-gray-900">Practice Chat</h2>
         <p className="mt-3 text-sm text-gray-600">Loading lesson notes…</p>
       </section>
     );
@@ -94,7 +94,7 @@ export default function StudentNotesGate({ studentId, studentName = '' }) {
     return (
       <section className="rounded-2xl bg-white/95 p-6 shadow-xl">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Private lesson notes</p>
-        <h2 className="mt-2 text-2xl font-bold text-gray-900">Student Voice</h2>
+        <h2 className="mt-2 text-2xl font-bold text-gray-900">Practice Chat</h2>
         <p className="mt-3 text-sm leading-6 text-gray-600">
           Enter the notes code from your First Chord WhatsApp group description. You’ll normally only need to do this once on this device.
         </p>
@@ -131,7 +131,7 @@ export default function StudentNotesGate({ studentId, studentName = '' }) {
   if (state.status === 'unavailable') {
     return (
       <section className="rounded-2xl bg-white/90 p-6 shadow-xl">
-        <h2 className="text-xl font-bold text-gray-900">Student Voice</h2>
+        <h2 className="text-xl font-bold text-gray-900">Practice Chat</h2>
         <p className="mt-3 text-sm text-gray-600">{state.message}</p>
         <button type="button" onClick={loadNotes} className="mt-4 rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700">
           Try again

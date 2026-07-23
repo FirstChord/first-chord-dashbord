@@ -39,7 +39,7 @@ When a store or purpose is added there, update this map in the same change.
    notes, and capability links without persistent tutor identity. The recommended
    fix is tutor-scoped Google login/allow-list before adding broader sensitive
    reads or writes.
-2. Student portal names/paths remain guessable, but Student Voice notes now load
+2. Student portal names/paths remain guessable, but Practice Chat notes now load
    separately and can be moved one family at a time behind a memorable code. A
    missing rollout row preserves legacy public notes during transition; a failed
    access-state read fails closed. Complete the rollout campaign and explain this
