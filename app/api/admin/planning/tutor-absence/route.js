@@ -54,7 +54,10 @@ export async function POST(request) {
       if (!card) return Response.json({ error: 'Planning card was not found' }, { status: 404 });
       const absenceIds = absenceIdsFromCard(card);
       if (!absenceIds.length) return Response.json({ ready: true, reviews: [] });
-      const reviews = await Promise.all(absenceIds.map((absenceId) => getTutorAbsenceScheduleReview({ absenceId })));
+      const reviews = await Promise.all(absenceIds.map((absenceId) => getTutorAbsenceScheduleReview({
+        absenceId,
+        studentMmsId: card.linkedStudentId || '',
+      })));
       const blocked = reviews.find((review) => !review.ready);
       return Response.json({ ready: !blocked, reviews, error: blocked?.message || '' }, { status: blocked ? 409 : 200 });
     } catch (error) {

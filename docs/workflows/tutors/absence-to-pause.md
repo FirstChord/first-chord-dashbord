@@ -115,6 +115,10 @@ established. Do not auto-retire it from incoming text or inferred overlap.
 5. Later sync may create missing work or refresh an active generated card, but
    never reopens completed, parked, or deferred work.
 6. Parent-facing grouping never replaces exact dated workflow truth.
+7. A student-linked notice, payment, or final-confirmation card verifies that
+   student's saved lesson against live MMS. A changed lesson for another
+   household on the same tutor/date blocks that household's card, not every
+   student's otherwise-current pause work.
 
 ## Code And Verification
 

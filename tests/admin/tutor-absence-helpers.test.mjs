@@ -13,6 +13,7 @@ import {
   formatTutorAbsenceDate,
   isTutorAbsencePaymentHandled,
   normaliseTutorAbsenceEvent,
+  scopeTutorAbsenceLessonSnapshots,
   selectRedundantTutorAbsencePauseCards,
   summariseTutorAbsenceState,
   shouldSyncGeneratedTutorAbsencePlanningItem,
@@ -332,6 +333,31 @@ test('schedule snapshot comparison fails loud for changed lessons and multi-stud
     expectedLessons: [{ ...expected[0], studentCount: 2 }],
     liveLessons: expected,
   }).reason, 'group_lesson');
+});
+
+test('student-scoped schedule review ignores another household changing on the same tutor absence date', () => {
+  const expectedLessons = [
+    { eventId: 'evt_ayla', studentMmsId: 'sdt_ayla', lessonDate: '2026-07-25', lessonTime: '15:00' },
+    { eventId: 'evt_evan', studentMmsId: 'sdt_evan', lessonDate: '2026-07-25', lessonTime: '15:30' },
+  ];
+  const liveLessons = [
+    expectedLessons[0],
+    { ...expectedLessons[1], lessonTime: '13:00' },
+  ];
+
+  const aylaLessons = scopeTutorAbsenceLessonSnapshots({
+    expectedLessons,
+    liveLessons,
+    studentMmsId: 'sdt_ayla',
+  });
+  const evanLessons = scopeTutorAbsenceLessonSnapshots({
+    expectedLessons,
+    liveLessons,
+    studentMmsId: 'sdt_evan',
+  });
+
+  assert.equal(compareTutorAbsenceLessonSnapshots(aylaLessons).ready, true);
+  assert.equal(compareTutorAbsenceLessonSnapshots(evanLessons).reason, 'schedule_changed');
 });
 
 test('already-paused tutor-absence lessons get a final confirmation card, not a finance pause card', () => {
