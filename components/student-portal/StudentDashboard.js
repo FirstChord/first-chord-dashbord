@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import StudentNotes from './StudentNotes';
+import StudentNotesGate from './StudentNotesGate';
 import StudentLinks from './StudentLinks';
 import StudentSongs from './StudentSongs';
 import HeaderGreenery from '@/components/tutor-dashboard/HeaderGreenery';
@@ -78,11 +78,7 @@ export default function StudentDashboard({ student, assignedSongs = [] }) {
         <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
           {/* Notes Panel - Left Side (wider) */}
           <div className="lg:col-span-2">
-            <StudentNotes
-              notes={student.notes}
-              notesSuccess={student.notesSuccess}
-              studentName={student.name}
-            />
+            <StudentNotesGate studentId={student.id} studentName={student.name} />
           </div>
           
           {/* Links Panel - Right Side (narrower) */}

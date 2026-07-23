@@ -20,7 +20,7 @@ export default async function RootStudentPage({ params }) {
     notFound();
   }
   
-  // Get student data (includes validation and notes)
+  // Get public student data. Notes load separately through the access gate.
   const studentData = await getStudentData(studentId);
   
   // If student is not found or not authorized, return 404
@@ -65,6 +65,10 @@ export async function generateMetadata({ params }) {
   
   return {
     title: `${studentData.name}'s Music Dashboard`,
-    description: `Personal music dashboard for ${studentData.name} - lesson notes, practice links, and more!`
+    description: `Personal music dashboard for ${studentData.name} - practice links, songs, and more!`,
+    robots: {
+      index: false,
+      follow: false,
+    },
   };
 }

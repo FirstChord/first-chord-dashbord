@@ -14,6 +14,7 @@ import {
   SONG_OUTCOMES_HEADERS,
   SONG_REQUESTS_HEADERS,
   SONG_STATUS_LOG_HEADERS,
+  STUDENT_PORTAL_ACCESS_HEADERS,
 } from '../../lib/admin/sheets/core.mjs';
 import {
   buildSongAssignmentSheetRow,
@@ -22,6 +23,7 @@ import {
   buildSongStatusLogSheetRow,
 } from '../../lib/admin/sheets/song-assignments.mjs';
 import { buildProposalSheetRow } from '../../lib/admin/sheets/proposals.mjs';
+import { buildStudentPortalAccessSheetRow } from '../../lib/admin/sheets/student-portal-access.mjs';
 import { BACKUP_TABS, NON_BACKED_UP_TABS } from '../../lib/admin/backup-tabs.mjs';
 
 // Students headers are external truth, so the definitions accept them as a
@@ -88,6 +90,7 @@ const BUILDER_CONTRACTS = [
   ['Song_Outcomes', SONG_OUTCOMES_HEADERS, buildSongOutcomeSheetRow],
   ['Song_Requests', SONG_REQUESTS_HEADERS, buildSongRequestSheetRow],
   ['Proposals', PROPOSALS_HEADERS, buildProposalSheetRow],
+  ['Student_Portal_Access', STUDENT_PORTAL_ACCESS_HEADERS, buildStudentPortalAccessSheetRow],
 ];
 
 test('row builders emit exactly their sheet headers', () => {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
+import Link from 'next/link';
 
 function deriveWeekday(dateValue) {
   if (!dateValue) return '';
@@ -487,6 +488,31 @@ export default function AdminOnboardForm({ initialData, tutorOptions, initialDup
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
               The student was added successfully, but the first-lesson check-in task was not created:
               <div className="mt-2 font-mono text-xs break-words">{result.firstLessonCheckinWarning}</div>
+            </div>
+          ) : null}
+          {result.notesPrivacyFollowUp?.length ? (
+            <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
+              <p className="font-semibold">Student notes privacy is ready as a follow-up</p>
+              <p className="mt-2">
+                Onboarding is complete. Add the memorable code to WhatsApp and explain the change before activating the notes lock.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {result.notesPrivacyFollowUp.map((item) => (
+                  <Link
+                    key={item.studentMmsId}
+                    href={`/admin/workflows/student-notes-access?student=${encodeURIComponent(item.studentMmsId)}`}
+                    className="rounded-full bg-blue-900 px-4 py-2 text-sm font-semibold text-white"
+                  >
+                    Set up {item.studentName || 'student'}’s notes privacy
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          {result.notesPrivacyFollowUpWarning ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              The student was onboarded, but the notes privacy follow-up was not queued:
+              <div className="mt-2 font-mono text-xs break-words">{result.notesPrivacyFollowUpWarning}</div>
             </div>
           ) : null}
           {result.duplicateWarnings?.length ? (

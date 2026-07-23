@@ -19,6 +19,7 @@ clear access boundaries, and plain-language transparency matter especially.
 | `Students`, registry/generated portal config | child/parent identity, contact, lesson, portal and Stripe linkage needed to provide tuition | enrolled; archive/remove through the established leaving flow |
 | `Students_Archive` | leaving snapshot for disputes/re-enrolment | 2 years after leaving |
 | `Practice_Notes_Log` and Gmail Sent | progress notes, recipient, delivery IDs; lesson-note service | 2 years after leaving; align both stores |
+| `Student_Portal_Access` | encrypted family notes code, credential verifier/version, and staff rollout confirmations | enrolled; remove through the established leaving/portal-removal flow |
 | `Incoming_Message_Inbox`, `WhatsApp_Group_Map`, local bridge cache | parent messages, phones, group/student mapping for lesson administration | handled/ignored inbox rows 12 months; cache 14 days/2,000 by default; confirmed map while operationally needed |
 | `Communication_Log`, `Parent_Understanding_State` | copied parent communication and human relationship notes | communications 2 years; review subjective understanding notes yearly |
 | planning, absence, pause, issue and event lanes | named operational workflow and audit evidence | workflow rows while active/useful; `Event_Log` proposed 2 years; never erase evidence to fake recovery |
@@ -38,10 +39,11 @@ When a store or purpose is added there, update this map in the same change.
    notes, and capability links without persistent tutor identity. The recommended
    fix is tutor-scoped Google login/allow-list before adding broader sensitive
    reads or writes.
-2. Student portal names/paths are guessable and can expose encouraging lesson
-   notes. Decide whether to accept that explicitly, protect only the notes panel
-   with a family token, or require full portal tokens. The middle option preserves
-   the familiar public page while protecting the sensitive text.
+2. Student portal names/paths remain guessable, but Student Voice notes now load
+   separately and can be moved one family at a time behind a memorable code. A
+   missing rollout row preserves legacy public notes during transition; a failed
+   access-state read fails closed. Complete the rollout campaign and explain this
+   access model in the parent-facing privacy notice.
 3. The incoming WhatsApp bridge retains parent group content locally and in
    Sheets for administration. A parent-facing privacy notice must explain this.
 4. The Practice Chat transcription relay currently exposes its raw OpenAI key to

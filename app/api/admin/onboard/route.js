@@ -16,6 +16,7 @@ import { generateFcStudentId, generateFriendlyUrl, normaliseExperienceLevel, nor
 import { ADMIN_TUTORS } from '@/lib/admin/tutors';
 import { markWaitingWorkflowStudentsOnboarded } from '@/lib/admin/waiting-workflow';
 import { createFirstLessonCheckinPlanningItem } from '@/lib/admin/planning';
+import { ensureStudentNotesAccessFollowUp } from '@/lib/admin/student-notes-access';
 
 function formatLessonDateForMessage(value) {
   const parsed = new Date(`${value}T12:00:00`);
@@ -510,6 +511,31 @@ export async function POST(request) {
       firstLessonCheckinWarning = error.message || 'First-lesson check-in task creation failed';
     }
 
+    let notesPrivacyFollowUp = [];
+    let notesPrivacyFollowUpWarning = '';
+    try {
+      notesPrivacyFollowUp = await Promise.all([
+        ensureStudentNotesAccessFollowUp({
+          studentMmsId: payload.mmsId,
+          studentName,
+          friendlyUrl: primaryRecord.friendlyUrl,
+          tutorName: tutor.fullName,
+          actorEmail: session.user.email || '',
+        }),
+        secondStudentDetails && secondaryRecord
+          ? ensureStudentNotesAccessFollowUp({
+              studentMmsId: secondStudentDetails.mmsId,
+              studentName: secondStudentName,
+              friendlyUrl: secondaryRecord.friendlyUrl,
+              tutorName: tutor.fullName,
+              actorEmail: session.user.email || '',
+            })
+          : null,
+      ].filter(Boolean));
+    } catch (error) {
+      notesPrivacyFollowUpWarning = error.message || 'Student notes privacy follow-up could not be queued';
+    }
+
     return Response.json({
       success: true,
       steps,
@@ -525,6 +551,8 @@ export async function POST(request) {
       waitingCloseoutWarning,
       firstLessonCheckin,
       firstLessonCheckinWarning,
+      notesPrivacyFollowUp,
+      notesPrivacyFollowUpWarning,
       duplicateWarnings: duplicateState.warnings,
       siblingGroup: secondStudentDetails
         ? {

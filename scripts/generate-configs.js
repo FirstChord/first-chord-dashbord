@@ -209,8 +209,6 @@ function generateStudentHelpers(registry, tutorGroups) {
   let output = `// GENERATED — do not edit directly. Run: npm run generate-configs to regenerate.
 // Student portal helper functions
 import { thetaCredentials } from '@/lib/config/theta-credentials';
-import { getPracticeNoteLogRows } from '@/lib/admin/sheets';
-import { selectLatestPortalPracticeNote } from '@/lib/admin/practice-notes-helpers.mjs';
 
 // Import existing soundslice mappings
 import SOUNDSLICE_MAPPINGS from '@/lib/soundslice-mappings';
@@ -280,27 +278,7 @@ export function generateStudentUrl(studentId) {
   return \`\${baseUrl}/student/\${studentId}\`;
 }
 
-async function getFirstChordPortalNote(studentId) {
-  try {
-    const rows = await getPracticeNoteLogRows(studentId);
-    return selectLatestPortalPracticeNote(rows);
-  } catch (error) {
-    console.warn('First Chord practice note lookup failed; falling back to MMS:', error.message);
-    return null;
-  }
-}
-
-function transformMmsNotes(notesResult = {}) {
-  return {
-    lesson_date: notesResult.date,
-    notes: notesResult.notes,
-    tutor_name: notesResult.tutor,
-    attendance: notesResult.attendanceStatus,
-    source: 'mms',
-  };
-}
-
-// Get student data including notes (reuses existing API)
+// Get public student data. Notes are loaded through the portal access gate.
 export async function getStudentData(studentId) {
   if (!isValidStudentId(studentId)) {
     return null;
@@ -309,46 +287,7 @@ export async function getStudentData(studentId) {
   const studentInfo = getStudentInfo(studentId);
   if (!studentInfo) return null;
 
-  try {
-    const ownedNote = await getFirstChordPortalNote(studentId);
-    if (ownedNote) {
-      return {
-        ...studentInfo,
-        notes: ownedNote,
-        notesSuccess: true,
-        notesSource: 'firstchord'
-      };
-    }
-
-    // Use optimized API call with caching for student portals
-    const mmsClient = (await import('@/lib/mms-client-cached')).default;
-    const notesResult = await mmsClient.getStudentNotes(studentId, { studentPortal: true });
-
-    if (notesResult.success) {
-      return {
-        ...studentInfo,
-        notes: transformMmsNotes(notesResult),
-        notesSuccess: true,
-        notesSource: 'mms'
-      };
-    } else {
-      // Return student info without notes if API fails
-      return {
-        ...studentInfo,
-        notes: null,
-        notesSuccess: false,
-        notesSource: 'unavailable'
-      };
-    }
-  } catch (error) {
-    console.error('Error fetching student data:', error);
-    return {
-      ...studentInfo,
-      notes: null,
-      notesSuccess: false,
-      notesSource: 'error'
-    };
-  }
+  return studentInfo;
 }
 `;
 

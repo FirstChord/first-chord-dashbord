@@ -32,6 +32,12 @@ const workflowSections = [
     status: 'Campaign',
   },
   {
+    href: '/admin/workflows/student-notes-access',
+    title: 'Student Notes Privacy',
+    description: 'Work through families, add their memorable notes code to WhatsApp, explain the change, and activate protection.',
+    status: 'Campaign',
+  },
+  {
     href: '/admin/workflows/cover-bank',
     title: 'Cover Bank',
     description: 'Call workflow for tutor cover availability: who is happy to cover, which days, cross-checked against teaching days.',
