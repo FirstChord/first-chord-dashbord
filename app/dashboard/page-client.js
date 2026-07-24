@@ -8,6 +8,7 @@ import QuickLinks from '@/components/navigation/QuickLinks';
 import TutorSchedulePanel from '@/components/tutor-dashboard/TutorSchedulePanel';
 import SongBrowser from '@/components/tutor-dashboard/SongBrowser';
 import HeaderGreenery from '@/components/tutor-dashboard/HeaderGreenery';
+import { TutorSignOutButton } from '@/components/tutor-dashboard/TutorAuthButton';
 import TimeOfDaySky from '@/components/shared/TimeOfDaySky';
 import { Search, ChevronLeft } from 'lucide-react';
 import { cache } from '@/lib/cache';
@@ -44,9 +45,12 @@ function notesUrlForStudent(student = {}, { history = false, summary = false } =
   return `/api/notes/${encodeURIComponent(studentId)}${params.toString() ? `?${params.toString()}` : ''}`;
 }
 
-export default function DashboardClient({ tutorOptions = [] }) {
+export default function DashboardClient({ tutorOptions = [], authAccess = {} }) {
   const TUTOR_OPTIONS = useMemo(() => tutorOptions.map((entry) => entry.shortName), [tutorOptions]);
-  const [tutor, setTutor] = useState('');
+  const fixedTutor = !authAccess.fullAccess && TUTOR_OPTIONS.length === 1
+    ? TUTOR_OPTIONS[0]
+    : '';
+  const [tutor, setTutor] = useState(fixedTutor);
   const [students, setStudents] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [lastNotes, setLastNotes] = useState(null);
@@ -67,6 +71,7 @@ export default function DashboardClient({ tutorOptions = [] }) {
   };
 
   const handleSelectTutor = (tutorName) => {
+    if (!TUTOR_OPTIONS.includes(tutorName)) return;
     setTutor(tutorName);
     try {
       localStorage.setItem(TUTOR_STORAGE_KEY, tutorName);
@@ -75,13 +80,17 @@ export default function DashboardClient({ tutorOptions = [] }) {
 
   // Restore the tutor from the last visit so a reload doesn't ask again
   useEffect(() => {
+    if (!authAccess.fullAccess) {
+      setTutor(fixedTutor);
+      return;
+    }
     try {
       const saved = localStorage.getItem(TUTOR_STORAGE_KEY);
       if (saved && TUTOR_OPTIONS.includes(saved)) {
         setTutor(saved);
       }
     } catch {}
-  }, []);
+  }, [TUTOR_OPTIONS, authAccess.fullAccess, fixedTutor]);
   // const [isAuthenticated, setIsAuthenticated] = useState(true); // Always authenticated with hardcoded token
 
   // Fun loading messages
@@ -405,14 +414,22 @@ export default function DashboardClient({ tutorOptions = [] }) {
           />
         </div>
         
-        <div className="bg-white p-12 rounded-xl shadow-lg max-w-4xl w-full mx-8 relative z-10">
+        <div className="relative z-10 mx-4 w-full max-w-4xl rounded-xl bg-white p-6 shadow-lg sm:mx-8 sm:p-12">
+          {authAccess.enforced ? (
+            <div className="mb-7 flex flex-col items-center justify-between gap-3 rounded-xl border border-green-100 bg-green-50/70 px-4 py-3 text-sm text-slate-700 sm:flex-row">
+              <span>
+                Signed in as <strong>{authAccess.email}</strong>
+              </span>
+              <TutorSignOutButton className="rounded-lg border border-green-200 bg-white px-3 py-2 text-sm font-bold text-[#2F6B3D] transition hover:bg-green-50" />
+            </div>
+          ) : null}
           <h1 className="text-2xl font-bold mb-8 text-center">Select Your Profile</h1>
-          <div className="grid grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
             {TUTOR_OPTIONS.map(tutorName => (
               <button
                 key={tutorName}
                 onClick={() => handleSelectTutor(tutorName)}
-                className="px-8 py-4 text-white rounded-lg text-center font-medium text-xl min-h-[60px] min-w-[140px] flex items-center justify-center bg-[#2F6B3D] hover:bg-[#245230] hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0 transition-all duration-150"
+                className="flex min-h-[60px] items-center justify-center rounded-lg bg-[#2F6B3D] px-6 py-4 text-center text-lg font-medium text-white transition-all duration-150 hover:-translate-y-0.5 hover:bg-[#245230] hover:shadow-lg active:translate-y-0 sm:text-xl"
               >
                 {tutorName}
               </button>
@@ -442,28 +459,35 @@ export default function DashboardClient({ tutorOptions = [] }) {
         style={{ background: 'var(--dashboard-header-background)' }}
       >
         <HeaderGreenery />
-        <div className="relative px-6 py-5 text-center">
+        <div className="relative px-4 py-4 text-center sm:px-6 sm:py-5">
           <h1 className="text-3xl font-black tracking-tight text-gray-900">
             {possessive(tutor)} Dashboard
           </h1>
           <p className="mt-1 text-gray-600">
             {timeAwareGreeting()}! · {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })}
           </p>
-          <button
-            onClick={() => {
-              setTutor('');
-              setSelectedStudent(null);
-              setLastNotes(null);
-              setPracticeChatPanel(null);
-              setSidebarOpen(true);
-              try {
-                localStorage.removeItem(TUTOR_STORAGE_KEY);
-              } catch {}
-            }}
-            className="absolute right-6 top-1/2 -translate-y-1/2 px-4 py-2 text-white rounded-lg bg-[#2F6B3D] hover:bg-[#245230] transition-colors"
-          >
-            Switch Tutor
-          </button>
+          <div className="mt-3 flex items-center justify-center gap-2 sm:absolute sm:right-6 sm:top-1/2 sm:mt-0 sm:-translate-y-1/2">
+            {authAccess.fullAccess ? (
+              <button
+                onClick={() => {
+                  setTutor('');
+                  setSelectedStudent(null);
+                  setLastNotes(null);
+                  setPracticeChatPanel(null);
+                  setSidebarOpen(true);
+                  try {
+                    localStorage.removeItem(TUTOR_STORAGE_KEY);
+                  } catch {}
+                }}
+                className="rounded-lg bg-[#2F6B3D] px-4 py-2 text-white transition-colors hover:bg-[#245230]"
+              >
+                Switch Tutor
+              </button>
+            ) : null}
+            {authAccess.enforced ? (
+              <TutorSignOutButton className="rounded-lg border border-green-700 bg-white/90 px-4 py-2 text-sm font-bold text-[#2F6B3D] transition hover:bg-white" />
+            ) : null}
+          </div>
         </div>
       </header>
 

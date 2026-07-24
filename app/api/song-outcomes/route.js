@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { appendSongOutcomeRow, getSongAssignmentRows } from '@/lib/admin/sheets';
 import { buildSongOutcomeRow } from '@/lib/songs/outcome-helpers.mjs';
 import { getTutorSurfaceTokenSecret, verifyStudentNotesToken } from '@/lib/tutor-surface-token.mjs';
+import { requireTutorDashboardAccess, tutorAuthErrorBody } from '@/lib/tutor-auth';
 
 // The tutor's optional one-tap "how did it go?" when a song reaches done or
 // gets parked. Append-only into Song_Outcomes; never touches the assignment.
@@ -30,6 +31,10 @@ export async function POST(request) {
   const auth = authorize(`${body.token || ''}`, mmsId);
   if (!auth.ok) {
     return NextResponse.json({ success: false, code: auth.code }, { status: auth.status });
+  }
+  const tutorSession = await requireTutorDashboardAccess({ requestedTutor: auth.tutor });
+  if (!tutorSession.ok) {
+    return NextResponse.json(tutorAuthErrorBody(tutorSession), { status: tutorSession.status });
   }
 
   try {

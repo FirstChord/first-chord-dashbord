@@ -1,7 +1,7 @@
 ---
 status: supporting
 audience: [human, agent]
-last_verified: 2026-07-20
+last_verified: 2026-07-24
 ---
 
 # Plans
@@ -13,6 +13,7 @@ policy, or workflow contracts.
 
 - [Practice Chat Whisper hardening](./active/practice-chat-whisper-hardening.md)
 - [Monolith split](./active/monolith-split.md)
+- [Tutor dashboard Google-login pilot](./active/tutor-dashboard-auth-pilot.md)
 - [Tutor-facing payroll](./active/tutor-payroll.md)
 
 ## Parked

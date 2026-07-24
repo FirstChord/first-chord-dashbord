@@ -1,7 +1,7 @@
 ---
 status: supporting
 audience: [human, agent]
-last_verified: 2026-07-20
+last_verified: 2026-07-24
 ---
 # Tutor and student surfaces
 
@@ -73,9 +73,12 @@ student songs
 
 ## Trust and write boundary
 
-Tutor selection is self-attested and remembered locally; it is not durable
-identity. Per-student signed tokens guard notes/song routes and bind the selected
-student/tutor context, but they do not equal authenticated tutor accounts.
+Tutor selection is self-attested and remembered locally on the legacy public
+service; it is not durable identity. The canonical service can enforce the
+staged Google-login pilot. Its shared Finn/Tom account has full selection and
+therefore proves an authorised operator, not an individual actor. Per-student
+signed tokens still guard notes/song routes as defence in depth, but tokens
+issued by the legacy public roster do not equal authenticated tutor accounts.
 
 Allowed public-surface writes remain narrow:
 

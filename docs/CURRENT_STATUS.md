@@ -88,9 +88,12 @@ Canonical details live in [state ownership](./architecture/data/ownership.md),
   cadence remain gated by persistent tutor auth/contact email.
 - **Pause clarity:** distinguish Pause History, sheet expectation, and live Stripe
   evidence more clearly without adding Stripe mutation to Issues.
-- **Tutor dashboard auth:** collect tutor login emails, then put `/dashboard`
-  behind per-tutor NextAuth sessions. This upgrades self-attested identity and
-  unblocks more sensitive tutor features.
+- **Tutor dashboard auth pilot:** the canonical service now has a reversible
+  Google-login pilot for the shared Finn/Tom `musiclessons` account, with full
+  tutor selection. The legacy `efficient-sparkle` dashboard stays public during
+  the pilot, so the security transition is not complete. After usability checks,
+  pilot one exact-email scoped tutor and then close/redirect the legacy route.
+  See the [active pilot plan](./plans/active/tutor-dashboard-auth-pilot.md).
 - **Reply proposal experiment:** leave the feature flag off until Finn explicitly
   starts a one-by-one pilot and accepts the privacy/policy terms. Avoid a bulk
   “draft all” start.

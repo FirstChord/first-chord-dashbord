@@ -3,6 +3,7 @@ import { appendSongStatusLogRows, getSongAssignmentRows, upsertSongAssignmentRow
 import { buildAssignmentUpsert, buildAssignmentUpdate, buildPathAssignments } from '@/lib/songs/assignment-helpers.mjs';
 import { buildStatusLogEntries } from '@/lib/songs/outcome-helpers.mjs';
 import { getTutorSurfaceTokenSecret, verifyStudentNotesToken } from '@/lib/tutor-surface-token.mjs';
+import { requireTutorDashboardAccess, tutorAuthErrorBody } from '@/lib/tutor-auth';
 
 // Status transitions are telemetry (Song_Status_Log, append-only): log them
 // best-effort after the assignment write, never fail the request over them.
@@ -37,6 +38,10 @@ export async function GET(request) {
   if (!auth.ok) {
     return NextResponse.json({ success: false, code: auth.code }, { status: auth.status });
   }
+  const tutorSession = await requireTutorDashboardAccess({ requestedTutor: auth.tutor });
+  if (!tutorSession.ok) {
+    return NextResponse.json(tutorAuthErrorBody(tutorSession), { status: tutorSession.status });
+  }
 
   try {
     const assignments = await getSongAssignmentRows(studentId);
@@ -59,6 +64,10 @@ export async function POST(request) {
   const auth = authorize(`${body.token || ''}`, mmsId);
   if (!auth.ok) {
     return NextResponse.json({ success: false, code: auth.code }, { status: auth.status });
+  }
+  const tutorSession = await requireTutorDashboardAccess({ requestedTutor: auth.tutor });
+  if (!tutorSession.ok) {
+    return NextResponse.json(tutorAuthErrorBody(tutorSession), { status: tutorSession.status });
   }
 
   try {
@@ -120,6 +129,10 @@ export async function PATCH(request) {
   const auth = authorize(`${body.token || ''}`, mmsId);
   if (!auth.ok) {
     return NextResponse.json({ success: false, code: auth.code }, { status: auth.status });
+  }
+  const tutorSession = await requireTutorDashboardAccess({ requestedTutor: auth.tutor });
+  if (!tutorSession.ok) {
+    return NextResponse.json(tutorAuthErrorBody(tutorSession), { status: tutorSession.status });
   }
 
   try {

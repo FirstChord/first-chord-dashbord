@@ -4,6 +4,7 @@ import {
 } from '@/lib/tutor-schedule-helpers.mjs';
 import { resolveTutorTeacherId } from '@/lib/tutor-dashboard-helpers.mjs';
 import { getActiveTutorOptions } from '@/lib/admin/tutors';
+import { requireTutorDashboardAccess, tutorAuthErrorBody } from '@/lib/tutor-auth';
 
 function todayInputValue() {
   return new Date().toISOString().slice(0, 10);
@@ -22,6 +23,15 @@ export async function GET(request) {
       lessons: [],
       summary: buildTutorDaySchedule([]),
     }, { status: 400 });
+  }
+
+  const tutorAuth = await requireTutorDashboardAccess({ requestedTutor: tutor });
+  if (!tutorAuth.ok) {
+    return Response.json({
+      ...tutorAuthErrorBody(tutorAuth),
+      lessons: [],
+      summary: buildTutorDaySchedule([]),
+    }, { status: tutorAuth.status });
   }
 
   const activeTutors = await getActiveTutorOptions();

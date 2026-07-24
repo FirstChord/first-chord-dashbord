@@ -3,6 +3,7 @@ import { getPracticeNoteLogRows } from '@/lib/admin/sheets';
 import { selectLatestPortalPracticeNote } from '@/lib/admin/practice-notes-helpers.mjs';
 import { buildPracticeSummary } from '@/lib/admin/practice-summary-helpers.mjs';
 import { getTutorSurfaceTokenSecret, verifyStudentNotesToken } from '@/lib/tutor-surface-token.mjs';
+import { requireTutorDashboardAccess, tutorAuthErrorBody } from '@/lib/tutor-auth';
 
 function authorizeNotesRequest(request, studentId) {
   const { searchParams } = new URL(request.url);
@@ -21,7 +22,8 @@ function authorizeNotesRequest(request, studentId) {
     };
   }
 
-  if (!verifyStudentNotesToken(token, { studentId, secret })) {
+  const payload = verifyStudentNotesToken(token, { studentId, secret });
+  if (!payload) {
     return {
       ok: false,
       status: 401,
@@ -33,6 +35,18 @@ function authorizeNotesRequest(request, studentId) {
     };
   }
 
+  return { ok: true, tutor: payload.tutor || '' };
+}
+
+async function authorizeTutorSession(tutor) {
+  const tutorAuth = await requireTutorDashboardAccess({ requestedTutor: tutor });
+  if (!tutorAuth.ok) {
+    return {
+      ok: false,
+      status: tutorAuth.status,
+      body: tutorAuthErrorBody(tutorAuth),
+    };
+  }
   return { ok: true };
 }
 
@@ -71,6 +85,10 @@ export async function POST(request, { params }) {
   const auth = authorizeNotesRequest(request, studentId);
   if (!auth.ok) {
     return Response.json(auth.body, { status: auth.status });
+  }
+  const tutorSession = await authorizeTutorSession(auth.tutor);
+  if (!tutorSession.ok) {
+    return Response.json(tutorSession.body, { status: tutorSession.status });
   }
   
   try {
@@ -116,6 +134,10 @@ export async function GET(request, { params }) {
   const auth = authorizeNotesRequest(request, studentId);
   if (!auth.ok) {
     return Response.json(auth.body, { status: auth.status });
+  }
+  const tutorSession = await authorizeTutorSession(auth.tutor);
+  if (!tutorSession.ok) {
+    return Response.json(tutorSession.body, { status: tutorSession.status });
   }
 
   const { searchParams } = new URL(request.url);

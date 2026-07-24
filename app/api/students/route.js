@@ -2,6 +2,7 @@ import mmsClient from '@/lib/mms-client-cached';
 import { enhanceStudentsWithSoundslice } from '@/lib/soundslice-mappings';
 import { addStudentNotesTokens } from '@/lib/tutor-surface-token.mjs';
 import { getActiveTutorOptions } from '@/lib/admin/tutors';
+import { requireTutorDashboardAccess, tutorAuthErrorBody } from '@/lib/tutor-auth';
 
 // BYPASS DATABASE - JUST USE MMS DATA DIRECTLY WITH SOUNDSLICE
 export async function GET(request) {
@@ -13,6 +14,10 @@ export async function GET(request) {
   
   try {
     if (tutor) {
+      const tutorAuth = await requireTutorDashboardAccess({ requestedTutor: tutor });
+      if (!tutorAuth.ok) {
+        return Response.json(tutorAuthErrorBody(tutorAuth), { status: tutorAuth.status });
+      }
       const activeTutors = await getActiveTutorOptions();
       if (!activeTutors.some((entry) => entry.shortName === tutor)) {
         return Response.json({ students: [] }, { status: 404 });

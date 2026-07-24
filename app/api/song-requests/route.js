@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { appendSongRequestRow } from '@/lib/admin/sheets';
 import { buildSongRequestRow } from '@/lib/songs/request-helpers.mjs';
 import { getTutorSurfaceTokenSecret, verifyStudentNotesToken } from '@/lib/tutor-surface-token.mjs';
+import { requireTutorDashboardAccess, tutorAuthErrorBody } from '@/lib/tutor-auth';
 
 // Tutor "request this song": a search miss on the Song Browser becomes a
 // status='new' row in the Song_Requests curation queue. Append-only from the
@@ -31,6 +32,10 @@ export async function POST(request) {
   const auth = authorize(`${body.token || ''}`, mmsId);
   if (!auth.ok) {
     return NextResponse.json({ success: false, code: auth.code }, { status: auth.status });
+  }
+  const tutorSession = await requireTutorDashboardAccess({ requestedTutor: auth.tutor });
+  if (!tutorSession.ok) {
+    return NextResponse.json(tutorAuthErrorBody(tutorSession), { status: tutorSession.status });
   }
 
   try {
