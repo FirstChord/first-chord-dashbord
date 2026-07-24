@@ -13,6 +13,7 @@ import {
   parseAvailabilityTimes,
   slotTimeBucket,
 } from '../../lib/admin/capacity-helpers.mjs';
+import { ADMIN_TUTORS } from '../../lib/admin/tutors-data.js';
 
 test('buildScheduledRefreshTargets picks missing, cadence-old, and unresolved operational caches', () => {
   const now = new Date('2026-06-20T12:00:00Z');
@@ -280,6 +281,34 @@ test('electric-guitar students match tutors in the general guitar teaching lane'
   assert.equal(student.capacityMatchStatus, 'matched');
   assert.equal(student.capacityMatches.length, 1);
   assert.deepEqual(student.capacityMatches[0].matchedInstruments, ['guitar']);
+});
+
+test('ukulele students match Robbie when he has a free slot', () => {
+  const robbie = ADMIN_TUTORS.Robbie;
+  const slot = normaliseFreeCalendarSlot({
+    ID: 'evt_robbie_ukulele',
+    StartDate: '2026-05-18T16:30:00',
+    Duration: 30,
+    TeacherID: robbie.teacherId,
+    Teacher: { DisplayName: robbie.fullName },
+    EventCategory: { Name: 'Free' },
+  });
+
+  const [student] = buildWaitingCapacityMatches({
+    waitingStudents: [{ mmsId: 'sdt_ukulele', instruments: ['Ukulele'] }],
+    freeSlots: [slot],
+    tutors: [{
+      shortName: 'Robbie',
+      ...robbie,
+    }],
+  });
+
+  assert.ok(robbie.instruments.includes('guitar'));
+  assert.ok(robbie.instruments.includes('ukulele'));
+  assert.equal(student.capacityMatchStatus, 'matched');
+  assert.equal(student.capacityMatches.length, 1);
+  assert.equal(student.capacityMatches[0].teacherName, 'Robbie Tranter');
+  assert.deepEqual(student.capacityMatches[0].matchedInstruments, ['ukulele']);
 });
 
 test('buildWaitingCapacityMatches includes Fennella for singing free slots', () => {
