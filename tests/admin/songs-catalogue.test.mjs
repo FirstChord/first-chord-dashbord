@@ -125,6 +125,7 @@ test('electric guitar is its own instrument, not a spelling of Guitar', () => {
 const INSTRUMENTS_WITHOUT_REPERTOIRE = new Set([
   'Voice',
   'Singing',
+  'Ukulele',
   'Ukulele Orchestra',
 ]);
 
