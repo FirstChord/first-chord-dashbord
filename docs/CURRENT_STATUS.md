@@ -1,7 +1,7 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: 2026-07-20
+last_verified: 2026-07-24
 ---
 # Admin current status
 
@@ -42,6 +42,10 @@ deliberate school-improvement prompt.
   invariants are live. Current gaps are in
   [song coverage](./reference/song-catalogue-coverage.md) and the
   [payroll plan](./plans/active/tutor-payroll.md).
+- **Practice Chat notes privacy:** the phased memorable-code workflow is live,
+  with Test Studenty exercised end to end. Existing family profiles stay
+  legacy-public until staff activate them individually. See the
+  [rollout handoff](./workflows/practice-chat/student-notes-access.md).
 
 ## Current operating contracts
 
@@ -64,6 +68,11 @@ Canonical details live in [state ownership](./architecture/data/ownership.md),
 
 ## Next choices
 
+- **Parent message angle for the notes rollout:** the current WhatsApp template
+  is safe placeholder copy, not the final campaign wording. Agree the parent
+  framing with Finn before starting real-family rollout, then update the one
+  template helper and its focused assertion listed in the
+  [rollout handoff](./workflows/practice-chat/student-notes-access.md).
 - **Practice Chat transcription security:** the current PWA can receive the raw
   OpenAI key from the relay. Complete the staged server-side transcription
   cutover, remove `/api-key`, and rotate the exposed key in a no-lessons window.

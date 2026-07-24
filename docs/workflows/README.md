@@ -1,7 +1,7 @@
 ---
 status: supporting
 audience: [human, agent]
-last_verified: 2026-07-20
+last_verified: 2026-07-24
 ---
 
 # Workflows
@@ -12,6 +12,7 @@ These are current human operating processes, grouped by the job being done.
 - [Tutor absence and payment-pause contract](./tutors/absence-to-pause.md)
 - [Paying tutors](./finance/paying-tutors.md)
 - [Practice Chat delivery](./practice-chat/delivery.md)
+- [Practice Chat student-notes access rollout](./practice-chat/student-notes-access.md)
 
 The old numbered portal workflows are historical and live under
 [`history/legacy-portal/`](../history/legacy-portal/README.md). Do not infer that

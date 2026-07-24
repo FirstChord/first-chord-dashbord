@@ -1,12 +1,78 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: 2026-07-23
+last_verified: 2026-07-24
 ---
 # Student notes access rollout
 
 Student profile URLs remain unchanged and their songs, links, and practice
 resources remain public. Only the Practice Chat lesson-note panel is gated.
+
+## Current handoff
+
+The feature is live in both the canonical admin app and the legacy/public
+student runtime. Test Studenty has been used to exercise the protected panel,
+wrong/right code handling, trusted-device cookie, and manual relock. There has
+been no bulk family activation: the `Student_Portal_Access` row for each student
+is the authority for whether that individual profile is protected.
+
+The current WhatsApp template explains this as “a small privacy step”. Finn
+intends to revisit the angle and wording before the real-family rollout begins.
+Treat that as an open copy decision, not an invitation to change the security
+workflow or automate sending. The template is owned by
+`buildNotesRolloutMessage()` in
+`lib/admin/student-notes-access-helpers.mjs`; update its focused assertion in
+`tests/admin/student-notes-access-helpers.test.mjs` at the same time.
+
+Test Studenty's registry slug is `test`, but `https://firstchord.co.uk/test/` is
+an unrelated WordPress page containing an old WPForms shortcode. For this test
+record use:
+
+```text
+https://efficient-sparkle-production.up.railway.app/test
+```
+
+Do not use the direct Railway URL in real-family messaging. Real profiles keep
+their established `firstchord.co.uk/<friendlyUrl>` links.
+
+## Pickup checklist
+
+For the next working session or agent:
+
+1. Read this document, `docs/CURRENT_STATUS.md`,
+   `docs/architecture/data/state-tabs.md`, `docs/operations/runbook.md`, and
+   `docs/policies/hygiene-and-secrets.md`.
+2. Ask Finn for the intended parent-facing angle, then revise only the
+   human-facing template and any matching UI guidance unless he requests a
+   broader workflow change.
+3. Run the three focused access suites:
+
+   ```bash
+   node --test tests/admin/student-notes-access-helpers.test.mjs
+   node --test tests/admin/student-notes-access-crypto.test.mjs
+   node --test tests/admin/student-notes-rate-limit.test.mjs
+   ```
+
+4. Run the repository pre-deploy checks required by `AGENTS.md`, inspect
+   generated diffs, commit, push, and verify the canonical admin service and the
+   `efficient-sparkle` public service independently.
+5. Recheck Test Studenty in a private browser before selecting a real family.
+   Never put a real access code in logs, screenshots, fixtures, or Git.
+
+## Implementation map
+
+| Responsibility | Current source |
+|---|---|
+| Admin workflow page | `app/admin/workflows/student-notes-access/page.js`, `components/admin/AdminStudentNotesAccessPageClient.js` |
+| Authenticated workflow API | `app/api/admin/student-notes-rollout/route.js` |
+| Campaign orchestration | `lib/admin/student-notes-access.js` |
+| Eligibility, progress, confirmations, and message copy | `lib/admin/student-notes-access-helpers.mjs` |
+| Code encryption and verification | `lib/admin/student-notes-access-crypto.mjs` |
+| Sheets adapter | `lib/admin/sheets/student-portal-access.mjs` |
+| Public protected-notes read and unlock | `app/api/student-portal/[studentId]/notes/route.js`, `app/api/student-portal/[studentId]/notes/unlock/route.js` |
+| Public panel | `components/student-portal/StudentNotesGate.js`, `components/student-portal/StudentNotes.js` |
+| Public note-source selection and limiter | `lib/student-portal-notes.mjs`, `lib/student-notes-rate-limit.mjs` |
+| Focused contracts | `tests/admin/student-notes-access-helpers.test.mjs`, `tests/admin/student-notes-access-crypto.test.mjs`, `tests/admin/student-notes-rate-limit.test.mjs`, `tests/admin/state-tab-contracts.test.mjs` |
 
 ## Staff campaign
 
@@ -26,10 +92,11 @@ marked `needs_follow_up` with the reason. Onboarding creates a visible,
 non-blocking follow-up in this same queue; it never rolls back otherwise
 successful Sheets, registry, or MMS work.
 
-The explicitly flagged Test Studenty record (`sdt_fBg9JN`, `/test`) is the only
-test record allowed into this campaign, so the complete lock/unlock flow can be
-smoke-tested without using a real family. It remains excluded from every other
-operational surface.
+The explicitly flagged Test Studenty record (`sdt_fBg9JN`, registry slug
+`test`) is the only test record allowed into this campaign, so the complete
+lock/unlock flow can be smoke-tested without using a real family. It remains
+excluded from every other operational surface. Use the direct public-runtime
+URL in the handoff above because the matching WordPress path is already taken.
 
 `Communication_Log` records a redacted copy template, not delivery and never the
 real code. The workflow's `message_sent_at` is a human assertion that the
