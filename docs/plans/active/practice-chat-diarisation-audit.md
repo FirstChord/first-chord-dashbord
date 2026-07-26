@@ -385,7 +385,10 @@ degrades rather than breaks).
 | `public/src/text-processor.js` | Rules rebuilt as word-boundary-anchored RegExps; unsafe rules deleted; filler list narrowed to real disfluencies; stutter-collapse restricted to function words; new `checkNoteSafety()` |
 | `tests/text-processor.test.mjs` | **New.** 17 fixtures, including the four live corruption cases |
 | `public/src/app.js` | Safety gate at send + on the legacy copy path; model and prompt passed to the ASR client |
-| `public/src/asr-client.js` | `resolveAsrModel()` (URL-switchable, allow-listed), constructor takes `{ model, prompt }`, sends `prompt` when present |
+| `public/src/asr-client.js` | `resolveAsrModel()` (allow-listed; falls back and warns on anything unknown), constructor takes `{ model, prompt }`, sends `prompt` when present |
+| `tests/module-integrity.test.mjs` | **New.** Structural guards — see "Guards" below |
+| `tests/asr-model.test.mjs` | **New.** Allow-list behaviour |
+| `.github/workflows/firebase-hosting-main.yml` | `npm test` now gates the Firebase deploy (it previously ran nothing) |
 | `public/src/practice-note-sync.js` | `fetchPracticeChatMusicContext()` |
 | `index.html`, `service-worker.js` | Cache-bust stamps → `20260724-safe-cleanup` / `practice-chat-v18-safe-cleanup` |
 
@@ -397,6 +400,37 @@ degrades rather than breaks).
 | `app/api/practice-notes/music-context/route.js` | **New.** Read-only instrument + song titles |
 | `lib/admin/practice-chat-auth.mjs` | CORS now allows `GET` (music context is the only read) |
 | `tests/admin/practice-chat-music-context.test.mjs` | **New.** 15 tests |
+| `lib/config/practice-chat-asr.mjs` | **New.** School-wide model config, allow-listed |
+| `components/navigation/QuickLinks.js` | Appends `asrModel` when the env var is set |
+| `docs/workflows/practice-chat/delivery.md` | Transcription-model section + the build-time inlining warning |
+
+### Running a model trial
+
+Set `NEXT_PUBLIC_PRACTICE_CHAT_ASR_MODEL=gpt-4o-mini-transcribe-2025-12-15` on
+Railway; delete it to revert. School-wide and invisible to tutors, because the
+useful comparison is a week on one model against a week on another, not a
+per-lesson choice. `NEXT_PUBLIC_` values are inlined at **build** time, so the
+variable change must trigger a rebuild or it has no effect.
+
+Chosen over `gpt-4o-transcribe`: same-or-better accuracy, **half the cost**, and
+~70% fewer hallucinations — the relevant failure mode, since silence is its
+documented trigger and a thinking student produces plenty. Pinned to the dated
+snapshot so transcription cannot change mid-trial. Reasoning and sources:
+Obsidian `06 Learning Log/2026-07-26 - Valid JavaScript Is Not Working Software`.
+
+**Record the trial dates.** Per-transcript model capture is part of the held
+slice, so those dates are the only record of which model produced which notes.
+
+### Guards
+
+`tests/module-integrity.test.mjs` exists because an edit during this work
+deleted ~20 methods from `app.js` while leaving their call sites intact. It
+passed `node --check` — still valid JavaScript — and no test covered `app.js`;
+it would have failed only when a tutor pressed finish. Three static checks: every
+`this.x(` resolves to something defined in the same module, every imported name
+is actually exported by its target (a missing export kills the whole module
+graph), and a hand-written golden list of the lesson-finishing methods. Verified
+by reproducing the deletion and watching them fail while `node --check` passed.
 
 ### Built but deliberately held — `wip/practice-chat-all`
 

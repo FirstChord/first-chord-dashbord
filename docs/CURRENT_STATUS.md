@@ -40,8 +40,10 @@ deliberate school-improvement prompt.
   substitutes; sending a flagged note takes a deliberate second tap. The
   transcription call is now given the student's instrument and current songs as
   context, so the model is told what to expect rather than corrected afterwards.
-  Model default stays `whisper-1`; `?asrModel=gpt-4o-transcribe` runs one lesson
-  on the newer model for a side-by-side. **Raw transcript capture is built but
+  Model default stays `whisper-1`; the transcription model is now school-wide
+  config (`NEXT_PUBLIC_PRACTICE_CHAT_ASR_MODEL`, allow-listed both sides, unset
+  = default) so a trial is a week on one model against a week on another rather
+  than a per-lesson choice. **Raw transcript capture is built but
   deliberately not shipped** — it stores verbatim child speech and is held
   pending a retention number and a parent privacy-notice decision (branch
   `wip/practice-chat-all`). Audit and phased plan:
