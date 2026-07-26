@@ -1,7 +1,7 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: 2026-07-20
+last_verified: 2026-07-26
 ---
 # Operations Runbook
 
@@ -376,6 +376,13 @@ git push origin main
 - `/admin/planning`
 - `/admin/workflows/parent-understanding`
 - one student portal page
+
+For runtime or incoming-bridge changes, also confirm `railway ssh node -v`
+matches the pinned Node major, the bridge heartbeat is fresh with a non-zero
+confirmed-group count, and one labelled intake test is stored exactly once.
+Archive the labelled test row afterward. A manual test proves dashboard intake
+but does not clear the “no auto-capture” warning; only a real
+`whatsapp_group_auto` capture does.
 
 ## Sheets Backups
 

@@ -1,12 +1,38 @@
 ---
 status: supporting
 audience: [human, agent]
-last_verified: 2026-07-20
+last_verified: 2026-07-26
 ---
 # Known Failure Signatures
 
 Use this for recurring production signatures whose diagnosis is not obvious.
 Git history owns the incident chronology.
+
+## GitHub Registry 401 Breaks Admin And Incoming Inbox
+
+**Signature:** the dashboard or incoming-message PWA raises
+`GitHub registry fetch failed: 401`; the Railway server exception may surface as
+a generic application-error digest. A First Chord Brain config-regeneration
+workflow can independently fail during checkout with `Bad credentials`.
+
+Treat these as separate credential lanes:
+
+- Railway `GITHUB_TOKEN` serves dashboard registry reads/writes and workflow
+  health.
+- GitHub Actions should use its repository-provided `GITHUB_TOKEN`; do not pass
+  a long-lived custom dashboard token to checkout.
+
+For Railway recovery, rotate the dedicated fine-grained token using the
+repository/permission boundary in
+[the runbook](../runbook.md#if-github-registry-auth-is-failing), deploy the
+staged variable change, then verify registry reads, workflow health, and one
+normal registry edit through its existing human approval boundary.
+
+Dashboard registry reads fall back to the snapshot bundled into the deployed
+commit when GitHub is unavailable. The fallback is deliberately read-only:
+registry writes require a fresh authenticated read and fail closed. Do not
+enable stale writes or use an end-of-life Node override to mask an authentication
+failure.
 
 ## Active MMS Student Missing From Tutor Roster
 

@@ -1,7 +1,7 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: 2026-07-24
+last_verified: 2026-07-26
 ---
 # Admin current status
 
@@ -26,6 +26,13 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
+- **Dashboard and WhatsApp intake resilience (2026-07-26):** production registry
+  reads now fall back to the deployed snapshot when GitHub authentication fails,
+  while registry writes fail closed. Dashboard CI and Railway run on Node 24.
+  The receive-only WhatsApp bridge now gets acknowledgement-only capture
+  responses and writes bounded privacy-safe logs. Production verification
+  confirmed the dashboard live, the bridge connected with a non-empty confirmed
+  group set, and one labelled intake test stored exactly once.
 - **Intent-led repository docs (2026-07-20):** one router, explicit lifecycle
   metadata, historical separation, and `npm run docs:check` in CI.
 - **Incoming reply proposals (built, deliberately off):** deterministic policy
@@ -99,7 +106,10 @@ Canonical details live in [state ownership](./architecture/data/ownership.md),
   “draft all” start.
 - **Incoming-message follow-ups:** settle retention/lawful-basis wording, capture
   the lesson group during onboarding, add removal for sibling mappings if needed,
-  and prune the ineffective inactivity-timestamp path.
+  prune the ineffective inactivity-timestamp path, and separately review/remove
+  the pre-hardening `launchagent.out.log`/`launchagent.err.log` files that may
+  contain message previews. Do not assume the new bounded logger removes those
+  legacy files.
 - **Practice Chat operational check:** use one approved real note to verify the
   recipient, MMS attendance, Gmail ID, Sheets audit, PostgreSQL claim, and
   duplicate response after relevant delivery changes.
