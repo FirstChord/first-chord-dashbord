@@ -33,8 +33,19 @@ deliberate school-improvement prompt.
   responses and writes bounded privacy-safe logs. Production verification
   confirmed the dashboard live, the bridge connected with a non-empty confirmed
   group set, and one labelled intake test stored exactly once.
-- **Intent-led repository docs (2026-07-20):** one router, explicit lifecycle
-  metadata, historical separation, and `npm run docs:check` in CI.
+- **Practice Chat transcription accuracy (2026-07-26):** the note tidy-up rules
+  are word-boundary anchored and fixture-tested — they were corrupting real
+  words in parent-facing notes (`topics`→`topicks`, `plectrum`→`picktrum`).
+  `checkNoteSafety()` flags risky wording on the finished note and never
+  substitutes; sending a flagged note takes a deliberate second tap. The
+  transcription call is now given the student's instrument and current songs as
+  context, so the model is told what to expect rather than corrected afterwards.
+  Model default stays `whisper-1`; `?asrModel=gpt-4o-transcribe` runs one lesson
+  on the newer model for a side-by-side. **Raw transcript capture is built but
+  deliberately not shipped** — it stores verbatim child speech and is held
+  pending a retention number and a parent privacy-notice decision (branch
+  `wip/practice-chat-all`). Audit and phased plan:
+  [Practice Chat diarisation audit](./plans/active/practice-chat-diarisation-audit.md).
 - **Incoming reply proposals (built, deliberately off):** deterministic policy
   checks plus optional model wording are implemented, but
   `ADMIN_AI_REPLY_DRAFT_ENABLED` remains unset pending a later small pilot and
