@@ -1,5 +1,6 @@
 import { ExternalLink, Copy, ExternalLink as LinkIcon, Check } from 'lucide-react';
 import { generateSmartUrls } from '@/lib/config';
+import { resolvePracticeChatAsrModel } from '@/lib/config/practice-chat-asr.mjs';
 import { useState } from 'react';
 import {
   SheetMusicIcon,
@@ -39,6 +40,12 @@ function buildPracticeChatUrl(student, activeTutor = '') {
   params.set('dashboardBaseUrl', dashboardBaseUrl);
   if (process.env.NEXT_PUBLIC_PRACTICE_CHAT_API_SECRET) {
     params.set('practiceChatSecret', process.env.NEXT_PUBLIC_PRACTICE_CHAT_API_SECRET);
+  }
+  // Only present during a transcription trial; absent the whole rest of the
+  // time, so the PWA uses its own default.
+  const asrModel = resolvePracticeChatAsrModel(process.env.NEXT_PUBLIC_PRACTICE_CHAT_ASR_MODEL);
+  if (asrModel) {
+    params.set('asrModel', asrModel);
   }
 
   return `${practiceChatBaseUrl}/?${params.toString()}`;

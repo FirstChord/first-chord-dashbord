@@ -90,7 +90,30 @@ DATABASE_URL=<Railway PostgreSQL URL>
 PRACTICE_CHAT_API_SECRET=<shared PWA handoff secret>
 # Optional emergency/temporary restriction only:
 PRACTICE_NOTES_ENABLED_TUTORS=<comma-separated canonical names>
+# Optional transcription trial only. Unset = the PWA's own default (whisper-1).
+NEXT_PUBLIC_PRACTICE_CHAT_ASR_MODEL=<supported model id>
 ```
+
+## Transcription Model
+
+The model is school-wide configuration, not a per-lesson choice: the useful
+comparison is a week on one model against a week on another, and a tutor should
+never have to remember a setting mid-lesson. Unset is the normal state.
+
+Supported values are allow-listed in `lib/config/practice-chat-asr.mjs` and
+again in the PWA's `asr-client.js`; anything else falls back to the default and
+warns rather than reaching the provider. `gpt-4o-transcribe-diarize` is
+deliberately excluded — it requires `diarized_json` plus a `chunking_strategy`
+and accepts no `prompt`, so it is a different feature, not a swap.
+
+**`NEXT_PUBLIC_` variables are inlined into the client bundle at build time.**
+Changing this value therefore requires a **rebuild**, not just a restart — on
+Railway, editing the variable triggers a new deployment, which is what bakes it
+in. A variable changed without a rebuild has no effect at all.
+
+Record the start and end of any trial: without per-transcript model capture
+(held with the raw-transcript slice), the dates the variable was set are the
+only record of which model produced which notes.
 
 Before first use against a database, run:
 
