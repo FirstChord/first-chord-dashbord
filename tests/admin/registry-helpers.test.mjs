@@ -8,6 +8,7 @@ import {
   escapeRegistryValue,
   extractValue,
   parseRegistry,
+  readRegistrySource,
   updateEntryBlock,
 } from '../../lib/admin/registry-helpers.mjs';
 
@@ -95,4 +96,97 @@ test('the text parser and the JavaScript parser agree on every student', async (
     assert.equal(entry.firstName, real.firstName, `${entry.mmsId}: firstName disagrees`);
     assert.equal(entry.lastName, real.lastName, `${entry.mmsId}: lastName disagrees`);
   }
+});
+
+test('production registry reads prefer the live GitHub source when it is healthy', async () => {
+  let bundledReads = 0;
+
+  const source = await readRegistrySource({
+    nodeEnv: 'production',
+    githubToken: 'configured',
+    readGithub: async () => ({ content: 'remote registry' }),
+    readBundled: async () => {
+      bundledReads += 1;
+      return 'bundled registry';
+    },
+  });
+
+  assert.equal(source, 'remote registry');
+  assert.equal(bundledReads, 0);
+});
+
+test('production registry reads fall back to the bundled snapshot when GitHub fails', async () => {
+  const failures = [];
+
+  const source = await readRegistrySource({
+    nodeEnv: 'production',
+    githubToken: 'expired',
+    readGithub: async () => {
+      throw new Error('GitHub registry fetch failed: 401');
+    },
+    readBundled: async () => 'bundled registry',
+    onGithubReadFailure: (error) => failures.push(error.message),
+  });
+
+  assert.equal(source, 'bundled registry');
+  assert.deepEqual(failures, ['GitHub registry fetch failed: 401']);
+});
+
+test('strict production registry reads reject GitHub failures before a write can use bundled data', async () => {
+  let bundledReads = 0;
+
+  await assert.rejects(
+    readRegistrySource({
+      nodeEnv: 'production',
+      githubToken: 'expired',
+      readGithub: async () => {
+        throw new Error('GitHub registry fetch failed: 401');
+      },
+      readBundled: async () => {
+        bundledReads += 1;
+        return 'bundled registry';
+      },
+      allowBundledFallback: false,
+    }),
+    /GitHub registry fetch failed: 401/,
+  );
+
+  assert.equal(bundledReads, 0);
+});
+
+test('production registry reads use the bundled snapshot when no GitHub token is configured', async () => {
+  let githubReads = 0;
+
+  const source = await readRegistrySource({
+    nodeEnv: 'production',
+    githubToken: '',
+    readGithub: async () => {
+      githubReads += 1;
+      return { content: 'remote registry' };
+    },
+    readBundled: async () => 'bundled registry',
+  });
+
+  assert.equal(source, 'bundled registry');
+  assert.equal(githubReads, 0);
+});
+
+test('strict production registry reads reject a missing token without reading bundled data', async () => {
+  let bundledReads = 0;
+
+  await assert.rejects(
+    readRegistrySource({
+      nodeEnv: 'production',
+      githubToken: '',
+      readGithub: async () => ({ content: 'remote registry' }),
+      readBundled: async () => {
+        bundledReads += 1;
+        return 'bundled registry';
+      },
+      allowBundledFallback: false,
+    }),
+    /GITHUB_TOKEN is not configured/,
+  );
+
+  assert.equal(bundledReads, 0);
 });

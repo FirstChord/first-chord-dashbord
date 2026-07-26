@@ -75,7 +75,7 @@ These names come from real code reads of `process.env` and local token paths.
 | `MMS_FIRST_LESSON_EVENT_CATEGORY_ID` | MMS first-lesson/event creation | First lesson event category may be missing or wrong | Confirm from MMS event categories. FINN TO FILL IN source. |
 | `MMS_DEFAULT_TOKEN` | Older MMS proxy/tutor dashboard compatibility routes | Older dashboard/proxy routes may fail | Prefer `MMS_BEARER_TOKEN` for admin; keep this only while legacy routes need it. FINN TO FILL IN whether it can be retired. |
 | `MMS_API_URL` | Older MMS proxy routes and placeholder service config | Older proxy routes may hit wrong host | Usually `https://api.mymusicstaff.com`. |
-| `GITHUB_TOKEN` | Production registry writes and workflow health cards | Registry edits from admin fail in production; GitHub workflow health shows unknown | Use a token with repo/workflow access. FINN TO FILL IN token owner and renewal. |
+| `GITHUB_TOKEN` | Production registry reads/writes and workflow health cards | Reads fall back to the bundled deployment snapshot; registry edits fail closed; GitHub workflow health shows unknown | Use a dedicated fine-grained token owned by `FirstChord`, scoped to `first-chord-dashbord` and `first-chord-brain`, with repository `Contents: Read and write` and `Actions: Read-only`. Store it in Railway, set an expiry reminder, and rotate before expiry. |
 | `STRIPE_API_KEY` | Stripe/payment scans | Payment issue refreshes and student Stripe checks fail | Use a restricted live key with Read access for Customers, Subscriptions, Invoices, Prices, and Payment Intents. Payment Intents Read is required by the live issue scan's `latest_invoice.payment_intent` expansion. Edit permissions in Stripe; update Railway/local `.env.local` only when the key value itself is rotated. |
 | `STRIPE_PAYMENT_LINK` or `PAYMENT_LINK` | Onboarding message templates | Payment link copy falls back to placeholder | Set to current one-to-one payment link. |
 | `GROUP_LESSON_PAYMENT_LINK` | Group onboarding copy | Group payment link may be wrong or use fallback | Set to current group lesson payment link. |
@@ -231,6 +231,33 @@ Recovery:
 2. Locally, either use those env vars or ensure `~/token_musiclessons.json` exists.
 3. If the refresh token has expired/revoked, generate a new one with Google Sheets scope and update Railway/local env. FINN TO FILL IN exact command/account.
 4. If a tab is missing, compare against `docs/architecture/data/state-tabs.md`. The app can create some managed state tabs, but do not rename tabs casually.
+
+## If GitHub Registry Auth Is Failing
+
+Symptoms:
+
+- Authenticated admin pages or the incoming-message PWA report `GitHub registry fetch failed: 401`.
+- Registry edits from onboarding, student detail, or archive workflows fail.
+- GitHub workflow health cards show unknown.
+
+Read availability is fail-safe: a failed production GitHub registry read falls
+back to the registry snapshot bundled into the deployed commit. The fallback is
+read-only. Registry writes still require a successful fresh GitHub read and
+authenticated GitHub update, so an expired token cannot authorise a stale write.
+
+Recovery:
+
+1. Create a dedicated fine-grained GitHub token owned by `FirstChord`.
+2. Limit repository access to `first-chord-dashbord` and `first-chord-brain`.
+3. Grant repository `Contents: Read and write` and `Actions: Read-only`.
+4. In Railway project `pure-spontaneity`, service `first-chord-dashbord`,
+   production environment, replace `GITHUB_TOKEN`.
+5. Review and deploy Railway's staged variable change.
+6. Confirm `/admin` and the incoming-message PWA load, workflow health is
+   available, and one normal registry edit can preview/save through its existing
+   human approval boundary.
+7. Revoke the expired token and record the new expiry reminder. Never paste the
+   token into logs, docs, chat, or source control.
 
 ## If Railway Deploy Is Broken
 
