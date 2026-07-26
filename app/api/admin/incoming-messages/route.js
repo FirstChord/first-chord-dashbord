@@ -1,5 +1,6 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
+import { buildBridgeMutationResponse } from '@/lib/admin/incoming-route-helpers.mjs';
 import {
   addStudentToGroup,
   captureIncomingMessage,
@@ -168,6 +169,17 @@ export async function POST(request) {
       await captureIncomingMessage(body?.message || body || {}, {
         actorEmail: isAdmin ? session.user.email || '' : 'incoming-message-bridge',
       });
+    }
+
+    // The external bridge needs acknowledgement, not the admin inbox or group
+    // map. Keep parent content and operational context inside the authenticated
+    // dashboard. Group sync retains its small, non-sensitive summary because
+    // the bridge uses it for operator diagnostics.
+    if (isBridge && !isAdmin) {
+      return Response.json(buildBridgeMutationResponse({
+        mode,
+        groupSyncSummary: extra.groupSyncSummary,
+      }));
     }
 
     const [inbox, groupMap] = await Promise.all([

@@ -27,6 +27,8 @@ npm run build
 - Pull requests and pushes to `main` repeat clean install, tests, application
   lint, and production build in `.github/workflows/ci.yml`. A green local run is
   not a substitute for investigating a failed GitHub check.
+- Railway and dashboard CI are pinned to Node 24. Keep their major versions
+  aligned and do not restore an end-of-life runtime as an incident workaround.
 - Pushing `main` deploys through Railway. Confirm before pushing.
 - Parent-facing, payment-affecting, and deletion/archive actions should stay human-approved.
 
@@ -114,9 +116,10 @@ These are used by local helper tools rather than the Railway app. Keep them out 
 | Name | Used by | What breaks if missing | Recovery |
 | --- | --- | --- | --- |
 | `DASHBOARD_BASE_URL` or `INCOMING_MESSAGE_WEBHOOK_URL` | `tools/whatsapp-incoming-bridge` | Confirmed-group capture posts to the wrong dashboard or fails | Set to the canonical admin Railway URL. |
-| `INCOMING_MESSAGE_INGEST_SECRET` | `tools/whatsapp-incoming-bridge` | Bridge posts are rejected by the dashboard API | Must match Railway's value. Store in the bridge `.env.local`, not in git. |
+| `INCOMING_MESSAGE_INGEST_SECRET` | `tools/whatsapp-incoming-bridge` | Bridge posts are rejected by the dashboard API | Must match Railway's value. Store in the bridge `.env`, not in git. |
 | `BAILEYS_AUTH_DIR` | WhatsApp bridge local session | Bridge may ask for a new WhatsApp pairing or use a different session | Defaults to the local auth folder. Keep this private and local. |
 | `BAILEYS_LOG_LEVEL` / `LOG_LEVEL` | WhatsApp bridge logging | No operational breakage | Optional debugging only. |
+| `BRIDGE_LOG_PATH`, `BRIDGE_LOG_MAX_BYTES`, `BRIDGE_LOG_MAX_FILES`, `BRIDGE_LOG_MAX_AGE_DAYS` | Privacy-safe structured bridge logging | Defaults still provide a bounded `logs/bridge.log`; incorrect overrides can retain too much or too little operational history | Defaults: 2 MiB per file, four rotations, 14-day maximum age. Do not point the log outside a private ignored directory. |
 | `DRY_RUN` | WhatsApp bridge testing | Messages may be logged but not posted when set true | Use for local testing only. |
 | `WHATSAPP_CACHE_PATH`, `WHATSAPP_CACHE_LIMIT`, `WHATSAPP_CACHE_MAX_AGE_DAYS`, `WHATSAPP_CAPTURED_BY`, `WRITE_STARRED_LOG`, `SYNC_GROUPS_ON_START`, `GROUP_SYNC_MAX_ATTEMPTS`, `GROUP_SYNC_WAIT_MS` | WhatsApp bridge capture/group-map helpers | Cache, capture attribution, legacy debug-log, or sync behaviour may differ from expected | Leave defaults unless debugging the bridge. Document any permanent change in `docs/operations/integrations/whatsapp-incoming-bridge.md`. |
 

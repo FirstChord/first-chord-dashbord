@@ -77,6 +77,12 @@ POST /api/admin/incoming-messages
 x-firstchord-incoming-secret: <INCOMING_MESSAGE_INGEST_SECRET>
 ```
 
+Secret-only bridge capture responses contain acknowledgement metadata only.
+They never return the admin inbox, group map, parent text, or student context.
+Group sync additionally returns its aggregate match summary so the local
+operator can diagnose mapping coverage. Authenticated admin requests retain the
+full interactive response their UI needs.
+
 The dashboard writes:
 
 - `Incoming_Message_Inbox`: captured evidence and human workflow state
@@ -115,7 +121,8 @@ roughly 65 minutes without proven health at the default heartbeat. launchd
 Recovery order:
 
 1. Use Quick capture for any urgent missed message.
-2. Check bridge logs, dashboard heartbeat, and confirmed-group count.
+2. Check `tools/whatsapp-incoming-bridge/logs/bridge.log`, the dashboard
+   heartbeat, and confirmed-group count.
 3. Restart/re-link the single bridge process if needed.
 4. Signal a live group sync if mappings are stale.
 5. Do not promise backlog recovery: history/append batches are cached locally
@@ -127,6 +134,15 @@ The JSON cache defaults to 2,000 messages and 14 days. It contains message text
 and identity metadata, is gitignored, and currently supports diagnostics and
 heartbeat counts—not replay or recovery. Treat it as sensitive and consider its
 removal if those diagnostics no longer justify retaining message bodies.
+
+Structured operational logs default to `logs/bridge.log`. They exclude message
+text, message/chat IDs, sender details, group samples, and dashboard response
+content. The logger rotates at 2 MiB, keeps at most four rotated files, and
+removes rotations older than 14 days. `BRIDGE_LOG_PATH`,
+`BRIDGE_LOG_MAX_BYTES`, `BRIDGE_LOG_MAX_FILES`, and
+`BRIDGE_LOG_MAX_AGE_DAYS` may override those bounds. Existing
+`launchagent.out.log`/`launchagent.err.log` files predate this boundary; review
+and remove them separately rather than assuming the new logger prunes them.
 
 `WRITE_STARRED_LOG` and `starred-payloads.ndjson` are legacy names; when enabled,
 the log can contain current test/auto payloads and personal data. Never commit it.

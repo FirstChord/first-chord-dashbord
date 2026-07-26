@@ -8,6 +8,11 @@ const path = require('node:path');
 const P = require('pino');
 const qrcode = require('qrcode-terminal');
 const { guardOutbound } = require('./outbound-guard');
+const {
+  buildSafeDashboardResponseLog,
+  buildSafePayloadLog,
+  createBridgeLogStream,
+} = require('./logging');
 
 const DEFAULT_DASHBOARD_URL = 'https://first-chord-dashbord-production.up.railway.app';
 
@@ -176,7 +181,16 @@ class WhatsAppIncomingBridge {
       this.bridgeVersion = '';
     }
     this.groupSyncWaitMs = Number(process.env.GROUP_SYNC_WAIT_MS || 25000) || 25000;
-    this.logger = P({ level: process.env.LOG_LEVEL || 'info' });
+    try {
+      this.logDestination = createBridgeLogStream({ env: process.env, baseDir: __dirname });
+      this.logger = P({ level: process.env.LOG_LEVEL || 'info' }, this.logDestination);
+    } catch (error) {
+      // Logging must never stop intake. The fallback remains privacy-safe
+      // because message bodies and response previews are excluded below.
+      console.error(`Could not initialise bounded bridge logging: ${error.message}`);
+      this.logDestination = null;
+      this.logger = P({ level: process.env.LOG_LEVEL || 'info' });
+    }
     this.sock = null;
     this.connected = false;
     this.recentMessages = new Map();
@@ -359,7 +373,7 @@ class WhatsAppIncomingBridge {
     }
 
     if (this.dryRun) {
-      this.logInfo('Dry run payload', { payload });
+      this.logInfo('Dry run payload', buildSafePayloadLog(payload));
       return { dryRun: true };
     }
 
@@ -370,18 +384,10 @@ class WhatsAppIncomingBridge {
         'x-firstchord-incoming-secret': this.webhookSecret,
       },
     });
-    const latest = Array.isArray(response.data?.inbox) ? response.data.inbox[0] : null;
-    this.logInfo('Posted incoming message to dashboard', {
-      status: response.status,
-      messageId: payload.external_message_id,
-      contentType: response.headers?.['content-type'] || '',
-      success: response.data?.success,
-      responseKeys: response.data && typeof response.data === 'object' ? Object.keys(response.data) : [],
-      responsePreview: typeof response.data === 'string' ? response.data.slice(0, 120) : '',
-      inboxCount: Array.isArray(response.data?.inbox) ? response.data.inbox.length : null,
-      latestText: latest?.messageText ? `${latest.messageText}`.slice(0, 80) : '',
-      latestCategory: latest?.suspectedCategory || '',
-    });
+    this.logInfo(
+      'Posted incoming message to dashboard',
+      buildSafeDashboardResponseLog(response),
+    );
     return response.data;
   }
 
@@ -643,7 +649,7 @@ class WhatsAppIncomingBridge {
 
   async sendGroupSync(groups = []) {
     if (this.dryRun) {
-      this.logInfo('Dry run group sync', { groupCount: groups.length, sample: groups.slice(0, 5) });
+      this.logInfo('Dry run group sync', { groupCount: groups.length });
       return { dryRun: true, groups };
     }
 
@@ -826,7 +832,8 @@ async function main() {
   const testIndex = process.argv.indexOf('--send-test');
   if (testIndex !== -1) {
     const text = process.argv.slice(testIndex + 1).join(' ').trim() || 'Alex is away next Friday';
-    await bridge.sendTestPayload(text);
+    const result = await bridge.sendTestPayload(text);
+    console.log(`Bridge intake test complete: ${result?.success === true || result?.dryRun === true ? 'success' : 'unexpected response'}`);
     return;
   }
   if (process.argv.includes('--sync-groups')) {

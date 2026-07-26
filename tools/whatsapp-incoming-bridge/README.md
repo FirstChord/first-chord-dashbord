@@ -30,6 +30,9 @@ INCOMING_STAFF_PHONES=+44...
 WHATSAPP_CAPTURED_BY=Finn
 WHATSAPP_CACHE_LIMIT=2000
 WHATSAPP_CACHE_MAX_AGE_DAYS=14
+BRIDGE_LOG_MAX_BYTES=2097152
+BRIDGE_LOG_MAX_FILES=4
+BRIDGE_LOG_MAX_AGE_DAYS=14
 ```
 
 `AUTO_CAPTURE_CONFIRMED_GROUPS=false` turns automated capture off. There is no
@@ -87,6 +90,13 @@ The test exercises dashboard ingestion; it is not a WhatsApp send. For a live
 smoke check, verify one non-sensitive confirmed-group message appears once,
 then verify the dashboard heartbeat and confirmed count.
 
+Privacy-safe structured logs are written to `logs/bridge.log`, rotate at 2 MiB,
+retain at most four rotations, and prune rotations older than 14 days. Override
+the path or bounds with `BRIDGE_LOG_PATH`, `BRIDGE_LOG_MAX_BYTES`,
+`BRIDGE_LOG_MAX_FILES`, and `BRIDGE_LOG_MAX_AGE_DAYS`. The launchd stdout/stderr
+files contain only wrapper/uncaught output after this version; older files may
+still contain legacy message previews and need a separate reviewed cleanup.
+
 The watchdog exits after a prolonged disconnect or lack of proven health
 (about 65 minutes at the default heartbeat); launchd should relaunch it. A
 logged-out session requires a QR re-link. Quick capture is the downtime
@@ -96,6 +106,7 @@ fallback—offline backlog recovery is not guaranteed.
 
 - auth session directory: grants access to the linked WhatsApp account
 - `cache/recent-messages.json`: message bodies and identity metadata
+- legacy `logs/launchagent.*.log`: may contain message previews from older bridge versions
 - `logs/starred-payloads.ndjson`: legacy filename; if enabled, may contain
   current auto/test payloads
 
