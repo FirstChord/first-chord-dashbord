@@ -1,7 +1,7 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: 2026-07-26
+last_verified: 2026-07-27
 ---
 # Admin current status
 
@@ -26,6 +26,17 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
+- **Tutor-absence dated payment handoff (2026-07-27):** a new guided
+  cancellation no longer treats the undated
+  `Students.payment_expectation = stripe_paused_expected` flag as proof that
+  the affected lesson dates were handled. The follow-up Planning card is a
+  structured pause card with the payment tool first; message-only final cards
+  are reserved for an explicit per-lesson “payment not needed” decision.
+  Existing active message-only cards created by the old logic were parked
+  without rewriting terminal history or touching Stripe, MMS, student payment
+  fields, or parent messages. The point-in-time repair evidence and repeatable
+  regression check are in the
+  [tutor-absence contract](./workflows/tutors/absence-to-pause.md).
 - **Dashboard and WhatsApp intake resilience (2026-07-26):** production registry
   reads now fall back to the deployed snapshot when GitHub authentication fails,
   while registry writes fail closed. Dashboard CI and Railway run on Node 24.
@@ -75,7 +86,7 @@ deliberate school-improvement prompt.
 | Navigation | Overview starts work; Issues handles detected problems; Workflows holds recurring processes; Planning holds due work, reflection, notes, and initiatives. Student records are reached through search and workflow links. |
 | Capacity | MMS `Free` events remain source truth. Waiting-list matches are hints filtered by instrument, never reservations or automatic assignment. |
 | Planning | `Planning_Items` is human work state, not a project-management or workflow engine. Friday reflection and Monday scheduling are seeded planning prompts. |
-| Pauses | Generic completion never changes payment state. The guarded pause-completion action requires human confirmation, writes through the existing student route, and logs to `Event_Log`. |
+| Pauses | Generic completion never changes payment state. The guarded pause-completion action requires human confirmation, writes through the existing student route, and logs to `Event_Log`. For new guided tutor-absence cancellations, an undated paused-expected flag cannot suppress the dated structured pause card or unlock its final message; only an explicit per-lesson payment-not-needed decision takes the message-only path. |
 | Messaging | Parent communication remains approval-first. `Communication_Log` means copied to send, not proven sent; inbound classifications and reply drafts remain proposals. |
 | Practice Chat | All registered tutors are enabled unless temporarily constrained. The tutor self-attests, the student must have one clear tutor assignment, the final screen names the server-derived recipient, and PostgreSQL claims the delivery key before MMS/Gmail work. Ambiguous Gmail outcomes require manual follow-up. |
 | Student portal notes | Profile URLs and non-note resources stay public. Practice Chat notes load through a separate no-store API; families are moved individually to memorable-code protection through the claimed admin rollout queue. A missing rollout row remains legacy-public, while an access-state failure fails closed. |

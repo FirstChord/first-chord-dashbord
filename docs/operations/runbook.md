@@ -1,7 +1,7 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: 2026-07-26
+last_verified: 2026-07-27
 ---
 # Operations Runbook
 
@@ -29,8 +29,33 @@ npm run build
   not a substitute for investigating a failed GitHub check.
 - Railway and dashboard CI are pinned to Node 24. Keep their major versions
   aligned and do not restore an end-of-life runtime as an incident workaround.
-- Pushing `main` deploys through Railway. Confirm before pushing.
+- Pushing `main` deploys through Railway. Completed, validated repository changes
+  deploy by default without a second confirmation; use the decision boundary
+  below for the exceptions.
 - Parent-facing, payment-affecting, and deletion/archive actions should stay human-approved.
+
+## Default Deployment Decision
+
+For normal completed work, finish the delivery loop: inspect the intended diff,
+commit it, push `main`, watch GitHub CI and every triggered Railway service, and
+smoke the affected production surface. Do not leave an ordinary validated
+change local merely to ask Finn whether it should be deployed.
+
+Stop before deployment and run it by Finn only when:
+
+- a missing product/operational decision, explicit local-only request, failed
+  safety gate, unknown production configuration/rollback path, or mixed
+  worktree prevents a safe intentional release; or
+- the rollout is materially risky enough to need a concise risk, rollout, smoke,
+  and rollback outline first. Treat credentials, authentication/permissions,
+  migrations or broad live-data repair, destructive/archive behaviour, and
+  releases that execute or newly enable consequential provider actions as
+  materially risky.
+
+Try to resolve ordinary validation failures within scope before escalating
+them. Deployment permission never substitutes for the existing human approval
+required to send parent messages, execute payments, change attendance, archive
+students, or mutate MMS/Stripe/Sheets operational truth.
 
 ## Main Systems
 
@@ -363,7 +388,8 @@ npm run build
 ```
 
 3. Commit intentionally.
-4. Push only after confirming with Finn:
+4. Push `main` by default after the checks and diff review pass. Pause only at
+   the documented default-deployment decision boundary:
 
 ```bash
 git push origin main

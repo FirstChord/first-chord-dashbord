@@ -1,7 +1,7 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: 2026-07-20
+last_verified: 2026-07-27
 ---
 # Tutor Absence And Pause Contract
 
@@ -126,10 +126,109 @@ established. Do not auto-retire it from incoming text or inferred overlap.
    household on the same tutor/date blocks that household's card, not every
    student's otherwise-current pause work.
 
+## Dated Payment Handoff Correction (2026-07-27)
+
+The observed failure was specific and plausible-looking:
+
+1. the first card correctly asked staff to send the early cancellation notice;
+2. the generated follow-up card then claimed the pause was already handled and
+   offered only a final parent message;
+3. the payment pause tool was missing whenever the student carried the broad
+   `stripe_paused_expected` flag.
+
+The root cause was using an undated student-level expectation as evidence that
+the tutor-absence dates had been processed. That flag has no pause-window
+coverage and cannot prove a Stripe action, a dated tool check, or a completed
+tutor-absence handoff.
+
+The corrected contract is:
+
+- notice-enabled `v1` cancellations create dated structured pause work even
+  when the student is already `stripe_paused_expected`;
+- generated pause cards set `is_pause = true` explicitly;
+- the Planning card keeps **Payment action** as step one and unlocks the final
+  parent confirmation only after the dated tool check is confirmed;
+- the pause-tool prefill reason is `Teacher Holiday`;
+- only an explicit per-lesson `pauseSkipped` / payment-not-needed decision
+  creates a message-only `tutor-absence-final-confirmation` card;
+- sync parks obsolete active message-only cards but never rewrites `done`,
+  `parked`, or deferred history;
+- pre-`v1` records are not silently backfilled merely because they contain old
+  tutor-absence state.
+
+The frozen historical Learning Log contains a 2026-06-25 description saying
+that `stripe_paused_expected` students were skipped. That describes the old
+implementation and is not current instruction. Current code, focused tests, and
+this canonical document supersede it.
+
+### Point-in-time production repair
+
+The production Planning sync on 2026-07-27:
+
+- created 9 missing structured pause cards;
+- refreshed 5 active structured pause cards;
+- parked 8 obsolete active message-only cards with progress/audit notes;
+- left 0 active message-only cards produced solely from the undated
+  paused-expected flag;
+- left 14 active structured tutor-absence pause cards, all explicitly marked
+  `is_pause = true`.
+
+Those totals are repair evidence, not permanent expected counts. Future
+absences and completed work will change them. The durable invariant is the card
+shape and action boundary, not “14 cards”.
+
+The repair changed dashboard Planning workflow state and append-only progress
+evidence only. It did not execute Stripe, edit MMS, change
+`Students.payment_expectation`, or send/copy a parent message.
+
+## Future Regression Check
+
+Run this check after changing tutor-absence sync, pause-card rendering, Planning
+completion gates, structured pause note labels, or payment-expectation handling.
+Also use it if a future second card looks like a message-only confirmation.
+
+Start with deterministic tests:
+
+```bash
+node --test tests/admin/tutor-absence-helpers.test.mjs
+node --test tests/admin/planning-client-helpers.test.mjs
+node --test tests/admin/pause-forecast.test.mjs
+npm run docs:check
+```
+
+Then, on the next real `v1` cancellation involving a student already marked
+`stripe_paused_expected`, check without fabricating a live absence:
+
+1. `/admin/planning` has an active `linkedWorkflowId = tutor-absence` card for
+   the affected student/date or safely grouped date block.
+2. The card is explicitly a structured pause (`is_pause = true`) and retains
+   the exact date labels consumed by `pause-forecast.mjs`.
+3. **Open payment pause tool** is the first action and its prefill uses
+   `Teacher Holiday`.
+4. The final parent message stays locked until the human confirms the dated
+   payment-tool check.
+5. No active `tutor-absence-final-confirmation` card exists merely because the
+   student is paused-expected.
+6. An explicit payment-not-needed decision still creates the non-pause,
+   message-only final card and records its reason.
+7. Any superseded active message-only card is parked with progress evidence;
+   terminal history remains unchanged.
+8. Finance sees the structured non-parked card, while early notices and genuine
+   no-payment final cards remain outside pause forecasting.
+
+Do not use a global card count as the check, and do not run Stripe or send a
+parent message just to prove the regression is fixed.
+
 ## Code And Verification
 
 - orchestration: `lib/admin/tutor-absence.js`
 - rules/IDs/grouping: `lib/admin/tutor-absence-helpers.mjs`
+- Planning payment-tool classification and prefill:
+  `lib/admin/planning-client-helpers.mjs`
+- Planning action gating/rendering:
+  `components/admin/planning/PlanningCard.js`
+- direct tutor-absence controls:
+  `components/admin/AdminTutorAbsencePageClient.js`
 - forecast parser: `lib/admin/pause-forecast.mjs`
 - focused tests: `tests/admin/tutor-absence-helpers.test.mjs`,
   `tests/admin/pause-*.test.mjs`, and planning helper tests

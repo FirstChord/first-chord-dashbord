@@ -121,6 +121,34 @@ HTTP access to an assistant. Prefer narrow read models and typed action proposal
 `docs/architecture/ai/tool-contracts.md` is the design allowlist for future dashboard AI
 capabilities. A model-supplied confirmation is never human approval.
 
+## Default Delivery And Deployment
+
+For a completed, in-scope repository change, deployment is the default finish.
+After the relevant checks pass, inspect the final diff, commit only the intended
+files, push `main`, monitor GitHub CI and every triggered Railway service, and
+smoke-test the affected production surface. Do not stop merely to ask Finn
+whether to deploy, and do not present deployment as an optional follow-up for
+ordinary code, test, or documentation changes.
+
+Pause before deployment only when one of these applies:
+
+- a product or operational decision genuinely needs Finn's answer, the user
+  explicitly asked for local-only/unpublished work, or an unresolved blocker
+  prevents a safe release;
+- relevant validation is failing or unavailable and cannot be repaired within
+  scope, production configuration or the rollback path is unknown, or unrelated
+  worktree changes prevent an intentional commit;
+- the rollout is materially risky and Finn needs a concise risk, rollout, smoke,
+  and rollback outline before approving it. Examples include credentials,
+  authentication/permissions, schema or data migrations, broad live-state
+  repair, destructive/archive behaviour, or a release that itself executes or
+  enables payment, messaging, attendance, registry, MMS, Stripe, or Sheets
+  mutations.
+
+Default deployment authority covers publishing the reviewed repository change;
+it does not authorise carrying out consequential school/provider actions after
+deployment. The human approval boundaries above remain in force.
+
 ## Validation By Change Type
 
 Start with the smallest matching test file, then run the full admin suite.
