@@ -260,6 +260,46 @@ Recovery:
 3. If the refresh token has expired/revoked, generate a new one with Google Sheets scope and update Railway/local env. FINN TO FILL IN exact command/account.
 4. If a tab is missing, compare against `docs/architecture/data/state-tabs.md`. The app can create some managed state tabs, but do not rename tabs casually.
 
+## If Google Sheets Write Quota Is Exceeded
+
+Symptoms:
+
+- Google reports `Quota exceeded` for `Write requests per minute per user`.
+- A confirmed save or reconciliation returns HTTP 429 or a raw Sheets quota
+  message.
+- The page may have completed an earlier non-transactional write before a later
+  audit or state write failed.
+
+Immediate recovery:
+
+1. Stop clicking the action repeatedly and allow at least one minute for the
+   per-user quota window to clear.
+2. Reload the workflow before retrying. Never infer success or failure solely
+   from the browser error because the earlier step may already be stored.
+3. For **Sync pause expectations**, return to `/admin/flags` and run it again.
+   Its GET preview reloads Pause History, schedule context, and current Students
+   values, so it proposes only changes still outstanding. Do not edit Stripe or
+   manually repeat every proposed Students change.
+4. If diagnostic/API detail is available, interpret the failed stage as:
+   - `attempt_log`: no Students batch was attempted;
+   - `student_batch_write`: outcome is unknown, so reload and preview before any
+     retry;
+   - `completion_log`: the Students changes were applied, but the completion
+     audit batch may be missing. Preserve the attempt evidence and record any
+     manual recovery rather than guessing or deleting log rows.
+5. If quota errors continue after the minute window, check for another bulk
+   writer or repeated browser action before increasing quotas. Review the code
+   for per-row write loops; do not work around the problem by removing audit
+   events or the confirmation boundary.
+
+The pause-expectation path should normally use exactly three write requests for
+the whole confirmed run: one attempt-event append, one Students
+`values.batchUpdate`, and one completion-event append. Multiple Students rows
+for one MMS ID are one decision and are aligned in that single update request.
+The regression contract is in
+`tests/admin/pause-expectation-reconciliation.test.mjs` and
+`tests/admin/sheets-helpers.test.mjs`.
+
 ## If GitHub Registry Auth Is Failing
 
 Symptoms:

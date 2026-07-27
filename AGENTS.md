@@ -81,6 +81,10 @@ Test names in the table refer to `tests/admin/*.test.mjs`.
   payment truth. High-confidence Pause History reconciliation is an explicit
   preview-and-confirm action on `/admin/flags`; only its confirmed POST may write
   `Students.payment_expectation`, and every change must append `Event_Log`.
+  Its normal write contract is three batched Sheets requests for the whole run:
+  attempt events, all matching Students cells, then completion events. Do not
+  replace those batches with per-student append/update loops; a retry must reload
+  current evidence and propose only outstanding changes.
 - Onboarding writes across Sheets, the registry, and MMS. It can partially
   succeed. Preserve step results and recovery detail; never turn a warning into
   unconditional success.
