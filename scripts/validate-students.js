@@ -206,7 +206,7 @@ function isValidFriendlyUrl(url) {
  * Validate Soundslice URL format
  */
 function isValidSoundsliceUrl(url) {
-  return /^https:\/\/www\.soundslice\.com\/courses\/\d+\/$/.test(url);
+  return /^https:\/\/www\.soundslice\.com\/courses\/\d+\/?$/.test(url);
 }
 
 /**

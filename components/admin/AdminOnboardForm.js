@@ -115,6 +115,8 @@ export default function AdminOnboardForm({ initialData, tutorOptions, initialDup
 
   const derivedWeekday = useMemo(() => deriveWeekday(form.lessonDate), [form.lessonDate]);
   const initialWarnings = initialDuplicateState?.warnings || [];
+  const resultIsComplete = result?.completionStatus?.canonicalRecord?.status === 'complete'
+    && result?.completionStatus?.mmsOperationalState?.status === 'complete';
 
   function updateField(key, value) {
     setForm((current) => ({
@@ -459,17 +461,23 @@ export default function AdminOnboardForm({ initialData, tutorOptions, initialDup
       ) : null}
 
       {result ? (
-        <section className="space-y-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-6">
-          <h3 className="text-lg font-semibold text-emerald-900">Onboarding complete</h3>
+        <section className={`space-y-4 rounded-2xl border p-6 ${
+          resultIsComplete
+            ? 'border-emerald-200 bg-emerald-50'
+            : 'border-amber-200 bg-amber-50'
+        }`}>
+          <h3 className={`text-lg font-semibold ${resultIsComplete ? 'text-emerald-900' : 'text-amber-950'}`}>
+            {resultIsComplete ? 'Onboarding complete' : 'Onboarding partially complete'}
+          </h3>
           {result.lessonWarning ? (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-              The student was added successfully, but MMS lesson creation still needs attention:
+              MMS setup still needs attention:
               <div className="mt-2 font-mono text-xs break-words">{result.lessonWarning}</div>
             </div>
           ) : null}
           {result.waitingCloseoutWarning ? (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-              The student was added successfully, but the waiting-list closeout needs checking:
+              The waiting-list closeout needs checking:
               <div className="mt-2 font-mono text-xs break-words">{result.waitingCloseoutWarning}</div>
             </div>
           ) : null}
@@ -486,7 +494,7 @@ export default function AdminOnboardForm({ initialData, tutorOptions, initialDup
           ) : null}
           {result.firstLessonCheckinWarning ? (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-              The student was added successfully, but the first-lesson check-in task was not created:
+              The first-lesson check-in task was not created:
               <div className="mt-2 font-mono text-xs break-words">{result.firstLessonCheckinWarning}</div>
             </div>
           ) : null}
@@ -511,8 +519,18 @@ export default function AdminOnboardForm({ initialData, tutorOptions, initialDup
           ) : null}
           {result.notesPrivacyFollowUpWarning ? (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-              The student was onboarded, but the notes privacy follow-up was not queued:
+              The notes privacy follow-up was not queued:
               <div className="mt-2 font-mono text-xs break-words">{result.notesPrivacyFollowUpWarning}</div>
+            </div>
+          ) : null}
+          {result.recoveryGuidance?.length ? (
+            <div className="rounded-xl border border-amber-200 bg-white p-4 text-sm text-slate-700">
+              <p className="font-semibold text-slate-900">Recovery guidance</p>
+              <ul className="mt-2 list-disc pl-5">
+                {result.recoveryGuidance.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
             </div>
           ) : null}
           {result.duplicateWarnings?.length ? (

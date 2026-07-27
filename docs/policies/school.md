@@ -34,7 +34,9 @@ the first lesson.
 
 Onboarding crosses Sheets, registry/GitHub, and MMS and can partially succeed.
 Show every step result and recovery action; never collapse warnings into
-unconditional success.
+unconditional success. Keep the waiting record open, and do not create
+post-onboarding check-ins or notes-access follow-ups, until the canonical record
+and all three MMS conditions above are complete.
 
 ## Lessons, Cancellation, And Leaving
 

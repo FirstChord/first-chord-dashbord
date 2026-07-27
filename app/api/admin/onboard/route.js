@@ -7,10 +7,14 @@ import {
   buildOnboardingRecoveryGuidance,
   createOnboardingSteps,
   getOnboardingDuplicateState,
+  isOnboardingOperationallyComplete,
   markOnboardingStep,
 } from '@/lib/admin/onboarding';
 import { addStudentSheetRow, appendEventLogRows } from '@/lib/admin/sheets';
-import { appendRegistryEntry } from '@/lib/admin/registry';
+import {
+  appendRegistryEntry,
+  assertRegistryWriteAvailable,
+} from '@/lib/admin/registry';
 import { activateStudent, createFirstLesson, ensureBillingProfile, getStudentDetails } from '@/lib/admin/mms';
 import { generateFcStudentId, generateFriendlyUrl, normaliseExperienceLevel, normaliseInstrument } from '@/lib/admin/fc';
 import { ADMIN_TUTORS } from '@/lib/admin/tutors';
@@ -185,17 +189,26 @@ async function appendCanonicalStudent({
 
   let registryAction = 'kept_existing';
   if (duplicateState.shouldAppendRegistry) {
-    await appendRegistryEntry({
-      mmsId: student.mmsId,
-      firstName: student.firstName,
-      lastName: student.lastName,
-      friendlyUrl,
-      tutor: tutor.shortName,
-      instrument,
-      soundsliceUrl: student.soundsliceUrl || '',
-      thetaUsername,
-      fcStudentId,
-    });
+    try {
+      await appendRegistryEntry({
+        mmsId: student.mmsId,
+        firstName: student.firstName,
+        lastName: student.lastName,
+        friendlyUrl,
+        tutor: tutor.shortName,
+        instrument,
+        soundsliceUrl: student.soundsliceUrl || '',
+        thetaUsername,
+        fcStudentId,
+      });
+    } catch (error) {
+      const registryError = new Error(
+        error?.message || 'Registry write failed after the Students row was inserted.',
+      );
+      registryError.onboardingStage = 'registryWrite';
+      registryError.sheetInsert = sheetInsert;
+      throw registryError;
+    }
     registryAction = 'appended';
   }
 
@@ -248,12 +261,46 @@ export async function POST(request) {
   const secondStudentName = secondStudentDetails?.fullName || '';
   const studentNamesLabel = secondStudentRequired && secondStudentName ? `${studentName} and ${secondStudentName}` : studentName;
   const studentFirstNamesLabel = firstNameList([studentName, secondStudentRequired ? secondStudentName : '']);
-  const duplicateState = await getOnboardingDuplicateState({
+  let steps = createOnboardingSteps();
+  let duplicateState = null;
+
+  try {
+    await assertRegistryWriteAvailable();
+    steps = markOnboardingStep(
+      steps,
+      'registryPreflight',
+      'succeeded',
+      'GitHub registry write path is available.',
+    );
+  } catch (error) {
+    steps = markOnboardingStep(
+      steps,
+      'registryPreflight',
+      'failed',
+      error.message || 'GitHub registry write path is unavailable.',
+    );
+    steps = markOnboardingStep(steps, 'duplicateCheck', 'skipped', 'Skipped because registry preflight failed.');
+    steps = markOnboardingStep(steps, 'sheetsWrite', 'skipped', 'No Students row was written because registry preflight failed.');
+    steps = markOnboardingStep(steps, 'registryWrite', 'skipped', 'No registry write was attempted because preflight failed.');
+    steps = markOnboardingStep(steps, 'mmsActivation', 'skipped', 'No MMS write was attempted because registry preflight failed.');
+    steps = markOnboardingStep(steps, 'mmsBillingProfile', 'skipped', 'No MMS write was attempted because registry preflight failed.');
+    steps = markOnboardingStep(steps, 'mmsFirstLesson', 'skipped', 'No MMS write was attempted because registry preflight failed.');
+
+    return Response.json(
+      {
+        error: error.message || 'GitHub registry write path is unavailable.',
+        steps,
+        recoveryGuidance: buildOnboardingRecoveryGuidance({ steps }),
+      },
+      { status: 503 },
+    );
+  }
+
+  duplicateState = await getOnboardingDuplicateState({
     mmsId: payload.mmsId,
     tutorFullName: tutor.fullName,
     tutorShortName: payload.tutorShortName,
   });
-  let steps = createOnboardingSteps();
 
   if (duplicateState.exactDuplicate) {
     steps = markOnboardingStep(
@@ -420,126 +467,141 @@ export async function POST(request) {
       }
     }
 
+    const completionStatus = buildOnboardingCompletionStatus({ steps });
+    const operationallyComplete = isOnboardingOperationallyComplete(completionStatus);
+
     let waitingCloseout = [];
     let waitingCloseoutWarning = '';
 
-    try {
-      const now = new Date().toISOString();
-      waitingCloseout = await markWaitingWorkflowStudentsOnboarded({
-        students: [
-          {
-            mmsId: payload.mmsId,
-            studentName,
-            parentName,
-            parentEmail,
-          },
-          secondStudentDetails
-            ? {
-                mmsId: secondStudentDetails.mmsId,
-                studentName: secondStudentName,
-                parentName: `${secondStudentDetails.parentFirstName || payload.parentFirstName || ''} ${secondStudentDetails.parentLastName || payload.parentLastName || ''}`.trim(),
-                parentEmail: secondStudentDetails.parentEmail || parentEmail,
-              }
-            : null,
-        ].filter(Boolean),
-        tutorName: tutor.fullName,
-        lessonDate: payload.lessonDate,
-        lessonTime: lessonTimeLabel,
-        lessonWarning,
-        now,
-      });
+    if (!operationallyComplete) {
+      waitingCloseoutWarning = 'Waiting status remains open because canonical or MMS onboarding is incomplete.';
+    } else {
+      try {
+        const now = new Date().toISOString();
+        waitingCloseout = await markWaitingWorkflowStudentsOnboarded({
+          students: [
+            {
+              mmsId: payload.mmsId,
+              studentName,
+              parentName,
+              parentEmail,
+            },
+            secondStudentDetails
+              ? {
+                  mmsId: secondStudentDetails.mmsId,
+                  studentName: secondStudentName,
+                  parentName: `${secondStudentDetails.parentFirstName || payload.parentFirstName || ''} ${secondStudentDetails.parentLastName || payload.parentLastName || ''}`.trim(),
+                  parentEmail: secondStudentDetails.parentEmail || parentEmail,
+                }
+              : null,
+          ].filter(Boolean),
+          tutorName: tutor.fullName,
+          lessonDate: payload.lessonDate,
+          lessonTime: lessonTimeLabel,
+          lessonWarning,
+          now,
+        });
 
-      if (waitingCloseout.length > 0) {
-        await appendEventLogRows(waitingCloseout.map((state) => ({
-          eventId: crypto.randomUUID(),
-          occurredAt: now,
-          actorEmail: session.user.email || '',
-          entityType: 'waiting',
-          entityId: state.mmsId,
-          eventType: 'waiting_onboarded_by_onboarding',
-          mmsId: state.mmsId,
-          studentName: state.mmsId === payload.mmsId ? studentName : secondStudentName || state.mmsId,
-          issueId: '',
-          payloadJson: JSON.stringify({
-            next_status: state.status,
-            lesson_id: lesson?.ID || '',
-            lesson_warning: lessonWarning,
-          }),
-        })));
+        if (waitingCloseout.length > 0) {
+          await appendEventLogRows(waitingCloseout.map((state) => ({
+            eventId: crypto.randomUUID(),
+            occurredAt: now,
+            actorEmail: session.user.email || '',
+            entityType: 'waiting',
+            entityId: state.mmsId,
+            eventType: 'waiting_onboarded_by_onboarding',
+            mmsId: state.mmsId,
+            studentName: state.mmsId === payload.mmsId ? studentName : secondStudentName || state.mmsId,
+            issueId: '',
+            payloadJson: JSON.stringify({
+              next_status: state.status,
+              lesson_id: lesson?.ID || '',
+              lesson_warning: lessonWarning,
+            }),
+          })));
+        }
+      } catch (error) {
+        waitingCloseoutWarning = error.message || 'Waiting-list closeout failed';
       }
-    } catch (error) {
-      waitingCloseoutWarning = error.message || 'Waiting-list closeout failed';
     }
 
     let firstLessonCheckin = null;
     let firstLessonCheckinWarning = '';
 
-    try {
-      const checkin = await createFirstLessonCheckinPlanningItem({
-        mmsId: payload.mmsId,
-        studentName,
-        tutorName: tutor.fullName,
-        lessonDate: payload.lessonDate,
-        lessonTime: lessonTimeLabel,
-        actorEmail: session.user.email || '',
-      });
-      firstLessonCheckin = {
-        planningId: checkin.planningId,
-        title: checkin.title,
-        targetDate: checkin.targetDate,
-      };
-
-      await appendEventLogRows([
-        {
-          eventId: crypto.randomUUID(),
-          occurredAt: new Date().toISOString(),
-          actorEmail: session.user.email || '',
-          entityType: 'planning',
-          entityId: checkin.planningId,
-          eventType: 'first_lesson_checkin_created',
+    if (!operationallyComplete) {
+      firstLessonCheckinWarning = 'First-lesson check-in was not queued because canonical or MMS onboarding is incomplete.';
+    } else {
+      try {
+        const checkin = await createFirstLessonCheckinPlanningItem({
           mmsId: payload.mmsId,
           studentName,
-          issueId: '',
-          payloadJson: JSON.stringify({
-            planning_id: checkin.planningId,
-            target_date: checkin.targetDate,
-            owner: 'Unassigned',
-          }),
-        },
-      ]);
-    } catch (error) {
-      firstLessonCheckinWarning = error.message || 'First-lesson check-in task creation failed';
+          tutorName: tutor.fullName,
+          lessonDate: payload.lessonDate,
+          lessonTime: lessonTimeLabel,
+          actorEmail: session.user.email || '',
+        });
+        firstLessonCheckin = {
+          planningId: checkin.planningId,
+          title: checkin.title,
+          targetDate: checkin.targetDate,
+        };
+
+        await appendEventLogRows([
+          {
+            eventId: crypto.randomUUID(),
+            occurredAt: new Date().toISOString(),
+            actorEmail: session.user.email || '',
+            entityType: 'planning',
+            entityId: checkin.planningId,
+            eventType: 'first_lesson_checkin_created',
+            mmsId: payload.mmsId,
+            studentName,
+            issueId: '',
+            payloadJson: JSON.stringify({
+              planning_id: checkin.planningId,
+              target_date: checkin.targetDate,
+              owner: 'Unassigned',
+            }),
+          },
+        ]);
+      } catch (error) {
+        firstLessonCheckinWarning = error.message || 'First-lesson check-in task creation failed';
+      }
     }
 
     let notesPrivacyFollowUp = [];
     let notesPrivacyFollowUpWarning = '';
-    try {
-      notesPrivacyFollowUp = await Promise.all([
-        ensureStudentNotesAccessFollowUp({
-          studentMmsId: payload.mmsId,
-          studentName,
-          friendlyUrl: primaryRecord.friendlyUrl,
-          tutorName: tutor.fullName,
-          actorEmail: session.user.email || '',
-        }),
-        secondStudentDetails && secondaryRecord
-          ? ensureStudentNotesAccessFollowUp({
-              studentMmsId: secondStudentDetails.mmsId,
-              studentName: secondStudentName,
-              friendlyUrl: secondaryRecord.friendlyUrl,
-              tutorName: tutor.fullName,
-              actorEmail: session.user.email || '',
-            })
-          : null,
-      ].filter(Boolean));
-    } catch (error) {
-      notesPrivacyFollowUpWarning = error.message || 'Student notes privacy follow-up could not be queued';
+    if (!operationallyComplete) {
+      notesPrivacyFollowUpWarning = 'Student notes privacy follow-up was not queued because canonical or MMS onboarding is incomplete.';
+    } else {
+      try {
+        notesPrivacyFollowUp = await Promise.all([
+          ensureStudentNotesAccessFollowUp({
+            studentMmsId: payload.mmsId,
+            studentName,
+            friendlyUrl: primaryRecord.friendlyUrl,
+            tutorName: tutor.fullName,
+            actorEmail: session.user.email || '',
+          }),
+          secondStudentDetails && secondaryRecord
+            ? ensureStudentNotesAccessFollowUp({
+                studentMmsId: secondStudentDetails.mmsId,
+                studentName: secondStudentName,
+                friendlyUrl: secondaryRecord.friendlyUrl,
+                tutorName: tutor.fullName,
+                actorEmail: session.user.email || '',
+              })
+            : null,
+        ].filter(Boolean));
+      } catch (error) {
+        notesPrivacyFollowUpWarning = error.message || 'Student notes privacy follow-up could not be queued';
+      }
     }
 
     return Response.json({
       success: true,
       steps,
-      completionStatus: buildOnboardingCompletionStatus({ steps }),
+      completionStatus,
       recoveryGuidance: buildOnboardingRecoveryGuidance({ steps, duplicateState }),
       lessonId: lesson?.ID || '',
       lessonWarning,
@@ -589,7 +651,22 @@ export async function POST(request) {
     if (steps.duplicateCheck.status === 'pending') {
       steps = markOnboardingStep(steps, 'duplicateCheck', 'succeeded', 'No blocking duplicate found.');
     }
-    if (steps.sheetsWrite.status === 'pending') {
+
+    if (error.onboardingStage === 'registryWrite') {
+      const insertedAt = error.sheetInsert?.insertedAt;
+      steps = markOnboardingStep(
+        steps,
+        'sheetsWrite',
+        'succeeded',
+        insertedAt
+          ? `At least one Students row was inserted (latest row ${insertedAt}) before the registry write failed.`
+          : 'At least one Students row was inserted before the registry write failed.',
+      );
+      steps = markOnboardingStep(steps, 'registryWrite', 'failed', error.message || 'Registry write failed.');
+      steps = markOnboardingStep(steps, 'mmsActivation', 'skipped', 'Skipped because the canonical registry write did not complete.');
+      steps = markOnboardingStep(steps, 'mmsBillingProfile', 'skipped', 'Skipped because the canonical registry write did not complete.');
+      steps = markOnboardingStep(steps, 'mmsFirstLesson', 'skipped', 'Skipped because the canonical registry write did not complete.');
+    } else if (steps.sheetsWrite.status === 'pending') {
       steps = markOnboardingStep(steps, 'sheetsWrite', 'failed', error.message || 'Onboarding failed before the Students sheet write completed.');
       steps = markOnboardingStep(steps, 'registryWrite', 'skipped', 'Skipped because the Students sheet write did not complete.');
       steps = markOnboardingStep(steps, 'mmsActivation', 'skipped', 'Skipped because the Students sheet write did not complete.');

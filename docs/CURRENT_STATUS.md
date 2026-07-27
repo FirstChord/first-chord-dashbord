@@ -26,6 +26,15 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
+- **Half-onboarding prevention and recovery (2026-07-27):** onboarding now
+  verifies that the production GitHub token can write the registry and can read
+  its live source before any Sheets or MMS write. A `Students` row without a
+  registry entry is identified as a partial canonical record and directed to
+  the narrow `SHEETS ONLY` repair rather than a duplicate full onboarding run.
+  If a provider fails after a write, the result records the successful and
+  failed lanes accurately, renders as partially complete, and keeps Waiting and
+  post-onboarding follow-ups open until the canonical record, MMS activation,
+  billing profile, and first lesson are all confirmed.
 - **Tutor-absence dated payment handoff (2026-07-27):** a new guided
   cancellation no longer treats the undated
   `Students.payment_expectation = stripe_paused_expected` flag as proof that

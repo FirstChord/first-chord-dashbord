@@ -17,13 +17,21 @@ function buildPreflightSummary({ duplicateState, operationalState, tutorFullName
           : 'No conflicting Students row found.',
     },
     registry: {
-      status: duplicateState.shouldAppendRegistry ? 'clear' : duplicateState.exactDuplicate ? 'blocked' : 'warning',
+      status: duplicateState.partialCanonicalRecord
+        ? 'blocked'
+        : duplicateState.shouldAppendRegistry
+          ? 'clear'
+          : duplicateState.exactDuplicate
+            ? 'blocked'
+            : 'warning',
       label: 'Registry',
-      detail: duplicateState.shouldAppendRegistry
-        ? 'No existing registry entry found.'
-        : duplicateState.registryMatchesTutor
-          ? `A registry entry already exists for tutor ${duplicateState.registryTutor}.`
-          : 'An existing registry entry will be reused for this multi-lesson student.',
+      detail: duplicateState.partialCanonicalRecord
+        ? 'The Students row exists but the registry entry is missing. Use the SHEETS ONLY recovery action; do not rerun onboarding.'
+        : duplicateState.shouldAppendRegistry
+          ? 'No existing registry entry found.'
+          : duplicateState.registryMatchesTutor
+            ? `A registry entry already exists for tutor ${duplicateState.registryTutor}.`
+            : 'An existing registry entry will be reused for this multi-lesson student.',
     },
     mmsStudent: {
       status: operationalState.isActive ? 'ready' : 'pending',
@@ -63,20 +71,9 @@ export async function POST(request) {
     return Response.json({ error: 'MMS ID and tutor are required' }, { status: 400 });
   }
 
-  const { duplicateState, operationalState } = await getOnboardingPreflightState({
-    mmsId: payload.mmsId,
-    tutorFullName: tutor.fullName,
-    tutorShortName: payload.tutorShortName,
-    teacherId: tutor.teacherId,
-    lessonDate: payload.lessonDate || '',
-    lessonTime: payload.lessonTime || '',
-  });
-
-  let secondary = null;
-  if (payload.lessonType === 'sibling_group' && payload.secondStudentMmsId) {
-    const secondDetails = await getStudentDetails(payload.secondStudentMmsId);
-    const secondaryState = await getOnboardingPreflightState({
-      mmsId: payload.secondStudentMmsId,
+  try {
+    const { duplicateState, operationalState } = await getOnboardingPreflightState({
+      mmsId: payload.mmsId,
       tutorFullName: tutor.fullName,
       tutorShortName: payload.tutorShortName,
       teacherId: tutor.teacherId,
@@ -84,27 +81,47 @@ export async function POST(request) {
       lessonTime: payload.lessonTime || '',
     });
 
-    secondary = {
-      mmsId: payload.secondStudentMmsId,
-      studentName: secondDetails.fullName || payload.secondStudentMmsId,
-      duplicateState: secondaryState.duplicateState,
-      operationalState: secondaryState.operationalState,
-      summary: buildPreflightSummary({
+    let secondary = null;
+    if (payload.lessonType === 'sibling_group' && payload.secondStudentMmsId) {
+      const secondDetails = await getStudentDetails(payload.secondStudentMmsId);
+      const secondaryState = await getOnboardingPreflightState({
+        mmsId: payload.secondStudentMmsId,
+        tutorFullName: tutor.fullName,
+        tutorShortName: payload.tutorShortName,
+        teacherId: tutor.teacherId,
+        lessonDate: payload.lessonDate || '',
+        lessonTime: payload.lessonTime || '',
+      });
+
+      secondary = {
+        mmsId: payload.secondStudentMmsId,
+        studentName: secondDetails.fullName || payload.secondStudentMmsId,
         duplicateState: secondaryState.duplicateState,
         operationalState: secondaryState.operationalState,
-        tutorFullName: tutor.fullName,
-      }),
-    };
-  }
+        summary: buildPreflightSummary({
+          duplicateState: secondaryState.duplicateState,
+          operationalState: secondaryState.operationalState,
+          tutorFullName: tutor.fullName,
+        }),
+      };
+    }
 
-  return Response.json({
-    duplicateState,
-    operationalState,
-    secondary,
-    summary: buildPreflightSummary({
+    return Response.json({
       duplicateState,
       operationalState,
-      tutorFullName: tutor.fullName,
-    }),
-  });
+      secondary,
+      summary: buildPreflightSummary({
+        duplicateState,
+        operationalState,
+        tutorFullName: tutor.fullName,
+      }),
+    });
+  } catch (error) {
+    return Response.json(
+      {
+        error: error.message || 'Onboarding preflight failed',
+      },
+      { status: 503 },
+    );
+  }
 }
