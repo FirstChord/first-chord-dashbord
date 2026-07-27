@@ -45,8 +45,9 @@ deliberate school-improvement prompt.
   census also found `/api/token` and `app/proxy/token.js` to be unreferenced
   copies of `app/api/auth/mms/route.js`, dead since the standalone-repo split;
   both are removed and `auth/mms` remains canonical. `clientKeyFromRequest` now
-  has coverage, which surfaced the rate-limiting decision recorded under
-  *Next choices*. 974 tests, build green.
+  has coverage, which surfaced the unlock rate-limit question — reviewed and
+  accepted as proportionate, recorded under *Deliberately not next*.
+  974 tests, build green.
 - **Pause-expectation Sheets quota fix (2026-07-27):** the explicit
   preview-and-confirm action on `/admin/flags` still changes only
   `Students.payment_expectation` and never Stripe, but its confirmed write path
@@ -120,7 +121,7 @@ deliberate school-improvement prompt.
 | Pauses | Generic completion never changes payment state. The guarded pause-completion action requires human confirmation, writes through the existing student route, and logs to `Event_Log`. For new guided tutor-absence cancellations, an undated paused-expected flag cannot suppress the dated structured pause card or unlock its final message; only an explicit per-lesson payment-not-needed decision takes the message-only path. |
 | Messaging | Parent communication remains approval-first. `Communication_Log` means copied to send, not proven sent; inbound classifications and reply drafts remain proposals. |
 | Practice Chat | All registered tutors are enabled unless temporarily constrained. The tutor self-attests, the student must have one clear tutor assignment, the final screen names the server-derived recipient, and PostgreSQL claims the delivery key before MMS/Gmail work. Ambiguous Gmail outcomes require manual follow-up. |
-| Student portal notes | Profile URLs and non-note resources stay public. Practice Chat notes load through a separate no-store API; families are moved individually to memorable-code protection through the claimed admin rollout queue. A missing rollout row remains legacy-public, while an access-state failure fails closed. |
+| Student portal notes | Profile URLs and non-note resources stay public. Practice Chat notes load through a separate no-store API; families are moved individually to memorable-code protection through the claimed admin rollout queue. A missing rollout row remains legacy-public, while an access-state failure fails closed. The memorable code is a light privacy guard proportionate to what it protects — a child's practice notes — not a defence against a determined attacker, and it is not sized to become one. |
 | Finance | Sheets holds operating estimates/review state; Stripe and Wise remain provider truth. Payroll preparation does not execute Wise payment. |
 | Public tutor surfaces | Low-friction tutor identity is not durable authentication. Do not add broader sensitive reads or consequential writes before tutor auth. |
 | Testing | A test that reads source text and asserts a name appears is a lint rule, not coverage — it cannot show the code ran, ran in the right order, or was correct. Guards, verifiers, and write paths get executed instead: inject the impure dependency and run the real function. Source-text checks are legitimate only for architectural absence (module X must not import writer Y) and for server components with no callable handler, and must discover their targets from disk rather than a hardcoded list. Before trusting a new security or money-path test, break the thing it guards and confirm it fails. |
@@ -131,19 +132,12 @@ Canonical details live in [state ownership](./architecture/data/ownership.md),
 
 ## Next choices
 
-- **Student-notes rate limiting trusts a caller-supplied header.**
-  `clientKeyFromRequest` buckets unlock attempts by the leftmost
-  `x-forwarded-for` value, which is the entry the caller controls — Railway
-  appends the real source to its right. A caller who varies that header gets a
-  fresh five-attempt budget each time, against a code space of 120 words × two
-  digits (10,800 combinations, ~5,400 tries on average). The limiter is the only
-  control standing in front of a child's practice notes, so this is the one that
-  matters. The fix is to read the Nth entry from the right, where N is how many
-  trusted proxies sit in front of the app — a deployment fact rather than a code
-  fact, which is why it is a decision and not a patch. A per-student cap would
-  be topology-independent but lets one attacker lock out a real family. Current
-  behaviour and the bypass are pinned in
-  `tests/admin/student-notes-rate-limit.test.mjs`.
+- **Notes access lifecycle, not notes brute force.** The realistic way practice
+  notes reach the wrong person is that the code lives in the WhatsApp group
+  description, so anyone ever in that group keeps access until it is reset — a
+  tutor who moves on, a family who leaves. Worth deciding whether code rotation
+  should be part of tutor changeover and student exit. This is a rollout and
+  lifecycle question, not a cryptographic one.
 - **Parent message angle for the notes rollout:** the current WhatsApp template
   is safe placeholder copy, not the final campaign wording. Agree the parent
   framing with Finn before starting real-family rollout, then update the one
@@ -191,7 +185,18 @@ Canonical details live in [state ownership](./architecture/data/ownership.md),
 - WhatsApp auto-send or general automated parent messaging;
 - Stripe mutations from Issues or model output;
 - a database rewrite before measured Sheets limits justify one;
-- direct edits to generated portal configuration files.
+- direct edits to generated portal configuration files;
+- hardening student-notes unlock beyond the current per-IP limit. The unlock
+  rate limit buckets on the caller-supplied leftmost `x-forwarded-for`, so a
+  rotating header would defeat it. Reviewed 2026-07-27 and accepted: the
+  existing limit already stops the realistic case (someone typing a few
+  guesses), while the bypass needs a scripted attacker deliberately targeting a
+  child's practice notes. A per-student cap would close it but lets one attacker
+  lock a real family out of their own notes, and correcting the header hop
+  depends on Railway's proxy topology — a wrong guess buckets every visitor
+  together. Both costs exceed the risk. Behaviour is pinned in
+  `tests/admin/student-notes-rate-limit.test.mjs`; revisit only if the data
+  behind the code stops being practice notes.
 
 ## Fragile contracts
 

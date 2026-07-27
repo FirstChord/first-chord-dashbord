@@ -36,10 +36,9 @@ test('limits are isolated between students and clients and clear on success', ()
 
 // --- who gets limited ---------------------------------------------------
 // The limiter above was well covered; the function deciding *which bucket a
-// request falls into* was not covered at all. That function is what makes the
-// limiter meaningful: the notes code is one of 120 words plus two digits —
-// 10,800 combinations, ~5,400 tries on average. At 5 attempts per 15 minutes
-// that is about four months. Per-request, it is seconds.
+// request falls into* was not covered at all. These tests describe how that
+// bucketing behaves, including where it is weak — see the note above the
+// last two.
 
 const requestWith = (headers = {}) => ({
   headers: {
@@ -71,17 +70,19 @@ test('a blank or whitespace forwarded header falls through rather than becoming 
 });
 
 test('the leftmost forwarded hop is used, and it is the caller-supplied one', () => {
-  // KNOWN GAP, pinned deliberately rather than asserted as correct.
+  // Accepted limitation, pinned so it stays visible rather than forgotten.
   //
-  // X-Forwarded-For is "client, proxy1, proxy2" — appended left to right. The
-  // leftmost entry is whatever the caller sent; Railway appends the real
-  // source to the right of it. So this reads the one value an attacker fully
-  // controls, and the test below shows what that buys them.
+  // X-Forwarded-For is "client, proxy1, proxy2", appended left to right, so the
+  // leftmost entry is whatever the caller sent. Bucketing on it means a caller
+  // who varies the header gets a fresh budget — the test below shows that.
   //
-  // Fixing it means taking the Nth-from-right entry, which depends on how many
-  // trusted proxies sit in front of the app — a deployment fact, not a code
-  // fact, so it is a decision rather than a patch. See CURRENT_STATUS
-  // "Next choices".
+  // Reviewed 2026-07-27 and left alone deliberately. The per-IP limit already
+  // stops the realistic case; the bypass needs a scripted attacker targeting a
+  // child's practice notes. Both available fixes cost more than the risk: a
+  // per-student cap lets one attacker lock a real family out, and reading a
+  // different header hop depends on Railway's proxy depth, where a wrong guess
+  // buckets every visitor together. See CURRENT_STATUS → "Deliberately not
+  // next". Revisit if what sits behind the code stops being practice notes.
   assert.equal(
     clientKeyFromRequest(requestWith({ 'x-forwarded-for': '198.51.100.50, 203.0.113.1, 70.41.3.18' })),
     '198.51.100.50',
@@ -89,8 +90,9 @@ test('the leftmost forwarded hop is used, and it is the caller-supplied one', ()
 });
 
 test('rotating the forwarded header resets the attempt budget', () => {
-  // The concrete consequence of the above: five failures, then a new header
-  // value, then five more — indefinitely, against a 10,800-value keyspace.
+  // The concrete consequence of the above, kept so the limitation is
+  // demonstrated rather than described. If this ever needs closing, this test
+  // is what should start failing.
   const studentMmsId = 'sdt_bruteforce';
   const now = Date.parse('2026-07-27T12:00:00.000Z');
   let totalAttempts = 0;
@@ -112,7 +114,7 @@ test('rotating the forwarded header resets the attempt budget', () => {
   }
 
   // 100 attempts inside one 15-minute window against a student whose per-IP
-  // budget is 5. The limiter is working exactly as written; the input is the
-  // problem.
+  // budget is 5. The limiter is working exactly as written; the input is what
+  // makes it porous.
   assert.equal(totalAttempts, 100);
 });
