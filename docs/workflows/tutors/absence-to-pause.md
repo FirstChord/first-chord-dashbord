@@ -82,14 +82,17 @@ admin action occurred, not that the future pause ended. It ignores parked cards.
 | MMS cannot load | block capture/decision; never convert failure into “no lessons” |
 | MMS changed after capture | block notice/payment/final confirmation until the real date is reviewed |
 | multi-student MMS event | block automatic cover/cancel; verify every household and record manual completion |
-| payment already paused or not needed | create a non-pause final-confirmation card with no finance effect |
+| payment explicitly marked not needed | create a non-pause final-confirmation card with no finance effect |
+| student is only marked `stripe_paused_expected` | still create the dated structured pause card; the undated expectation is context, not proof that this absence window is covered |
 | dates expand after notice | park the earlier open notice; label a replacement `Update:` if the old notice was completed |
 | cover changes to cancellation | create normal notice/pause work and check whether a cover correction is owed |
 | cancellation changes to cover | manually park/remove related pause work until a reconciliation tool exists |
 
 No missing linked card is treated as completion. Cover never creates pause work.
-Students already `stripe_paused_expected` or explicitly payment-not-needed are
-excluded from new pause work.
+Only an explicit per-lesson payment-not-needed decision is excluded from new
+pause work. `Students.payment_expectation = stripe_paused_expected` does not
+carry date coverage, so it cannot suppress the payment tool or complete a tutor
+absence by itself.
 
 ## Reconciliation Boundary
 
@@ -112,10 +115,13 @@ established. Do not auto-retire it from incoming text or inferred overlap.
 3. Every block names the reason and one safe next action.
 4. Early notice never claims payment happened; final copy appears only after the
    payment/no-payment outcome is known.
-5. Later sync may create missing work or refresh an active generated card, but
+5. A tutor-absence pause card keeps the payment tool as step one even when the
+   student is already marked `stripe_paused_expected`; the final parent message
+   unlocks only after the dated tool check is confirmed.
+6. Later sync may create missing work or refresh an active generated card, but
    never reopens completed, parked, or deferred work.
-6. Parent-facing grouping never replaces exact dated workflow truth.
-7. A student-linked notice, payment, or final-confirmation card verifies that
+7. Parent-facing grouping never replaces exact dated workflow truth.
+8. A student-linked notice, payment, or final-confirmation card verifies that
    student's saved lesson against live MMS. A changed lesson for another
    household on the same tutor/date blocks that household's card, not every
    student's otherwise-current pause work.

@@ -13,6 +13,7 @@ import {
   buildPaymentPausePrefillUrl,
   buildPauseConfirmationMessage,
   isPausePlanningItem,
+  requiresTutorAbsencePaymentTool,
   isDueNowPlanningItem,
   isOpenPlanningItem,
   getPlanningStory,
@@ -156,6 +157,17 @@ test('buildPaymentPausePrefillUrl returns empty without a student/dates, and a p
   assert.match(url, /payment-pause-pwa/);
   assert.match(url, /mmsId=sdt_1/);
   assert.match(url, /source=dashboard-planning/);
+
+  const tutorAbsenceUrl = buildPaymentPausePrefillUrl({
+    item: {
+      planningId: 'p2',
+      linkedWorkflowId: 'tutor-absence',
+      notes: 'Lesson date: 2026-08-04\nTutor absence: Chloe Mak.',
+      targetDate: '2026-07-30',
+    },
+    student: { mmsId: 'sdt_1', fullName: 'Ada Smith' },
+  });
+  assert.equal(new URL(tutorAbsenceUrl).searchParams.get('reason'), 'Teacher Holiday');
 });
 
 test('buildPauseConfirmationMessage addresses adults directly and parents in third person', () => {
@@ -185,6 +197,14 @@ test('isPausePlanningItem / isOpenPlanningItem / isDueNowPlanningItem classify i
   assert.equal(isPausePlanningItem({ title: 'Pause Ada', isPause: 'false' }), false);
   assert.equal(isPausePlanningItem({ title: 'Away weeks for Ada', isPause: 'true' }), true);
   assert.equal(isPausePlanningItem({ title: 'Pause Ada', isPause: '' }), true); // unset = infer
+  assert.equal(requiresTutorAbsencePaymentTool({
+    title: 'Pause Ada',
+    linkedWorkflowId: 'tutor-absence',
+  }), true);
+  assert.equal(requiresTutorAbsencePaymentTool({
+    title: 'Pause Ada',
+    linkedWorkflowId: 'holidays',
+  }), false);
   assert.equal(isOpenPlanningItem({ status: 'active' }), true);
   assert.equal(isOpenPlanningItem({ status: 'done' }), false);
   const now = new Date('2026-07-10T12:00:00Z');

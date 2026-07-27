@@ -17,6 +17,7 @@ import {
   extractTutorAbsenceFinalConfirmationMessage,
   isSchoolNotePlanningItem,
   hasPausePaymentConfirmation,
+  requiresTutorAbsencePaymentTool,
   buildTutorAbsenceWorkflowHref,
   workflowHref,
   findStudentById,
@@ -66,6 +67,11 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
   const linkedStudent = findStudentById(studentOptions, item.linkedStudentId) || null;
   const linkedStudentPaymentExpectation = paymentExpectationOverrides[item.linkedStudentId] || linkedStudent?.paymentExpectation || '';
   const pauseExpectationAlreadySet = linkedStudentPaymentExpectation === 'stripe_paused_expected';
+  const requiresExplicitTutorAbsenceTool = requiresTutorAbsencePaymentTool(item);
+  const pauseToolStepComplete = Boolean(
+    pauseToolRan
+    || (pauseExpectationAlreadySet && !requiresExplicitTutorAbsenceTool)
+  );
   const paymentPausePrefillUrl = isPauseReminder
     ? buildPaymentPausePrefillUrl({ item, student: linkedStudent })
     : '';
@@ -75,7 +81,7 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
   const canCompletePause = Boolean(
     item.linkedStudentId
     && paymentPausePrefillUrl
-    && (pauseToolRan || pauseExpectationAlreadySet)
+    && pauseToolStepComplete
     && (pauseMessageConfirmed || pausePaymentConfirmed)
   );
   const linkedStudentIds = parseLinkedStudentIds(item.linkedStudentIds ?? item.linkedStudentId);
@@ -302,9 +308,10 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
               <div>
                 <p className="text-sm font-semibold text-amber-950">Complete this pause</p>
                 <p className="mt-1 text-xs leading-5 text-amber-800">
-                  Run the tool, send the parent message, then mark it complete — the dashboard handles the rest.
+                  First run the payment tool for these dates. Then send the confirmation and mark the card complete.
                 </p>
               </div>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-700">1. Payment action</p>
               {paymentPausePrefillUrl ? (
                 onOpenPauseTool ? (
                   <button
@@ -329,6 +336,11 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
                   Add structured pause dates to prefill the pause tool
                 </span>
               )}
+              {requiresExplicitTutorAbsenceTool && pauseExpectationAlreadySet ? (
+                <p className="rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs leading-5 text-amber-900">
+                  This student is marked paused expected, but that undated flag does not prove this tutor-absence window is covered. Check the payment tool for these dates.
+                </p>
+              ) : null}
               {isPauseReminder ? (
                 <PauseDatesEditor
                   item={item}
@@ -338,9 +350,9 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
                   hasPrefillUrl={Boolean(paymentPausePrefillUrl)}
                 />
               ) : null}
-              {pauseConfirmationMessage ? (
+              {pauseConfirmationMessage && pauseToolStepComplete ? (
                 <div className="rounded-lg border border-amber-100 bg-white p-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-700">Parent message</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-700">2. Parent confirmation</p>
                   <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-800">{pauseConfirmationMessage}</p>
                   <button
                     type="button"
@@ -365,19 +377,23 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
                   </button>
                   {copyState ? <span className="ml-2 text-xs font-semibold text-amber-800">{copyState}</span> : null}
                 </div>
+              ) : pauseConfirmationMessage ? (
+                <p className="rounded-lg border border-amber-200 bg-amber-100/60 px-3 py-2 text-xs font-medium leading-5 text-amber-900">
+                  The final parent message unlocks after you confirm the payment tool has been run.
+                </p>
               ) : null}
               <div className="space-y-2">
                 <label className="flex items-start gap-2 text-sm font-medium text-amber-950">
                   <input
                     type="checkbox"
-                    checked={pauseToolRan || pauseExpectationAlreadySet}
-                    disabled={isPending || pauseExpectationAlreadySet}
+                    checked={pauseToolStepComplete}
+                    disabled={isPending || (pauseExpectationAlreadySet && !requiresExplicitTutorAbsenceTool)}
                     onChange={(event) => setPauseToolRan(event.target.checked)}
                     className="mt-1 h-4 w-4 rounded border-amber-300 text-slate-900"
                   />
                   <span>
                     Payment pause tool has been run
-                    {pauseExpectationAlreadySet ? (
+                    {pauseExpectationAlreadySet && !requiresExplicitTutorAbsenceTool ? (
                       <span className="block text-xs font-normal text-amber-800">Payment expectation is already paused expected.</span>
                     ) : null}
                   </span>
@@ -386,7 +402,7 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
                   <input
                     type="checkbox"
                     checked={pauseMessageConfirmed || pausePaymentConfirmed}
-                    disabled={isPending || pausePaymentConfirmed}
+                    disabled={isPending || pausePaymentConfirmed || !pauseToolStepComplete}
                     onChange={(event) => setPauseMessageConfirmed(event.target.checked)}
                     className="mt-1 h-4 w-4 rounded border-amber-300 text-slate-900"
                   />

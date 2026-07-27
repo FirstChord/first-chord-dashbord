@@ -648,8 +648,8 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
                         </span>
                       </div>
                       {alreadyPausedExpected ? (
-                        <p className="mt-3 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-900">
-                          Already paused expected, so no extra payment action is needed for this lesson.
+                        <p className="mt-3 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2 text-xs font-medium leading-5 text-amber-900">
+                          The student is marked paused expected, but that undated flag does not prove this absence is covered. Check the payment tool for these dates, or explicitly mark the action not needed with a reason.
                         </p>
                       ) : null}
                       <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -658,7 +658,7 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
                             href={pauseUrl}
                             target="_blank"
                             rel="noreferrer"
-                            className={`inline-flex rounded-lg border border-violet-300 bg-white px-3 py-1.5 text-xs font-semibold text-violet-950 hover:bg-violet-50 ${alreadyPausedExpected ? 'pointer-events-none opacity-50' : ''}`}
+                            className="inline-flex rounded-lg border border-violet-300 bg-white px-3 py-1.5 text-xs font-semibold text-violet-950 hover:bg-violet-50"
                           >
                             Open payment pause tool
                           </a>
@@ -667,7 +667,7 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
                           <input
                             type="checkbox"
                             checked={Boolean(state.pauseToolRan)}
-                            disabled={alreadyPausedExpected || Boolean(state.pauseSkipped)}
+                            disabled={Boolean(state.pauseSkipped)}
                             onChange={(event) => updateMessageState(lesson.eventId, { pauseToolRan: event.target.checked })}
                           />
                           Pause tool run
@@ -675,17 +675,16 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
                         <button
                           type="button"
                           onClick={() => setPausedExpected(lesson)}
-                          disabled={alreadyPausedExpected || Boolean(state.pauseSkipped) || paymentUpdateState.pendingId === lesson.eventId || Boolean(state.paymentExpectationAligned)}
+                          disabled={Boolean(state.pauseSkipped) || paymentUpdateState.pendingId === lesson.eventId || Boolean(state.paymentExpectationAligned)}
                           className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-950 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {paymentUpdateState.pendingId === lesson.eventId ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-                          {alreadyPausedExpected || state.paymentExpectationAligned ? 'Expecting paused payments ✓' : 'Expect payments paused'}
+                          {state.paymentExpectationAligned ? 'Payment expectation aligned ✓' : 'Confirm paused expectation'}
                         </button>
                         <label className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700">
                           <input
                             type="checkbox"
                             checked={Boolean(state.pauseSkipped)}
-                            disabled={alreadyPausedExpected}
                             onChange={(event) => updateMessageState(lesson.eventId, {
                               pauseSkipped: event.target.checked,
                               pauseToolRan: event.target.checked ? false : state.pauseToolRan,
