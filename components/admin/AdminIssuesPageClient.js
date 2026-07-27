@@ -714,6 +714,20 @@ export default function AdminIssuesPageClient({ issues, freshness }) {
       ) : null}
       {pauseSyncState.error ? <p className="text-sm text-red-700">{pauseSyncState.error}</p> : null}
       {pauseSyncState.success ? <p className="text-sm text-emerald-700">{pauseSyncState.success}</p> : null}
+      <details className="rounded-xl border border-amber-200 bg-amber-50/60 px-4 py-3 text-sm text-amber-950">
+        <summary className="cursor-pointer font-semibold">What does “Sync pause expectations” do?</summary>
+        <div className="mt-2 space-y-2 text-amber-900">
+          <p>
+            It checks high-confidence Pause History against each student’s usual lesson and shows you any
+            Students-sheet payment expectation that looks out of date.
+          </p>
+          <p>
+            Nothing changes until you review the preview and confirm. Confirmation updates only the
+            dashboard’s expected payment state and writes an audit log. It does not pause, resume, charge,
+            or otherwise change anything in Stripe.
+          </p>
+        </div>
+      </details>
 
       {actionState.error ? (
         <section className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">

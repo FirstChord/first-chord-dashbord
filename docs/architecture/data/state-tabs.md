@@ -98,10 +98,14 @@ Some source formats are fragile because they come from human-edited external sys
   server-side `confirm: true` before writing `Students.payment_expectation`.
   Eligibility requires a subscription-ID Pause History match plus usual-lesson
   coverage; it never touches `setup_pending` or `inactive_or_stopped`, and never
-  mutates Stripe. Before each student write it appends
-  `payment_expectation_reconciliation_attempted`; after a successful write it
-  appends `payment_expectation_reconciled`, both with the admin actor and reason.
-  This leaves recoverable evidence when a non-transactional Sheets step fails.
+  mutates Stripe. The confirmed run appends all
+  `payment_expectation_reconciliation_attempted` events in one write, updates all
+  eligible `Students.payment_expectation` cells in one batch request, then
+  appends all `payment_expectation_reconciled` events in one write. Both event
+  types retain the admin actor and reason. This caps the normal run at three
+  Sheets write requests while leaving recoverable evidence when a
+  non-transactional step fails. Duplicate Students rows for one MMS ID are one
+  reconciliation decision, and every matching expectation cell is aligned.
 - **Tutor absence grouped pause IDs.** `buildTutorAbsencePausePlanningBundle` creates single-date IDs as `planning_tutor_absence_pause_...` and grouped period IDs as `planning_tutor_absence_pause_period_<tutor>_<studentMmsId>_<firstDate>_<lastDate>`. When a later saved absence extends a block, the older grouped period ID is deliberately superseded and parked. Do not hard-delete those rows; finance ignores `parked`, while `Planning_Progress_Log` preserves why the visible card changed. See `docs/workflows/tutors/absence-to-pause.md` for the full workflow map.
 - **Payroll period IDs.** `buildPayrollRunId` creates stable IDs from tutor short name + period start/end. Do not manually change `period_start`, `period_end`, or `tutor_short_name` on saved payroll rows; the payroll page will treat that as a different run. Use `adjustment_amount` + `notes` for corrections.
 - **Wise batch-payment CSV columns.** `WISE_CSV_HEADERS` in `lib/admin/wise-helpers.mjs` is the exact column order Wise expects on batch upload: `recipientId, name, recipientEmail, recipientDetail, sourceCurrency, targetCurrency, amountCurrency, amount, paymentReference, receiverType`. `amount` (tutor's owed figure) and `paymentReference` (`FC pay <periodEnd>`, kept short for Wise's per-currency length limit) are generated; the rest come from the `Tutor_Wise` sheet. Only **reviewed** payroll rows with a positive owed amount are emitted (`buildWiseBatch`). If Wise changes its expected CSV format, update `WISE_CSV_HEADERS` + the wise-helpers tests. The dashboard only generates the file; a human uploads and approves it in Wise (payroll stays reconciliation, not execution).

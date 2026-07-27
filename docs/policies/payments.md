@@ -92,6 +92,13 @@ Overview, Issue Queue, and Stripe reads never update
 4. only eligible changes write `Students.payment_expectation`
 5. each attempt and applied change appends an `Event_Log` record
 
+The confirmed run batches all attempt events, all eligible Students-cell
+updates, and all completion events into at most three normal Sheets write
+requests, regardless of student count. Multiple Students rows for the same MMS
+ID are collapsed to one student decision and every matching expectation cell is
+aligned in the same batch. A retry always reloads current evidence and proposes
+only work still outstanding.
+
 Eligibility is deliberately narrow: Stripe-managed student, subscription-ID
 Pause History match, high confidence, and coverage of a usual lesson.
 Setup-pending, inactive/stopped, low-confidence, missing-schedule, invalid-window,

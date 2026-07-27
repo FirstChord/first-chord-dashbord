@@ -26,6 +26,14 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
+- **Pause-expectation Sheets quota fix (2026-07-27):** the explicit
+  preview-and-confirm action on `/admin/flags` still changes only
+  `Students.payment_expectation` and never Stripe, but its confirmed write path
+  now batches all attempt audits, Students cells, and completion audits into
+  three Sheets requests for the whole run instead of three requests per
+  student. Duplicate tutor rows for one MMS ID are collapsed to one decision
+  and all matching expectation cells are aligned. The Issues page now explains
+  the boundary beside the button in plain English.
 - **Half-onboarding prevention and recovery (2026-07-27):** onboarding now
   verifies that the production GitHub token can write the registry and can read
   its live source before any Sheets or MMS write. A `Students` row without a

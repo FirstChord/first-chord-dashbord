@@ -12,6 +12,10 @@ const workflowSource = await readFile(
   new URL('../../lib/admin/pause-expectation-workflow.js', import.meta.url),
   'utf8',
 );
+const issuesClientSource = await readFile(
+  new URL('../../components/admin/AdminIssuesPageClient.js', import.meta.url),
+  'utf8',
+);
 
 function sourceBetween(startMarker, endMarker = '') {
   const start = issuesSource.indexOf(startMarker);
@@ -22,7 +26,10 @@ function sourceBetween(startMarker, endMarker = '') {
 }
 
 test('generic issue orchestration has no Students writer or reconciliation dependency', () => {
-  assert.doesNotMatch(issuesSource, /updateStudentSheetRow|applyPauseExpectationReconciliation|reconcilePauseExpectations/);
+  assert.doesNotMatch(
+    issuesSource,
+    /updateStudentSheetRow|updateStudentPaymentExpectationRows|applyPauseExpectationReconciliation|reconcilePauseExpectations/,
+  );
   assert.match(issuesSource, /loadStudentContextCollection/);
 });
 
@@ -35,7 +42,10 @@ test('Students and Issues use the same student-context loader', () => {
 
 test('live Stripe scans do not reconcile student payment expectations', () => {
   const source = sourceBetween('export async function scanLiveStripeIssues()', 'export async function getAdminIssues()');
-  assert.doesNotMatch(source, /applyPauseExpectationReconciliation|reconcilePauseExpectations|updateStudentSheetRow/);
+  assert.doesNotMatch(
+    source,
+    /applyPauseExpectationReconciliation|reconcilePauseExpectations|updateStudentSheetRow|updateStudentPaymentExpectationRows/,
+  );
 });
 
 test('student payment-expectation reconciliation is isolated behind a confirmed admin route', () => {
@@ -43,6 +53,11 @@ test('student payment-expectation reconciliation is isolated behind a confirmed 
   assert.match(routeSource, /executePauseExpectationReconciliation/);
   assert.match(routeSource, /pause-expectation-workflow/);
   assert.match(routeSource, /reconcilePauseExpectations/);
-  assert.match(workflowSource, /updateStudentSheetRow/);
+  assert.match(workflowSource, /updateStudentPaymentExpectationRows/);
   assert.match(workflowSource, /applyPauseExpectationReconciliation/);
+});
+
+test('Issues explains that pause expectation reconciliation never changes Stripe', () => {
+  assert.match(issuesClientSource, /What does “Sync pause expectations” do/);
+  assert.match(issuesClientSource, /does not pause, resume, charge/);
 });

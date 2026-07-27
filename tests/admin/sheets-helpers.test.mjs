@@ -1,7 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { columnNumberToLetter, findTutorInsertRow } from '../../lib/admin/sheets-helpers.mjs';
+import {
+  buildStudentPaymentExpectationBatch,
+  columnNumberToLetter,
+  findTutorInsertRow,
+} from '../../lib/admin/sheets-helpers.mjs';
 
 test('columnNumberToLetter converts spreadsheet columns correctly', () => {
   assert.equal(columnNumberToLetter(1), 'A');
@@ -35,4 +39,59 @@ test('findTutorInsertRow falls back to append when tutor block is missing', () =
   ];
 
   assert.equal(findTutorInsertRow(rows, 0, 'Arion Xenos'), rows.length + 2);
+});
+
+test('buildStudentPaymentExpectationBatch updates every matching row in one batch payload', () => {
+  const batch = buildStudentPaymentExpectationBatch({
+    headers: ['Student forename', 'mms_id', 'payment_expectation'],
+    rows: [
+      ['Ada', 'sdt_ada', 'stripe_active_expected'],
+      ['Ada', 'sdt_ada', 'stripe_paused_expected'],
+      ['Sam', 'sdt_sam', 'stripe_active_expected'],
+    ],
+    changes: [
+      { mmsId: 'sdt_ada', nextPaymentExpectation: 'stripe_paused_expected' },
+      { mmsId: 'sdt_sam', nextPaymentExpectation: 'stripe_paused_expected' },
+    ],
+  });
+
+  assert.equal(batch.requestedStudentCount, 2);
+  assert.equal(batch.changedRowCount, 2);
+  assert.deepEqual(batch.data, [
+    {
+      range: 'Students!C2',
+      values: [['stripe_paused_expected']],
+    },
+    {
+      range: 'Students!C4',
+      values: [['stripe_paused_expected']],
+    },
+  ]);
+  assert.deepEqual(batch.targets[0].changedRowNumbers, [2]);
+  assert.equal(batch.targets[0].matchedRowCount, 2);
+});
+
+test('buildStudentPaymentExpectationBatch rejects missing students and conflicting duplicate changes', () => {
+  const input = {
+    headers: ['mms_id', 'payment_expectation'],
+    rows: [['sdt_ada', 'stripe_active_expected']],
+  };
+
+  assert.throws(
+    () => buildStudentPaymentExpectationBatch({
+      ...input,
+      changes: [{ mmsId: 'sdt_missing', nextPaymentExpectation: 'stripe_paused_expected' }],
+    }),
+    /was not found/,
+  );
+  assert.throws(
+    () => buildStudentPaymentExpectationBatch({
+      ...input,
+      changes: [
+        { mmsId: 'sdt_ada', nextPaymentExpectation: 'stripe_paused_expected' },
+        { mmsId: 'sdt_ada', nextPaymentExpectation: 'stripe_active_expected' },
+      ],
+    }),
+    /Conflicting payment expectation changes/,
+  );
 });

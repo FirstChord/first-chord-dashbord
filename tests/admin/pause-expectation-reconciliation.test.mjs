@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { applyPauseExpectationReconciliation } from '../../lib/admin/pause-expectation-reconciliation.mjs';
+import {
+  applyPauseExpectationReconciliation,
+  buildPauseExpectationReconciliationPlan,
+} from '../../lib/admin/pause-expectation-reconciliation.mjs';
 
 function eligiblePausedStudent(overrides = {}) {
   return {
@@ -26,7 +29,7 @@ function eligiblePausedStudent(overrides = {}) {
 }
 
 test('explicit reconciliation writes only planned changes and logs the signed-in admin', async () => {
-  const updates = [];
+  const updateBatches = [];
   const eventBatches = [];
 
   const result = await applyPauseExpectationReconciliation([
@@ -39,8 +42,8 @@ test('explicit reconciliation writes only planned changes and logs the signed-in
   ], {
     actorEmail: 'admin@example.com',
     currentDate: '2026-07-14T12:00:00.000Z',
-    updateStudentPaymentExpectation: async (mmsId, paymentExpectation) => {
-      updates.push({ mmsId, paymentExpectation });
+    updateStudentPaymentExpectations: async (changes) => {
+      updateBatches.push(changes);
     },
     appendEvents: async (events) => {
       eventBatches.push(events);
@@ -50,7 +53,10 @@ test('explicit reconciliation writes only planned changes and logs the signed-in
   assert.equal(result.checkedCount, 2);
   assert.equal(result.changeCount, 1);
   assert.equal(result.reconciledAt, '2026-07-14T12:00:00.000Z');
-  assert.deepEqual(updates, [{ mmsId: 'sdt_sync', paymentExpectation: 'stripe_paused_expected' }]);
+  assert.deepEqual(updateBatches, [[{
+    mmsId: 'sdt_sync',
+    nextPaymentExpectation: 'stripe_paused_expected',
+  }]]);
   assert.equal(result.synced[0].studentName, 'Sam Example');
   assert.equal(eventBatches.length, 2);
   assert.equal(eventBatches[0].length, 1);
@@ -83,15 +89,44 @@ test('explicit reconciliation refuses to change state without both write adapter
   await assert.rejects(
     applyPauseExpectationReconciliation([eligiblePausedStudent()], {
       currentDate: '2026-07-14T12:00:00.000Z',
-      updateStudentPaymentExpectation: async () => {},
+      updateStudentPaymentExpectations: async () => {},
     }),
     /requires explicit write adapters/i,
   );
 });
 
-test('explicit reconciliation records completed students and the failed write stage', async () => {
+test('explicit reconciliation batches every student into one update and two audit appends', async () => {
+  const updateBatches = [];
+  const eventBatches = [];
+
+  const result = await applyPauseExpectationReconciliation([
+    eligiblePausedStudent({ mmsId: 'sdt_first', fullName: 'First Student' }),
+    eligiblePausedStudent({ mmsId: 'sdt_second', fullName: 'Second Student' }),
+  ], {
+    actorEmail: 'admin@example.com',
+    currentDate: '2026-07-14T12:00:00.000Z',
+    updateStudentPaymentExpectations: async (changes) => updateBatches.push(changes),
+    appendEvents: async (rows) => eventBatches.push(rows),
+  });
+
+  assert.equal(result.changeCount, 2);
+  assert.equal(updateBatches.length, 1);
+  assert.equal(updateBatches[0].length, 2);
+  assert.equal(eventBatches.length, 2);
+  assert.deepEqual(eventBatches.map((events) => events.map((event) => event.eventType)), [
+    [
+      'payment_expectation_reconciliation_attempted',
+      'payment_expectation_reconciliation_attempted',
+    ],
+    [
+      'payment_expectation_reconciled',
+      'payment_expectation_reconciled',
+    ],
+  ]);
+});
+
+test('explicit reconciliation reports an unknown batch outcome if the Students write fails', async () => {
   const events = [];
-  let updateCount = 0;
 
   await assert.rejects(
     applyPauseExpectationReconciliation([
@@ -100,19 +135,16 @@ test('explicit reconciliation records completed students and the failed write st
     ], {
       actorEmail: 'admin@example.com',
       currentDate: '2026-07-14T12:00:00.000Z',
-      updateStudentPaymentExpectation: async () => {
-        updateCount += 1;
-        if (updateCount === 2) throw new Error('Sheets update failed');
-      },
+      updateStudentPaymentExpectations: async () => { throw new Error('Sheets update failed'); },
       appendEvents: async (rows) => events.push(...rows),
     }),
     (error) => {
-      assert.equal(error.partialResult.changeCount, 1);
-      assert.equal(error.partialResult.synced[0].mmsId, 'sdt_first');
+      assert.equal(error.partialResult.changeCount, 0);
+      assert.deepEqual(error.partialResult.synced, []);
       assert.deepEqual(error.partialResult.failed, {
-        mmsId: 'sdt_second',
-        nextPaymentExpectation: 'stripe_paused_expected',
-        stage: 'student_write',
+        mmsIds: ['sdt_first', 'sdt_second'],
+        stage: 'student_batch_write',
+        outcome: 'unknown',
       });
       return true;
     },
@@ -120,7 +152,6 @@ test('explicit reconciliation records completed students and the failed write st
 
   assert.deepEqual(events.map((event) => [event.entityId, event.eventType]), [
     ['sdt_first', 'payment_expectation_reconciliation_attempted'],
-    ['sdt_first', 'payment_expectation_reconciled'],
     ['sdt_second', 'payment_expectation_reconciliation_attempted'],
   ]);
 });
@@ -130,10 +161,46 @@ test('explicit reconciliation never writes when the attempt audit cannot be stor
   await assert.rejects(
     applyPauseExpectationReconciliation([eligiblePausedStudent()], {
       currentDate: '2026-07-14T12:00:00.000Z',
-      updateStudentPaymentExpectation: async () => { updateCalled = true; },
+      updateStudentPaymentExpectations: async () => { updateCalled = true; },
       appendEvents: async () => { throw new Error('Event Log unavailable'); },
     }),
     (error) => error.partialResult.failed.stage === 'attempt_log',
   );
   assert.equal(updateCalled, false);
+});
+
+test('explicit reconciliation marks every applied change when the completion audit batch fails', async () => {
+  let appendCount = 0;
+  await assert.rejects(
+    applyPauseExpectationReconciliation([
+      eligiblePausedStudent({ mmsId: 'sdt_first', fullName: 'First Student' }),
+      eligiblePausedStudent({ mmsId: 'sdt_second', fullName: 'Second Student' }),
+    ], {
+      currentDate: '2026-07-14T12:00:00.000Z',
+      updateStudentPaymentExpectations: async () => {},
+      appendEvents: async () => {
+        appendCount += 1;
+        if (appendCount === 2) throw new Error('Completion log unavailable');
+      },
+    }),
+    (error) => {
+      assert.equal(error.partialResult.changeCount, 2);
+      assert.equal(error.partialResult.failed.stage, 'completion_log');
+      assert.equal(error.partialResult.failed.outcome, 'changes_applied_audit_unknown');
+      assert.equal(error.partialResult.synced.every((entry) => entry.completionLogMissing), true);
+      return true;
+    },
+  );
+});
+
+test('reconciliation plan collapses duplicate Students records for the same MMS ID', () => {
+  const plan = buildPauseExpectationReconciliationPlan([
+    eligiblePausedStudent(),
+    eligiblePausedStudent(),
+  ], {
+    currentDate: '2026-07-14T12:00:00.000Z',
+  });
+
+  assert.equal(plan.length, 1);
+  assert.equal(plan[0].sourceRecordCount, 2);
 });

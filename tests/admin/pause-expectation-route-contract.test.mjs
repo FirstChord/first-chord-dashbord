@@ -46,7 +46,14 @@ test('confirmed reconciliation passes the signed-in actor to the workflow', asyn
 
 test('partial workflow failure remains visible to the caller', async () => {
   const error = new Error('write failed');
-  error.partialResult = { changeCount: 1, failed: { mmsId: 'sdt_2', stage: 'student_write' } };
+  error.partialResult = {
+    changeCount: 0,
+    failed: {
+      mmsIds: ['sdt_1', 'sdt_2'],
+      stage: 'student_batch_write',
+      outcome: 'unknown',
+    },
+  };
   const result = await executePauseExpectationReconciliation({
     session: adminSession,
     payload: { confirm: true },
