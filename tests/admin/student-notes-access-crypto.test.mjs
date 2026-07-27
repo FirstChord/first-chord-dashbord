@@ -72,3 +72,74 @@ test('cookie names do not expose raw MMS identifiers', () => {
   assert.match(name, /^fc_notes_[a-f0-9]{16}$/);
   assert.doesNotMatch(name, /sdt_private/);
 });
+
+// --- session forgery ----------------------------------------------------
+// The scoping test above proves the session cookie carries student, version
+// and expiry. These prove those fields cannot be edited by whoever holds the
+// cookie — the cookie is client-side, so the HMAC is the only thing making
+// any of it true.
+
+const TEST_SECRET = 'test-secret-that-is-at-least-thirty-two-bytes-long';
+const SESSION_NOW = Date.parse('2026-07-23T12:00:00.000Z');
+const sessionArgs = { studentMmsId: 'sdt_123', credentialVersion: 2 };
+const validSession = () => createStudentNotesSession({ ...sessionArgs, now: SESSION_NOW });
+const verifySession = (token, overrides = {}) => verifyStudentNotesSession(token, {
+  ...sessionArgs,
+  now: SESSION_NOW + 1000,
+  ...overrides,
+});
+
+test('a session payload rewritten to extend its own expiry is rejected', () => {
+  const [, signature] = validSession().split('.');
+  // Same student, same version — only the expiry is pushed out. This is the
+  // edit a holder of an expiring cookie would actually make.
+  const forged = Buffer.from(JSON.stringify({
+    sid: 'sdt_123',
+    v: 2,
+    exp: SESSION_NOW + (10 * 365 * 24 * 60 * 60 * 1000),
+  })).toString('base64url');
+
+  assert.equal(verifySession(`${forged}.${signature}`), false);
+});
+
+test('a session payload rewritten to claim another student is rejected', () => {
+  const [, signature] = validSession().split('.');
+  const forged = Buffer.from(JSON.stringify({
+    sid: 'sdt_other',
+    v: 2,
+    exp: SESSION_NOW + 60_000,
+  })).toString('base64url');
+
+  assert.equal(verifySession(`${forged}.${signature}`, { studentMmsId: 'sdt_other' }), false);
+});
+
+test('a session minted under a rotated secret no longer verifies', () => {
+  const token = validSession();
+  try {
+    // Rotating STUDENT_PORTAL_NOTES_SECRET must invalidate every live session —
+    // that is what makes the secret a usable revocation lever.
+    process.env.STUDENT_PORTAL_NOTES_SECRET = 'a-different-secret-also-at-least-thirty-two-bytes';
+    assert.equal(verifySession(token), false);
+  } finally {
+    process.env.STUDENT_PORTAL_NOTES_SECRET = TEST_SECRET;
+  }
+  assert.equal(verifySession(token), true, 'restoring the secret restores the session');
+});
+
+test('a flipped signature byte is rejected', () => {
+  const [encoded, signature] = validSession().split('.');
+  const flipped = signature.slice(0, -1) + (signature.endsWith('A') ? 'B' : 'A');
+
+  assert.equal(verifySession(`${encoded}.${flipped}`), false);
+});
+
+test('truncated and malformed session tokens are rejected, not thrown on', () => {
+  const [encoded] = validSession().split('.');
+
+  assert.equal(verifySession(encoded), false);
+  assert.equal(verifySession(`${encoded}.`), false);
+  assert.equal(verifySession(''), false);
+  assert.equal(verifySession('not-a-token'), false);
+  assert.equal(verifySession('%%%.%%%'), false);
+  assert.equal(verifySession(undefined), false);
+});

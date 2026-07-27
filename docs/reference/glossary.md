@@ -80,6 +80,17 @@ lesson groups (`source: whatsapp_group_auto`). Starring is not a capture path.
 School-side messages stamp open items as reply evidence instead of creating
 rows; no-signal parent messages land pre-archived.
 
+## Route guard census (testing)
+
+The sweep in `tests/admin/api-route-guard-census.test.mjs` that discovers every
+`app/api/**/route.js` on disk and records which guard it applies — tutor
+session, admin, signed token, shared secret, or declared public with a written
+reason. It replaced a hardcoded seven-route list, so a newly added unguarded
+route fails the suite until someone classifies it. It is a lint rule: it also
+checks the tutor guard is reached before any data module call, but it cannot
+show any guard works. Behaviour lives in
+`tests/admin/tutor-auth-guard.test.mjs`.
+
 ## Sheet census (data governance)
 
 A per-tab row-count reading taken during `npm run backup:sheets`

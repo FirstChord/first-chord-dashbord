@@ -26,6 +26,27 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
+- **Test-suite confidence pass (2026-07-27):** four gaps from the test-architecture
+  audit are closed, and the standing policy that came out of it is below under
+  *Testing policy*. The tutor-dashboard guard's decision logic moved to
+  `lib/tutor-auth-contract.mjs` with the session and admin lookups injected;
+  `lib/tutor-auth.js` is now a thin adapter, and behaviour is unchanged. That
+  makes the guard runnable under `node --test` for the first time — previously
+  the only coverage was a regex looking for its name in route source, which
+  passed with the guard moved below the data fetch it was meant to gate.
+  `tutor-auth-route-boundary.test.mjs` is replaced by
+  `api-route-guard-census.test.mjs`, which discovers every `app/api/**/route.js`
+  from disk rather than a hardcoded list, so a new unguarded route fails until
+  it is classified or declared public with a reason. Also added: signature
+  forgery coverage for the two token verifiers that had none, a fake Google
+  Sheets client exercising the write path's row targeting and column
+  arithmetic, and one composed pause-path test that runs Pause_History rows
+  through all five pause modules with only the write adapters stubbed. The
+  census also found `/api/token` and `app/proxy/token.js` to be unreferenced
+  copies of `app/api/auth/mms/route.js`, dead since the standalone-repo split;
+  both are removed and `auth/mms` remains canonical. `clientKeyFromRequest` now
+  has coverage, which surfaced the rate-limiting decision recorded under
+  *Next choices*. 974 tests, build green.
 - **Pause-expectation Sheets quota fix (2026-07-27):** the explicit
   preview-and-confirm action on `/admin/flags` still changes only
   `Students.payment_expectation` and never Stripe, but its confirmed write path
@@ -54,13 +75,6 @@ deliberate school-improvement prompt.
   fields, or parent messages. The point-in-time repair evidence and repeatable
   regression check are in the
   [tutor-absence contract](./workflows/tutors/absence-to-pause.md).
-- **Dashboard and WhatsApp intake resilience (2026-07-26):** production registry
-  reads now fall back to the deployed snapshot when GitHub authentication fails,
-  while registry writes fail closed. Dashboard CI and Railway run on Node 24.
-  The receive-only WhatsApp bridge now gets acknowledgement-only capture
-  responses and writes bounded privacy-safe logs. Production verification
-  confirmed the dashboard live, the bridge connected with a non-empty confirmed
-  group set, and one labelled intake test stored exactly once.
 - **Practice Chat transcription accuracy (2026-07-26):** the note tidy-up rules
   are word-boundary anchored and fixture-tested — they were corrupting real
   words in parent-facing notes (`topics`→`topicks`, `plectrum`→`picktrum`).
@@ -109,6 +123,7 @@ deliberate school-improvement prompt.
 | Student portal notes | Profile URLs and non-note resources stay public. Practice Chat notes load through a separate no-store API; families are moved individually to memorable-code protection through the claimed admin rollout queue. A missing rollout row remains legacy-public, while an access-state failure fails closed. |
 | Finance | Sheets holds operating estimates/review state; Stripe and Wise remain provider truth. Payroll preparation does not execute Wise payment. |
 | Public tutor surfaces | Low-friction tutor identity is not durable authentication. Do not add broader sensitive reads or consequential writes before tutor auth. |
+| Testing | A test that reads source text and asserts a name appears is a lint rule, not coverage — it cannot show the code ran, ran in the right order, or was correct. Guards, verifiers, and write paths get executed instead: inject the impure dependency and run the real function. Source-text checks are legitimate only for architectural absence (module X must not import writer Y) and for server components with no callable handler, and must discover their targets from disk rather than a hardcoded list. Before trusting a new security or money-path test, break the thing it guards and confirm it fails. |
 
 Canonical details live in [state ownership](./architecture/data/ownership.md),
 [state tabs](./architecture/data/state-tabs.md),
@@ -116,6 +131,19 @@ Canonical details live in [state ownership](./architecture/data/ownership.md),
 
 ## Next choices
 
+- **Student-notes rate limiting trusts a caller-supplied header.**
+  `clientKeyFromRequest` buckets unlock attempts by the leftmost
+  `x-forwarded-for` value, which is the entry the caller controls — Railway
+  appends the real source to its right. A caller who varies that header gets a
+  fresh five-attempt budget each time, against a code space of 120 words × two
+  digits (10,800 combinations, ~5,400 tries on average). The limiter is the only
+  control standing in front of a child's practice notes, so this is the one that
+  matters. The fix is to read the Nth entry from the right, where N is how many
+  trusted proxies sit in front of the app — a deployment fact rather than a code
+  fact, which is why it is a decision and not a patch. A per-student cap would
+  be topology-independent but lets one attacker lock out a real family. Current
+  behaviour and the bypass are pinned in
+  `tests/admin/student-notes-rate-limit.test.mjs`.
 - **Parent message angle for the notes rollout:** the current WhatsApp template
   is safe placeholder copy, not the final campaign wording. Agree the parent
   framing with Finn before starting real-family rollout, then update the one
