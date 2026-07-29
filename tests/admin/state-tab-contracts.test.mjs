@@ -9,13 +9,19 @@ import assert from 'node:assert/strict';
 
 import {
   buildManagedStateSheetDefinitions,
+  LIFECYCLE_SNAPSHOT_HEADERS,
   PROPOSALS_HEADERS,
   SONG_ASSIGNMENTS_HEADERS,
   SONG_OUTCOMES_HEADERS,
   SONG_REQUESTS_HEADERS,
   SONG_STATUS_LOG_HEADERS,
+  STUDENT_LIFECYCLE_HEADERS,
   STUDENT_PORTAL_ACCESS_HEADERS,
 } from '../../lib/admin/sheets/core.mjs';
+import {
+  buildLifecycleSnapshotRow,
+  buildStudentLifecycleRow,
+} from '../../lib/admin/sheets/student-lifecycle.mjs';
 import {
   buildSongAssignmentSheetRow,
   buildSongOutcomeSheetRow,
@@ -91,6 +97,8 @@ const BUILDER_CONTRACTS = [
   ['Song_Requests', SONG_REQUESTS_HEADERS, buildSongRequestSheetRow],
   ['Proposals', PROPOSALS_HEADERS, buildProposalSheetRow],
   ['Student_Portal_Access', STUDENT_PORTAL_ACCESS_HEADERS, buildStudentPortalAccessSheetRow],
+  ['Student_Lifecycle', STUDENT_LIFECYCLE_HEADERS, buildStudentLifecycleRow],
+  ['Lifecycle_Snapshot', LIFECYCLE_SNAPSHOT_HEADERS, buildLifecycleSnapshotRow],
 ];
 
 test('row builders emit exactly their sheet headers', () => {

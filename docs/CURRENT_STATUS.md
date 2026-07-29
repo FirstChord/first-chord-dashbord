@@ -26,6 +26,38 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
+- **Student lifecycle and retention (2026-07-28):** the school can now answer how
+  long a student has been with it, and how long the ones who left actually
+  stayed. `npm run lifecycle:refresh` reads MMS attendance — which reaches back
+  to 2019 and had never been read — and writes `Student_Lifecycle` (per student,
+  full replace) plus one appended `Lifecycle_Snapshot` row. Dry run by default.
+  It is a termly ritual that prints a report, not a dashboard surface: nothing
+  reads these tabs on page load and nothing acts on them automatically.
+  Two definitions carry the weight and are pinned by tests. **Departed** requires
+  inactive *and* nothing booked, because inactive-with-future-lessons is a pause.
+  **Cohort survival is measured at a fixed horizon**, excluding students whose
+  cohort has not yet had that long — the obvious alternative, average lifetime by
+  cohort, falls every year regardless of retention because recent starters cannot
+  have lasted a year, and it reads as a collapse that is not happening.
+  First findings: median tenure 1.52y with 62 students past three years; median
+  lifetime of leavers 0.48y; and 88 of 316 departures ended inside three months,
+  **44 of them after nought or one lesson** — a sign-up conversion gap, not a
+  teaching one. Twelve-month survival has fallen from 72% (2022) to 43% (2025)
+  and wants explaining before it is trusted; 2026's six-month figure is the best
+  since 2021. Also fixed here: students with only future lessons booked were
+  getting a negative tenure and dragging the median down.
+  A successful `--apply` run **books its own next review** as the single
+  `planning_student_lifecycle_review` row in `Planning_Items`, reusing the
+  self-renewing pattern proven by the Sheets backup, with the headline figures
+  written to `Planning_Progress_Log` so the next person sees whether anything
+  moved without opening the tab. Deliberately not a cron or scheduled Action:
+  the value is in a human reading the report, an unattended job would fill the
+  snapshot lane with noise instead of a few measurements that meant something,
+  and it would need the MMS token as a CI secret for no gain. It works only
+  because tenure ages a day per day, so a termly figure is never meaningfully
+  stale. Retry backoff also gained jitter — five workers retrying in lockstep
+  were re-triggering the same HTTP 429 and left up to 14 students unread on a
+  run; now one.
 - **Test-suite confidence pass (2026-07-27):** four gaps from the test-architecture
   audit are closed, and the standing policy that came out of it is below under
   *Testing policy*. The tutor-dashboard guard's decision logic moved to
@@ -105,11 +137,6 @@ deliberate school-improvement prompt.
   invariants are live. Current gaps are in
   [song coverage](./reference/song-catalogue-coverage.md) and the
   [payroll plan](./plans/active/tutor-payroll.md).
-- **Practice Chat notes privacy:** the phased memorable-code workflow is live,
-  with Test Studenty exercised end to end. Existing family profiles stay
-  legacy-public until staff activate them individually. See the
-  [rollout handoff](./workflows/practice-chat/student-notes-access.md).
-
 ## Current operating contracts
 
 | Area | Current boundary |

@@ -9,6 +9,18 @@ Plain-English explanations of technical terms used in the admin dashboard. This 
 
 - **Path template** — a named ordered list of catalogue song IDs (`lib/config/path-templates.mjs`, canonical hand-edited). "Assign path" instantiates it into per-student `Song_Assignments` rows; the student copy is personal from then on.
 
+## Student lifecycle
+
+**Tenure** is how long a student who is still here has been coming; **lifetime**
+is how long a student who left actually stayed. Exactly one applies to any given
+student, so the other stays blank — blank is meaningful, not missing.
+**Departed** means inactive *and* nothing booked, because inactive with future
+lessons is a pause. **Cohort survival** is the share of students who started in a
+given year that were still attending N months after their first lesson, counting
+only students whose cohort has had N months available — the naive alternative
+(average lifetime by cohort) falls every year no matter what, because recent
+starters cannot yet have lasted long.
+
 ## Proposals inbox
 
 The "machine prepares, human commits" pattern made concrete: a machine-produced suggestion (a **proposal**) sits in the generic `Proposals` tab until a human uses, edits or discards it — the machine never acts. A **lane** is one kind of proposal; V1's only lane is `incoming_reply` (suggested WhatsApp replies on open incoming messages). Proposals expire after 7 days and are **superseded** if the message under them changes or a fresh draft is made. Telemetry is derived, not stored: an approved proposal whose applied text matches the proposed text was *used unmodified* — the gate metric for adding a second lane.

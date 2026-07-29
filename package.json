@@ -17,6 +17,7 @@
     "backup:sheets": "node scripts/backup-sheets-tabs.mjs",
     "restore:drill": "node scripts/restore-drill.mjs",
     "retention:report": "node scripts/retention-report.mjs",
+    "lifecycle:refresh": "node scripts/refresh-student-lifecycle.mjs",
     "ensure:state-tabs": "node scripts/ensure-state-tabs.mjs",
     "ensure:practice-delivery-claims": "node scripts/ensure-practice-delivery-claims.mjs",
     "docs:check": "node scripts/check-docs.mjs",
