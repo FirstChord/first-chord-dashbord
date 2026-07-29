@@ -39,6 +39,7 @@ export default function AdminStudentDetailClient({
   recentPracticeNotes = [],
   practiceTimeline = null,
   recentCommunications = [],
+  timeWithSchool = '',
 }) {
   const [form, setForm] = useState({
     firstName: student.firstName || '',
@@ -455,6 +456,12 @@ export default function AdminStudentDetailClient({
     <div className="space-y-8">
       <section>
         <h2 className="text-2xl font-semibold text-slate-900">{student.fullName || student.mmsId}</h2>
+        {/* Context, not a control. Tenure never asks for an action on its own —
+            it changes how everything else on this page should be read. Absent
+            rather than placeholdered when unknown. */}
+        {timeWithSchool ? (
+          <p className="mt-1 text-sm text-slate-500">{timeWithSchool}</p>
+        ) : null}
         <p className="mt-2 text-sm text-slate-600">
           Editable student detail. Sheets-lane fields and registry-lane fields are saved separately behind one form.
         </p>

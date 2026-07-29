@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   buildLifecycleRow,
+  formatTimeWithSchool,
   summariseLifecycle,
   survivalByCohort,
   yearsBetween,
@@ -203,4 +204,59 @@ test('summary is empty-safe', () => {
   assert.equal(summary.studentsWithHistory, 0);
   assert.equal(summary.medianTenureYears, null);
   assert.equal(summary.medianLifetimeYears, null);
+});
+
+// ── the one line shown on a student record ──────────────────────────────────
+
+test('tenure reads as a plain sentence, not a metric', () => {
+  assert.equal(
+    formatTimeWithSchool({ firstLesson: '2022-05-28', departed: 'FALSE', tenureYears: 4.17 }),
+    'With us 4 years 2 months',
+  );
+});
+
+test('a departed student reads in the past tense', () => {
+  assert.equal(
+    formatTimeWithSchool({ firstLesson: '2022-01-01', departed: 'TRUE', lifetimeYears: 2.25 }),
+    'Was with us 2 years 3 months',
+  );
+});
+
+test('singulars and exact years read naturally', () => {
+  const cases = [
+    [{ tenureYears: 1 }, 'With us 1 year'],
+    [{ tenureYears: 2 }, 'With us 2 years'],
+    [{ tenureYears: 1 / 12 }, 'With us 1 month'],
+    [{ tenureYears: 0.5 }, 'With us 6 months'],
+    [{ tenureYears: 1.0833 }, 'With us 1 year 1 month'],
+  ];
+  for (const [row, expected] of cases) {
+    assert.equal(formatTimeWithSchool({ firstLesson: '2020-01-01', departed: 'FALSE', ...row }), expected);
+  }
+});
+
+test('a brand new student says something true rather than "0 months"', () => {
+  assert.equal(
+    formatTimeWithSchool({ firstLesson: '2026-07-20', departed: 'FALSE', tenureYears: 0.02 }),
+    'With us less than a month',
+  );
+});
+
+test('nothing is claimed when there is nothing to say', () => {
+  // Each of these renders no line at all rather than a placeholder: a student
+  // with no row yet, one who signed up but has not started, and a junk value.
+  assert.equal(formatTimeWithSchool({}), '');
+  assert.equal(formatTimeWithSchool(null), '');
+  assert.equal(formatTimeWithSchool({ firstLesson: '', tenureYears: 3 }), '');
+  assert.equal(formatTimeWithSchool({ firstLesson: '2026-01-01', departed: 'FALSE', tenureYears: null }), '');
+  assert.equal(formatTimeWithSchool({ firstLesson: '2026-01-01', departed: 'FALSE', tenureYears: -0.1 }), '');
+});
+
+test('a departed student without a lifetime shows nothing, not their tenure', () => {
+  // The two fields are mutually exclusive by design; falling through to the
+  // wrong one would silently report a leaver as still attending.
+  assert.equal(
+    formatTimeWithSchool({ firstLesson: '2022-01-01', departed: 'TRUE', lifetimeYears: null, tenureYears: 4 }),
+    '',
+  );
 });

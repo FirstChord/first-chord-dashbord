@@ -5,15 +5,18 @@ import { getPlanningDashboard } from '@/lib/admin/planning';
 import { getPracticeNoteLogRows } from '@/lib/admin/sheets';
 import { getCommunicationLogForStudent } from '@/lib/admin/communications';
 import { buildStudentPracticeTimeline } from '@/lib/admin/practice-timeline-helpers.mjs';
+import { getStudentLifecycleRow } from '@/lib/admin/sheets/student-lifecycle.mjs';
+import { formatTimeWithSchool } from '@/lib/admin/student-lifecycle.mjs';
 import AdminStudentDetailClient from '@/components/admin/AdminStudentDetailClient';
 
 export default async function AdminStudentDetailPage({ params }) {
   const resolvedParams = await params;
-  const [student, planning, recentPracticeNotes, recentCommunications] = await Promise.all([
+  const [student, planning, recentPracticeNotes, recentCommunications, lifecycleRow] = await Promise.all([
     getAdminStudentByMmsId(resolvedParams.mmsId),
     getPlanningDashboard(),
     getPracticeNoteLogRows(resolvedParams.mmsId),
     getCommunicationLogForStudent(resolvedParams.mmsId, { limit: 5 }),
+    getStudentLifecycleRow(resolvedParams.mmsId),
   ]);
   const tutorOptions = await getActiveTutorOptions();
 
@@ -46,6 +49,7 @@ export default async function AdminStudentDetailPage({ params }) {
       recentPracticeNotes={recentPracticeNotes.slice(0, 5)}
       practiceTimeline={practiceTimeline}
       recentCommunications={recentCommunications}
+      timeWithSchool={formatTimeWithSchool(lifecycleRow || {})}
     />
   );
 }
