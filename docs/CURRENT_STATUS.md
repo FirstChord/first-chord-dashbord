@@ -199,6 +199,13 @@ Canonical details live in [state ownership](./architecture/data/ownership.md),
 - **Cover test cleanup:** before 22 July, check MMS event `evt_zsGLw6J0` at
   14:00 and restore Tom unless Dean is genuinely covering. This is a manual MMS
   check; automation remains parked in [the cover note](./plans/parked/cover-loop.md).
+- **Song placements, before the RSL 2026 songs are added.** A level is a property
+  of a (song, framework) pair, not of a song: today a song has one `level` and
+  one `series`, so a piece that sits at Grade 3 in the 2019 syllabus and Grade 4
+  in the 2026 one cannot be expressed without duplicating its ID and splitting
+  its accumulated history. Deciding the schema before the new songs go in is a
+  schema choice; after, it is a migration of live data. Phased plan, invariants
+  and open decisions in [song placements](./plans/active/song-placements.md).
 - **Student paths:** decide whether current use justifies RSL Grade 7–8 ingestion,
   recommendation/progress work, or fretboard/chord paths. Finn must still create
   the missing Soundslice slices listed in

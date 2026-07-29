@@ -68,6 +68,20 @@ Soundslice list export
 `artist: 'RSL'` is an explicit needs-curation marker for syllabus originals or
 unverified attribution. Never replace it by guessing.
 
+**The `fc_song_*` ID is permanent** — never renamed, never reused, never retired.
+Every accumulated fact about a song (assignments, status transitions, outcomes)
+hangs off it, so a new ID for what is musically the same piece silently splits
+its history in two.
+
+That invariant is what makes the current one-`level`-one-`series` shape a
+problem: a song placed at Grade 3 in one syllabus and Grade 4 in its replacement
+cannot be expressed without duplicating the ID. **A level is a property of a
+(song, framework) pair, not of a song.** The phased migration, invariants and
+open naming decision are in
+[song placements](../../plans/active/song-placements.md); it needs settling
+before the RSL 2026 syllabus is ingested, because before is a schema choice and
+after is a migration of live data.
+
 Per-student Soundslice courses and the shared slice catalogue are separate
 surfaces. Soundslice exposes no usable course API, so this system does not create
 or populate student courses. Existing course links remain available alongside

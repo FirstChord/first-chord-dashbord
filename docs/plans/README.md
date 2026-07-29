@@ -11,6 +11,7 @@ policy, or workflow contracts.
 
 ## Active
 
+- [Song placements](./active/song-placements.md)
 - [Practice Chat Whisper hardening](./active/practice-chat-whisper-hardening.md)
 - [Monolith split](./active/monolith-split.md)
 - [Tutor dashboard Google-login pilot](./active/tutor-dashboard-auth-pilot.md)

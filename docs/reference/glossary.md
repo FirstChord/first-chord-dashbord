@@ -11,6 +11,15 @@ Plain-English explanations of technical terms used in the admin dashboard. This 
 
 ## Student lifecycle
 
+Careful: **"lifecycle" means two unrelated things in this system.** The older one
+is a student's *operational status* — active, waiting, paused, left — derived
+from Sheets/registry/payment fields and shown on the student record. The newer
+one is *time with the school*, from `Student_Lifecycle`. The tabs, the docs and
+the UI keep them apart deliberately: the tenure line on a student record is never
+labelled "Lifecycle".
+
+
+
 **Tenure** is how long a student who is still here has been coming; **lifetime**
 is how long a student who left actually stayed. Exactly one applies to any given
 student, so the other stays blank — blank is meaningful, not missing.
@@ -20,6 +29,20 @@ given year that were still attending N months after their first lesson, counting
 only students whose cohort has had N months available — the naive alternative
 (average lifetime by cohort) falls every year no matter what, because recent
 starters cannot yet have lasted long.
+
+## Song frameworks and placements
+
+**Proposed, not yet built** — see
+[song placements](../plans/active/song-placements.md).
+
+A **framework** is any body of curriculum that places songs at levels: an exam
+syllabus (RSL Acoustic 2026), a method book (John Thompson), or a school
+qualification (SQA National 5). It generalises the current `series`. A
+**placement** is one song's position within one framework — its level, and
+optionally its order. One song may hold several placements, which is how a piece
+sits at Grade 3 in a superseded syllabus and Grade 4 in its replacement without
+its `fc_song_*` ID ever changing. `status` (current / superseded) belongs to the
+framework, never to the song.
 
 ## Proposals inbox
 
