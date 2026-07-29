@@ -39,12 +39,24 @@ deliberate school-improvement prompt.
   cohort has not yet had that long — the obvious alternative, average lifetime by
   cohort, falls every year regardless of retention because recent starters cannot
   have lasted a year, and it reads as a collapse that is not happening.
-  First findings: median tenure 1.52y with 62 students past three years; median
-  lifetime of leavers 0.48y; and 88 of 316 departures ended inside three months,
-  **44 of them after nought or one lesson** — a sign-up conversion gap, not a
-  teaching one. Twelve-month survival has fallen from 72% (2022) to 43% (2025)
-  and wants explaining before it is trusted; 2026's six-month figure is the best
-  since 2021. Also fixed here: students with only future lessons booked were
+  First findings: median tenure 1.52y with 62 students past three years, and
+  median lifetime of leavers 0.48y.
+  **Do not compare cohorts across the record-keeping change.** Lessons marked
+  attended as a share of lessons on the calendar runs 23% (2019) → 31% (2022) →
+  49% (2024) → 63% (2026): monotonic, steep, and exactly the tightening Finn
+  describes. Where lessons stayed on the calendar after a student stopped, their
+  last lesson is too late and their **lifetime is overstated**, so older cohorts
+  look like they survived longer than they did. That inflation is strongest in
+  the years that appear best. An apparent fall in twelve-month survival from 72%
+  (2022) to 43% (2025) was reported here and is **withdrawn**: the confound
+  produces the trend. The rise in nought-or-one-lesson departures (~5% → ~20%)
+  is compromised the same way, since inflated old lifetimes push those students
+  out of the under-three-months bucket.
+  Safe to use: start dates (independently confirmed by MMS `DateStarted`),
+  current-roster tenure, and anything measured from 2026-07-28 forward under
+  consistent record-keeping. Pre-2024 history is a decent record of when people
+  started and a poor one of when they stopped. This is the argument for the
+  snapshot lane: the comparable series begins with its first row, not with 2019. Also fixed here: students with only future lessons booked were
   getting a negative tenure and dragging the median down.
   A successful `--apply` run **books its own next review** as the single
   `planning_student_lifecycle_review` row in `Planning_Items`, reusing the
