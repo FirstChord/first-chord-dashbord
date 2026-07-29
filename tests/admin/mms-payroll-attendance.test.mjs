@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { searchAttendanceForPayroll, clearPayrollAttendanceCacheForTests, updatePayrollAttendanceStatus } from '../../lib/admin/mms.js';
+import { searchAttendanceForPayroll, clearPayrollAttendanceCacheForTests, updatePayrollAttendanceStatus, peekPayrollAttendanceAge } from '../../lib/admin/mms.js';
 
 // Two contracts live here:
 //
@@ -209,6 +209,113 @@ test('payroll attendance decisions preserve notes and write an allowed status to
       StudentNote: 'keep student',
       AttendanceStatus: 'AbsentNotice',
     });
+  } finally {
+    globalThis.fetch = originalFetch;
+    clearPayrollAttendanceCacheForTests();
+    if (originalBearer === undefined) delete process.env.MMS_BEARER_TOKEN;
+    else process.env.MMS_BEARER_TOKEN = originalBearer;
+  }
+});
+
+// The payroll page passes allowExpired because a save re-renders the whole page
+// inside its own POST — the spinner on "Review and generate statement" lasts as
+// long as that render, and a cold ~950-row MMS fetch there turned a ~1s save
+// into a ~7s one. Freshness is deferred, not dropped: the refresh still runs.
+test('allowExpired serves past-hard-max rows instead of making the caller wait', async () => {
+  await withMockedFetch(async ({ calls, advance, setRows, settle }) => {
+    await searchAttendanceForPayroll(BASE);
+    advance(HARD_MAX_AGE_MS + 1);
+    setRows([{ ID: 'atn_5' }]);
+
+    const rows = await searchAttendanceForPayroll({ ...BASE, allowExpired: true });
+    assert.deepEqual(rows, [{ ID: 'atn_1' }], 'the save renders with what we already had');
+    assert.equal(calls.length, 2, 'and a refresh was started behind the request');
+
+    await settle();
+    const after = await searchAttendanceForPayroll({ ...BASE, allowExpired: true });
+    assert.deepEqual(after, [{ ID: 'atn_5' }], 'the next render sees the refreshed rows');
+    assert.equal(calls.length, 2);
+  });
+});
+
+test('allowExpired still fetches when the cache is empty', async () => {
+  await withMockedFetch(async ({ calls }) => {
+    const rows = await searchAttendanceForPayroll({ ...BASE, allowExpired: true });
+    assert.deepEqual(rows, [{ ID: 'atn_1' }]);
+    assert.equal(calls.length, 1, 'a cold container has nothing to serve, so it fetches');
+  });
+});
+
+test('peekPayrollAttendanceAge reports staleness for the query the page rendered', async () => {
+  await withMockedFetch(async ({ advance }) => {
+    assert.equal(peekPayrollAttendanceAge(BASE), null, 'nothing cached yet');
+
+    await searchAttendanceForPayroll(BASE);
+    assert.equal(peekPayrollAttendanceAge(BASE).isFresh, true);
+
+    advance(HARD_MAX_AGE_MS + 1);
+    const stale = peekPayrollAttendanceAge(BASE);
+    assert.equal(stale.isExpired, true, 'the page can tell the user what it served is old');
+    assert.equal(stale.age, HARD_MAX_AGE_MS + 1);
+
+    // Key must match searchAttendanceForPayroll's regardless of teacher order.
+    assert.equal(peekPayrollAttendanceAge({ ...BASE, teacherIds: ['tch_a'] }).isExpired, true);
+    assert.equal(peekPayrollAttendanceAge({ ...BASE, teacherIds: ['tch_zzz'] }), null);
+  });
+});
+
+// `fetch` has no default timeout, so before this an MMS request that never
+// answered hung the render behind it forever — the spinner that never stops.
+// The failure has to be loud and legible: payroll prints loadError verbatim.
+test('a hanging MMS request fails with a readable error instead of hanging', async () => {
+  const originalFetch = globalThis.fetch;
+  const originalBearer = process.env.MMS_BEARER_TOKEN;
+  const originalTimeout = process.env.MMS_REQUEST_TIMEOUT_MS;
+  process.env.MMS_BEARER_TOKEN = 'test-token';
+  process.env.MMS_REQUEST_TIMEOUT_MS = '50';
+  clearPayrollAttendanceCacheForTests();
+
+  // Never resolves on its own — only the abort signal can end it.
+  globalThis.fetch = (_url, init) => new Promise((_resolve, reject) => {
+    init.signal.addEventListener('abort', () => reject(init.signal.reason));
+  });
+  // AbortSignal.timeout's timer is unref'd, so without something ref'd holding
+  // the loop open Node drains it and cancels the test before the abort fires.
+  const keepAlive = setInterval(() => {}, 10);
+
+  try {
+    await assert.rejects(
+      () => searchAttendanceForPayroll(BASE),
+      (error) => {
+        assert.match(error.message, /MMS did not respond within \d+s/u);
+        assert.doesNotMatch(error.message, /TimeoutError/u, 'the raw abort name must not reach the admin UI');
+        return true;
+      },
+    );
+  } finally {
+    clearInterval(keepAlive);
+    globalThis.fetch = originalFetch;
+    clearPayrollAttendanceCacheForTests();
+    if (originalBearer === undefined) delete process.env.MMS_BEARER_TOKEN;
+    else process.env.MMS_BEARER_TOKEN = originalBearer;
+    if (originalTimeout === undefined) delete process.env.MMS_REQUEST_TIMEOUT_MS;
+    else process.env.MMS_REQUEST_TIMEOUT_MS = originalTimeout;
+  }
+});
+
+test('an unreachable MMS host is reported as unreachable, not as a crash', async () => {
+  const originalFetch = globalThis.fetch;
+  const originalBearer = process.env.MMS_BEARER_TOKEN;
+  process.env.MMS_BEARER_TOKEN = 'test-token';
+  clearPayrollAttendanceCacheForTests();
+
+  globalThis.fetch = async () => { throw new TypeError('fetch failed'); };
+
+  try {
+    await assert.rejects(
+      () => searchAttendanceForPayroll(BASE),
+      /Could not reach MMS: fetch failed/u,
+    );
   } finally {
     globalThis.fetch = originalFetch;
     clearPayrollAttendanceCacheForTests();

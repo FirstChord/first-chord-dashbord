@@ -1,11 +1,12 @@
 import ScopeBadge from '@/components/admin/ui/ScopeBadge';
 import Link from 'next/link';
+import { Suspense, cache } from 'react';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import { getPauseHistoryRows, getPayrollRunRows, getStudentsSheetRows, getTutorPayRows, getTutorWiseRows, upsertPayrollRunRow } from '@/lib/admin/sheets';
-import { searchAttendanceForPayroll } from '@/lib/admin/mms';
+import { peekPayrollAttendanceAge, searchAttendanceForPayroll } from '@/lib/admin/mms';
 import { parseTutorPay } from '@/lib/admin/cost-helpers.mjs';
 import {
   buildPayrollPeriod,
@@ -519,17 +520,26 @@ function buildPayrollQuery(params = {}) {
   return query.toString();
 }
 
-export default async function AdminPayrollPage({ searchParams }) {
-  const params = (await searchParams) || {};
-  const payDate = `${params.payDate || nextWednesday()}`.slice(0, 10);
+// The one MMS query this page makes, derived from the pay date alone so every
+// render of the page — including the re-render inside a save — hits the same
+// cache key.
+function buildAttendanceQuery(payDate) {
   const teacherIds = Object.values(ADMIN_TUTORS).map((tutor) => tutor.teacherId).filter(Boolean);
   // Fetch the full max look-back (since-last-paid catch-up can reach back up to 5 weeks).
-  const fetchStart = new Date(new Date(`${payDate}T00:00:00Z`).getTime() - 35 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  const fetchEnd = buildPayrollPeriod({ payDate, cadence: 'weekly' }).periodEnd;
+  const startDate = new Date(new Date(`${payDate}T00:00:00Z`).getTime() - 35 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const endDate = buildPayrollPeriod({ payDate, cadence: 'weekly' }).periodEnd;
+  return { startDate, endDate, teacherIds, limit: 1000 };
+}
+
+// Everything below the page header, memoised per request so the streamed
+// summary line and the workspace share one set of fetches rather than each
+// paying for its own. Arguments are primitives on purpose: React's cache() keys
+// on argument identity, so an options object would miss on every call.
+const loadPayrollWorkspace = cache(async (payDate, tutorParam, startParam, endParam) => {
   // Per-tutor window override: ?tutor=<shortName>&start=<YYYY-MM-DD>&end=<YYYY-MM-DD>
   // (one tutor at a time). end lets an invoice that closes earlier in the week stop short.
-  const overrides = params.tutor && (params.start || params.end)
-    ? { [`${params.tutor}`]: { start: `${params.start || ''}`.slice(0, 10), end: `${params.end || ''}`.slice(0, 10) } }
+  const overrides = tutorParam && (startParam || endParam)
+    ? { [tutorParam]: { start: startParam, end: endParam } }
     : {};
 
   const [tutorPayRows, savedRuns, tutorWiseRows, studentRows, pauseRows] = await Promise.all([
@@ -540,33 +550,20 @@ export default async function AdminPayrollPage({ searchParams }) {
     getPauseHistoryRows(),
   ]);
 
-  // Attendance is cached with stale-while-revalidate, so saves and window tweaks
-  // never block on MMS. `?refresh=1` is the deliberate "I just recorded a lesson
-  // in MMS" escape hatch — it bypasses the cache and waits for fresh rows.
-  const forceRefresh = `${params.refresh || ''}` === '1';
-
+  // allowExpired: a save re-renders this whole page inside its own POST, and the
+  // button's spinner lasts exactly as long as that render. Blocking here on a
+  // ~950-row MMS fetch was the difference between a ~1s save and a ~7s one, so
+  // this render always takes whatever is cached — however old — and lets the
+  // refresh run behind the request. `?refresh=1` is the deliberate wait.
+  const attendanceQuery = buildAttendanceQuery(payDate);
   let attendanceRows = [];
   let loadError = '';
   try {
-    attendanceRows = await searchAttendanceForPayroll({
-      startDate: fetchStart,
-      endDate: fetchEnd,
-      teacherIds,
-      limit: 1000,
-      forceRefresh,
-    });
+    attendanceRows = await searchAttendanceForPayroll({ ...attendanceQuery, allowExpired: true });
   } catch (error) {
     loadError = error.message || 'Could not load MMS attendance for payroll.';
   }
-
-  // Drop `refresh` from the URL once it has done its job, otherwise every later
-  // save re-renders this page with refresh=1 still set and refetches MMS every
-  // time — exactly the cost the cache exists to avoid. Must sit outside the try:
-  // redirect() signals by throwing, and the catch above would swallow it.
-  if (forceRefresh && !loadError) {
-    const cleanQuery = buildPayrollQuery(params);
-    redirect(`/admin/finance/payroll?${[cleanQuery, 'refreshed=1'].filter(Boolean).join('&')}`);
-  }
+  const attendanceAge = peekPayrollAttendanceAge(attendanceQuery);
 
   const preview = buildPayrollPreview({
     attendanceRows,
@@ -607,14 +604,71 @@ export default async function AdminPayrollPage({ searchParams }) {
     awaiting: confirmationRows.filter((row) => !row.tutorResponse).length,
   };
   const workspaceRows = activeRows.map((row) => ({ ...row, workflow: getPayrollWorkflowState(row) }));
-  const requestedTutor = `${params.tutor || ''}`.trim();
-  const selectedRow = workspaceRows.find((row) => row.tutorShortName === requestedTutor)
+  const selectedRow = workspaceRows.find((row) => row.tutorShortName === tutorParam)
     || workspaceRows.find((row) => !['paid', 'ready'].includes(row.workflow.key))
     || workspaceRows[0]
     || null;
   const selectedTutor = selectedRow?.tutorShortName || '';
   const selectorRows = workspaceRows.map(({ payrollId, tutor, tutorShortName, workflow }) => ({ payrollId, tutor, tutorShortName, workflow }));
 
+  return {
+    preview,
+    selectedRow,
+    selectedTutor,
+    selectorRows,
+    wiseBatch,
+    wiseCsvParams,
+    confirmations,
+    attendanceChangedRows,
+    amountConflicts,
+    disputed,
+    loadError,
+    attendanceAge,
+  };
+});
+
+// Rounded age of the attendance the page is showing, but only once it is past
+// the point where the cache would previously have forced a wait — under that,
+// the data is current enough that saying anything is noise.
+function staleAttendanceLabel(attendanceAge) {
+  if (!attendanceAge?.isExpired) return '';
+  const minutes = Math.round(attendanceAge.age / 60000);
+  if (minutes < 90) return `${minutes} min ago`;
+  return `${Math.round(minutes / 60)} hr ago`;
+}
+
+export default async function AdminPayrollPage({ searchParams }) {
+  const params = (await searchParams) || {};
+  const payDate = `${params.payDate || nextWednesday()}`.slice(0, 10);
+  const tutorParam = `${params.tutor || ''}`.trim();
+  const startParam = `${params.start || ''}`.slice(0, 10);
+  const endParam = `${params.end || ''}`.slice(0, 10);
+
+  // `?refresh=1` is the deliberate "I just recorded a lesson in MMS" escape
+  // hatch — the one place waiting is honest, because you asked for fresh rows.
+  // It runs before any streaming begins so redirect() can still send a real
+  // redirect instead of having to unwind a part-sent response.
+  const forceRefresh = `${params.refresh || ''}` === '1';
+  let refreshError = '';
+  if (forceRefresh) {
+    try {
+      await searchAttendanceForPayroll({ ...buildAttendanceQuery(payDate), forceRefresh: true });
+    } catch (error) {
+      refreshError = error.message || 'Could not load MMS attendance for payroll.';
+    }
+    // Drop `refresh` from the URL once it has done its job, otherwise every later
+    // save re-renders this page with refresh=1 still set and refetches MMS every
+    // time — exactly the cost the cache exists to avoid. Must sit outside the try:
+    // redirect() signals by throwing, and the catch above would swallow it.
+    if (!refreshError) {
+      const cleanQuery = buildPayrollQuery(params);
+      redirect(`/admin/finance/payroll?${[cleanQuery, 'refreshed=1'].filter(Boolean).join('&')}`);
+    }
+  }
+
+  // The shell — title, pay date, refresh — renders immediately from the URL
+  // alone. Everything that needs Sheets or MMS streams in below it, so the page
+  // is never a blank wait for its slowest fetch.
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <header className="border-b border-slate-200 pb-6">
@@ -625,9 +679,9 @@ export default async function AdminPayrollPage({ searchParams }) {
               Payroll
               <ScopeBadge>Nothing is paid automatically</ScopeBadge>
             </h2>
-            <p className="mt-2 text-sm text-slate-500">
-              {formatMoney(wiseBatch.totalAmount)} ready · {preview.totals.reviewLessonCount} lesson{preview.totals.reviewLessonCount === 1 ? '' : 's'} need review · {confirmations.awaiting} awaiting
-            </p>
+            <Suspense fallback={<p className="mt-2 h-5 w-80 max-w-full animate-pulse rounded bg-slate-100" />}>
+              <PayrollSummaryLine payDate={payDate} tutor={tutorParam} start={startParam} end={endParam} />
+            </Suspense>
           </div>
           <form className="flex items-end gap-2">
             <label>
@@ -657,6 +711,55 @@ export default async function AdminPayrollPage({ searchParams }) {
         </section>
       ) : null}
 
+      {refreshError ? (
+        <section className="rounded-[1.6rem] border border-rose-200 bg-rose-50 p-5 text-sm text-rose-900">
+          MMS payroll attendance could not be refreshed: {refreshError}
+        </section>
+      ) : null}
+
+      <Suspense fallback={<PayrollWorkspaceFallback />}>
+        <PayrollWorkspace payDate={payDate} tutor={tutorParam} start={startParam} end={endParam} />
+      </Suspense>
+    </div>
+  );
+}
+
+async function PayrollSummaryLine({ payDate, tutor, start, end }) {
+  const { preview, wiseBatch, confirmations, attendanceAge } = await loadPayrollWorkspace(payDate, tutor, start, end);
+  const stale = staleAttendanceLabel(attendanceAge);
+  return (
+    <p className="mt-2 text-sm text-slate-500">
+      {formatMoney(wiseBatch.totalAmount)} ready · {preview.totals.reviewLessonCount} lesson{preview.totals.reviewLessonCount === 1 ? '' : 's'} need review · {confirmations.awaiting} awaiting
+      {stale ? <span className="text-slate-400"> · MMS attendance from {stale}, refreshing</span> : null}
+    </p>
+  );
+}
+
+function PayrollWorkspaceFallback() {
+  return (
+    <div className="space-y-4" aria-busy="true" aria-label="Loading payroll">
+      <div className="h-16 animate-pulse rounded-2xl border border-slate-200 bg-white/60" />
+      <div className="h-96 animate-pulse rounded-[1.4rem] border border-slate-200 bg-white/60" />
+    </div>
+  );
+}
+
+async function PayrollWorkspace({ payDate, tutor, start, end }) {
+  const {
+    selectedRow,
+    selectedTutor,
+    selectorRows,
+    wiseBatch,
+    wiseCsvParams,
+    confirmations,
+    attendanceChangedRows,
+    amountConflicts,
+    disputed,
+    loadError,
+  } = await loadPayrollWorkspace(payDate, tutor, start, end);
+
+  return (
+    <>
       {loadError ? (
         <section className="rounded-[1.6rem] border border-rose-200 bg-rose-50 p-5 text-sm text-rose-900">
           MMS payroll attendance could not be loaded: {loadError}
@@ -701,6 +804,6 @@ export default async function AdminPayrollPage({ searchParams }) {
           />
         </div>
       </details>
-    </div>
+    </>
   );
 }

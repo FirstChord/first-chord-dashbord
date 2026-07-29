@@ -151,3 +151,53 @@ test('swr cache: invalidateScope drops entries and blocks a pre-write fetch from
   cache.invalidateScope('Students');
   assert.deepEqual(cache.peek('Planning::A1').value, ['kept']);
 });
+
+// allowExpired exists for renders on a human's critical path (the payroll save
+// re-renders the whole page inside its own POST, and the button spinner lasts
+// that long). Past the hard max the default is to make the caller wait; this
+// opts out of the wait without opting out of the refresh.
+test('swr cache: allowExpired serves a past-hard-max value and refreshes behind it', async () => {
+  const cache = makeCache();
+  let fetches = 0;
+  const fetcher = async () => { fetches += 1; return [`fetch-${fetches}`]; };
+
+  await withMockedNow(1_000, () => cache.read('k', fetcher));
+  const hardMaxPassed = 1_000 + 60_000 + 300_000 + 1;
+
+  const value = await withMockedNow(hardMaxPassed, () => cache.read('k', fetcher, { allowExpired: true }));
+  assert.deepEqual(value, ['fetch-1'], 'the expired value is served rather than making the caller wait');
+  assert.equal(fetches, 2, 'and a refresh was started behind the request');
+
+  // The refresh still lands, so the next read is current.
+  await new Promise((resolve) => setImmediate(resolve));
+  const after = await withMockedNow(hardMaxPassed, () => cache.read('k', fetcher, { allowExpired: true }));
+  assert.deepEqual(after, ['fetch-2']);
+  assert.equal(fetches, 2, 'and did not fetch again');
+});
+
+test('swr cache: allowExpired still fetches when nothing is cached', async () => {
+  const cache = makeCache();
+  let fetches = 0;
+  const fetcher = async () => { fetches += 1; return ['fetched']; };
+
+  const value = await withMockedNow(1_000, () => cache.read('k', fetcher, { allowExpired: true }));
+  assert.deepEqual(value, ['fetched'], 'nothing stale to serve means the caller must wait');
+  assert.equal(fetches, 1);
+});
+
+test('swr cache: stat reports age without evicting an expired entry', async () => {
+  const cache = makeCache();
+  await withMockedNow(1_000, () => cache.read('k', async () => ['fetched']));
+
+  const fresh = await withMockedNow(30_000, async () => cache.stat('k'));
+  assert.equal(fresh.isFresh, true);
+  assert.equal(fresh.isExpired, false);
+
+  const expiredAt = 1_000 + 60_000 + 300_000 + 60_000;
+  const expired = await withMockedNow(expiredAt, async () => cache.stat('k'));
+  assert.equal(expired.isExpired, true);
+  assert.equal(expired.age, expiredAt - 1_000);
+  // stat must not evict — the page reads the value and its age in the same render.
+  assert.equal(await withMockedNow(expiredAt, async () => cache.stat('k')) !== null, true);
+  assert.equal(cache.stat('missing'), null);
+});

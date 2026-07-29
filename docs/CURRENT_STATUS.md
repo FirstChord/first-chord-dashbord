@@ -26,6 +26,34 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
+- **Payroll save latency (2026-07-29):** "Review and generate statement" was
+  intermittently hanging on its spinner — sometimes ~1s, sometimes ~7s, with the
+  work already saved by the time the browser was refreshed. The spinner was
+  timing the wrong thing: a server action's `revalidatePath` rebuilds the whole
+  page inside the same POST, so every button on the payroll page paid for the
+  page's slowest fetch. Cold MMS attendance measured 4.7s (951 rows, 35 days, 16
+  tutors) against 1.2s for the five Sheets reads beside it, and the attendance
+  cache's 30-minute hard ceiling meant a normal stop-start review session
+  crossed it and blocked. The payroll page now passes `allowExpired` and never
+  waits on MMS: it renders whatever is cached at any age, refreshes behind the
+  request, and — only when what it served is past the old ceiling — says so in
+  the header summary. `↻ Refresh MMS & recalculate` remains the deliberate wait
+  and is unchanged. The page also streams: the shell renders from the URL alone
+  and the tutor workspace arrives behind a `Suspense` boundary (TTFB 0.15s
+  against a 1.9–2.8s full render). No change to what is calculated, saved or
+  paid. Contract: [state tabs → payroll attendance cache](./architecture/data/state-tabs.md).
+  Shipped alongside it: **outbound request timeouts**. Neither `fetch` nor the
+  Sheets client had one, so a stalled connection hung a render forever with no
+  error and nothing in the logs — that, not slowness, was the true "stuck until
+  I refresh" case. MMS calls now route through `mmsFetch` (readable message on
+  abort, since these strings reach the admin UI verbatim) and Sheets sets
+  `timeout` once on the client. Both 30s, both deliberately generous against a
+  4.7s real worst case; `MMS_REQUEST_TIMEOUT_MS` tunes the MMS one without a
+  deploy.
+  **Deliberately left undone, worth picking up:** the statement page uses a
+  different attendance cache key than the payroll page and so always pays a cold
+  fetch; and the Present/Absent/Cancelled buttons invalidate the cache and then
+  refresh, so they always pay the full 4.7s.
 - **Student lifecycle and retention (2026-07-28):** the school can now answer how
   long a student has been with it, and how long the ones who left actually
   stayed. `npm run lifecycle:refresh` reads MMS attendance — which reaches back
@@ -130,20 +158,14 @@ deliberate school-improvement prompt.
   fields, or parent messages. The point-in-time repair evidence and repeatable
   regression check are in the
   [tutor-absence contract](./workflows/tutors/absence-to-pause.md).
-- **Practice Chat transcription accuracy (2026-07-26):** the note tidy-up rules
-  are word-boundary anchored and fixture-tested — they were corrupting real
-  words in parent-facing notes (`topics`→`topicks`, `plectrum`→`picktrum`).
-  `checkNoteSafety()` flags risky wording on the finished note and never
-  substitutes; sending a flagged note takes a deliberate second tap. The
-  transcription call is now given the student's instrument and current songs as
-  context, so the model is told what to expect rather than corrected afterwards.
-  Model default stays `whisper-1`; the transcription model is now school-wide
-  config (`NEXT_PUBLIC_PRACTICE_CHAT_ASR_MODEL`, allow-listed both sides, unset
-  = default) so a trial is a week on one model against a week on another rather
-  than a per-lesson choice. **Raw transcript capture is built but
-  deliberately not shipped** — it stores verbatim child speech and is held
+- **Practice Chat transcription accuracy (2026-07-26):** anchored tidy-up rules,
+  a non-substituting safety flag, and instrument/song context on the
+  transcription call; model is school-wide config
+  (`NEXT_PUBLIC_PRACTICE_CHAT_ASR_MODEL`, default `whisper-1`). **Raw transcript
+  capture is built but deliberately not shipped** — verbatim child speech, held
   pending a retention number and a parent privacy-notice decision (branch
-  `wip/practice-chat-all`). Audit and phased plan:
+  `wip/practice-chat-all`); see "Practice Chat transcription security" below.
+  Audit and phased plan:
   [Practice Chat diarisation audit](./plans/active/practice-chat-diarisation-audit.md).
 - **Incoming reply proposals (built, deliberately off):** deterministic policy
   checks plus optional model wording are implemented, but
