@@ -22,7 +22,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
 await loadLocalEnv(repoRoot);
 
-const { buildLifecycleRow, summariseLifecycle, survivalByCohort } = await import(
+const { buildLifecycleRow, MARKING_MATURITY_DAYS, summariseLifecycle, summariseMarking, survivalByCohort } = await import(
   '../lib/admin/student-lifecycle.mjs'
 );
 
@@ -109,6 +109,9 @@ console.log(`fetched ${students.length} students from MMS; pulling lesson histor
 
 const rows = [];
 const failures = [];
+// Only date and status are kept per lesson — the full objects across ~40k
+// lessons are not worth holding just to count them.
+const allLessons = [];
 const queue = [...students];
 let done = 0;
 
@@ -117,15 +120,29 @@ await Promise.all(
     while (queue.length) {
       const student = queue.shift();
       const { error, lessons } = await fetchHistory(student.ID);
-      if (error) failures.push({ id: student.ID, name: student.FullName, error });
-      else rows.push(buildLifecycleRow({ student, lessons, today: TODAY }));
+      if (error) {
+        failures.push({ id: student.ID, name: student.FullName, error });
+      } else {
+        rows.push(buildLifecycleRow({ student, lessons, today: TODAY }));
+        for (const lesson of lessons) {
+          allLessons.push({
+            date: (lesson?.EventStartDate ?? '').slice(0, 10),
+            status: lesson?.AttendanceStatus,
+          });
+        }
+      }
       done += 1;
       if (done % 100 === 0) console.log(`  ${done}/${students.length}`);
     }
   }),
 );
 
-const summary = summariseLifecycle(rows, { today: TODAY });
+const marking = summariseMarking(allLessons, { today: TODAY });
+const summary = {
+  ...summariseLifecycle(rows, { today: TODAY }),
+  markingCompletenessPct: marking.trailingTwelveMonths?.rate ?? null,
+  markingLessonsCounted: marking.trailingTwelveMonths?.total ?? null,
+};
 const cohorts = survivalByCohort(rows, { today: TODAY });
 
 console.log(`\nbuilt ${rows.length} rows; ${failures.length} students could not be read`);
@@ -154,6 +171,24 @@ for (const cohort of cohorts) {
 console.log('\n  Read down a column, not across a row: comparing cohorts at the');
 console.log('  SAME horizon is the only fair comparison. Average lifetime by');
 console.log('  cohort always falls for recent years and means nothing.');
+
+console.log('\n── Calendar marking ─────────────────────────────────────');
+console.log('  share of lessons carrying a definite status — present, absent');
+console.log(`  with notice, teacher absent, anything. A marked absence counts.`);
+console.log(`  Lessons from the last ${MARKING_MATURITY_DAYS} days are excluded; they may not be marked yet.\n`);
+for (const year of marking.byYear) {
+  if (year.total < 20) continue;
+  console.log(
+    `  ${year.year}  ${String(year.total).padStart(6)} lessons  ${String(year.rate).padStart(3)}%  `
+    + '█'.repeat(Math.round(year.rate / 3)),
+  );
+}
+if (marking.trailingTwelveMonths) {
+  console.log(`\n  Last 12 months: ${marking.trailingTwelveMonths.rate}% of `
+    + `${marking.trailingTwelveMonths.total} lessons marked.`);
+  console.log('  This validates everything above it — retention depends on knowing');
+  console.log('  when a student stopped, which depends on the register being kept.');
+}
 
 if (failures.length) {
   console.log(`\n  ${failures.length} unreadable: ` + failures.slice(0, 5).map((f) => `${f.name || f.id} (${f.error})`).join(', '));

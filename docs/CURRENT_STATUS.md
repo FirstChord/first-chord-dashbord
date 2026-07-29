@@ -41,10 +41,10 @@ deliberate school-improvement prompt.
   have lasted a year, and it reads as a collapse that is not happening.
   First findings: median tenure 1.52y with 62 students past three years, and
   median lifetime of leavers 0.48y.
-  **Do not compare cohorts across the record-keeping change.** Lessons marked
-  attended as a share of lessons on the calendar runs 23% (2019) → 31% (2022) →
-  49% (2024) → 63% (2026): monotonic, steep, and exactly the tightening Finn
-  describes. Where lessons stayed on the calendar after a student stopped, their
+  **Do not compare cohorts across the record-keeping change.** Calendar marking
+  completeness (below) went 22% (2021) → 31% (2023) → 50% (2024) → 87% (2025):
+  a step change, not a drift. Where lessons stayed on the calendar after a
+  student stopped, their
   last lesson is too late and their **lifetime is overstated**, so older cohorts
   look like they survived longer than they did. That inflation is strongest in
   the years that appear best. An apparent fall in twelve-month survival from 72%
@@ -56,8 +56,18 @@ deliberate school-improvement prompt.
   current-roster tenure, and anything measured from 2026-07-28 forward under
   consistent record-keeping. Pre-2024 history is a decent record of when people
   started and a poor one of when they stopped. This is the argument for the
-  snapshot lane: the comparable series begins with its first row, not with 2019. Also fixed here: students with only future lessons booked were
-  getting a negative tenure and dragging the median down.
+  snapshot lane: the comparable series begins with its first row, not with 2019.
+  The refresh now also reports **calendar marking completeness** — the share of
+  past lessons carrying a definite status, where a marked absence counts as a
+  success because the goal is engagement with the calendar, not attendance
+  rate. 73% (2019) → 22% (2021) → 31% (2023) → 50% (2024) → 87% (2025) → 90%
+  (2026), currently 89% of 8,974 lessons over the trailing twelve months. The
+  step change follows MMS attendance becoming the basis for tutor pay in 2024:
+  the register got kept because money depended on it. This is the dial that
+  validates the retention figures beside it, so it is stored in the same
+  snapshot row — if it falls, those numbers degrade with no other signal.
+  Also fixed here: students with only future lessons booked were getting a
+  negative tenure and dragging the median down.
   A successful `--apply` run **books its own next review** as the single
   `planning_student_lifecycle_review` row in `Planning_Items`, reusing the
   self-renewing pattern proven by the Sheets backup, with the headline figures

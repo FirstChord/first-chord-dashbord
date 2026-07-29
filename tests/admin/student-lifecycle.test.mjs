@@ -4,7 +4,9 @@ import test from 'node:test';
 import {
   buildLifecycleRow,
   formatTimeWithSchool,
+  isLessonMarked,
   summariseLifecycle,
+  summariseMarking,
   survivalByCohort,
   yearsBetween,
 } from '../../lib/admin/student-lifecycle.mjs';
@@ -259,4 +261,111 @@ test('a departed student without a lifetime shows nothing, not their tenure', ()
     formatTimeWithSchool({ firstLesson: '2022-01-01', departed: 'TRUE', lifetimeYears: null, tenureYears: 4 }),
     '',
   );
+});
+
+// ── calendar marking completeness ───────────────────────────────────────────
+
+test('a marked absence counts as a success, not a failure', () => {
+  // The point of the metric is engagement with the calendar, not attendance
+  // rate. A tutor who records "absent with notice" has done the job.
+  const lessons = [
+    { date: '2026-01-05', status: 'Present' },
+    { date: '2026-01-12', status: 'AbsentNotice' },
+    { date: '2026-01-19', status: 'TeacherAbsentNoMakeup' },
+    { date: '2026-01-26', status: 'AbsentNoMakeup' },
+  ];
+
+  const { byYear } = summariseMarking(lessons, { today: TODAY });
+  assert.equal(byYear[0].rate, 100);
+});
+
+test('only unrecorded and blank count as unmarked', () => {
+  const lessons = [
+    { date: '2026-01-05', status: 'Present' },
+    { date: '2026-01-12', status: 'Unrecorded' },
+    { date: '2026-01-19', status: '' },
+    { date: '2026-01-26', status: null },
+  ];
+
+  const { byYear } = summariseMarking(lessons, { today: TODAY });
+  assert.equal(byYear[0].total, 4);
+  assert.equal(byYear[0].marked, 1);
+  assert.equal(byYear[0].rate, 25);
+});
+
+test('unrecorded is matched regardless of case or padding', () => {
+  assert.equal(isLessonMarked('  unrecorded  '), false);
+  assert.equal(isLessonMarked('UNRECORDED'), false);
+  assert.equal(isLessonMarked('Present'), true);
+  assert.equal(isLessonMarked(undefined), false);
+});
+
+test('lessons too recent to have been marked are excluded', () => {
+  // Without this the figure is permanently pessimistic and cannot reach 100%,
+  // so nobody can tell a good month from a bad one.
+  const lessons = [
+    { date: '2026-07-01', status: 'Present' },
+    { date: '2026-07-27', status: 'Unrecorded' },  // yesterday — not due yet
+  ];
+
+  const { byYear } = summariseMarking(lessons, { today: TODAY });
+  assert.equal(byYear[0].total, 1, 'yesterday is not counted against the school');
+  assert.equal(byYear[0].rate, 100);
+});
+
+test('future bookings never count', () => {
+  const lessons = [
+    { date: '2026-01-05', status: 'Present' },
+    { date: '2028-08-28', status: '' },
+  ];
+
+  const { byYear } = summariseMarking(lessons, { today: TODAY });
+  assert.equal(byYear.length, 1);
+  assert.equal(byYear[0].year, '2026');
+});
+
+test('years are reported separately and in order', () => {
+  const lessons = [
+    { date: '2021-03-01', status: 'Unrecorded' },
+    { date: '2021-03-08', status: 'Unrecorded' },
+    { date: '2021-03-15', status: 'Present' },
+    { date: '2025-03-01', status: 'Present' },
+    { date: '2025-03-08', status: 'Present' },
+  ];
+
+  const { byYear } = summariseMarking(lessons, { today: TODAY });
+  assert.deepEqual(byYear.map((y) => y.year), ['2021', '2025']);
+  assert.equal(byYear[0].rate, 33);
+  assert.equal(byYear[1].rate, 100);
+});
+
+test('the trailing twelve months is the headline figure', () => {
+  const lessons = [
+    { date: '2020-01-05', status: 'Unrecorded' },  // old, excluded from trailing
+    { date: '2026-01-05', status: 'Present' },
+    { date: '2026-02-05', status: 'AbsentNotice' },
+    { date: '2026-03-05', status: 'Unrecorded' },
+  ];
+
+  const { trailingTwelveMonths } = summariseMarking(lessons, { today: TODAY });
+  assert.equal(trailingTwelveMonths.total, 3, 'the 2020 lesson is outside the window');
+  assert.equal(trailingTwelveMonths.rate, 67);
+});
+
+test('no lessons produces nulls rather than a fake 100%', () => {
+  const result = summariseMarking([], { today: TODAY });
+  assert.deepEqual(result.byYear, []);
+  assert.equal(result.trailingTwelveMonths, null);
+});
+
+test('junk dates are skipped without breaking the count', () => {
+  const lessons = [
+    { date: '2026-01-05', status: 'Present' },
+    { date: '', status: 'Present' },
+    { date: 'not-a-date', status: 'Present' },
+    { status: 'Present' },
+  ];
+
+  const { byYear } = summariseMarking(lessons, { today: TODAY });
+  assert.equal(byYear[0].total, 1);
 });
