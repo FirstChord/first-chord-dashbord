@@ -8,6 +8,7 @@ import {
   resolveTutorTeacherId,
   stripDuplicatePracticeGoals,
 } from '../../lib/tutor-dashboard-helpers.mjs';
+import { ADMIN_TUTORS } from '../../lib/admin/tutors-data.js';
 
 const SAMPLE_TUTORS = {
   'Eléna': {
@@ -21,6 +22,17 @@ const SAMPLE_TUTORS = {
     instruments: ['guitar'],
   },
 };
+
+test('canonical tutor identities keep unique MMS IDs and include Matthew', () => {
+  const teacherIds = Object.values(ADMIN_TUTORS).map((tutor) => tutor.teacherId);
+
+  assert.equal(new Set(teacherIds).size, teacherIds.length);
+  assert.deepEqual(ADMIN_TUTORS.Matthew, {
+    fullName: 'Matthew Leung',
+    teacherId: 'tch_zLY8Jn',
+    instruments: ['piano'],
+  });
+});
 
 test('getTutorDashboardOptions exposes stable short-name tutor options', () => {
   const options = getTutorDashboardOptions(SAMPLE_TUTORS);

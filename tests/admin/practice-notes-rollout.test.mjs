@@ -6,9 +6,11 @@ import {
   resolvePracticeNotesStudentTutor,
   validateSelfAttestedPracticeNotesTutor,
 } from '../../lib/admin/practice-notes-rollout.mjs';
+import { ADMIN_TUTORS } from '../../lib/admin/tutors-data.js';
 
 test('Practice Chat enables the full registered tutor roster unless a rollout list is configured', () => {
-  assert.equal(getPracticeNotesEnabledTutors({}).length, 16);
+  assert.deepEqual(getPracticeNotesEnabledTutors({}), Object.keys(ADMIN_TUTORS));
+  assert.equal(getPracticeNotesEnabledTutors({}).includes('Matthew'), true);
   assert.deepEqual(getPracticeNotesEnabledTutors({ PRACTICE_NOTES_ENABLED_TUTORS: 'Kenny, Eléna Esposito' }), ['Kenny', 'Eléna']);
 });
 

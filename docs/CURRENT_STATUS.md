@@ -26,6 +26,23 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
+- **Matthew tutor handover (2026-07-30):** Matthew Leung
+  (`tch_zLY8Jn`, piano inferred from the confirmed student/lesson set) is now in
+  the canonical Brain tutor lists, the dashboard tutor identity, and the derived
+  `FC_Tutors`/`FC_Students` lanes. The five explicitly selected student records
+  were aligned in one five-cell `Students.Tutor` batch plus the registry, with a
+  pre-change Sheets backup and attempted/completed `Event_Log` evidence. No
+  payment, contact, attendance, Stripe, or MMS write was made. Patrick and Eléna
+  remain **leaving**, with Matthew recorded as their replacement; do not retire
+  them yet. This is a recorded partial handover, not the completed-state model
+  for future transfers: the requested dashboard alignment currently precedes
+  the remaining MMS cleanup. A fresh MMS audit found their outgoing recurring events still
+  coexisting with Matthew's new events on 15, 22, and 29 August (one old/new
+  pair also uses different times). End the outgoing series from the 15 August boundary,
+  verify that date plus the next two recurrences contains exactly one intended
+  lesson per student/group, then use `/admin/tutors` to retire them. The durable
+  sequence and the safe future batch-preview contract are in
+  [Tutor arrival and handover](./workflows/tutors/arrival-and-handover.md).
 - **Payroll save latency (2026-07-29):** "Review and generate statement" was
   intermittently hanging on its spinner — sometimes ~1s, sometimes ~7s, with the
   work already saved by the time the browser was refreshed. The spinner was
