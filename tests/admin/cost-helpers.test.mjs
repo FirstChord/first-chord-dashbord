@@ -56,10 +56,12 @@ test('hourly tutor priced per hour of lessons: 30=£12, 45=£18, 60=£24', () =>
   assert.equal(c60.byTutor[0].weekly, 24);
 });
 
-test('calculateTutorSlotPay applies 45-minute group uplift once per slot', () => {
+test('calculateTutorSlotPay applies the group uplift once at every slot duration', () => {
   assert.equal(calculateTutorSlotPay(30, 'one_to_one', 24), 12);
   assert.equal(calculateTutorSlotPay(45, 'one_to_one', 24), 18);
+  assert.equal(calculateTutorSlotPay(30, 'group', 24), 14);
   assert.equal(calculateTutorSlotPay(45, 'group', 24), 20);
+  assert.equal(calculateTutorSlotPay(60, 'group', 24), 26);
   assert.equal(calculateTutorSlotPay(45, 'one_to_one', 24, { studentCount: 2 }), 20);
 });
 

@@ -1,7 +1,7 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: null
+last_verified: 2026-07-30
 ---
 # Paying tutors
 
@@ -22,6 +22,9 @@ clear record.
 - **Wise** is where the payment is actually uploaded and approved.
 
 Nothing on the payroll page sends money or WhatsApp messages automatically.
+For hourly tutors, each payable slot is `hourly rate × duration / 60`. A group
+slot adds £2 once to that slot, regardless of duration or student count; it is
+never multiplied per student.
 
 ## Before Wednesday: prepare and agree the figures
 

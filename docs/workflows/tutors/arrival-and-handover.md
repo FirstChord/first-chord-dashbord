@@ -128,14 +128,18 @@ After a group of transfers, not after every individual edit:
 3. Check the outgoing tutor's dashboard roster no longer includes them.
 4. Search the effective date plus the next two recurrence dates and confirm
    there is exactly one intended lesson per student/group.
-5. Resolve any tutor-conflict flags before continuing.
+5. Search the outgoing tutor's **complete** calendar and roster on the same
+   dates, not only the selected transfer students. Any unrelated future lesson
+   or active billing profile is separate handover work and blocks retirement.
+6. Resolve any tutor-conflict flags before continuing.
 
 This batch verification is the main time-saver: the new tutor is configured once and the live MMS roster is checked once per handover group, not once per setup step.
 
 ## Part 5 — Retire the outgoing tutor
 
-Only after every student transfer is complete and the post-boundary MMS search
-contains no outgoing lessons:
+Only after every student transfer is complete, the outgoing tutor's full
+post-boundary MMS calendar contains no lessons, and no active billing profile
+still assigns a student to them:
 
 1. Return to `/admin/tutors`.
 2. Choose **Review warnings** for the leaving tutor.
@@ -161,7 +165,8 @@ audit. The next safe reduction in manual work is one explicit handover preview,
 not automatic MMS mutation. It should:
 
 1. take an outgoing tutor, incoming tutor, effective date, and selected roster;
-2. read fresh MMS billing profiles and future events for those MMS student IDs;
+2. read fresh MMS billing profiles and future events for those MMS student IDs,
+   plus the outgoing tutor's complete future roster/calendar;
 3. block alignment while an outgoing post-boundary event, missing incoming
    event, unexpected time, or incomplete group remains;
 4. show the exact Students/registry cells that will change;
@@ -182,5 +187,6 @@ of this dashboard workflow.
 | New tutor appears but has no students | Check MMS teacher assignment first; the dashboard reads the roster live from MMS. |
 | Student appears under both tutors | Check MMS assignment, then align the Students sheet and Registry deliberately; resolve any tutor-conflict flag. |
 | Student has two lessons after the handover date | End the outgoing recurring series from the boundary; do not treat the incoming billing profile as proof of completion. Check at least the boundary date and the next two recurrences. |
+| Selected transfers are clean but the outgoing tutor still has lessons | Audit the tutor's complete future calendar and roster. Those other students need their own explicit handover or series closure before retirement. |
 | Outgoing tutor shows students in Retirement checks | They have not been reassigned in the dashboard yet. Keep the tutor as **Leaving**; do not retire. |
 | Payroll remains visible after retirement | Expected. Retirement hides live operational choices, not historic or final pay work. |

@@ -135,18 +135,18 @@ test('buildPayrollRunId is stable by tutor and period', () => {
   );
 });
 
-test('buildPayrollPreview dedupes group attendances and pays once per event slot', () => {
+test('buildPayrollPreview dedupes a 60-minute group and applies one £2 uplift', () => {
   const preview = buildPayrollPreview({
     payDate: '2026-07-01',
     tutorPay: parseTutorPay([{ tutor: 'Calum', hourly_rate: '24', pay_model: 'hourly' }]),
     attendanceRows: [
-      attendance({ EventID: 'evt_group', StudentID: 'a', StudentName: 'A', EventDuration: 45 }),
-      attendance({ EventID: 'evt_group', StudentID: 'b', StudentName: 'B', EventDuration: 45 }),
+      attendance({ EventID: 'evt_group', StudentID: 'a', StudentName: 'A', EventDuration: 60 }),
+      attendance({ EventID: 'evt_group', StudentID: 'b', StudentName: 'B', EventDuration: 60 }),
     ],
   });
   const calum = preview.rows.find((row) => row.tutorShortName === 'Calum');
   assert.equal(calum.lessonCount, 1);
-  assert.equal(calum.expectedAmount, 20);
+  assert.equal(calum.expectedAmount, 26);
   assert.equal(calum.payableSlots[0].studentCount, 2);
 });
 

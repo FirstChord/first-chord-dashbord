@@ -1,7 +1,7 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: 2026-07-27
+last_verified: 2026-07-30
 ---
 # Admin current status
 
@@ -31,17 +31,21 @@ deliberate school-improvement prompt.
   the canonical Brain tutor lists, the dashboard tutor identity, and the derived
   `FC_Tutors`/`FC_Students` lanes. The five explicitly selected student records
   were aligned in one five-cell `Students.Tutor` batch plus the registry, with a
-  pre-change Sheets backup and attempted/completed `Event_Log` evidence. No
-  payment, contact, attendance, Stripe, or MMS write was made. Patrick and Eléna
-  remain **leaving**, with Matthew recorded as their replacement; do not retire
-  them yet. This is a recorded partial handover, not the completed-state model
-  for future transfers: the requested dashboard alignment currently precedes
-  the remaining MMS cleanup. A fresh MMS audit found their outgoing recurring events still
-  coexisting with Matthew's new events on 15, 22, and 29 August (one old/new
-  pair also uses different times). End the outgoing series from the 15 August boundary,
-  verify that date plus the next two recurrences contains exactly one intended
-  lesson per student/group, then use `/admin/tutors` to retire them. The durable
-  sequence and the safe future batch-preview contract are in
+  pre-change Sheets backups and attempted/completed `Event_Log` evidence. The
+  selected calendar handover is now clean on 15, 22, and 29 August: Matthew has
+  exactly four intended slots covering all five students and neither outgoing
+  tutor has those lessons. Matthew's `Tutor_Pay` row is explicit at £24/hour,
+  weekly, active, normal route; `Tutor_Phones` holds his verified number; Wise
+  remains intentionally unconfigured. The shared payroll rule now adds £2 once
+  to every group slot, including his 60-minute Sophia/Athena lesson, and the
+  finance assumption version records that basis change. No attendance, Stripe,
+  Wise, payment-execution, or MMS write was made by the dashboard work.
+  Patrick and Eléna remain **leaving**, with Matthew recorded as their
+  replacement; do not retire them yet. A full outgoing-tutor audit found six
+  other Patrick lessons and one Eléna/Pablo Cunningham lesson on each checked
+  Saturday, plus Ezra still has an active Patrick billing profile. Those live
+  MMS assignments must be ended or reassigned and re-audited before either
+  tutor is hidden. The durable sequence and safe future preview contract are in
   [Tutor arrival and handover](./workflows/tutors/arrival-and-handover.md).
 - **Payroll save latency (2026-07-29):** "Review and generate statement" was
   intermittently hanging on its spinner — sometimes ~1s, sometimes ~7s, with the
