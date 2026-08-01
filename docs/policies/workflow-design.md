@@ -59,6 +59,34 @@ underlying truth merely because they are displayed or stored. Use
 Avoid live vendor reads on ordinary page load. Prefer an explicit or scheduled
 refresh and show freshness where it affects a decision.
 
+## Verified beats inferred
+
+A guard is only as strong as its weakest unstated premise. Where a number
+matters, prefer a fact the source will tell you over one deduced from the shape
+of its response.
+
+The payroll attendance walk is the worked example. It threw rather than
+truncated, it had a test asserting exactly that, and it existed *because* of an
+earlier truncation bug — and it was still unsafe. "A page shorter than we asked
+for is the last page" quietly assumed the endpoint honours the `limit` we send.
+It need not, and MMS had been returning `TotalItemCount` the whole time.
+
+So when a check protects a count, a total, or an amount:
+
+- **Name what the check assumes, not just what it catches.** A guard earns trust
+  for the failure it was built against, not the one standing next to it.
+- **Ask whether the source already reports the thing being inferred** before
+  writing logic to deduce it. This is usually less code, not more.
+- **Notice when a limit or threshold is quietly doing correctness work.** Once
+  completeness was verified against a reported total, page size became a pure
+  latency knob — and a number that only affects speed is safe to tune, where one
+  holding correctness upright is not. If tuning a constant for performance feels
+  risky, that is the signal to go and make the invariant checkable first.
+
+Both halves matter: verifying the invariant is what *earns* the freedom to tune
+the number. Full reasoning in the Obsidian Learning Log,
+`2026-08-01 - The Safety Net's Assumption Was the Unsafe Part`.
+
 ## Approval boundary
 
 Keep these deterministic and explicitly human-approved:
@@ -142,3 +170,6 @@ Before shipping, ask:
    keyboard/focus use without relying on a reload?
 7. Are the focused tests, state contract, current status, and recovery notes
    updated where the behaviour actually changed?
+8. Where a guard protects a count or an amount, is it checking a fact the source
+   reports rather than one inferred from shape? See
+   [verified beats inferred](#verified-beats-inferred).
