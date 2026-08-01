@@ -65,6 +65,103 @@ test('an exact-multiple total terminates via one empty page', async () => {
   assert.deepEqual(calls, [0, 100, 200]);
 });
 
+// A fetcher that reports the endpoint's own count alongside the rows, the way
+// MMS /search does via TotalItemCount.
+function countedFetcher(totalRows, pageCalls, { reportTotal = totalRows, serveAtMost = Infinity } = {}) {
+  return async ({ offset, limit }) => {
+    pageCalls.push(offset);
+    const available = Math.max(0, Math.min(totalRows, serveAtMost) - offset);
+    return {
+      rows: Array.from({ length: Math.max(0, Math.min(limit, available)) }, (_, i) => offset + i),
+      total: reportTotal,
+    };
+  };
+}
+
+test('pagination stops on the reported total, without needing a short page', async () => {
+  const calls = [];
+  // An exact multiple: the heuristic needs a wasted extra request to learn it is
+  // done, the reported total does not.
+  const rows = await fetchAllPages(countedFetcher(200, calls), { pageSize: 100, maxPages: 5 });
+  assert.equal(rows.length, 200);
+  assert.deepEqual(calls, [0, 100], 'no trailing empty-page request');
+});
+
+test('a single page covering the reported total is one request', async () => {
+  const calls = [];
+  const rows = await fetchAllPages(countedFetcher(951, calls), { pageSize: 2000, maxPages: 5 });
+  assert.equal(rows.length, 951);
+  assert.deepEqual(calls, [0], 'a window inside the page size costs exactly one round trip');
+});
+
+// The failure the whole design exists to prevent: an endpoint that caps `limit`
+// below what we asked. Under the short-page heuristic every page looks like the
+// last one and the walk truncates in silence — which on this lane means a short
+// payroll that looks entirely plausible.
+test('a silently capped limit is caught by the reported total, not truncated', async () => {
+  const calls = [];
+  await assert.rejects(
+    // We ask for 2000; the endpoint only ever serves 1000 but admits 3000 exist.
+    fetchAllPages(countedFetcher(3000, calls, { serveAtMost: 1000 }), {
+      pageSize: 2000, maxPages: 5, label: 'payroll',
+    }),
+    /payroll: endpoint reported 3000 rows but ran out after 1000/u,
+  );
+
+  // Same shape without the total: the heuristic accepts the short page and
+  // returns 1000 of 3000 rows without complaint. This is the contrast, pinned.
+  const heuristicCalls = [];
+  const quietlyShort = await fetchAllPages(
+    async ({ offset, limit }) => {
+      heuristicCalls.push(offset);
+      const available = Math.max(0, 1000 - offset);
+      return Array.from({ length: Math.max(0, Math.min(limit, available)) }, (_, i) => offset + i);
+    },
+    { pageSize: 2000, maxPages: 5, label: 'payroll' },
+  );
+  assert.equal(quietlyShort.length, 1000, 'the heuristic alone cannot see the truncation');
+});
+
+test('a total the endpoint overshoots is refused too', async () => {
+  const calls = [];
+  await assert.rejects(
+    fetchAllPages(countedFetcher(500, calls, { reportTotal: 300 }), { pageSize: 2000, maxPages: 5, label: 'payroll' }),
+    /payroll: endpoint reported 300 rows but returned 500/u,
+  );
+});
+
+test('a total needing more pages than the cap fails loudly and says so', async () => {
+  const calls = [];
+  await assert.rejects(
+    fetchAllPages(countedFetcher(10000, calls), { pageSize: 100, maxPages: 3, label: 'payroll' }),
+    /payroll: 10000 rows needs more than 3 pages of 100/u,
+  );
+});
+
+test('array-returning fetchers keep the old heuristic behaviour', async () => {
+  const random = rng(7);
+  for (let round = 0; round < 25; round += 1) {
+    const pageSize = 1 + Math.floor(random() * 40);
+    const totalRows = Math.floor(random() * pageSize * 6);
+    const calls = [];
+    const rows = await fetchAllPages(pagedFetcher(totalRows, calls), { pageSize, maxPages: 20, label: 'test' });
+    assert.deepEqual(rows, Array.from({ length: totalRows }, (_, i) => i));
+  }
+});
+
+test('the reported-total walk returns every row exactly once, for any total', async () => {
+  const random = rng(11);
+  for (let round = 0; round < 50; round += 1) {
+    const pageSize = 1 + Math.floor(random() * 40);
+    const totalRows = Math.floor(random() * pageSize * 8);
+    const calls = [];
+    const rows = await fetchAllPages(countedFetcher(totalRows, calls), { pageSize, maxPages: 20, label: 'test' });
+    assert.deepEqual(rows, Array.from({ length: totalRows }, (_, i) => i),
+      `pageSize=${pageSize} totalRows=${totalRows}`);
+    assert.deepEqual(calls, calls.map((_, i) => i * pageSize), 'offsets advance by pageSize');
+  }
+});
+
 // ---------- payroll windows ----------
 
 function addDaysIso(date, days) {

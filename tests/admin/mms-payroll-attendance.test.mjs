@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { searchAttendanceForPayroll, clearPayrollAttendanceCacheForTests, updatePayrollAttendanceStatus, peekPayrollAttendanceAge } from '../../lib/admin/mms.js';
+import {
+  searchAttendanceForPayroll,
+  clearPayrollAttendanceCacheForTests,
+  updatePayrollAttendanceStatus,
+  peekPayrollAttendanceAge,
+  PAYROLL_ATTENDANCE_PAGE_SIZE,
+} from '../../lib/admin/mms.js';
 
 // Two contracts live here:
 //
@@ -417,4 +423,40 @@ test('an attendance row outside every cached window falls back to invalidating',
     if (originalBearer === undefined) delete process.env.MMS_BEARER_TOKEN;
     else process.env.MMS_BEARER_TOKEN = originalBearer;
   }
+});
+
+// The page size is part of the cache key, so it has to have one home. A caller
+// that omits `limit` and one that passes the default explicitly must land on the
+// same entry; if they ever diverged, the payroll page and the tutor statement
+// would quietly stop sharing a fetch again.
+test('omitting the limit and passing the default hit the same cache entry', async () => {
+  await withMockedFetch(async ({ calls }) => {
+    const query = { startDate: '2026-06-24', endDate: '2026-07-28', teacherIds: ['tch_a'] };
+    await searchAttendanceForPayroll(query);
+    assert.equal(calls.length, 1);
+
+    // Asking for the default by name must not be a different key.
+    await searchAttendanceForPayroll({ ...query, limit: PAYROLL_ATTENDANCE_PAGE_SIZE });
+    assert.equal(calls.length, 1, 'the explicit default must not open a second cache entry');
+
+    // A genuinely different page size is a different fetch, as it must be.
+    await searchAttendanceForPayroll({ ...query, limit: PAYROLL_ATTENDANCE_PAGE_SIZE + 1 });
+    assert.equal(calls.length, 2);
+  });
+});
+
+// One request should cover a payroll window; paging is the safety net. The page
+// size is only safe to raise because completeness is verified against
+// TotalItemCount — see lib/admin/mms-pagination.mjs.
+test('a window inside the page size costs exactly one MMS request', async () => {
+  await withMockedFetch(async ({ calls, setRows }) => {
+    setRows(Array.from({ length: 951 }, (_, i) => ({ ID: `atn_${i}` })));
+    const rows = await searchAttendanceForPayroll(BASE);
+    assert.equal(rows.length, 951);
+    assert.equal(calls.length, 1, '951 rows must not need a second round trip');
+    assert.ok(
+      PAYROLL_ATTENDANCE_PAGE_SIZE > 951,
+      'the page size must keep real headroom over the current window, or this stops being true',
+    );
+  });
 });

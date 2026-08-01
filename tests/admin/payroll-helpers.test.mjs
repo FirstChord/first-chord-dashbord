@@ -396,3 +396,16 @@ test('a superset of attendance rows produces the identical payroll row', () => {
     narrow.payableSlots.map((slot) => slot.startAt),
   );
 });
+
+// `limit` is part of the attendance cache key, so the page size must have
+// exactly one home (PAYROLL_ATTENDANCE_PAGE_SIZE in lib/admin/mms.js). A copy
+// here would split the cache the moment the two drifted — which is precisely the
+// bug this shared query was introduced to fix.
+test('buildPayrollAttendanceQuery carries no page size of its own', () => {
+  const query = buildPayrollAttendanceQuery('2026-07-29');
+  assert.equal('limit' in query, false, 'page size belongs to lib/admin/mms.js, not here');
+  assert.deepEqual(
+    Object.keys(query).sort(),
+    ['endDate', 'startDate', 'teacherIds'],
+  );
+});

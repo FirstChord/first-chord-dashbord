@@ -83,6 +83,18 @@ deliberate school-improvement prompt.
   field the dashboard just set; patched entries are left **stale, not fresh**, so
   MMS still gets the last word on the next read, and an unpatchable row falls
   back to invalidating. Nothing about what is calculated, saved or paid changed.
+  Then on **2026-08-01** the 951-rows-against-a-1000-page-size loose end closed,
+  by removing the boundary rather than moving it. `fetchAllPages` decided it was
+  done when a page came back short — a rule that assumes MMS honours the `limit`
+  we send, so raising the page size for headroom could have made every page look
+  final and truncated in silence. Probing found MMS already returns
+  `TotalItemCount` on every `/search` response, so completeness is now verified
+  against it and the walk throws if it holds any other number; the short-page
+  rule survives only as a fallback. That makes page size a latency decision
+  rather than a correctness one, so it moved to 2000
+  (`PAYROLL_ATTENDANCE_PAGE_SIZE`, one home — it is part of the cache key).
+  Measured: the window is 951 rows in one request; a 3,229-row window pages
+  correctly in two with nothing duplicated or lost.
 - **Student lifecycle and retention (2026-07-28):** the school can now answer how
   long a student has been with it, and how long the ones who left actually
   stayed. `npm run lifecycle:refresh` reads MMS attendance — which reaches back
