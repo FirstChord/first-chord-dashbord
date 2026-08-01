@@ -323,3 +323,98 @@ test('an unreachable MMS host is reported as unreachable, not as a crash', async
     else process.env.MMS_BEARER_TOKEN = originalBearer;
   }
 });
+
+// Recording a lesson is immediately followed by a router.refresh(). Invalidating
+// the cache made that refresh pay a full ~950-row MMS fetch to learn one field we
+// had just set ourselves. AttendanceStatus is the only field payroll
+// classification reads, so folding it in is a complete patch for what the page
+// shows — and the entry stays stale, so MMS still gets the last word.
+test('recording attendance patches the payroll cache instead of dropping it', async () => {
+  const originalFetch = globalThis.fetch;
+  const originalBearer = process.env.MMS_BEARER_TOKEN;
+  process.env.MMS_BEARER_TOKEN = 'test-token';
+  clearPayrollAttendanceCacheForTests();
+
+  const row = {
+    ID: 'atn_1',
+    EventID: 'evt_1',
+    StudentID: 'sdt_1',
+    AttendanceStatus: 'Unrecorded',
+    TeacherNote: 'keep teacher',
+    ParentNote: '',
+    StudentNote: '',
+  };
+  let searches = 0;
+  globalThis.fetch = async (url, init) => {
+    if (init.method === 'POST') searches += 1;
+    return { ok: true, status: 200, text: async () => JSON.stringify({ ItemSubset: [row] }) };
+  };
+
+  try {
+    const before = await searchAttendanceForPayroll(BASE);
+    assert.equal(before[0].AttendanceStatus, 'Unrecorded');
+    const searchesAfterSeed = searches;
+
+    await updatePayrollAttendanceStatus({
+      studentId: 'sdt_1',
+      eventId: 'evt_1',
+      attendanceId: 'atn_1',
+      attendanceStatus: 'Present',
+    });
+
+    // The value the very next render sees, without waiting on MMS.
+    const after = await searchAttendanceForPayroll({ ...BASE, allowExpired: true });
+    assert.equal(after[0].AttendanceStatus, 'Present', 'the decision is visible immediately');
+    assert.ok(
+      searches > searchesAfterSeed,
+      'the write itself still reads MMS; what must not happen is the *render* blocking on a refetch',
+    );
+
+    // Stale, not fresh: the entry is a head start on the truth, not a replacement.
+    assert.equal(peekPayrollAttendanceAge(BASE).isFresh, false);
+  } finally {
+    globalThis.fetch = originalFetch;
+    clearPayrollAttendanceCacheForTests();
+    if (originalBearer === undefined) delete process.env.MMS_BEARER_TOKEN;
+    else process.env.MMS_BEARER_TOKEN = originalBearer;
+  }
+});
+
+test('an attendance row outside every cached window falls back to invalidating', async () => {
+  const originalFetch = globalThis.fetch;
+  const originalBearer = process.env.MMS_BEARER_TOKEN;
+  process.env.MMS_BEARER_TOKEN = 'test-token';
+  clearPayrollAttendanceCacheForTests();
+
+  // The cached payroll window holds one row; the lesson being recorded is a
+  // different one (a window the page never fetched). The write succeeds, but
+  // there is nothing here to correct — so the cache must be dropped, not left
+  // asserting a state we never reconciled.
+  let searchRows = [{ ID: 'atn_cached', EventID: 'evt_cached', StudentID: 'sdt_1', AttendanceStatus: 'Present' }];
+  globalThis.fetch = async () => ({
+    ok: true,
+    status: 200,
+    text: async () => JSON.stringify({ ItemSubset: searchRows }),
+  });
+
+  try {
+    await searchAttendanceForPayroll(BASE);
+    assert.equal(peekPayrollAttendanceAge(BASE).isFresh, true, 'seeded');
+
+    searchRows = [{ ID: 'atn_far', EventID: 'evt_far', StudentID: 'sdt_1', AttendanceStatus: 'Unrecorded' }];
+    const result = await updatePayrollAttendanceStatus({
+      studentId: 'sdt_1',
+      eventId: 'evt_far',
+      attendanceId: 'atn_far',
+      attendanceStatus: 'Present',
+    });
+
+    assert.equal(result.ok, true, 'the MMS write itself succeeded');
+    assert.equal(peekPayrollAttendanceAge(BASE), null, 'an unpatchable write invalidates rather than lying');
+  } finally {
+    globalThis.fetch = originalFetch;
+    clearPayrollAttendanceCacheForTests();
+    if (originalBearer === undefined) delete process.env.MMS_BEARER_TOKEN;
+    else process.env.MMS_BEARER_TOKEN = originalBearer;
+  }
+});

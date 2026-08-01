@@ -201,3 +201,71 @@ test('swr cache: stat reports age without evicting an expired entry', async () =
   assert.equal(await withMockedNow(expiredAt, async () => cache.stat('k')) !== null, true);
   assert.equal(cache.stat('missing'), null);
 });
+
+// patchScopeStale exists so a caller that just wrote through to the source can
+// fold the change in instead of dropping the cache and making the very next
+// render pay a full refetch. The patch must be a head start on the truth, never
+// a replacement for it — hence "stale", not "fresh".
+test('swr cache: patchScopeStale folds in a known change and still refreshes behind the next read', async () => {
+  const cache = makeCache({ scopeOf: (key) => key.split('::')[0] });
+  let fetches = 0;
+  const fetcher = async () => { fetches += 1; return [{ id: 'a', status: 'from-source' }]; };
+
+  await withMockedNow(1_000, () => cache.read('Att::w1', fetcher));
+  assert.equal(fetches, 1);
+
+  const patched = await withMockedNow(2_000, () => cache.patchScopeStale('Att', (rows) => (
+    rows.map((row) => (row.id === 'a' ? { ...row, status: 'patched' } : row))
+  )));
+  assert.equal(patched, 1);
+
+  // Served immediately — no wait — but treated as stale, so a refresh starts.
+  const served = await withMockedNow(2_000, () => cache.read('Att::w1', fetcher));
+  assert.deepEqual(served, [{ id: 'a', status: 'patched' }], 'the local edit is visible at once');
+  assert.equal(fetches, 2, 'and the source is still consulted behind the request');
+
+  await new Promise((resolve) => setImmediate(resolve));
+  const after = await withMockedNow(2_000, () => cache.read('Att::w1', fetcher));
+  assert.deepEqual(after, [{ id: 'a', status: 'from-source' }], 'the source gets the last word');
+});
+
+test('swr cache: patchScopeStale reports 0 when nothing matched, so callers can fall back', async () => {
+  const cache = makeCache({ scopeOf: (key) => key.split('::')[0] });
+  await withMockedNow(1_000, () => cache.read('Att::w1', async () => [{ id: 'a' }]));
+
+  const patched = cache.patchScopeStale('Att', () => undefined);
+  assert.equal(patched, 0);
+  // Untouched entries stay fresh.
+  assert.equal((await withMockedNow(2_000, () => cache.stat("Att::w1"))).isFresh, true);
+  assert.equal(cache.patchScopeStale('OtherScope', (rows) => rows), 0);
+});
+
+test('swr cache: a fetch that predates a patch cannot land on top of it', async () => {
+  const cache = makeCache({ scopeOf: (key) => key.split('::')[0] });
+  let release;
+  const gate = new Promise((resolve) => { release = resolve; });
+  const slowFetcher = async () => { await gate; return [{ id: 'a', status: 'pre-write' }]; };
+
+  // The real sequence: the payroll page is open (cache seeded), a background
+  // refresh is already in flight when the admin records a lesson in MMS, and the
+  // patch lands while that older fetch is still out.
+  const originalNow = Date.now;
+  try {
+    Date.now = () => 1_000;
+    await cache.read('Att::w1', async () => [{ id: 'a', status: 'seed' }]);
+
+    Date.now = () => 1_000 + 60_001;          // stale: serves now, refreshes behind
+    const served = await cache.read('Att::w1', slowFetcher);
+    assert.deepEqual(served, [{ id: 'a', status: 'seed' }]);
+
+    cache.patchScopeStale('Att', (rows) => rows.map((row) => ({ ...row, status: 'patched' })));
+    release();
+    await gate;
+    await new Promise((resolve) => setImmediate(resolve));
+
+    const peeked = cache.peek('Att::w1', { keepExpired: true });
+    assert.equal(peeked.value[0].status, 'patched', 'the in-flight pre-write result must not overwrite the patch');
+  } finally {
+    Date.now = originalNow;
+  }
+});

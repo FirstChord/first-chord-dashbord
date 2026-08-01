@@ -9,12 +9,11 @@ import { getPauseHistoryRows, getPayrollRunRows, getStudentsSheetRows, getTutorP
 import { peekPayrollAttendanceAge, searchAttendanceForPayroll } from '@/lib/admin/mms';
 import { parseTutorPay } from '@/lib/admin/cost-helpers.mjs';
 import {
-  buildPayrollPeriod,
+  buildPayrollAttendanceQuery,
   buildPayrollPreview,
   formatPayrollDate,
   nextWednesday,
 } from '@/lib/admin/payroll-helpers.mjs';
-import { ADMIN_TUTORS } from '@/lib/admin/tutors-data';
 import { formatMoney } from '@/lib/admin/finance-helpers.mjs';
 import { parseTutorWise, buildWiseBatch, selectPayableReviewedRuns } from '@/lib/admin/wise-helpers.mjs';
 import { getPayrollWorkflowState, hasMaterialTutorStatementChange } from '@/lib/admin/payroll-workflow-helpers.mjs';
@@ -520,17 +519,6 @@ function buildPayrollQuery(params = {}) {
   return query.toString();
 }
 
-// The one MMS query this page makes, derived from the pay date alone so every
-// render of the page — including the re-render inside a save — hits the same
-// cache key.
-function buildAttendanceQuery(payDate) {
-  const teacherIds = Object.values(ADMIN_TUTORS).map((tutor) => tutor.teacherId).filter(Boolean);
-  // Fetch the full max look-back (since-last-paid catch-up can reach back up to 5 weeks).
-  const startDate = new Date(new Date(`${payDate}T00:00:00Z`).getTime() - 35 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  const endDate = buildPayrollPeriod({ payDate, cadence: 'weekly' }).periodEnd;
-  return { startDate, endDate, teacherIds, limit: 1000 };
-}
-
 // Everything below the page header, memoised per request so the streamed
 // summary line and the workspace share one set of fetches rather than each
 // paying for its own. Arguments are primitives on purpose: React's cache() keys
@@ -555,7 +543,7 @@ const loadPayrollWorkspace = cache(async (payDate, tutorParam, startParam, endPa
   // ~950-row MMS fetch was the difference between a ~1s save and a ~7s one, so
   // this render always takes whatever is cached — however old — and lets the
   // refresh run behind the request. `?refresh=1` is the deliberate wait.
-  const attendanceQuery = buildAttendanceQuery(payDate);
+  const attendanceQuery = buildPayrollAttendanceQuery(payDate);
   let attendanceRows = [];
   let loadError = '';
   try {
@@ -652,7 +640,7 @@ export default async function AdminPayrollPage({ searchParams }) {
   let refreshError = '';
   if (forceRefresh) {
     try {
-      await searchAttendanceForPayroll({ ...buildAttendanceQuery(payDate), forceRefresh: true });
+      await searchAttendanceForPayroll({ ...buildPayrollAttendanceQuery(payDate), forceRefresh: true });
     } catch (error) {
       refreshError = error.message || 'Could not load MMS attendance for payroll.';
     }

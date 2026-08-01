@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 
 import { parseTutorPay } from '../../lib/admin/cost-helpers.mjs';
 import {
+  attendanceQueryCoversPeriod,
+  buildPayrollAttendanceQuery,
   buildPayrollPeriod,
   buildPayrollPreview,
   buildPayrollRunId,
@@ -332,4 +334,65 @@ test('normalisePayrollRunRow parses sheet rows', () => {
   assert.equal(row.payrollId, 'p1');
   assert.equal(row.expectedAmount, 12);
   assert.equal(row.status, 'paid');
+});
+
+// The payroll page and the tutor statement must ask MMS the same question, or
+// the statement pays its own cold fetch for data the page already holds. That
+// reuse is only safe because buildPayrollPreview does its own filtering — these
+// pin both halves of that claim.
+test('buildPayrollAttendanceQuery covers the run it was derived from', () => {
+  const payDate = '2026-07-29';
+  const query = buildPayrollAttendanceQuery(payDate);
+
+  assert.equal(query.startDate, '2026-06-24', '35-day look-back');
+  assert.equal(query.endDate, '2026-07-28', 'inclusive period end for the pay date');
+  assert.ok(query.teacherIds.length > 1, 'the page-shaped query spans every tutor');
+
+  const period = buildPayrollPeriod({ payDate, cadence: 'weekly' });
+  assert.equal(attendanceQueryCoversPeriod(query, period), true);
+  // A window reaching back further than the fetch must be refused, not silently
+  // served short — that is the shape of the bug that underpaid every run in June.
+  assert.equal(
+    attendanceQueryCoversPeriod(query, { periodStart: '2026-05-01', periodEnd: '2026-07-28' }),
+    false,
+  );
+  assert.equal(
+    attendanceQueryCoversPeriod(query, { periodStart: '2026-06-24', periodEnd: '2026-08-30' }),
+    false,
+  );
+  assert.equal(attendanceQueryCoversPeriod(query, { periodStart: '', periodEnd: '' }), false);
+});
+
+test('a superset of attendance rows produces the identical payroll row', () => {
+  const payDate = '2026-07-01';
+  const period = buildPayrollPeriod({ payDate, cadence: 'weekly' });
+  const tutorPay = parseTutorPay([{ tutor: 'Calum', hourly_rate: '24', pay_model: 'hourly' }]);
+
+  const wanted = [
+    attendance({ EventID: 'evt_1', EventStartDate: `${period.periodStart}T16:00:00` }),
+    attendance({ EventID: 'evt_2', EventStartDate: `${period.periodEnd}T16:00:00` }),
+  ];
+  // Exactly what a page-shaped fetch drags in that a narrow one would not:
+  // another tutor, and dates on both sides of this window.
+  const noise = [
+    attendance({ EventID: 'evt_3', TeacherID: 'tch_zplpJw', EventStartDate: `${period.periodEnd}T17:00:00` }),
+    attendance({ EventID: 'evt_4', EventStartDate: '2026-06-10T16:00:00' }),
+    attendance({ EventID: 'evt_5', EventStartDate: '2026-07-01T16:00:00' }),
+  ];
+
+  const pick = (rows) => buildPayrollPreview({ payDate, tutorPay, attendanceRows: rows })
+    .rows.find((row) => row.tutorShortName === 'Calum');
+  const narrow = pick(wanted);
+  const broad = pick([...wanted, ...noise]);
+
+  assert.ok(narrow, 'expected a row for Calum');
+  assert.equal(narrow.lessonCount, 2, 'the narrow fetch is the baseline');
+  assert.equal(broad.payrollId, narrow.payrollId);
+  assert.equal(broad.lessonCount, narrow.lessonCount);
+  assert.equal(broad.teachingMinutes, narrow.teachingMinutes);
+  assert.equal(broad.expectedAmount, narrow.expectedAmount);
+  assert.deepEqual(
+    broad.payableSlots.map((slot) => slot.startAt),
+    narrow.payableSlots.map((slot) => slot.startAt),
+  );
 });

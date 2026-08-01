@@ -71,10 +71,18 @@ deliberate school-improvement prompt.
   `timeout` once on the client. Both 30s, both deliberately generous against a
   4.7s real worst case; `MMS_REQUEST_TIMEOUT_MS` tunes the MMS one without a
   deploy.
-  **Deliberately left undone, worth picking up:** the statement page uses a
-  different attendance cache key than the payroll page and so always pays a cold
-  fetch; and the Present/Absent/Cancelled buttons invalidate the cache and then
-  refresh, so they always pay the full 4.7s.
+  The last two findings from that audit closed on **2026-08-01**. The statement
+  now uses the same `buildPayrollAttendanceQuery` shape as the payroll page, so
+  opening one off the back of that page is a cache hit — safe because
+  `buildPayrollPreview` filters by teacher and period itself, verified across all
+  37 real reviewed/paid runs with zero difference in lesson count, minutes or
+  amount, with `attendanceQueryCoversPeriod` falling back to the narrow window if
+  a hand-set period sits outside the page's. And recording attendance now folds
+  the new status into the cached rows (`patchScopeStale`) rather than dropping
+  them, so Present/Absent/Cancelled no longer pays a 4.7s refetch to learn a
+  field the dashboard just set; patched entries are left **stale, not fresh**, so
+  MMS still gets the last word on the next read, and an unpatchable row falls
+  back to invalidating. Nothing about what is calculated, saved or paid changed.
 - **Student lifecycle and retention (2026-07-28):** the school can now answer how
   long a student has been with it, and how long the ones who left actually
   stayed. `npm run lifecycle:refresh` reads MMS attendance — which reaches back
