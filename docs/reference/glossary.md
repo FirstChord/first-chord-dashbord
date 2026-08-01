@@ -78,8 +78,24 @@ A cache keeps a temporary copy of data to avoid re-fetching. TTL ("time to live"
 
 A cache pattern where the app serves a recently-stale value immediately, then refreshes it in the background for the next request.
 
-- First Chord uses this only with a hard cap. It is meant for admin speed, not for replacing source-of-truth checks.
-- If a workflow must know live MMS, Stripe, or a just-edited Sheet value, use an explicit refresh or direct source read.
+- Normally First Chord uses this with a hard cap: past it, the caller waits for a fresh read rather than seeing something very old.
+- **The payroll page is the deliberate exception** (`allowExpired`, 2026-07-29). A save re-renders that whole page inside its own POST, so blocking there meant the button's spinner waited on a ~950-row MMS fetch. It now renders whatever is cached *at any age* and refreshes behind the request — and says so in the header when what it served is past the usual cap, because cached context must show its freshness. "↻ Refresh MMS & recalculate" is the deliberate wait.
+- A write that knows exactly what it changed can **patch** the cache instead of dropping it (`patchScopeStale`) — recording attendance does this. Patched entries are marked stale, never fresh: the patch buys speed, not authority, and the source still gets the last word on the next read.
+- It is meant for admin speed, not for replacing source-of-truth checks. If a workflow must know live MMS, Stripe, or a just-edited Sheet value, use an explicit refresh or direct source read.
+
+## Timeout
+
+A ceiling on how long one outbound request may take before it is abandoned with an error.
+
+- Neither `fetch` nor the Google Sheets client has one by default, so before 2026-07-29 a stalled connection could hang an admin page **forever** — no error, nothing in the logs, just a spinner. That, rather than slowness, was the real "stuck until I refresh".
+- Both now stop at 30s (`MMS_REQUEST_TIMEOUT_MS` overrides the MMS one without a deploy). Deliberately slack against a ~5s realistic worst case: a timeout tighter than a legitimately slow response turns a rare hang into a payroll that will not load at all.
+
+## TotalItemCount
+
+The count of matching records MMS returns alongside the rows on every `/search` response.
+
+- Used to decide when a paged fetch is **complete**. The alternative — "a page smaller than we asked for must be the last one" — quietly assumes the endpoint honours the limit we send; if it caps below that, every page looks final and the result truncates in silence. On payroll that means a short total that looks entirely plausible.
+- Because completeness is now checked against this number, page size is a speed decision rather than a correctness one. See `lib/admin/mms-pagination.mjs`.
 
 ## Server component
 
