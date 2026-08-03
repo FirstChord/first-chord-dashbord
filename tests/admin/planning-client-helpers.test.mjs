@@ -13,6 +13,7 @@ import {
   buildPaymentPausePrefillUrl,
   buildPauseConfirmationMessage,
   isPausePlanningItem,
+  isTutorAbsenceCapturePlanningItem,
   requiresTutorAbsencePaymentTool,
   isDueNowPlanningItem,
   isOpenPlanningItem,
@@ -211,6 +212,28 @@ test('isPausePlanningItem / isOpenPlanningItem / isDueNowPlanningItem classify i
   assert.equal(isDueNowPlanningItem({ status: 'active', targetDate: '2026-07-10' }, now), true);
   assert.equal(isDueNowPlanningItem({ status: 'active', targetDate: '2026-07-20' }, now), false); // future
   assert.equal(isDueNowPlanningItem({ status: 'done', targetDate: '2026-07-01' }, now), false); // done
+});
+
+test('cancelled tutor-absence parent handoff does not become a student pause card', () => {
+  const item = {
+    planningId: 'planning_tutor_absence_example_2026-07-20',
+    title: 'Tutor absence: Example Tutor — 20 Jul 2026',
+    notes: [
+      'Tutor absence date: 2026-07-20',
+      'Tutor: Example',
+      'Tutor absence decision: cancel_day',
+    ].join('\n'),
+    nextAction: 'Waiting for linked pause cards to complete; this absence closes automatically.',
+    linkedWorkflowId: 'tutor-absence',
+    linkedTutorId: 'Example',
+    linkedStudentId: '',
+    status: 'waiting',
+  };
+
+  assert.equal(isTutorAbsenceCapturePlanningItem(item), true);
+  assert.equal(isPausePlanningItem(item), false);
+  assert.equal(getPlanningStory(item, []), item.title);
+  assert.equal(requiresTutorAbsencePaymentTool(item), false);
 });
 
 test('getPlanningStory frames pause cards and falls back to the title', () => {

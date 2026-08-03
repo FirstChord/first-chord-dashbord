@@ -116,6 +116,9 @@ export async function POST(request) {
         item: {
           ...card,
           notes: withTutorAbsenceDecision(card.notes, decision),
+          // Heal older capture rows whose unset flag would otherwise fall back
+          // to the word "pause" in the cancellation handoff copy.
+          isPause: false,
           status: decision === 'cancel_day' && noAffectedLessons ? 'done' : 'waiting',
           outcome: decision === 'cancel_day'
             ? noAffectedLessons

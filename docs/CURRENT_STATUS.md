@@ -244,7 +244,8 @@ deliberate school-improvement prompt.
   failed lanes accurately, renders as partially complete, and keeps Waiting and
   post-onboarding follow-ups open until the canonical record, MMS activation,
   billing profile, and first lesson are all confirmed.
-- **Tutor-absence dated payment handoff (2026-07-27):** a new guided
+- **Tutor-absence dated payment handoff (2026-07-27; classification corrected
+  2026-08-03):** a new guided
   cancellation no longer treats the undated
   `Students.payment_expectation = stripe_paused_expected` flag as proof that
   the affected lesson dates were handled. The follow-up Planning card is a
@@ -252,8 +253,12 @@ deliberate school-improvement prompt.
   are reserved for an explicit per-lesson “payment not needed” decision.
   Existing active message-only cards created by the old logic were parked
   without rewriting terminal history or touching Stripe, MMS, student payment
-  fields, or parent messages. The point-in-time repair evidence and repeatable
-  regression check are in the
+  fields, or parent messages. The original date capture remains an explicitly
+  non-pause parent tracker while those student-linked cards are open; wording
+  such as “linked pause cards” cannot make it display payment controls or enter
+  pause forecasting. Existing unset capture rows are recognised by their tutor,
+  date and no-student shape, so the correction needs no workflow-state repair.
+  The point-in-time repair evidence and repeatable regression check are in the
   [tutor-absence contract](./workflows/tutors/absence-to-pause.md).
 - **Practice Chat transcription accuracy (2026-07-26):** anchored tidy-up rules,
   a non-substituting safety flag, and instrument/song context on the

@@ -673,6 +673,7 @@ test('buildTutorAbsencePlanningItem snapshots students and targets a meeting day
   assert.equal(item.linkedWorkflowId, 'tutor-absence');
   assert.equal(item.linkedTutorId, 'Robbie');
   assert.equal(item.linkedStudentId, '');
+  assert.equal(item.isPause, false);
   assert.equal(item.targetDate, '2026-06-18'); // Thursday before the Friday absence
   assert.match(item.title, /Robbie Tranter/);
   assert.match(item.notes, /Charlie Mcdougall, Ailsa Hoebe/);

@@ -98,8 +98,10 @@ absence by itself.
 
 Finance/reconciliation uses only dated cancellation/cover state, structured
 pause cards, and the student's own pause coverage. Early notices, manual
-group-event records, and no-payment final confirmations have `isPause: false`
-and cannot alter payment expectation or finance maths.
+group-event records, original tutor-absence capture/handoff cards, and
+no-payment final confirmations have `isPause: false` and cannot alter payment
+expectation or finance maths. Cancellation wording on the parent handoff must
+never make it a structured pause; the student-linked child cards own that work.
 
 If the student's own pause is recorded after a tutor cancellation, the earlier
 tutor-absence pause card can become redundant. Reconciliation remains

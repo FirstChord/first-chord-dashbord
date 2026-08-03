@@ -11,6 +11,7 @@ import {
 } from '@/lib/admin/planning-helpers.mjs';
 import {
   isPausePlanningItem,
+  isTutorAbsenceCapturePlanningItem,
   isTutorAbsenceNoticePlanningItem,
   extractTutorAbsenceNoticeMessage,
   isTutorAbsenceFinalConfirmationPlanningItem,
@@ -54,7 +55,7 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
   const isSystemPlanningItem = item.planningId === SCHOOL_FORWARD_PLANNING_ID || item.planningId === MONDAY_SCHEDULE_PLANNING_ID;
   const pausePaymentConfirmed = hasPausePaymentConfirmation(item);
   const isTutorAbsenceCard = item.linkedWorkflowId === 'tutor-absence' && Boolean(item.linkedTutorId);
-  const isTutorAbsenceCapture = isTutorAbsenceCard && !isPauseReminder;
+  const isTutorAbsenceCapture = isTutorAbsenceCapturePlanningItem(item);
   const isTutorAbsenceNotice = isTutorAbsenceNoticePlanningItem(item);
   const tutorAbsenceNoticeMessage = isTutorAbsenceNotice ? extractTutorAbsenceNoticeMessage(item) : '';
   const isTutorAbsenceFinalConfirmation = isTutorAbsenceFinalConfirmationPlanningItem(item);
