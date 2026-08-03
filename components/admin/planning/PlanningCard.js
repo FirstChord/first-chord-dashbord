@@ -367,7 +367,7 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
                           body: pauseConfirmationMessage,
                           source: 'pause_card',
                         });
-                      } catch (error) {
+                      } catch {
                         setCopyState('Copy failed');
                       }
                     }}

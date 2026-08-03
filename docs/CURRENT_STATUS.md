@@ -26,6 +26,14 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
+- **Zero-warning maintenance feedback (2026-08-03):** all 38 accumulated lint
+  warnings are resolved, including six Hook dependency warnings that could hold
+  stale tutor, schedule, or inbox closures. Lint now rejects the next warning
+  instead of letting background noise regrow. The unconsumed, authentication-
+  free Google Sheets fallback prototype and its credential-printing test script
+  are removed, Next.js production tracing is pinned to this repository, and
+  grouped weekly dependency updates cover both the root app and the separately
+  installed WhatsApp bridge.
 - **Abandoned Practice Chat claim recovery (2026-08-03):** a request that
   crashed after claiming a delivery could leave the PostgreSQL row `claimed`
   forever. The matching tutor retry now leaves fresh claims alone, but after a

@@ -158,18 +158,6 @@ function calmHealthDetail(detail = '') {
   return detail;
 }
 
-function StatCard({ label, value, href = '', tone = 'border-blue-100 bg-white/90', helper = '' }) {
-  const content = (
-    <div className={`h-full rounded-2xl border p-5 shadow-[0_12px_36px_rgba(15,23,42,0.05)] backdrop-blur-sm transition ${tone} ${href ? 'hover:-translate-y-0.5 hover:shadow-[0_16px_42px_rgba(15,23,42,0.08)]' : ''}`}>
-      <p className="text-sm text-slate-500">{label}</p>
-      <p className="mt-2 text-3xl font-semibold text-slate-900">{value}</p>
-      {helper ? <p className="mt-2 text-xs text-slate-600">{helper}</p> : null}
-    </div>
-  );
-
-  return href ? <Link href={href}>{content}</Link> : content;
-}
-
 function ActionCard({ label, value, href, helper = '', tone = 'border-slate-200 bg-white' }) {
   return (
     <Link

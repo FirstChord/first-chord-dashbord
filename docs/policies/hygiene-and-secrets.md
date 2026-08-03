@@ -1,7 +1,7 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: 2026-07-20
+last_verified: 2026-08-03
 ---
 # Hygiene And Secrets
 
@@ -69,3 +69,9 @@ Keep them private, apply the data-protection retention window, and use
 Run `npm run hygiene:check`, inspect generated diffs after any config-generating
 command, and smoke every integration affected by a credential/config change.
 Never weaken a hygiene check to ship a secret-bearing diff.
+
+`npm run lint` is a zero-warning gate: resolve a new warning in the same change
+instead of teaching CI to accept more noise. Dependabot checks the root app and
+the separately deployed WhatsApp bridge every Monday in grouped pull requests;
+automation proposes versions only, while the normal tests, build, review, and
+deployment boundary still decide whether an update ships.

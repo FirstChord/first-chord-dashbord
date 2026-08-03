@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import {
   assessBridgeHealth,
@@ -719,7 +719,7 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
 
   // Fresh data whenever the (installed) app is opened or the tab regains
   // focus, plus the manual refresh button
-  async function refreshInbox() {
+  const refreshInbox = useCallback(async () => {
     setIsRefreshing(true);
     try {
       const response = await fetch('/api/admin/incoming-messages');
@@ -738,7 +738,7 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
     } catch {} finally {
       setIsRefreshing(false);
     }
-  }
+  }, [replyDraftingAvailable]);
 
   async function handleDraftReply(entry) {
     setSubmitError('');
@@ -814,7 +814,7 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('pageshow', onVisible);
     };
-  }, []);
+  }, [refreshInbox]);
 
   const openCount = useMemo(() => inbox.filter((entry) => ['inbox', 'needs_review'].includes(entry.status)).length, [inbox]);
   const absenceCount = useMemo(() => inbox.filter((entry) => ABSENCE_CATEGORIES.has(entry.suspectedCategory) && ['inbox', 'needs_review'].includes(entry.status)).length, [inbox]);

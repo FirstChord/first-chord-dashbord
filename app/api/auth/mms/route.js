@@ -21,7 +21,7 @@ export async function POST(request) {
     })
     
     return Response.json({ success: true })
-  } catch (error) {
+  } catch {
     return Response.json({ error: 'Failed to store token' }, { status: 500 })
   }
 }

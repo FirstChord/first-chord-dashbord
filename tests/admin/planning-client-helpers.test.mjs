@@ -340,9 +340,18 @@ test('buildQuickCaptureItem builds an item from a raw note (title truncated, act
   assert.equal(item.itemType, 'action');
   assert.equal(item.nextAction, item.title);
   // overrides win and control fields (e.g. studentSelectionSource) are stripped
-  const withOverride = buildQuickCaptureItem('note', { title: 'Custom', studentSelectionSource: 'manual' }, []);
+  const withOverride = buildQuickCaptureItem('note', {
+    title: 'Custom',
+    studentSelectionSource: 'manual',
+    structuredCapture: 'pause',
+    pauseType: 'range',
+    tutorAbsenceDates: ['2026-08-10'],
+  }, []);
   assert.equal(withOverride.title, 'Custom');
   assert.equal('studentSelectionSource' in withOverride, false);
+  assert.equal('structuredCapture' in withOverride, false);
+  assert.equal('pauseType' in withOverride, false);
+  assert.equal('tutorAbsenceDates' in withOverride, false);
 });
 
 test('EMPTY_FORM is a complete blank planning form', () => {

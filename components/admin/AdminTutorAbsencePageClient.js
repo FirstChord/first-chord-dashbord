@@ -20,16 +20,6 @@ function cardClasses(extra = '') {
   return `rounded-[1.2rem] border border-blue-100 bg-white/90 p-5 shadow-[0_12px_36px_rgba(15,23,42,0.06)] ${extra}`;
 }
 
-function statusLabel(status = '') {
-  const labels = {
-    draft: 'Draft',
-    in_progress: 'In Progress',
-    parents_to_message: 'Parents to message',
-    resolved: 'Resolved',
-  };
-  return labels[status] || status || 'Draft';
-}
-
 function decisionLabel(decision = '') {
   if (decision === 'cancel_day') return 'Cancel day';
   if (decision === 'cover') return 'Cover lessons';
@@ -125,7 +115,10 @@ export default function AdminTutorAbsencePageClient({ workflow }) {
   const selectedCoverTutor = workflow.coverOptions.find((tutor) => tutor.shortName === coverTutorShortName)
     || (candidateFallback ? { shortName: candidateFallback.tutorKey, fullName: candidateFallback.tutorName } : null);
   const workflowChecklist = messageState.__workflow || {};
-  const cancellationMessageGroups = workflow.cancellationMessageGroups || [];
+  const cancellationMessageGroups = useMemo(
+    () => workflow.cancellationMessageGroups || [],
+    [workflow.cancellationMessageGroups],
+  );
   const groupedMessageEventIds = useMemo(() => new Set(
     cancellationMessageGroups.flatMap((group) => (
       group.occurrences || []

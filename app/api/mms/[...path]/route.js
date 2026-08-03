@@ -42,7 +42,7 @@ export async function GET(request, { params }) {
     
     const data = await response.json()
     return Response.json(data, { status: response.status })
-  } catch (error) {
+  } catch {
     return Response.json({ error: 'MMS API request failed' }, { status: 500 })
   }
 }
@@ -79,7 +79,7 @@ export async function POST(request, { params }) {
     
     const data = await response.json()
     return Response.json(data, { status: response.status })
-  } catch (error) {
+  } catch {
     return Response.json({ error: 'MMS API request failed' }, { status: 500 })
   }
 }

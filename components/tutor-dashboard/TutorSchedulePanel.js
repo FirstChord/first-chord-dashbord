@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 
 function todayInputValue() {
@@ -68,7 +68,7 @@ export default function TutorSchedulePanel({
     new Map((students || []).map((student) => [student.mms_id, student]))
   ), [students]);
 
-  const loadSchedule = async ({ refresh = false } = {}) => {
+  const loadSchedule = useCallback(async ({ refresh = false } = {}) => {
     if (!tutor || !date) return;
     setIsLoading(true);
     setError('');
@@ -87,11 +87,11 @@ export default function TutorSchedulePanel({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [date, tutor]);
 
   useEffect(() => {
     loadSchedule();
-  }, [tutor, date]);
+  }, [loadSchedule]);
 
   useEffect(() => {
     if (compact && defaultCollapsed) {
@@ -116,7 +116,7 @@ export default function TutorSchedulePanel({
     }
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [tutor, date]);
+  }, [loadSchedule]);
 
   const lessons = schedule?.lessons || [];
 

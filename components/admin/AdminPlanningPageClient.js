@@ -691,7 +691,6 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
     }
   }
 
-  const summary = planning.summary || {};
   const schoolForwardReflections = useMemo(
     () => buildSchoolForwardReflections(planning.items || [], { limit: 6 }),
     [planning.items],

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Check, X, AlertCircle } from 'lucide-react';
 import { serviceAuth } from '@/lib/config';
 
 export default function SetupWizard({ tutorName, onComplete }) {

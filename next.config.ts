@@ -6,8 +6,11 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 });
 
 const nextConfig: NextConfig = {
+  // Keep production tracing inside this repository when a parent directory also
+  // contains a lockfile. This avoids host-specific workspace-root inference.
+  outputFileTracingRoot: process.cwd(),
   eslint: {
-    // Disable ESLint during builds for now (warnings are blocking deployment)
+    // CI and `npm run lint` enforce the zero-warning lint gate explicitly.
     ignoreDuringBuilds: true,
   },
   /* config options here */

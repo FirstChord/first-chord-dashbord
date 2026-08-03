@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import StudentCard from '@/components/student/StudentCard';
 import NotesPanel from '@/components/student/NotesPanel';
@@ -53,7 +53,7 @@ export default function Dashboard({ initialData }) {
     }
   }, [initialData]);
 
-  const syncStudentsFromMMS = async (targetTutor, forceSync = false) => {
+  const syncStudentsFromMMS = useCallback(async (targetTutor, forceSync = false) => {
     if (!targetTutor) return;
 
     setSyncStatus('syncing');
@@ -123,7 +123,7 @@ export default function Dashboard({ initialData }) {
       setSyncStatus('error');
       setTimeout(() => setSyncStatus('idle'), 5000);
     }
-  };
+  }, []);
 
   // Filter students by search term and tutor
   useEffect(() => {
@@ -153,7 +153,7 @@ export default function Dashboard({ initialData }) {
       // Try cache first, then MMS sync, then fallback to local
       syncStudentsFromMMS(tutor, false); // false = allow cache usage
     }
-  }, [tutor]);
+  }, [tutor, syncStudentsFromMMS]);
 
   // Fetch notes when student is selected
   useEffect(() => {
@@ -186,7 +186,7 @@ export default function Dashboard({ initialData }) {
           setTokenStatus('error');
         });
     }
-  }, [selectedStudent]);
+  }, [selectedStudent, tutor, syncStudentsFromMMS]);
 
   const handleStudentSelect = (student) => {
     if (selectionMode) {

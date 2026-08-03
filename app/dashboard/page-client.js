@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import StudentCard from '@/components/student/StudentCard';
 import NotesPanel from '@/components/student/NotesPanel';
@@ -18,6 +18,18 @@ import {
 } from '@/lib/tutor-dashboard-helpers.mjs';
 
 const TUTOR_STORAGE_KEY = 'fc_dashboard_tutor';
+const LOADING_MESSAGES = [
+  "The First Chord Dashboard is just taking a sec to learn ancient Greek, bear with it...",
+  "The First Chord Dashboard is choosing between two lovely patterned shirts, please hold...",
+  "The First Chord Dashboard is emotionally processing being a dashboard, please hold...",
+  "The First Chord Dashboard is just round the corner, please hold...",
+  "The First Chord Dashboard is exploring quantum physics, please hold...",
+  "The First Chord Dashboard is just finishing the last of its lunch, please hold...",
+  "The First Chord Dashboard is chatting with Vince, please hold...",
+  "The First Chord Dashboard is pretending to be an ironing board, please hold...",
+  "The First Chord Dashboard is tuning its guitar, please hold...",
+  "The First Chord Dashboard is advising a chicken on road safety, please hold...",
+];
 
 function lessonStartMinutes(lesson) {
   const match = `${lesson.lessonTime || ''}`.match(/^(\d{1,2}):(\d{2})$/);
@@ -93,23 +105,8 @@ export default function DashboardClient({ tutorOptions = [], authAccess = {} }) 
   }, [TUTOR_OPTIONS, authAccess.fullAccess, fixedTutor]);
   // const [isAuthenticated, setIsAuthenticated] = useState(true); // Always authenticated with hardcoded token
 
-  // Fun loading messages
-  const loadingMessages = [
-    "The First Chord Dashboard is just taking a sec to learn ancient Greek, bear with it...",
-    "The First Chord Dashboard is choosing between two lovely patterned shirts, please hold...",
-    "The First Chord Dashboard is emotionally processing being a dashboard, please hold...",
-    "The First Chord Dashboard is just round the corner, please hold...",
-    "The First Chord Dashboard is exploring quantum physics, please hold...",
-    "The First Chord Dashboard is just finishing the last of its lunch, please hold...",
-    "The First Chord Dashboard is chatting with Vince, please hold...",
-    "The First Chord Dashboard is pretending to be an ironing board, please hold...",
-    "The First Chord Dashboard is tuning its guitar, please hold...",
-    "The First Chord Dashboard is advising a chicken on road safety, please hold..."
-  ];
-
-
   // Sync students from MMS
-  const syncStudentsFromMMS = async (forcedTutor = null, forceSync = false) => {
+  const syncStudentsFromMMS = useCallback(async (forcedTutor = null, forceSync = false) => {
     const targetTutor = forcedTutor || tutor;
     if (!targetTutor) return;
 
@@ -124,7 +121,7 @@ export default function DashboardClient({ tutorOptions = [], authAccess = {} }) 
     }
 
     // Show fun loading message
-    const randomMessage = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
+    const randomMessage = LOADING_MESSAGES[Math.floor(Math.random() * LOADING_MESSAGES.length)];
     setLoadingMessage(randomMessage);
     setIsLoading(true);
 
@@ -166,7 +163,7 @@ export default function DashboardClient({ tutorOptions = [], authAccess = {} }) 
       setIsLoading(false);
       setLoadingMessage('');
     }
-  };
+  }, [tutor]);
 
   // Today's lessons feed the sidebar time chips and the at-a-glance summary
   useEffect(() => {
@@ -200,7 +197,7 @@ export default function DashboardClient({ tutorOptions = [], authAccess = {} }) 
       // Try cache first, then MMS sync, then fallback to local
       syncStudentsFromMMS(tutor, false); // false = allow cache usage
     }
-  }, [tutor]); // Removed syncStudentsFromMMS from dependencies to prevent infinite loop
+  }, [tutor, syncStudentsFromMMS]);
 
   useEffect(() => {
     if (!practiceChatPanel) return undefined;
@@ -301,7 +298,7 @@ export default function DashboardClient({ tutorOptions = [], authAccess = {} }) 
           setLoading(false);
         });
     }
-  }, [selectedStudent]);
+  }, [selectedStudent, tutor, syncStudentsFromMMS]);
 
   // Filter students by search (group-only students, e.g. Ukulele Orchestra, stay hidden)
   const filteredStudents = filterTutorStudentsBySearch(excludeGroupOnlyStudents(students), searchTerm);
