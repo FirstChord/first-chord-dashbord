@@ -26,6 +26,14 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
+- **Production dependency and provider-liveness hardening (2026-08-03):** the
+  production npm audit moved from 14 advisories (one critical, seven high) to
+  zero without changing framework/auth majors. Two unused production packages
+  were removed, Next 15 and NextAuth 4 moved to patched releases, compatible
+  transitive fixes are pinned and build-tested, and the separately installed
+  WhatsApp bridge tree is also clear. Stripe and GitHub requests now share a
+  bounded 30-second abort path, so provider stalls fail explicitly instead of
+  holding an admin render, registry update, or scheduled refresh indefinitely.
 - **Agent readiness and finance measurement resilience (2026-08-03):** current
   source now produces one deterministic module/export/test index instead of
   freezing repository facts into model weights or a hand-maintained guide.
