@@ -26,6 +26,14 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
+- **Abandoned Practice Chat claim recovery (2026-08-03):** a request that
+  crashed after claiming a delivery could leave the PostgreSQL row `claimed`
+  forever. The matching tutor retry now leaves fresh claims alone, but after a
+  conservative 15-minute window atomically parks the old claim as
+  `tracking_failed`, records a manual-follow-up audit/issue in Sheets, and
+  returns an explicit unknown-status conflict without calling MMS or Gmail.
+  Recovery therefore makes the stuck work visible without turning uncertainty
+  into a duplicate attendance update or parent email.
 - **Concurrent write collision reduction (2026-08-03):** `Students` mutations
   now bypass the Sheets read cache before resolving an MMS ID. Normal student
   edits send only the specifically changed cells instead of rewriting every

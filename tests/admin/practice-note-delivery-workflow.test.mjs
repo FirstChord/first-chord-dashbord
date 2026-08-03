@@ -3,8 +3,70 @@ import test from 'node:test';
 
 import {
   buildPracticeNoteClaimFailureResponse,
+  buildPracticeNoteManualFollowUpPayload,
+  buildPracticeNoteManualFollowUpResponse,
   executeClaimedPracticeNoteDelivery,
 } from '../../lib/admin/practice-note-delivery-workflow.mjs';
+
+test('manual follow-up payload marks stale claims without inventing provider success', () => {
+  const payload = buildPracticeNoteManualFollowUpPayload({
+    claimNote: { deliveryKey: 'delivery:abandoned', mmsAttendanceSaved: false },
+    claimResult: { status: 'tracking_failed', staleClaim: true },
+    message: 'Check providers manually.',
+  });
+
+  assert.equal(payload.operationStatus, 'tracking_failed');
+  assert.equal(payload.manualFollowUpNeeded, true);
+  assert.equal(payload.mmsAttendanceSaved, false);
+  assert.equal(payload.emailError, 'Check providers manually.');
+});
+
+test('manual follow-up payload preserves known email failure evidence', () => {
+  const payload = buildPracticeNoteManualFollowUpPayload({
+    claimNote: { deliveryKey: 'delivery:email-failed' },
+    existingDelivery: {
+      operationStatus: 'email_failed',
+      emailError: 'Gmail timed out',
+      completedAt: '',
+    },
+    claimResult: { status: 'email_failed_manual_follow_up' },
+    message: 'generic message',
+  });
+
+  assert.equal(payload.operationStatus, 'email_failed');
+  assert.equal(payload.emailError, 'Gmail timed out');
+  assert.equal(payload.manualFollowUpNeeded, true);
+});
+
+test('manual follow-up response states uncertainty and blocks provider replay', () => {
+  const response = buildPracticeNoteManualFollowUpResponse({
+    deliveryKey: 'delivery:abandoned',
+    claimResult: { manualFollowUp: true, status: 'tracking_failed' },
+  });
+
+  assert.equal(response.status, 409);
+  assert.equal(response.body.success, false);
+  assert.equal(response.body.manualFollowUp, true);
+  assert.equal(response.body.deliveryStatusUnknown, true);
+  assert.equal(response.body.attendanceSave.reason, 'manual_verification_required');
+  assert.match(response.body.error, /did not repeat either provider action/u);
+});
+
+test('a manual-follow-up claim prevents delivery execution', async () => {
+  let deliveryCalls = 0;
+  const result = await executeClaimedPracticeNoteDelivery({
+    deliveryKey: 'delivery:abandoned',
+    saveClaim: async () => ({ ok: false, manualFollowUp: true, status: 'tracking_failed' }),
+    executeDelivery: async () => {
+      deliveryCalls += 1;
+    },
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.manualFollowUp, true);
+  assert.equal(result.reason, 'manual_follow_up');
+  assert.equal(deliveryCalls, 0);
+});
 
 test('claim failure response is an explicit 503 with no provider-action claim', () => {
   const response = buildPracticeNoteClaimFailureResponse({

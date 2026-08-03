@@ -1,7 +1,7 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: 2026-07-20
+last_verified: 2026-08-03
 ---
 # Practice Chat Delivery Contract
 
@@ -58,6 +58,15 @@ If the database claim cannot be saved, return 503 and call neither MMS nor
 Gmail. If the initial Sheets claim fails, release only that fresh pre-provider
 claim and do no provider work. Terminal completed, failed, or manual-follow-up
 claims are never automatically reacquired or deleted to force a retry.
+
+A `claimed` database row older than 15 minutes is treated as an interrupted
+delivery, not as permission to try again. On the next matching request,
+PostgreSQL atomically moves it to `tracking_failed`; the route records
+`manual_follow_up_needed = TRUE` in the Sheets audit row, returns HTTP 409 with
+unknown provider status, and calls neither MMS nor Gmail. Fifteen minutes is a
+conservative abandonment window, not a provider timeout. The human must inspect
+MMS attendance and Gmail evidence before deciding whether either side needs a
+manual repair.
 
 A duplicate request returns the existing result instead of repeating provider
 work. If MMS succeeds and Gmail errors or times out, mark manual follow-up and
@@ -135,6 +144,9 @@ PWA.
   attendance/payroll from MMS truth rather than resending the email.
 - Final log failure: treat as partial success and reconcile from PostgreSQL,
   Gmail, MMS, and existing Sheets evidence. Never guess or erase history.
+- Claim still `claimed` after 15 minutes: submit the same delivery once to park
+  it as manual follow-up, then inspect MMS and Gmail. Do not delete or reset the
+  claim, and do not submit a different note merely to bypass its delivery key.
 
 ## Verification
 

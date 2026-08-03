@@ -179,6 +179,12 @@ Dashboard-owned writes call `invalidateSheetReadCache()` for the affected tab. E
 
 Google Sheets is acceptable for the current scale because writes are low-volume and mostly human-triggered. The main risk is two users editing the same keyed row at nearly the same time. Sheets remains last-write-wins: there is no compare-and-swap row primitive. Student mutations therefore force-read before locating an MMS ID, single-student edits write only the named cells, and archive/delete re-locates the MMS ID after the archive append before deleting. Shared managed-row upserts also bypass the read cache before targeting a row. These measures prevent stale cache use and greatly narrow unrelated-field collisions, but they are not a transaction; preserve the explicit partial-success handling in multi-system workflows.
 
+The PostgreSQL Practice Chat claim is the exception: its unique key is an atomic
+execution lock. A row left `claimed` for 15 minutes is never recycled. The next
+matching request atomically changes it to `tracking_failed`, mirrors manual
+follow-up into `Practice_Notes_Log`, and performs no provider action because the
+earlier MMS/Gmail outcome is unknown.
+
 Use append-only tabs for history (`Event_Log`, `Planning_Progress_Log`, archives). Use keyed upserts for current workflow state.
 
 Watch for:

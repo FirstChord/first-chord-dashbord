@@ -19,6 +19,8 @@ import {
 } from '@/lib/admin/practice-notes-helpers.mjs';
 import {
   buildPracticeNoteClaimFailureResponse,
+  buildPracticeNoteManualFollowUpPayload,
+  buildPracticeNoteManualFollowUpResponse,
   executeClaimedPracticeNoteDelivery,
 } from '@/lib/admin/practice-note-delivery-workflow.mjs';
 import {
@@ -350,6 +352,39 @@ export async function POST(request) {
         ...preview,
         dryRun: false,
       }, { headers });
+    }
+
+    if (delivery.manualFollowUp) {
+      const manualFollowUpMessage = 'A previous delivery was interrupted. Check MMS attendance and Gmail before deciding whether any manual repair is needed; Practice Chat will not repeat an uncertain provider action.';
+      const manualFollowUpNote = normalisePracticeNotePayload(
+        buildPracticeNoteManualFollowUpPayload({
+          claimNote,
+          existingDelivery,
+          claimResult: delivery.claimResult,
+          message: manualFollowUpMessage,
+        }),
+      );
+      let practiceNoteLog;
+      try {
+        practiceNoteLog = manualFollowUpNote.errors.length
+          ? { ok: false, error: manualFollowUpNote.errors.join(', ') }
+          : await upsertPracticeNoteLogRow(manualFollowUpNote);
+      } catch (error) {
+        practiceNoteLog = {
+          ok: false,
+          error: error.message || 'Practice note manual follow-up log save failed',
+        };
+      }
+
+      const failure = buildPracticeNoteManualFollowUpResponse({
+        mode,
+        deliveryKey,
+        claimResult: delivery.claimResult,
+        practiceNoteLog,
+        preview,
+        isAbsentNoMakeup,
+      });
+      return Response.json(failure.body, { status: failure.status, headers });
     }
 
     if (!delivery.ok) {
