@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { Check, Loader2, Pencil, Trash2 } from 'lucide-react';
+import { Archive, Check, Loader2, Pencil, Trash2 } from 'lucide-react';
 import {
   SCHOOL_FORWARD_PLANNING_ID,
   MONDAY_SCHEDULE_PLANNING_ID,
@@ -137,10 +137,10 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
                 type="button"
                 onClick={() => onArchive?.(item)}
                 disabled={isPending}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-red-100 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                className={`inline-flex items-center gap-1.5 rounded-lg border bg-white px-3 py-1.5 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50 ${isTutorAbsenceNotice ? 'border-slate-200 text-slate-700 hover:bg-slate-50' : 'border-red-100 text-red-700 hover:bg-red-50'}`}
               >
-                <Trash2 className="h-3.5 w-3.5" />
-                Remove
+                {isTutorAbsenceNotice ? <Archive className="h-3.5 w-3.5" /> : <Trash2 className="h-3.5 w-3.5" />}
+                {isTutorAbsenceNotice ? 'Park notice' : 'Remove'}
               </button>
             ) : null}
             <button
@@ -473,7 +473,7 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
                   onClick={() => onTutorAbsenceNoticeSent?.(item)}
                   className="rounded-lg bg-indigo-950 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Mark initial notice sent
+                  Mark sent &amp; complete
                 </button>
                 {copyState ? <span className="text-xs font-semibold text-indigo-800">{copyState}</span> : null}
               </div>

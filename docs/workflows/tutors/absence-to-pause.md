@@ -127,6 +127,10 @@ established. Do not auto-retire it from incoming text or inferred overlap.
    student's saved lesson against live MMS. A changed lesson for another
    household on the same tutor/date blocks that household's card, not every
    student's otherwise-current pause work.
+9. In the due-today view, an initial-notice card shows its message and copy
+   action inline, with an explicit **Mark sent & complete** action. **Park
+   notice** is a separate history-preserving choice and must not record the
+   notice as sent. Do not replace the message-evidence gate with generic Done.
 
 ## Dated Payment Handoff Correction (2026-07-27)
 

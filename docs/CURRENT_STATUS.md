@@ -258,6 +258,9 @@ deliberate school-improvement prompt.
   such as “linked pause cards” cannot make it display payment controls or enter
   pause forecasting. Existing unset capture rows are recognised by their tutor,
   date and no-student shape, so the correction needs no workflow-state repair.
+  Two-week initial-notice cards now expose their message, copy action and
+  evidence-gated completion directly in the due view; parking is named
+  explicitly and never claims the notice was sent.
   The point-in-time repair evidence and repeatable regression check are in the
   [tutor-absence contract](./workflows/tutors/absence-to-pause.md).
 - **Practice Chat transcription accuracy (2026-07-26):** anchored tidy-up rules,

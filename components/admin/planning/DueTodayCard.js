@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, Loader2, Pencil, Trash2 } from 'lucide-react';
+import { Archive, Check, Loader2, Pencil, Trash2 } from 'lucide-react';
 import { isPausePlanningItem, isTutorAbsenceNoticePlanningItem, isTutorAbsenceFinalConfirmationPlanningItem, getPlanningStory, getPlanningWhatToDo, dueChipLabel } from '@/lib/admin/planning-client-helpers.mjs';
 import PlanningCard from './PlanningCard';
 
@@ -57,10 +57,10 @@ export default function DueTodayCard({
             type="button"
             onClick={() => onArchive?.(item)}
             disabled={isPending}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-red-100 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className={`inline-flex items-center gap-1.5 rounded-lg border bg-white px-3 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${isTutorAbsenceNotice ? 'border-slate-200 text-slate-700 hover:bg-slate-50' : 'border-red-100 text-red-700 hover:bg-red-50'}`}
           >
-            <Trash2 className="h-3.5 w-3.5" />
-            Remove
+            {isTutorAbsenceNotice ? <Archive className="h-3.5 w-3.5" /> : <Trash2 className="h-3.5 w-3.5" />}
+            {isTutorAbsenceNotice ? 'Park notice' : 'Remove'}
           </button>
           <button
             type="button"
@@ -96,7 +96,7 @@ export default function DueTodayCard({
         >
           Defer until next meeting
         </button>
-        {!isPause && (
+        {!isPause && !isTutorAbsenceNotice && (
           <button
             type="button"
             onClick={() => setExpanded((value) => !value)}
@@ -107,9 +107,9 @@ export default function DueTodayCard({
         )}
       </div>
 
-      {/* Pause cards show the steps inline (unhidden, minus the noise); other
-          cards reveal the full card under Details. Both use compact mode. */}
-      {isPause || expanded ? (
+      {/* Pause cards and initial notices show their real action inline; other
+          cards reveal the full card under Details. All use compact mode. */}
+      {isPause || isTutorAbsenceNotice || expanded ? (
         <div className="mt-4 border-t border-slate-100 pt-4">
           <PlanningCard
             item={item}

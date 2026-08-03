@@ -24,6 +24,7 @@ import {
   formatDateTime,
   extractPauseDatesFromPlanningItem,
   isPausePlanningItem,
+  isTutorAbsenceNoticePlanningItem,
   isOpenPlanningItem,
   findStudentById,
   hasPausePaymentConfirmation,
@@ -529,7 +530,10 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
   }
 
   async function handleArchiveItem(item) {
-    const confirmed = window.confirm('Remove this planning card from active planning? It will be parked, not deleted, so the history stays available.');
+    const isInitialNotice = isTutorAbsenceNoticePlanningItem(item);
+    const confirmed = window.confirm(isInitialNotice
+      ? 'Park this initial notice card? It will leave active Planning but remain in history. This does not record the parent notice as sent.'
+      : 'Remove this planning card from active planning? It will be parked, not deleted, so the history stays available.');
     if (!confirmed) return;
 
     try {
@@ -537,7 +541,9 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
         mode: 'status',
         planningId: item.planningId,
         status: 'parked',
-        progressNote: 'Removed from active Planning board by admin.',
+        progressNote: isInitialNotice
+          ? 'Initial tutor-absence notice parked by admin; no message-send completion was recorded.'
+          : 'Removed from active Planning board by admin.',
       }, item.planningId);
     } catch (error) {
       setSaveState({ pending: false, error: error.message, savedAt: '' });
