@@ -38,11 +38,11 @@ export function collectMappedSourcePaths(repoRoot) {
     path.join(repoRoot, root),
     isCodeFile,
   ));
-  const adminRoutes = walk(
-    path.join(repoRoot, 'app/api/admin'),
+  const routeFiles = walk(
+    path.join(repoRoot, 'app'),
     (filePath) => /^route\.(?:js|mjs|ts)$/u.test(path.basename(filePath)),
   );
-  return [...new Set([...files, ...adminRoutes].map((filePath) => relative(repoRoot, filePath)))]
+  return [...new Set([...files, ...routeFiles].map((filePath) => relative(repoRoot, filePath)))]
     .sort();
 }
 
@@ -320,9 +320,11 @@ function renderTests(tests) {
 export function renderCodeMap(index) {
   const groups = new Map();
   for (const record of index.records) {
-    const directory = record.path.startsWith('app/api/admin/')
-      ? 'app/api/admin routes'
-      : path.posix.dirname(record.path);
+    let directory = path.posix.dirname(record.path);
+    if (record.path.startsWith('app/api/admin/')) directory = 'app/api/admin routes';
+    else if (record.path.startsWith('app/api/cron/')) directory = 'app/api/cron routes';
+    else if (record.path.startsWith('app/api/')) directory = 'app/api routes';
+    else if (record.path.startsWith('app/')) directory = 'app routes outside app/api';
     if (!groups.has(directory)) groups.set(directory, []);
     groups.get(directory).push(record);
   }
@@ -356,9 +358,11 @@ export function renderCodeMap(index) {
   for (const [directory, records] of [...groups.entries()].sort(([left], [right]) => left.localeCompare(right))) {
     output.push('', `## ${directory}`, '', '| Path | Source note | Exports | Direct test references |', '|---|---|---|---|');
     for (const record of records.sort((left, right) => left.path.localeCompare(right.path))) {
-      const label = directory === 'app/api/admin routes'
-        ? record.path.slice('app/api/admin/'.length)
-        : path.posix.basename(record.path);
+      let label = path.posix.basename(record.path);
+      if (directory === 'app/api/admin routes') label = record.path.slice('app/api/admin/'.length);
+      else if (directory === 'app/api/cron routes') label = record.path.slice('app/api/cron/'.length);
+      else if (directory === 'app/api routes') label = record.path.slice('app/api/'.length);
+      else if (directory === 'app routes outside app/api') label = record.path.slice('app/'.length);
       output.push(`| ${codeLink(record.path, label)} | ${escapeTableText(record.sourceNote.text) || '—'} | ${renderExports(record.exports)} | ${renderTests(record.directTests)} |`);
     }
   }

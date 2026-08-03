@@ -1,7 +1,50 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildFlagsFreshnessSummary, buildIssueEvidenceSummary } from '../../lib/admin/health-helpers.mjs';
+import {
+  buildFinanceAutomationHealth,
+  buildFlagsFreshnessSummary,
+  buildIssueEvidenceSummary,
+  buildWorkflowRunHealth,
+} from '../../lib/admin/health-helpers.mjs';
+
+test('buildWorkflowRunHealth treats an old scheduled success as stale', () => {
+  const run = {
+    name: 'Stripe Amounts Cache',
+    status: 'completed',
+    conclusion: 'success',
+    updated_at: '2026-07-20T06:00:00Z',
+    html_url: 'https://example.test/run',
+  };
+  const summary = buildWorkflowRunHealth(run, {
+    label: 'Stripe amounts',
+    maxAgeHours: 8 * 24,
+    now: new Date('2026-08-03T06:00:00Z'),
+  });
+
+  assert.equal(summary.status, 'Stale');
+  assert.match(summary.detail, /hours old/u);
+});
+
+test('buildFinanceAutomationHealth checks both current baseline and prior-month collections', () => {
+  const healthy = buildFinanceAutomationHealth({
+    snapshotRows: [{ period_type: 'monthly', snapshot_at: '2026-08-01T06:30:00Z' }],
+    collectedRows: [{ month: '2026-07', refreshed_at: '2026-08-01T05:15:00Z' }],
+    now: new Date('2026-08-03T08:00:00Z'),
+  });
+  assert.equal(healthy.status, 'Healthy');
+
+  const stale = buildFinanceAutomationHealth({
+    snapshotRows: [],
+    collectedRows: [{ month: '2026-07', refreshed_at: '2026-08-01T05:15:00Z' }],
+    now: new Date('2026-08-03T08:00:00Z'),
+  });
+  assert.equal(stale.status, 'Stale');
+  assert.match(stale.detail, /2026-08 monthly baseline/u);
+
+  const pending = buildFinanceAutomationHealth({ now: new Date('2026-08-01T04:00:00Z') });
+  assert.equal(pending.status, 'Running');
+});
 
 test('buildFlagsFreshnessSummary reports unknown when no generated dates exist', () => {
   const summary = buildFlagsFreshnessSummary([]);

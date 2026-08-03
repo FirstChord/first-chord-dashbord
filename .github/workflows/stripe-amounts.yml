@@ -2,14 +2,16 @@ name: Stripe Amounts Cache
 
 # Refreshes the Stripe_Amounts_Cache tab (per-student subscription actuals) and the
 # Stripe_Collected_Monthly calibration row so the finance estimate reports real
-# billing amounts where Stripe knows them. Runs Mondays 05:30 UTC — before the
-# 06:00 finance snapshot, so the weekly snapshot reads a fresh cache. Read-only
+# billing amounts where Stripe knows them. Runs on the 1st at 05:15 UTC so the
+# completed prior month appears promptly, and Mondays 05:30 before the weekly
+# finance snapshot. The month row is a keyed upsert, so later runs safely refresh it. Read-only
 # against Stripe; a failed run just leaves the cache stale, and the finance layer
 # degrades back to the estimate after 14 days.
 
 on:
   workflow_dispatch:
   schedule:
+    - cron: "15 5 1 * *" # prior-month collection actuals before monthly finance review
     - cron: "30 5 * * 1" # Mondays 05:30 UTC, ahead of the 06:00 finance snapshot
 
 concurrency:

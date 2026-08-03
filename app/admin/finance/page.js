@@ -12,7 +12,7 @@ import { buildFinanceCoverage, FLAG_LABELS as FINANCE_FLAG_LABELS } from '@/lib/
 import { buildFinanceTrend } from '@/lib/admin/finance-trend.mjs';
 import { buildFinanceScenario } from '@/lib/admin/finance-scenario.mjs';
 import { buildForwardOutlook } from '@/lib/admin/forward-outlook.mjs';
-import { buildCalibration, buildStripeAmountsMap } from '@/lib/admin/stripe-amounts-helpers.mjs';
+import { buildCalibration, buildStripeAmountsMap, describeCalibrationBasis } from '@/lib/admin/stripe-amounts-helpers.mjs';
 import { getPlanningItemRows, getWaitingListStateRows, getStudentsArchiveRows } from '@/lib/admin/sheets';
 import { buildRosterMovement, onboardedDatesFromWaitingState, leftDatesFromArchive } from '@/lib/admin/roster-movement.mjs';
 import { authOptions } from '@/lib/admin/auth';
@@ -366,10 +366,12 @@ export default async function AdminFinancePage({ searchParams }) {
           href: '/admin/finance/payroll',
         }
       : null,
-    calibration.estimateBasis === 'current_estimate'
+    calibration.estimateBasis !== 'monthly_snapshot'
       ? {
-          title: 'No frozen monthly finance snapshot for the Stripe comparison yet',
-          detail: `The ${calibration.month} gap compares Stripe collections with today’s estimate, so treat it as early calibration rather than drift.`,
+          title: calibration.estimateBasis === 'weekly_snapshot'
+            ? 'Monthly Stripe baseline failed; using the earliest weekly snapshot'
+            : 'No frozen finance snapshot for the Stripe comparison yet',
+          detail: `${describeCalibrationBasis(calibration)} Treat the gap as approximate rather than exact drift.`,
         }
       : null,
     stripeActuals.staleCount
@@ -647,7 +649,7 @@ export default async function AdminFinancePage({ searchParams }) {
             <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Estimated Stripe billing</p>
               <p className="mt-1 text-2xl font-semibold text-slate-900">{calibration.estimatedStripeMonthly === null ? '—' : formatMoney(calibration.estimatedStripeMonthly)}</p>
-              <p className="mt-1 text-xs text-slate-600">{calibration.estimateBasis === 'monthly_snapshot' ? `from the ${calibration.month} monthly snapshot` : "no snapshot for that month — using today's estimate"}</p>
+              <p className="mt-1 text-xs text-slate-600">{describeCalibrationBasis(calibration)}</p>
             </div>
             <div className={`rounded-2xl border p-4 ${calibration.deltaPct !== null && Math.abs(calibration.deltaPct) > 10 ? 'border-amber-200 bg-amber-50' : 'border-emerald-200 bg-emerald-50'}`}>
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Gap</p>

@@ -36,6 +36,10 @@ function healthPriority(health) {
     health.mms.status,
     health.configWorkflow.status,
     health.fcWorkflow.status,
+    health.financeWorkflow.status,
+    health.stripeWorkflow.status,
+    health.scheduleWorkflow.status,
+    health.financeAutomation.status,
     health.flagsFreshness.status,
   ];
 
@@ -122,6 +126,18 @@ function buildTrustSummary(health, systemHealth) {
   }
   if (['Failing', 'Stale', 'Running', 'Aging'].includes(health.fcWorkflow.status)) {
     details.push(`Regenerate FC IDs ${String(health.fcWorkflow.status || 'unknown').toLowerCase()}`);
+  }
+  if (['Failing', 'Stale', 'Running', 'Aging'].includes(health.financeWorkflow.status)) {
+    details.push(`Finance snapshots ${String(health.financeWorkflow.status || 'unknown').toLowerCase()}`);
+  }
+  if (['Failing', 'Stale', 'Running', 'Aging'].includes(health.stripeWorkflow.status)) {
+    details.push(`Stripe amounts ${String(health.stripeWorkflow.status || 'unknown').toLowerCase()}`);
+  }
+  if (['Failing', 'Stale', 'Running', 'Aging'].includes(health.scheduleWorkflow.status)) {
+    details.push(`Schedule refresh ${String(health.scheduleWorkflow.status || 'unknown').toLowerCase()}`);
+  }
+  if (['Failing', 'Stale', 'Running', 'Aging'].includes(health.financeAutomation.status)) {
+    details.push(`Finance data ${String(health.financeAutomation.status || 'unknown').toLowerCase()}`);
   }
 
   return {
@@ -465,7 +481,7 @@ export default async function AdminHomePage() {
 }
 
 // --- Streamed health section -------------------------------------------------
-// Health makes 3 uncached external calls (MMS + 2 GitHub), so these two pieces
+// Health makes 6 uncached external calls (MMS + 5 GitHub), so these two pieces
 // stream in separately — the rest of the Overview renders immediately, and these
 // fill in a moment later (instantly on repeat visits thanks to the 60s cache).
 
@@ -517,6 +533,33 @@ async function OverviewSystemChecks() {
       detail: calmHealthDetail(health.fcWorkflow.detail),
       updatedAt: health.fcWorkflow.updatedAt,
       link: health.fcWorkflow.htmlUrl,
+    },
+    {
+      label: 'Finance Snapshots',
+      status: health.financeWorkflow.status,
+      detail: calmHealthDetail(health.financeWorkflow.detail),
+      updatedAt: health.financeWorkflow.updatedAt,
+      link: health.financeWorkflow.htmlUrl,
+    },
+    {
+      label: 'Stripe Amounts',
+      status: health.stripeWorkflow.status,
+      detail: calmHealthDetail(health.stripeWorkflow.detail),
+      updatedAt: health.stripeWorkflow.updatedAt,
+      link: health.stripeWorkflow.htmlUrl,
+    },
+    {
+      label: 'Schedule Refresh',
+      status: health.scheduleWorkflow.status,
+      detail: calmHealthDetail(health.scheduleWorkflow.detail),
+      updatedAt: health.scheduleWorkflow.updatedAt,
+      link: health.scheduleWorkflow.htmlUrl,
+    },
+    {
+      label: 'Finance Data',
+      status: health.financeAutomation.status,
+      detail: health.financeAutomation.detail,
+      updatedAt: health.financeAutomation.updatedAt,
     },
     {
       label: 'Review Flags Freshness',

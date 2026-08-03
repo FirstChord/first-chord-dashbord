@@ -46,6 +46,8 @@ derived from the same index; regenerate it, never hand-edit it.
 
 - `app/admin/`: admin pages and server-rendered composition.
 - `app/api/admin/`: authenticated admin mutation/read routes.
+- `app/**/route.{js,mjs,ts}`: every Next route handler is included in the
+  generated code map and route-security census, including cron and public lanes.
 - `components/admin/`: interactive admin UI.
 - `lib/admin/*.js`: integration and workflow orchestration.
 - `lib/admin/*-helpers.mjs`: preferably pure business rules.

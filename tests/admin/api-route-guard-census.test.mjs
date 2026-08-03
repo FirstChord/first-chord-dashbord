@@ -16,9 +16,9 @@ import { readdir, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
-const API_ROOT = fileURLToPath(new URL('../../app/api', import.meta.url));
+const APP_ROOT = fileURLToPath(new URL('../../app', import.meta.url));
 
-async function discoverRoutes(directory = API_ROOT) {
+async function discoverRoutes(directory = APP_ROOT) {
   const entries = await readdir(directory, { withFileTypes: true });
   const found = [];
   for (const entry of entries) {
@@ -45,12 +45,12 @@ function guardsFor(source) {
 // Routes that are reachable without any of the guards above, each with the
 // reason it is safe. Adding a route here should be a deliberate act.
 const DECLARED_PUBLIC = new Map([
-  ['auth/[...nextauth]/route.js', 'the NextAuth handler itself — it *is* the login endpoint'],
-  ['auth/mms/route.js', 'stores a caller-supplied MMS token in their own httpOnly cookie; grants no access'],
+  ['api/auth/[...nextauth]/route.js', 'the NextAuth handler itself — it *is* the login endpoint'],
+  ['api/auth/mms/route.js', 'stores a caller-supplied MMS token in their own httpOnly cookie; grants no access'],
 ]);
 
 const routes = await discoverRoutes();
-const relative = (file) => path.relative(API_ROOT, file);
+const relative = (file) => path.relative(APP_ROOT, file);
 
 test('every API route applies a guard or is a declared public endpoint', async () => {
   const unguarded = [];
@@ -125,7 +125,7 @@ test('the student portal keeps a family-code boundary, not the tutor session', a
   // Carried over from tutor-auth-route-boundary: the two surfaces must not
   // converge on one guard, because a tutor session must never open a parent's
   // portal and vice versa.
-  const portalRoutes = routes.filter((file) => relative(file).startsWith('student-portal/'));
+  const portalRoutes = routes.filter((file) => relative(file).startsWith('api/student-portal/'));
   assert.ok(portalRoutes.length > 0, 'expected student-portal routes to exist');
 
   for (const file of portalRoutes) {
@@ -151,5 +151,5 @@ test('the dashboard server page redirects unauthorised pilot users before render
 test('the census is non-trivial — it is actually finding routes', () => {
   // Guards the discovery itself: a broken walker returning [] would make every
   // test above pass vacuously.
-  assert.ok(routes.length >= 50, `expected to discover the full API surface, found ${routes.length}`);
+  assert.ok(routes.length >= 55, `expected to discover the full Next route surface, found ${routes.length}`);
 });

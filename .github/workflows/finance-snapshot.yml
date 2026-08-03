@@ -2,7 +2,8 @@ name: Finance Snapshot
 
 # Appends a read-only revenue/cost/margin snapshot to the Finance_Snapshot tab so we
 # build a seasonal time series (e.g. how many students go off over the summer). Weekly
-# every Monday; monthly on the 1st. Calls the secret-protected endpoint on Railway.
+# every Monday; monthly retries during days 1-7, with the endpoint making later
+# attempts no-op after the first success. Calls the secret-protected endpoint on Railway.
 
 on:
   workflow_dispatch:
@@ -15,7 +16,7 @@ on:
         options: [weekly, monthly]
   schedule:
     - cron: "0 6 * * 1"   # weekly: Mondays 06:00 UTC
-    - cron: "30 6 1 * *"  # monthly: 1st of the month 06:30 UTC
+    - cron: "30 6 1-7 * *" # monthly catch-up: first success wins, later attempts no-op
 
 concurrency:
   group: finance-snapshot
@@ -30,8 +31,8 @@ jobs:
         env:
           ENDPOINT: https://first-chord-dashbord-production.up.railway.app/api/cron/finance-snapshot
           SECRET: ${{ secrets.FINANCE_SNAPSHOT_SECRET }}
-          # Monthly schedule sets period=monthly; weekly schedule and manual default to weekly.
-          PERIOD: ${{ github.event.inputs.period || (github.event.schedule == '30 6 1 * *' && 'monthly' || 'weekly') }}
+          # Monthly catch-up schedule sets period=monthly; weekly and manual default to weekly.
+          PERIOD: ${{ github.event.inputs.period || (github.event.schedule == '30 6 1-7 * *' && 'monthly' || 'weekly') }}
         run: |
           set -euo pipefail
           if [ -z "${SECRET}" ]; then

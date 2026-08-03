@@ -90,6 +90,8 @@ function makeFixtureRepo() {
     'lib/admin/wise-helpers.mjs': `/** @fileoverview Builds a Wise payout batch. */\nexport function buildWiseBatch() {}\n`,
     'lib/admin/payroll.mjs': `import { buildWiseBatch } from './wise-helpers.mjs';\nexport function preparePayroll() { return buildWiseBatch(); }\n`,
     'app/api/admin/payroll/route.js': `import { preparePayroll } from '@/lib/admin/payroll.mjs';\nexport async function GET() { return preparePayroll(); }\n`,
+    'app/api/cron/payroll/route.js': `import { preparePayroll } from '@/lib/admin/payroll.mjs';\nexport async function POST() { return preparePayroll(); }\n`,
+    'app/public-export/route.js': `export async function GET() {}\n`,
     'tests/admin/wise-batch-contract.test.mjs': `import { buildWiseBatch } from '../../lib/admin/wise-helpers.mjs';\n`,
     'tests/admin/payroll-route.test.mjs': `import '../../app/api/admin/payroll/route.js';\n`,
     'AGENTS.md': `## Workflow Map\n\n| Area | Code | Tests |\n|---|---|---|\n| Payroll | \`lib/admin/wise-*.mjs\`, \`app/api/admin/payroll/\` | \`wise-batch-contract\` |\n\n## Next\n`,
@@ -108,12 +110,17 @@ test('the shared index powers direct test references, search, impact, and determ
   const index = buildCodeIndex({ repoRoot });
   const wise = index.recordsByPath.get('lib/admin/wise-helpers.mjs');
 
+  assert.ok(index.recordsByPath.has('app/api/cron/payroll/route.js'));
+  assert.ok(index.recordsByPath.has('app/public-export/route.js'));
   assert.deepEqual(wise.directTests, ['tests/admin/wise-batch-contract.test.mjs']);
   assert.deepEqual(wise.directConsumers, ['lib/admin/payroll.mjs']);
   assert.equal(searchCodeIndex(index, 'Wise payout')[0].record.path, 'lib/admin/wise-helpers.mjs');
 
   const [impact] = buildImpactReport(index, ['lib/admin/wise-helpers.mjs']);
-  assert.deepEqual(impact.entrypoints, [{ path: 'app/api/admin/payroll/route.js', distance: 2 }]);
+  assert.deepEqual(impact.entrypoints, [
+    { path: 'app/api/admin/payroll/route.js', distance: 2 },
+    { path: 'app/api/cron/payroll/route.js', distance: 2 },
+  ]);
   assert.deepEqual(impact.relatedTests, [
     { path: 'tests/admin/wise-batch-contract.test.mjs', distance: 1 },
     { path: 'tests/admin/payroll-route.test.mjs', distance: 3 },
@@ -124,6 +131,8 @@ test('the shared index powers direct test references, search, impact, and determ
   assert.equal(first, second);
   assert.match(first, /Source fingerprint: `[a-f0-9]{16}`/u);
   assert.match(first, /Direct test references/u);
+  assert.match(first, /## app\/api\/cron routes/u);
+  assert.match(first, /## app routes outside app\/api/u);
 
   fs.appendFileSync(path.join(repoRoot, 'lib/admin/wise-helpers.mjs'), 'export const ADDED_LATER = true;\n');
   const changed = renderCodeMap(buildCodeIndex({ repoRoot }));

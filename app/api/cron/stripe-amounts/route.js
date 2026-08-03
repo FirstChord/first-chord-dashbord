@@ -3,10 +3,10 @@ import { replaceStripeAmountsCacheRows, upsertStripeCollectedMonthlyRow } from '
 import { fetchAllActiveSubscriptions, fetchPaidInvoicesForMonth } from '@/lib/admin/stripe-batch';
 import { buildStripeAmountsCacheRows, previousMonthKey, summariseCollectedInvoices } from '@/lib/admin/stripe-amounts-helpers.mjs';
 
-// Weekly Stripe actuals refresh, called by a GitHub Action cron (Mondays, before
-// the finance snapshot so the snapshot reads a fresh cache). Read-only against
-// Stripe; the only writes are the two cache tabs. Shares FINANCE_SNAPSHOT_SECRET —
-// same trust domain, same caller (the finance cron pipeline).
+// Stripe actuals refresh, called by GitHub Actions on the first of each month and
+// Mondays before the finance snapshot. Read-only against Stripe; the only writes
+// are the two cache tabs. Shares FINANCE_SNAPSHOT_SECRET — same trust domain,
+// same caller (the finance cron pipeline).
 
 function clean(value = '') {
   return `${value || ''}`.trim();

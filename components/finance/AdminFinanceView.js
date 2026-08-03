@@ -3,6 +3,7 @@ import ScopeBadge from '@/components/admin/ui/ScopeBadge';
 import SaveSpendButton from '@/components/admin/SaveSpendButton';
 import { formatMoney } from '@/lib/admin/finance-helpers.mjs';
 import { EXPENSE_LOG_CATEGORIES } from '@/lib/admin/cost-helpers.mjs';
+import { describeCalibrationBasis } from '@/lib/admin/stripe-amounts-helpers.mjs';
 
 function viewHref(view, extras = {}) {
   const query = new URLSearchParams({ view, ...extras });
@@ -301,7 +302,7 @@ function DetailsView({ totals, revenue, cost, expenses, coverage, attentionItems
             <DetailRow label="Estimated Stripe billing" value={calibration.estimatedStripeMonthly === null ? '—' : formatMoney(calibration.estimatedStripeMonthly)} />
             <DetailRow label="Gap" value={calibration.deltaPct === null ? '—' : `${calibration.deltaPct > 0 ? '+' : ''}${calibration.deltaPct}%`} strong />
           </div>
-          <p className="mt-4 text-xs leading-5 text-slate-500">{calibration.estimateBasis === 'monthly_snapshot' ? 'Compared with the frozen monthly snapshot.' : 'No frozen snapshot for that month; comparison uses today’s estimate.'}</p>
+          <p className="mt-4 text-xs leading-5 text-slate-500">{describeCalibrationBasis(calibration)}</p>
         </div>
       </section>
 

@@ -26,15 +26,20 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
-- **Generated agent navigation layer (2026-08-03):** current source now produces
-  one deterministic module/export/test index instead of freezing repository
-  facts into model weights or another hand-maintained guide. Agents can query a
-  narrow result or inspect a changed file's conservative static impact radius;
-  the browseable Markdown is derived, and CI blocks drift or unsupported export
-  syntax. Direct test references and import consumers are labelled as evidence,
-  not proof of coverage or runtime reachability. This changes developer
-  orientation only — no dashboard runtime, provider, Sheets, or school workflow
-  behavior changed.
+- **Agent readiness and finance measurement resilience (2026-08-03):** current
+  source now produces one deterministic module/export/test index instead of
+  freezing repository facts into model weights or a hand-maintained guide.
+  Narrow search and conservative impact queries cover every Next route handler,
+  and the matching route-security census exposed three obsolete scaffold routes
+  that have now been removed. CI blocks map drift and unsupported export syntax;
+  static evidence narrows inspection but does not prove runtime reachability.
+  The same health pass traced July's missing monthly Stripe comparison to a
+  workflow failure that was fixed but never retried. Monthly finance baselines
+  now retry idempotently on days 1–7, Stripe collections refresh on the first as
+  well as Mondays, and the overview distinguishes workflow cadence from actual
+  data completeness. A genuinely missed baseline is never invented: comparison
+  falls back visibly to the month's earliest weekly snapshot, then to a labelled
+  current estimate.
 - **Matthew tutor handover (2026-07-30):** Matthew Leung
   (`tch_zLY8Jn`, piano inferred from the confirmed student/lesson set) is now in
   the canonical Brain tutor lists, the dashboard tutor identity, and the derived

@@ -15,9 +15,12 @@ import assert from 'node:assert/strict';
 import {
   clearSheetReadCacheForTests,
   ensureManagedSheet,
+  FINANCE_SNAPSHOT_HEADERS,
+  FINANCE_SNAPSHOT_SHEET,
   upsertManagedSheetRow,
   withSheetsRetry,
 } from '../../lib/admin/sheets/core.mjs';
+import { appendFinanceSnapshotRow } from '../../lib/admin/sheets/finance.mjs';
 
 // --- the fake -----------------------------------------------------------
 
@@ -129,6 +132,35 @@ test.after(() => {
 });
 
 const HEADERS = ['mms_id', 'student_name', 'status', 'updated_at'];
+
+// --- append-only monthly identity --------------------------------------
+
+test('a deterministic monthly finance snapshot appends once and then becomes a no-op', async () => {
+  counter += 1;
+  process.env.GOOGLE_SPREADSHEET_ID = `finance-sheet-id-${counter}`;
+  clearSheetReadCacheForTests();
+  const sheets = fakeSheets({ tabs: { [FINANCE_SNAPSHOT_SHEET]: [FINANCE_SNAPSHOT_HEADERS] } });
+  globalThis.__firstChordSheetsClientPromise = Promise.resolve(sheets);
+  const row = {
+    snapshot_id: 'fs_monthly_2026-08',
+    snapshot_at: '2026-08-03T06:30:00.000Z',
+    period_type: 'monthly',
+    active_count: 190,
+  };
+
+  assert.deepEqual(await appendFinanceSnapshotRow(row), {
+    appended: true,
+    snapshotId: 'fs_monthly_2026-08',
+  });
+  assert.deepEqual(await appendFinanceSnapshotRow(row), {
+    appended: false,
+    snapshotId: 'fs_monthly_2026-08',
+  });
+  assert.equal(
+    sheets.calls.filter((call) => call.kind === 'append' && call.sheet === FINANCE_SNAPSHOT_SHEET).length,
+    1,
+  );
+});
 
 // --- row targeting ------------------------------------------------------
 

@@ -208,6 +208,16 @@ test('buildFinanceSnapshotRow stamps the assumptions version so series basis cha
   assert.match(PRICE_ASSUMPTIONS_VERSION, /^\d{4}-\d{2}\.\d+ \|/);
 });
 
+test('buildFinanceSnapshotRow gives monthly rows a deterministic month identity', () => {
+  const overview = buildFinanceOverview([oneToOne30({ mmsId: 'priced' })]);
+  const first = buildFinanceSnapshotRow(overview, { periodType: 'monthly', at: new Date('2026-08-01T06:30:00Z') });
+  const retry = buildFinanceSnapshotRow(overview, { periodType: 'monthly', at: new Date('2026-08-04T06:30:00Z') });
+
+  assert.equal(first.snapshot_id, 'fs_monthly_2026-08');
+  assert.equal(retry.snapshot_id, first.snapshot_id);
+  assert.notEqual(first.snapshot_at, retry.snapshot_at);
+});
+
 test('formatMoney trims trailing pence-zeros and handles non-numbers', () => {
   assert.equal(formatMoney(25), '£25');
   assert.equal(formatMoney(108.33), '£108.33');
