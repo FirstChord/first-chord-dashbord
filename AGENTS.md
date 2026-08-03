@@ -22,6 +22,26 @@ copying it here.
 External handovers and the Obsidian vault may add operating context, but they
 must not be the only source of a safety-critical implementation rule.
 
+## Fast Code Orientation
+
+Use the Workflow Map below to choose the area and its safety documents. For the
+next layer, query the generated source index instead of loading a large index or
+starting with a broad repository search:
+
+```bash
+npm run code-map:find -- "Wise payout"
+npm run code-map:impact -- lib/admin/wise-helpers.mjs
+```
+
+`code-map:find` returns matching modules, source-authored notes, exports with line
+numbers, direct test references, and direct production consumers.
+`code-map:impact` follows conservative static imports to related tests, scripts,
+and app entrypoints; with no path arguments it inspects the current git diff.
+Both commands accept `--json` for agents or other tools. Static evidence can miss
+dynamic/runtime relationships, so impact output narrows inspection rather than
+replacing it. The browsable [generated code map](docs/reference/code-map.md) is
+derived from the same index; regenerate it, never hand-edit it.
+
 ## Repository Shape
 
 - `app/admin/`: admin pages and server-rendered composition.
@@ -38,6 +58,8 @@ must not be the only source of a safety-critical implementation rule.
   `lib/soundslice-mappings.js`, `lib/config/instruments.js`, and the ignored
   Theta credential output: generated artifacts; do not edit them to compensate
   for an upstream problem.
+- `docs/reference/code-map.md`: generated source/export/test lookup; regenerate
+  with `npm run generate-code-map` and verify with `npm run code-map:check`.
 
 ## Truth And State Boundaries
 
@@ -160,6 +182,7 @@ Start with the smallest matching test file, then run the full admin suite.
 ```bash
 node --test tests/admin/<focused-file>.test.mjs
 node --test tests/admin/*.test.mjs
+npm run code-map:check
 npm run hygiene:check
 npm run lint
 ```
@@ -187,18 +210,19 @@ Use the direct `node --test` command during a read-only investigation because
 The current suite mainly covers helpers; route and component behavior still need
 manual checks unless a change adds contract-level coverage.
 
-`.github/workflows/ci.yml` repeats install, admin tests, application lint, and a
-production build for pull requests and pushes to `main`. Do not weaken or skip a
-failing check to merge a change; fix the failure or document why the workflow
-itself is wrong.
+`.github/workflows/ci.yml` repeats documentation/code-map checks, install, admin
+tests, application lint, and a production build for pull requests and pushes to
+`main`. Do not weaken or skip a failing check to merge a change; fix the failure
+or document why the workflow itself is wrong.
 
 ## Safe Change And Recovery Checklist
 
 Before finishing:
 
 1. Confirm the authoritative owner for every field read or written.
-2. Search for all consumers of changed exports, labels, tab headers, event types,
-   and route payload fields.
+2. Start with `npm run code-map:impact -- <path>`, then search for all consumers
+   of changed exports, labels, tab headers, event types, and route payload fields
+   that conservative static analysis may not see.
 3. Preserve fail-safe handling for missing, stale, conflicting, or unknown data.
 4. Add or update tests and note any required manual check.
 5. Inspect `git status --short` and `git diff`; preserve unrelated user changes.

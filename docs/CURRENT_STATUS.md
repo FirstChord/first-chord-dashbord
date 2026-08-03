@@ -1,7 +1,7 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: 2026-07-30
+last_verified: 2026-08-03
 ---
 # Admin current status
 
@@ -26,6 +26,15 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
+- **Generated agent navigation layer (2026-08-03):** current source now produces
+  one deterministic module/export/test index instead of freezing repository
+  facts into model weights or another hand-maintained guide. Agents can query a
+  narrow result or inspect a changed file's conservative static impact radius;
+  the browseable Markdown is derived, and CI blocks drift or unsupported export
+  syntax. Direct test references and import consumers are labelled as evidence,
+  not proof of coverage or runtime reachability. This changes developer
+  orientation only — no dashboard runtime, provider, Sheets, or school workflow
+  behavior changed.
 - **Matthew tutor handover (2026-07-30):** Matthew Leung
   (`tch_zLY8Jn`, piano inferred from the confirmed student/lesson set) is now in
   the canonical Brain tutor lists, the dashboard tutor identity, and the derived
@@ -213,15 +222,6 @@ deliberate school-improvement prompt.
   `ADMIN_AI_REPLY_DRAFT_ENABLED` remains unset pending a later small pilot and
   the sign-off in [AI tool contracts](./architecture/ai/tool-contracts.md).
   Stored decisions remain reviewable while the feature is off.
-- **Continuity and recovery:** operations-without-Finn guidance, rehearsed Sheets
-  restore, managed-tab backup coverage, and contract tests are live. See
-  [continuity](./operations/continuity.md) and
-  [disaster recovery](./operations/disaster-recovery.md).
-- **Teaching and finance layers:** catalogue/path templates, tutor-visible song
-  assignments, outcome/request telemetry, payroll statements, and money-path
-  invariants are live. Current gaps are in
-  [song coverage](./reference/song-catalogue-coverage.md) and the
-  [payroll plan](./plans/active/tutor-payroll.md).
 ## Current operating contracts
 
 | Area | Current boundary |

@@ -1,7 +1,7 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: 2026-07-27
+last_verified: 2026-08-03
 ---
 # Operations Runbook
 
@@ -19,6 +19,7 @@ This runbook covers operational recovery for the First Chord dashboard. It is in
 
 ```bash
 npm run hygiene:check
+npm run code-map:check
 npm run test:admin
 npm run lint
 npm run build
@@ -422,6 +423,7 @@ Expected:
 
 ```bash
 npm run docs:check
+npm run code-map:check
 npm run test:admin
 npm run lint
 npm run build

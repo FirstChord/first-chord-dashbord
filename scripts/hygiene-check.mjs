@@ -2,6 +2,12 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 
+import {
+  buildCodeIndex,
+  CODE_MAP_RELATIVE_PATH,
+  renderCodeMap,
+} from './code-map-core.mjs';
+
 const repoRoot = process.cwd();
 
 const CODE_EXTENSIONS = new Set(['.js', '.jsx', '.mjs', '.ts', '.tsx']);
@@ -11,6 +17,7 @@ const DOC_ROOTS = ['docs'];
 const LARGE_CODE_LINE_THRESHOLD = 1200;
 const LARGE_HELPER_LINE_THRESHOLD = 900;
 const LARGE_DOC_LINE_THRESHOLD = 260;
+const LARGE_DOC_EXCLUSIONS = new Set([CODE_MAP_RELATIVE_PATH]);
 
 const IGNORED_PARTS = new Set([
   '.git',
@@ -134,6 +141,7 @@ function collectLargeDocs() {
       lines: DOC_EXTENSIONS.has(path.extname(filePath)) ? lineCount(filePath) : 0,
     }))
     .filter((entry) => DOC_EXTENSIONS.has(entry.extension))
+    .filter((entry) => !LARGE_DOC_EXCLUSIONS.has(entry.path))
     .filter((entry) => entry.lines >= LARGE_DOC_LINE_THRESHOLD)
     .sort((a, b) => b.lines - a.lines)
     .slice(0, 12);
@@ -180,6 +188,22 @@ const files = changedFiles();
 const diffText = changedDiff();
 const fileDiffs = changedDiffByFile();
 const warnings = [];
+
+try {
+  const codeMapPath = path.join(repoRoot, CODE_MAP_RELATIVE_PATH);
+  const expectedCodeMap = renderCodeMap(buildCodeIndex({ repoRoot }));
+  if (!existsSync(codeMapPath) || readFileSync(codeMapPath, 'utf8') !== expectedCodeMap) {
+    warnings.push({
+      title: 'Generated code map is stale',
+      body: `  Run npm run generate-code-map, then inspect ${CODE_MAP_RELATIVE_PATH}. CI enforces the same check.`,
+    });
+  }
+} catch (error) {
+  warnings.push({
+    title: 'Generated code map could not be checked',
+    body: `  ${error instanceof Error ? error.message : String(error)}\n  Run npm run code-map:check for the full failure.`,
+  });
+}
 
 const largeCodeFiles = collectLargeCodeFiles();
 if (largeCodeFiles.length) {

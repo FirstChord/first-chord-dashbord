@@ -1,0 +1,142 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import test from 'node:test';
+
+import {
+  buildCodeIndex,
+  buildImpactReport,
+  extractExports,
+  extractImportSpecifiers,
+  extractSourceNote,
+  findUnsupportedExportLines,
+  renderCodeMap,
+  searchCodeIndex,
+  validateAgentWorkflowMap,
+} from '../../scripts/code-map-core.mjs';
+
+test('extractExports covers declarations, named re-exports, barrels, and defaults with lines', () => {
+  const exports = extractExports(`export const ONE = 1;
+export async function two() {}
+export {
+  three,
+  original as renamed,
+} from './three.mjs';
+export * from './barrel.mjs';
+export default class Example {}
+`);
+  assert.deepEqual(exports.map(({ name, kind, line, source }) => ({ name, kind, line, source })), [
+    { name: 'ONE', kind: 'const', line: 1, source: '' },
+    { name: 'two', kind: 'async function', line: 2, source: '' },
+    { name: 'three', kind: 'named', line: 3, source: './three.mjs' },
+    { name: 'renamed', kind: 'named', line: 3, source: './three.mjs' },
+    { name: '*', kind: 'star', line: 7, source: './barrel.mjs' },
+    { name: 'default:Example', kind: 'default', line: 8, source: '' },
+  ]);
+  assert.deepEqual(findUnsupportedExportLines('export type Example = string;\n'), [1]);
+});
+
+test('extractSourceNote prefers fileoverview and does not mistake URL text for a comment', () => {
+  const source = `const API = 'https://example.com';
+// Implementation detail that is not the module overview.
+/** @fileoverview Finds the current source without inventing a summary. More detail. */
+export function find() {}
+`;
+  assert.deepEqual(extractSourceNote(source), {
+    text: 'Finds the current source without inventing a summary.',
+    line: 3,
+    explicit: true,
+  });
+  assert.deepEqual(extractSourceNote("const API = 'https://example.com';\nexport const API_URL = API;\n"), {
+    text: '',
+    line: null,
+    explicit: false,
+  });
+  assert.deepEqual(extractSourceNote(`/* Earlier block
+ * spanning two lines.
+ */
+/** @fileoverview Later explicit overview wins. */
+export const VALUE = true;
+`), {
+    text: 'Later explicit overview wins.',
+    line: 4,
+    explicit: true,
+  });
+});
+
+test('extractImportSpecifiers recognises static, re-export, dynamic, and require imports', () => {
+  const specifiers = extractImportSpecifiers(`
+import thing from './thing.mjs';
+import '@/side-effect.js';
+export { other } from './other.mjs';
+export * from './barrel.mjs';
+const lazy = import('./lazy.mjs');
+const old = require('./old.cjs');
+`);
+  assert.deepEqual(specifiers.sort(), [
+    './barrel.mjs',
+    './lazy.mjs',
+    './old.cjs',
+    './other.mjs',
+    './thing.mjs',
+    '@/side-effect.js',
+  ]);
+});
+
+function makeFixtureRepo() {
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'first-chord-code-map-'));
+  const files = {
+    'lib/admin/wise-helpers.mjs': `/** @fileoverview Builds a Wise payout batch. */\nexport function buildWiseBatch() {}\n`,
+    'lib/admin/payroll.mjs': `import { buildWiseBatch } from './wise-helpers.mjs';\nexport function preparePayroll() { return buildWiseBatch(); }\n`,
+    'app/api/admin/payroll/route.js': `import { preparePayroll } from '@/lib/admin/payroll.mjs';\nexport async function GET() { return preparePayroll(); }\n`,
+    'tests/admin/wise-batch-contract.test.mjs': `import { buildWiseBatch } from '../../lib/admin/wise-helpers.mjs';\n`,
+    'tests/admin/payroll-route.test.mjs': `import '../../app/api/admin/payroll/route.js';\n`,
+    'AGENTS.md': `## Workflow Map\n\n| Area | Code | Tests |\n|---|---|---|\n| Payroll | \`lib/admin/wise-*.mjs\`, \`app/api/admin/payroll/\` | \`wise-batch-contract\` |\n\n## Next\n`,
+  };
+  for (const [name, source] of Object.entries(files)) {
+    const target = path.join(repoRoot, name);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, source);
+  }
+  return repoRoot;
+}
+
+test('the shared index powers direct test references, search, impact, and deterministic Markdown', (t) => {
+  const repoRoot = makeFixtureRepo();
+  t.after(() => fs.rmSync(repoRoot, { recursive: true, force: true }));
+  const index = buildCodeIndex({ repoRoot });
+  const wise = index.recordsByPath.get('lib/admin/wise-helpers.mjs');
+
+  assert.deepEqual(wise.directTests, ['tests/admin/wise-batch-contract.test.mjs']);
+  assert.deepEqual(wise.directConsumers, ['lib/admin/payroll.mjs']);
+  assert.equal(searchCodeIndex(index, 'Wise payout')[0].record.path, 'lib/admin/wise-helpers.mjs');
+
+  const [impact] = buildImpactReport(index, ['lib/admin/wise-helpers.mjs']);
+  assert.deepEqual(impact.entrypoints, [{ path: 'app/api/admin/payroll/route.js', distance: 2 }]);
+  assert.deepEqual(impact.relatedTests, [
+    { path: 'tests/admin/wise-batch-contract.test.mjs', distance: 1 },
+    { path: 'tests/admin/payroll-route.test.mjs', distance: 3 },
+  ]);
+
+  const first = renderCodeMap(index);
+  const second = renderCodeMap(buildCodeIndex({ repoRoot }));
+  assert.equal(first, second);
+  assert.match(first, /Source fingerprint: `[a-f0-9]{16}`/u);
+  assert.match(first, /Direct test references/u);
+
+  fs.appendFileSync(path.join(repoRoot, 'lib/admin/wise-helpers.mjs'), 'export const ADDED_LATER = true;\n');
+  const changed = renderCodeMap(buildCodeIndex({ repoRoot }));
+  assert.notEqual(changed, first, 'an export change must make the generated artifact drift');
+});
+
+test('Workflow Map validation checks paths, globs, and focused test patterns', (t) => {
+  const repoRoot = makeFixtureRepo();
+  t.after(() => fs.rmSync(repoRoot, { recursive: true, force: true }));
+  const source = fs.readFileSync(path.join(repoRoot, 'AGENTS.md'), 'utf8');
+  assert.deepEqual(validateAgentWorkflowMap({ repoRoot, source }), []);
+  assert.deepEqual(
+    validateAgentWorkflowMap({ repoRoot, source: source.replace('wise-batch-contract', 'missing-test') }),
+    ['AGENTS.md Workflow Map: unmatched test pattern missing-test'],
+  );
+});

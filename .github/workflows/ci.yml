@@ -37,6 +37,9 @@ jobs:
       - name: Check documentation structure and links
         run: npm run docs:check
 
+      - name: Check generated code map and agent workflow references
+        run: npm run code-map:check
+
       - name: Run deterministic admin tests
         run: npm run test:admin
 
