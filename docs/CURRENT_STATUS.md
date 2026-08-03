@@ -38,7 +38,14 @@ deliberate school-improvement prompt.
   cancel into a reassuring total. Existing aggregate calibration remains
   labelled legacy context; the first scored blind result appears after the
   first locked month closes. This is forecast/reconciliation only—Stripe remains
-  provider truth and no payment action was added.
+  provider truth and no payment action was added. A Playwright follow-up made
+  that proof the Finance front door: Overview now contains only the Stripe
+  prediction and the three real finance work links. Run-rate, break-even,
+  forecasts, warnings and history remain under **Evidence**; the seasonal
+  scenario planner is no longer advertised until real monthly results show that
+  it is decision-useful rather than merely plausible. The Overview server path
+  now reads only the forecast and collection lanes; it no longer fetches the
+  roster, schedules, planning, expenses and snapshot model merely to hide them.
 - **Executable finance cron contracts (2026-08-03):** the finance snapshot and
   Stripe cache HTTP boundaries now live in framework-free handler factories
   exercised with fake providers. Tests prove missing/bad secrets cause no work,

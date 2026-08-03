@@ -243,8 +243,37 @@ function EvidenceSection({ id = '', title, summary, children, defaultOpen = fals
 
 export default async function AdminFinancePage({ searchParams }) {
   const params = (await searchParams) || {};
-  const view = ['overview', 'plan', 'details', 'spend', 'legacy'].includes(`${params.view || ''}`) ? `${params.view || ''}` : 'overview';
+  const view = ['overview', 'details', 'spend', 'legacy'].includes(`${params.view || ''}`) ? `${params.view || ''}` : 'overview';
   const trendPeriod = params.trend === 'monthly' ? 'monthly' : 'weekly';
+
+  // The front door intentionally proves one thing. Do not make it pay for the
+  // wider planning model until the user opens Evidence or a finance tool.
+  if (view === 'overview') {
+    const [forecastRows, collectedRows] = await Promise.all([
+      getStripeForecastMonthlyRows(),
+      getStripeCollectedMonthlyRows(),
+    ]);
+    const stripeReconciliation = buildStripeReconciliation({ forecastRows, collectedRows });
+    const openForecastRow = findMonthlyStripeForecast(forecastRows, { month: currentMonthKey() });
+    const openStripeForecast = openForecastRow ? {
+      month: openForecastRow.month,
+      forecastedAt: openForecastRow.forecasted_at,
+      forecastTotal: Number.parseFloat(openForecastRow.forecast_total),
+      coveragePct: Number.parseFloat(openForecastRow.coverage_pct),
+      billedStudentCount: Number.parseInt(openForecastRow.billed_student_count, 10) || 0,
+      zeroExpectedCount: Number.parseInt(openForecastRow.zero_expected_count, 10) || 0,
+      unpricedCount: Number.parseInt(openForecastRow.unpriced_count, 10) || 0,
+      approximateCount: Number.parseInt(openForecastRow.approximate_count, 10) || 0,
+    } : null;
+
+    return (
+      <AdminFinanceView
+        view="overview"
+        stripeReconciliation={stripeReconciliation}
+        openStripeForecast={openStripeForecast}
+      />
+    );
+  }
 
   const [students, scheduleRows, tutorPayRows, expenseRows, expenseLogRows, snapshotRows, planningRows] = await Promise.all([
     getOperationalAdminStudents(),
@@ -255,11 +284,10 @@ export default async function AdminFinancePage({ searchParams }) {
     getFinanceSnapshotRows(),
     getPlanningItemRows(),
   ]);
-  const [waitingStateRows, archiveRows, stripeCacheRows, forecastRows, collectedRows] = await Promise.all([
+  const [waitingStateRows, archiveRows, stripeCacheRows, collectedRows] = await Promise.all([
     getWaitingListStateRows(),
     getStudentsArchiveRows(),
     getStripeAmountsCacheRows(),
-    getStripeForecastMonthlyRows(),
     getStripeCollectedMonthlyRows(),
   ]);
   const roster = buildRosterMovement({
@@ -310,17 +338,6 @@ export default async function AdminFinancePage({ searchParams }) {
     snapshotRows,
     currentStripeWeekly: revenue.byPaymentMode.stripe.weekly,
   });
-  const stripeReconciliation = buildStripeReconciliation({ forecastRows, collectedRows });
-  const openForecastRow = findMonthlyStripeForecast(forecastRows, { month: currentMonthKey() });
-  const openStripeForecast = openForecastRow ? {
-    month: openForecastRow.month,
-    forecastedAt: openForecastRow.forecasted_at,
-    forecastTotal: Number.parseFloat(openForecastRow.forecast_total),
-    coveragePct: Number.parseFloat(openForecastRow.coverage_pct),
-    unpricedCount: Number.parseInt(openForecastRow.unpriced_count, 10) || 0,
-    approximateCount: Number.parseInt(openForecastRow.approximate_count, 10) || 0,
-  } : null;
-
   const marginTone = totals.marginMonthly >= 0 ? 'border-emerald-200 bg-emerald-50' : 'border-rose-200 bg-rose-50';
   const today = new Date().toISOString().slice(0, 10);
   const breakEvenDelta = scenario.breakEvenActiveCount === null ? null : activeNow - scenario.breakEvenActiveCount;
@@ -392,34 +409,20 @@ export default async function AdminFinancePage({ searchParams }) {
           detail: 'Stale Stripe cache rows are ignored and those students fall back to the price table until the refresh runs.',
         }
       : null,
-    !openStripeForecast
-      ? {
-          title: `Blind Stripe forecast for ${currentMonthKey()} is not locked`,
-          detail: 'The next Stripe refresh must save the dashboard-only forecast before it reads Stripe. Until then, this month cannot produce a valid blind result.',
-        }
-      : null,
   ].filter(Boolean);
 
   if (view !== 'legacy') {
     return (
       <AdminFinanceView
         view={view}
-        modelConfidenceLabel={modelConfidenceLabel}
         totals={totals}
         revenue={revenue}
         cost={cost}
         expenses={expenses}
         coverage={coverage}
         trend={trend}
-        scenario={scenario}
-        scenarioStudents={scenarioStudents}
-        scenarioPricePct={scenarioPricePct}
-        trendPeriod={trendPeriod}
-        pauseForecast={pauseForecast}
         attentionItems={attentionItems}
         calibration={calibration}
-        stripeReconciliation={stripeReconciliation}
-        openStripeForecast={openStripeForecast}
         roster={roster}
         spend={spend}
         today={today}

@@ -40,6 +40,16 @@ Neither record authorises a Stripe mutation, changes payment expectation, or
 proves an accounting/bank balance. Forecast discrepancies are investigation
 evidence; Stripe remains the provider truth.
 
+The default Finance view uses progressive disclosure: show the current locked
+prediction or scored result, the billing/paused split needed to understand it,
+and links to real finance work. Unscored run-rate, break-even, projection,
+warning and historical models belong under **Evidence**. Do not promote a model
+back to Overview until repeated actual results make it useful for a real owner
+decision, including at least one normal month and one seasonal pause month. The
+Overview read boundary must mirror that presentation boundary: fetch only the
+forecast and revealed-collection lanes, leaving the wider planning model to
+Evidence and explicit tools.
+
 Allowed payment modes are `stripe`, `manual`, and `unknown`. Approved manual
 payment students are not evaluated as broken Stripe students.
 

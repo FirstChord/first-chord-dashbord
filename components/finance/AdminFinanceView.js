@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import ScopeBadge from '@/components/admin/ui/ScopeBadge';
 import SaveSpendButton from '@/components/admin/SaveSpendButton';
 import { formatMoney } from '@/lib/admin/finance-helpers.mjs';
 import { EXPENSE_LOG_CATEGORIES } from '@/lib/admin/cost-helpers.mjs';
@@ -13,8 +12,8 @@ function viewHref(view, extras = {}) {
 function ViewNav({ active = 'overview' }) {
   const items = [
     ['overview', 'Overview'],
-    ['plan', 'Plan'],
-    ['details', 'Details'],
+    ['details', 'Evidence'],
+    ...(active === 'spend' ? [['spend', 'Spend']] : []),
   ];
   return (
     <nav aria-label="Finance views" className="inline-flex rounded-full border border-slate-200 bg-white/75 p-1 shadow-sm">
@@ -31,101 +30,20 @@ function ViewNav({ active = 'overview' }) {
   );
 }
 
-function FinanceHeader({ view, modelConfidenceLabel, pricedCount, activeCount }) {
+function FinanceHeader({ view }) {
+  const description = view === 'details'
+    ? 'Underlying estimates, checks and history for investigation.'
+    : view === 'spend'
+      ? 'Record actual spending as it happens.'
+      : 'Only proved signals and useful finance work appear here.';
   return (
     <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="fc-display text-3xl text-slate-900">Finance</h1>
-          <ScopeBadge>Planning estimate</ScopeBadge>
-        </div>
-        <p className="mt-2 text-sm text-slate-500">
-          {modelConfidenceLabel} · {pricedCount}/{activeCount} active students priced
-        </p>
+        <h1 className="fc-display text-3xl text-slate-900">Finance</h1>
+        <p className="mt-2 text-sm text-slate-500">{description}</p>
       </div>
       <ViewNav active={view} />
     </header>
-  );
-}
-
-function MarginChange({ delta }) {
-  if (!delta || !Number.isFinite(delta.abs) || delta.abs === 0) {
-    return <span className="text-sm text-slate-500">No change from the last snapshot</span>;
-  }
-  const improved = delta.abs > 0;
-  return (
-    <span className={`text-sm font-semibold ${improved ? 'text-emerald-700' : 'text-rose-700'}`}>
-      {improved ? '↑' : '↓'} {formatMoney(Math.abs(delta.abs))} from the last snapshot
-    </span>
-  );
-}
-
-function BreakEvenBar({ active, target }) {
-  if (!Number.isFinite(target) || target <= 0) return null;
-  const scaleMax = Math.max(active, target) * 1.08;
-  const activeWidth = Math.min(100, (active / scaleMax) * 100);
-  const targetLeft = Math.min(98, (target / scaleMax) * 100);
-  const distance = active - target;
-  return (
-    <div>
-      <div className="flex items-baseline justify-between gap-4">
-        <h2 className="text-sm font-semibold text-slate-900">Active students</h2>
-        <p className={`text-sm font-semibold ${distance >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
-          {distance >= 0 ? `${distance} above` : `${Math.abs(distance)} below`} break-even
-        </p>
-      </div>
-      <div className="relative mt-4 h-3 rounded-full bg-slate-200" aria-label={`${active} active students; break-even is ${target}`}>
-        <div className={`h-3 rounded-full ${distance >= 0 ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: `${activeWidth}%` }} />
-        <div className="absolute -top-2 h-7 w-0.5 bg-slate-900" style={{ left: `${targetLeft}%` }} />
-      </div>
-      <div className="relative mt-2 h-5 text-xs text-slate-500">
-        <span>{active} active</span>
-        <span className="absolute -translate-x-1/2 font-medium text-slate-700" style={{ left: `${targetLeft}%` }}>{target} break-even</span>
-      </div>
-    </div>
-  );
-}
-
-function ForecastChart({ weeks = [], summary = {} }) {
-  const points = weeks.filter((week) => Number.isFinite(week.marginMonthly));
-  if (!points.length) return null;
-  const width = 720;
-  const height = 170;
-  const padX = 18;
-  const padY = 18;
-  const values = points.map((point) => point.marginMonthly);
-  const min = Math.min(0, ...values);
-  const max = Math.max(0, ...values);
-  const span = max - min || 1;
-  const x = (index) => padX + (index / Math.max(points.length - 1, 1)) * (width - padX * 2);
-  const y = (value) => padY + ((max - value) / span) * (height - padY * 2);
-  const line = points.map((point, index) => `${x(index).toFixed(1)},${y(point.marginMonthly).toFixed(1)}`).join(' ');
-  const zeroY = y(0);
-  const negative = summary.belowBreakEvenWeeks > 0;
-  const firstDate = points[0]?.weekStart;
-  const lastDate = points[points.length - 1]?.weekStart;
-  const labelDate = (value) => value ? new Date(`${value}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
-
-  return (
-    <figure>
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        role="img"
-        aria-label={`Projected monthly margin over ${points.length} weeks; ${summary.belowBreakEvenWeeks || 0} weeks below break-even`}
-        className="block h-44 w-full overflow-visible"
-      >
-        <line x1={padX} x2={width - padX} y1={zeroY} y2={zeroY} stroke="#94a3b8" strokeWidth="1" strokeDasharray="5 5" />
-        <text x={width - padX} y={Math.max(12, zeroY - 6)} textAnchor="end" fill="#64748b" fontSize="11">£0</text>
-        <polyline points={line} fill="none" stroke={negative ? '#e11d48' : '#059669'} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-        {points.map((point, index) => (
-          <circle key={point.weekStart || index} cx={x(index)} cy={y(point.marginMonthly)} r={index === points.length - 1 ? 4 : 2.5} fill={negative ? '#e11d48' : '#059669'} />
-        ))}
-      </svg>
-      <figcaption className="flex justify-between text-xs text-slate-500">
-        <span>{labelDate(firstDate)}</span>
-        <span>{labelDate(lastDate)}</span>
-      </figcaption>
-    </figure>
   );
 }
 
@@ -146,6 +64,13 @@ function formatSignedMoney(value) {
   return `${value > 0 ? '+' : '−'}${formatMoney(Math.abs(value))}`;
 }
 
+function formatMonth(month = '') {
+  const date = new Date(`${month}-01T12:00:00Z`);
+  return Number.isNaN(date.getTime())
+    ? month
+    : date.toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+}
+
 function StripeProof({ reconciliation = {}, openForecast = null }) {
   const complete = reconciliation.forecastPresent && reconciliation.actualPresent;
   const largest = (reconciliation.differences || []).slice(0, 8);
@@ -157,36 +82,26 @@ function StripeProof({ reconciliation = {}, openForecast = null }) {
   })[status] || status;
 
   return (
-    <section className="rounded-[1.5rem] border border-blue-200 bg-white/90 p-6 shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-600">Foundation test</p>
-          <h2 className="mt-1 text-lg font-semibold text-slate-900">Can the dashboard predict Stripe?</h2>
-          <p className="mt-1 max-w-3xl text-sm text-slate-500">
-            The forecast is saved before the Stripe refresh is allowed to read any provider fact. Student-level error prevents equal mistakes from cancelling into a reassuring total.
-          </p>
-        </div>
-        <ScopeBadge>Blind monthly test</ScopeBadge>
-      </div>
+    <section className="rounded-[1.5rem] border border-blue-200 bg-white/90 p-5 shadow-sm sm:p-6">
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-600">Stripe prediction</p>
+      <h2 className="mt-1 text-xl font-semibold text-slate-900">Can the dashboard predict Stripe?</h2>
 
       {complete ? (
         <>
-          <p className="mt-5 text-sm font-semibold text-slate-700">Result for {reconciliation.month}</p>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-500">Locked forecast</p><p className="mt-1 text-2xl font-semibold tabular-nums text-slate-950">{formatMoney(reconciliation.forecastTotal)}</p></div>
-            <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-500">Stripe collected</p><p className="mt-1 text-2xl font-semibold tabular-nums text-slate-950">{formatMoney(reconciliation.collectedTotal)}</p><p className="mt-1 text-xs text-slate-500">{reconciliation.invoiceCount ?? '—'} paid invoices</p></div>
-            <div className={`rounded-2xl p-4 ${Math.abs(reconciliation.deltaPct || 0) <= 2 ? 'bg-emerald-50' : 'bg-amber-50'}`}><p className="text-xs text-slate-500">Net gap</p><p className="mt-1 text-2xl font-semibold tabular-nums text-slate-950">{formatSignedMoney(reconciliation.netDifference)}</p><p className="mt-1 text-xs text-slate-500">{Number.isFinite(reconciliation.deltaPct) ? `${reconciliation.deltaPct > 0 ? '+' : ''}${reconciliation.deltaPct}%` : '—'}</p></div>
-            <div className="rounded-2xl bg-violet-50 p-4"><p className="text-xs text-slate-500">Student-level error</p><p className="mt-1 text-2xl font-semibold tabular-nums text-slate-950">{Number.isFinite(reconciliation.totalAbsoluteError) ? formatMoney(reconciliation.totalAbsoluteError) : '—'}</p><p className="mt-1 text-xs text-slate-500">gross misses; cannot cancel</p></div>
+          <p className="mt-2 text-sm text-slate-600">Result for {formatMonth(reconciliation.month)}</p>
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-500">Predicted</p><p className="mt-1 text-2xl font-semibold tabular-nums text-slate-950">{formatMoney(reconciliation.forecastTotal)}</p></div>
+            <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-500">Stripe collected</p><p className="mt-1 text-2xl font-semibold tabular-nums text-slate-950">{formatMoney(reconciliation.collectedTotal)}</p></div>
+            <div className={`rounded-2xl p-4 ${Math.abs(reconciliation.deltaPct || 0) <= 2 ? 'bg-emerald-50' : 'bg-amber-50'}`}><p className="text-xs text-slate-500">Difference</p><p className="mt-1 text-2xl font-semibold tabular-nums text-slate-950">{formatSignedMoney(reconciliation.netDifference)}</p><p className="mt-1 text-xs text-slate-500">{Number.isFinite(reconciliation.deltaPct) ? `${reconciliation.deltaPct > 0 ? '+' : ''}${reconciliation.deltaPct}%` : '—'}</p></div>
           </div>
-          <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-600">
-            <span><strong className="text-slate-900">{reconciliation.matchedCollectionPct ?? '—'}%</strong> of collections matched to a student</span>
-            <span><strong className="text-slate-900">{reconciliation.mismatchCount}</strong> student differences</span>
-            {reconciliation.offsettingError > 0 ? <span><strong className="text-slate-900">{formatMoney(reconciliation.offsettingError)}</strong> of errors cancelled in the headline</span> : null}
-            {reconciliation.unmatchedActualTotal > 0 ? <span><strong className="text-slate-900">{formatMoney(reconciliation.unmatchedActualTotal)}</strong> unmatched in Stripe</span> : null}
-          </div>
+          <p className="mt-4 text-sm text-slate-600">
+            Student-level error <strong className="text-slate-900">{Number.isFinite(reconciliation.totalAbsoluteError) ? formatMoney(reconciliation.totalAbsoluteError) : '—'}</strong>
+            {' · '}{reconciliation.mismatchCount} differences
+            {Number.isFinite(reconciliation.matchedCollectionPct) ? ` · ${reconciliation.matchedCollectionPct}% matched` : ''}
+          </p>
           {largest.length ? (
             <details className="mt-5 border-t border-slate-100 pt-4">
-              <summary className="cursor-pointer text-sm font-semibold text-slate-700">Largest differences</summary>
+              <summary className="cursor-pointer text-sm font-semibold text-slate-700">Check the largest differences</summary>
               <div className="mt-3 divide-y divide-slate-100">
                 {largest.map((item) => (
                   <div key={item.mmsId} className="grid gap-1 py-3 text-sm sm:grid-cols-[1fr_auto_auto] sm:gap-5">
@@ -197,129 +112,47 @@ function StripeProof({ reconciliation = {}, openForecast = null }) {
                 ))}
               </div>
             </details>
-          ) : <p className="mt-4 text-sm font-semibold text-emerald-700">Every matched student landed on the forecast.</p>}
+          ) : <p className="mt-4 text-sm font-semibold text-emerald-700">Every matched student landed on the prediction.</p>}
         </>
       ) : openForecast ? (
-        <div className="mt-5 rounded-2xl bg-blue-50 p-5">
-          <p className="text-sm font-semibold text-blue-950">{openForecast.month} forecast is locked</p>
-          <p className="mt-1 text-3xl font-semibold tabular-nums text-slate-950">{formatMoney(openForecast.forecastTotal)}</p>
-          <p className="mt-2 text-sm text-blue-900">
-            Saved {openForecast.forecastedAt ? new Date(openForecast.forecastedAt).toLocaleString('en-GB') : 'before reveal'} with {Number.isFinite(openForecast.coveragePct) ? `${openForecast.coveragePct}%` : 'unknown'} pricing coverage. Stripe collections stay out of this record; the first scored result appears after the month closes.
-          </p>
-          {openForecast.unpricedCount || openForecast.approximateCount ? <p className="mt-2 text-xs text-blue-800">{openForecast.unpricedCount} unpriced · {openForecast.approximateCount} calendar/price assumptions to test</p> : null}
-        </div>
+        <>
+          <p className="mt-2 text-sm text-slate-600">Prediction for {formatMonth(openForecast.month)}</p>
+          <p className="mt-4 text-4xl font-semibold tabular-nums text-slate-950">{formatMoney(openForecast.forecastTotal)}</p>
+          <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-600">
+            {Number.isFinite(openForecast.billedStudentCount) ? <span><strong className="text-slate-900">{openForecast.billedStudentCount}</strong> expected to bill</span> : null}
+            {Number.isFinite(openForecast.zeroExpectedCount) ? <span><strong className="text-slate-900">{openForecast.zeroExpectedCount}</strong> paused or not billing</span> : null}
+            {Number.isFinite(openForecast.coveragePct) ? <span><strong className="text-slate-900">{openForecast.coveragePct}%</strong> priced</span> : null}
+          </div>
+          <p className="mt-4 rounded-2xl bg-blue-50 px-4 py-3 text-sm text-blue-950">We’ll compare this prediction with Stripe after {formatMonth(openForecast.month)} closes.</p>
+          <details className="mt-4 border-t border-slate-100 pt-4">
+            <summary className="cursor-pointer text-sm font-semibold text-slate-700">How this test works</summary>
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              Locked {openForecast.forecastedAt ? new Date(openForecast.forecastedAt).toLocaleString('en-GB') : 'before the reveal'}, before Stripe was read.
+              {' '}{openForecast.approximateCount || 0} calendar or cadence assumptions are marked approximate
+              {openForecast.unpricedCount ? ` and ${openForecast.unpricedCount} students could not be priced` : ''}.
+            </p>
+          </details>
+        </>
       ) : (
-        <p className="mt-5 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900">Waiting for the Stripe refresh to lock the first dashboard-only forecast. No result will be claimed until a forecast predates its actuals.</p>
+        <p className="mt-5 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900">Waiting for the first prediction to lock. No result will be claimed until a prediction predates its Stripe actuals.</p>
       )}
     </section>
   );
 }
 
-function Overview({ totals, revenue, trend, scenario, pauseForecast, attentionItems, stripeReconciliation, openStripeForecast }) {
-  const negative = totals.marginMonthly < 0;
-  const visibleAttention = attentionItems.slice(0, 3);
+function Overview({ stripeReconciliation, openStripeForecast }) {
   return (
     <div className="space-y-5">
-      <section className={`grid gap-6 rounded-[1.5rem] border bg-white/90 p-6 shadow-sm lg:grid-cols-[0.8fr_1.2fr] ${negative ? 'border-rose-200' : 'border-emerald-200'}`}>
-        <div>
-          <p className="text-sm font-medium text-slate-500">Run-rate margin</p>
-          <p className="mt-2 text-5xl font-semibold tracking-tight text-slate-950 tabular-nums">{formatMoney(totals.marginMonthly)}<span className="ml-1 text-xl font-medium text-slate-500">/mo</span></p>
-          <p className="mt-3"><MarginChange delta={trend.deltas?.marginMonthly} /></p>
-          <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-600">
-            <span><strong className="font-semibold text-slate-900">{revenue.active.count}</strong> active</span>
-            <span><strong className="font-semibold text-slate-900">{revenue.paused.count}</strong> paused</span>
-            <span><strong className="font-semibold text-slate-900">{formatMoney(totals.totalCostMonthly)}</strong> costs</span>
-          </div>
-        </div>
-        <div className="rounded-2xl bg-slate-50 p-5">
-          <BreakEvenBar active={revenue.active.count} target={scenario.breakEvenActiveCount} />
-        </div>
-      </section>
-
       <StripeProof reconciliation={stripeReconciliation} openForecast={openStripeForecast} />
 
-      <section className="rounded-[1.5rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold text-slate-900">Next 12 weeks</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              {pauseForecast.summary.belowBreakEvenWeeks
-                ? `${pauseForecast.summary.belowBreakEvenWeeks} weeks below break-even`
-                : 'Stays above break-even'}
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-xs text-slate-500">Lowest week</p>
-            <p className="text-lg font-semibold text-slate-900 tabular-nums">{formatMoney(pauseForecast.summary.trough?.marginMonthly ?? pauseForecast.summary.baseMarginMonthly)}/mo</p>
-          </div>
+      <section aria-labelledby="finance-work" className="rounded-[1.5rem] border border-slate-200 bg-white/90 p-5 shadow-sm">
+        <h2 id="finance-work" className="text-sm font-semibold text-slate-900">Finance work</h2>
+        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          <ActionLink href="/admin/finance/payroll" primary>Payroll</ActionLink>
+          <ActionLink href="/admin/finance/reconciliation">Absences</ActionLink>
+          <ActionLink href={viewHref('spend')}>Record spend</ActionLink>
         </div>
-        <div className="mt-3"><ForecastChart weeks={pauseForecast.weeks} summary={pauseForecast.summary} /></div>
       </section>
-
-      {visibleAttention.length ? (
-        <section className="overflow-hidden rounded-[1.5rem] border border-amber-200 bg-white/90 shadow-sm">
-          <div className="border-b border-amber-100 px-5 py-4">
-            <h2 className="font-semibold text-slate-900">Needs attention</h2>
-          </div>
-          <div className="divide-y divide-slate-100">
-            {visibleAttention.map((item) => (
-              <div key={item.title} className="flex items-center justify-between gap-4 px-5 py-3.5">
-                <p className="text-sm font-medium text-slate-800">{item.title}</p>
-                {item.href ? <Link href={item.href} className="shrink-0 text-sm font-semibold text-blue-700 hover:underline">Fix →</Link> : null}
-              </div>
-            ))}
-          </div>
-          {attentionItems.length > visibleAttention.length ? (
-            <Link href={viewHref('details')} className="block border-t border-slate-100 px-5 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50">{attentionItems.length - visibleAttention.length} more in Details →</Link>
-          ) : null}
-        </section>
-      ) : (
-        <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">✓ No finance checks need attention</p>
-      )}
-
-      <section className="grid gap-3 sm:grid-cols-3">
-        <ActionLink href="/admin/finance/payroll" primary>Review payroll</ActionLink>
-        <ActionLink href="/admin/finance/reconciliation">Check absences</ActionLink>
-        <ActionLink href={viewHref('spend')}>Log spend</ActionLink>
-      </section>
-    </div>
-  );
-}
-
-function PlanView({ activeNow, pausedCount, scenario, scenarioStudents, scenarioPricePct, trendPeriod }) {
-  const summerPreset = (pct) => -Math.round(activeNow * pct);
-  return (
-    <div className="space-y-5">
-      <section className="rounded-[1.5rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
-        <h2 className="text-xl font-semibold text-slate-900">Plan a change</h2>
-        <p className="mt-1 text-sm text-slate-500">Change active students or price. Nothing here changes live data.</p>
-        <div className="mt-6 rounded-2xl bg-slate-50 p-5">
-          <BreakEvenBar active={activeNow} target={scenario.breakEvenActiveCount} />
-          <p className="mt-3 text-sm text-slate-500">{pausedCount} students are currently paused.</p>
-        </div>
-        <div className="mt-5 flex flex-wrap gap-2">
-          {[['Light summer', 0.1], ['Typical summer', 0.2], ['Deep summer', 0.3]].map(([label, pct]) => (
-            <Link key={label} href={viewHref('plan', { students: `${summerPreset(pct)}`, trend: trendPeriod })} className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50">
-              {label} · {Math.abs(summerPreset(pct))} paused
-            </Link>
-          ))}
-        </div>
-        <form method="get" action="/admin/finance" className="mt-5 grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-          <input type="hidden" name="view" value="plan" />
-          <input type="hidden" name="trend" value={trendPeriod} />
-          <label className="text-sm font-medium text-slate-700">Change in active students<input name="students" type="number" defaultValue={scenarioStudents || ''} placeholder="e.g. -20" className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base text-slate-900 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100" /></label>
-          <label className="text-sm font-medium text-slate-700">Price change %<input name="pricePct" type="number" defaultValue={scenarioPricePct || ''} placeholder="e.g. 5" className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base text-slate-900 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100" /></label>
-          <button type="submit" className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-700">Model it</button>
-        </form>
-      </section>
-
-      {scenario.isChanged ? (
-        <section className={`rounded-[1.5rem] border p-6 shadow-sm ${scenario.scenario.aboveBreakEven ? 'border-emerald-200 bg-emerald-50' : 'border-rose-200 bg-rose-50'}`}>
-          <p className="text-sm font-medium text-slate-600">Modelled margin</p>
-          <p className="mt-2 text-4xl font-semibold text-slate-950 tabular-nums">{formatMoney(scenario.scenario.marginMonthly)}<span className="ml-1 text-lg font-medium text-slate-500">/mo</span></p>
-          <p className="mt-3 text-sm text-slate-700">{scenario.scenario.activeCount} active · {scenario.scenario.aboveBreakEven ? 'above' : 'below'} break-even · {scenario.scenario.marginDelta >= 0 ? '+' : ''}{formatMoney(scenario.scenario.marginDelta)} vs now</p>
-        </section>
-      ) : null}
     </div>
   );
 }
@@ -431,18 +264,12 @@ function SpendView({ today, spend, totals, addExpenseLogAction, deleteExpenseLog
 
 export default function AdminFinanceView({
   view = 'overview',
-  modelConfidenceLabel,
   totals,
   revenue,
   cost,
   expenses,
   coverage,
   trend,
-  scenario,
-  scenarioStudents,
-  scenarioPricePct,
-  trendPeriod,
-  pauseForecast,
   attentionItems,
   calibration,
   stripeReconciliation,
@@ -455,11 +282,10 @@ export default function AdminFinanceView({
 }) {
   return (
     <div className="space-y-6">
-      <FinanceHeader view={view} modelConfidenceLabel={modelConfidenceLabel} pricedCount={coverage.pricedCount} activeCount={coverage.activeCount} />
-      {view === 'plan' ? <PlanView activeNow={revenue.active.count} pausedCount={revenue.paused.count} scenario={scenario} scenarioStudents={scenarioStudents} scenarioPricePct={scenarioPricePct} trendPeriod={trendPeriod} /> : null}
+      <FinanceHeader view={view} />
       {view === 'details' ? <DetailsView totals={totals} revenue={revenue} cost={cost} expenses={expenses} coverage={coverage} attentionItems={attentionItems} calibration={calibration} roster={roster} trend={trend} /> : null}
       {view === 'spend' ? <SpendView today={today} spend={spend} totals={totals} addExpenseLogAction={addExpenseLogAction} deleteExpenseLogAction={deleteExpenseLogAction} /> : null}
-      {!['plan', 'details', 'spend'].includes(view) ? <Overview totals={totals} revenue={revenue} trend={trend} scenario={scenario} pauseForecast={pauseForecast} attentionItems={attentionItems} stripeReconciliation={stripeReconciliation} openStripeForecast={openStripeForecast} /> : null}
+      {!['details', 'spend'].includes(view) ? <Overview stripeReconciliation={stripeReconciliation} openStripeForecast={openStripeForecast} /> : null}
     </div>
   );
 }
