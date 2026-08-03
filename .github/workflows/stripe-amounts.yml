@@ -1,12 +1,11 @@
 name: Stripe Amounts Cache
 
-# Refreshes the Stripe_Amounts_Cache tab (per-student subscription actuals) and the
-# Stripe_Collected_Monthly calibration row so the finance estimate reports real
-# billing amounts where Stripe knows them. Runs on the 1st at 05:15 UTC so the
-# completed prior month appears promptly, and Mondays 05:30 before the weekly
-# finance snapshot. The month row is a keyed upsert, so later runs safely refresh it. Read-only
-# against Stripe; a failed run just leaves the cache stale, and the finance layer
-# degrades back to the estimate after 14 days.
+# Locks the current Stripe_Forecast_Monthly row before any provider read, then
+# refreshes the per-student subscription cache and prior-month collection reveal.
+# Runs on the 1st at 05:15 UTC so the completed prior month appears promptly, and
+# Mondays 05:30 before the weekly finance snapshot. Forecast is first-write-wins;
+# actuals are refreshable caches. A forecast-lock failure fails closed before
+# Stripe, while a later provider failure leaves the previous caches intact.
 
 on:
   workflow_dispatch:

@@ -26,9 +26,10 @@ test('buildWorkflowRunHealth treats an old scheduled success as stale', () => {
   assert.match(summary.detail, /hours old/u);
 });
 
-test('buildFinanceAutomationHealth checks both current baseline and prior-month collections', () => {
+test('buildFinanceAutomationHealth checks the blind forecast, baseline, and prior-month collections', () => {
   const healthy = buildFinanceAutomationHealth({
     snapshotRows: [{ period_type: 'monthly', snapshot_at: '2026-08-01T06:30:00Z' }],
+    forecastRows: [{ month: '2026-08', forecasted_at: '2026-08-01T05:00:00Z' }],
     collectedRows: [{ month: '2026-07', refreshed_at: '2026-08-01T05:15:00Z' }],
     now: new Date('2026-08-03T08:00:00Z'),
   });
@@ -36,11 +37,20 @@ test('buildFinanceAutomationHealth checks both current baseline and prior-month 
 
   const stale = buildFinanceAutomationHealth({
     snapshotRows: [],
+    forecastRows: [{ month: '2026-08', forecasted_at: '2026-08-01T05:00:00Z' }],
     collectedRows: [{ month: '2026-07', refreshed_at: '2026-08-01T05:15:00Z' }],
     now: new Date('2026-08-03T08:00:00Z'),
   });
   assert.equal(stale.status, 'Stale');
   assert.match(stale.detail, /2026-08 monthly baseline/u);
+
+  const missingForecast = buildFinanceAutomationHealth({
+    snapshotRows: [{ period_type: 'monthly', snapshot_at: '2026-08-01T06:30:00Z' }],
+    collectedRows: [{ month: '2026-07', refreshed_at: '2026-08-01T05:15:00Z' }],
+    now: new Date('2026-08-03T08:00:00Z'),
+  });
+  assert.equal(missingForecast.status, 'Stale');
+  assert.match(missingForecast.detail, /blind Stripe forecast/u);
 
   const pending = buildFinanceAutomationHealth({ now: new Date('2026-08-01T04:00:00Z') });
   assert.equal(pending.status, 'Running');

@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
 import { getServerSession } from 'next-auth';
 import { getOperationalAdminStudents } from '@/lib/admin/students';
-import { appendExpenseLogRow, deleteExpenseLogRow, getScheduleContextRows, getTutorPayRows, getExpenseRows, getExpenseLogRows, getFinanceSnapshotRows, getStripeAmountsCacheRows, getStripeCollectedMonthlyRows } from '@/lib/admin/sheets';
+import { appendExpenseLogRow, deleteExpenseLogRow, getScheduleContextRows, getTutorPayRows, getExpenseRows, getExpenseLogRows, getFinanceSnapshotRows, getStripeAmountsCacheRows, getStripeCollectedMonthlyRows, getStripeForecastMonthlyRows } from '@/lib/admin/sheets';
 import { enrichScheduleContextsWithSharedSlots } from '@/lib/admin/schedule-context-helpers.mjs';
 import { buildFinanceOverview, formatMoney } from '@/lib/admin/finance-helpers.mjs';
 import { buildExpenseLogSummary, EXPENSE_LOG_CATEGORIES, parseTutorPay } from '@/lib/admin/cost-helpers.mjs';
@@ -13,6 +13,7 @@ import { buildFinanceTrend } from '@/lib/admin/finance-trend.mjs';
 import { buildFinanceScenario } from '@/lib/admin/finance-scenario.mjs';
 import { buildForwardOutlook } from '@/lib/admin/forward-outlook.mjs';
 import { buildCalibration, buildStripeAmountsMap, describeCalibrationBasis } from '@/lib/admin/stripe-amounts-helpers.mjs';
+import { buildStripeReconciliation, currentMonthKey, findMonthlyStripeForecast } from '@/lib/admin/stripe-forecast-helpers.mjs';
 import { getPlanningItemRows, getWaitingListStateRows, getStudentsArchiveRows } from '@/lib/admin/sheets';
 import { buildRosterMovement, onboardedDatesFromWaitingState, leftDatesFromArchive } from '@/lib/admin/roster-movement.mjs';
 import { authOptions } from '@/lib/admin/auth';
@@ -254,10 +255,11 @@ export default async function AdminFinancePage({ searchParams }) {
     getFinanceSnapshotRows(),
     getPlanningItemRows(),
   ]);
-  const [waitingStateRows, archiveRows, stripeCacheRows, collectedRows] = await Promise.all([
+  const [waitingStateRows, archiveRows, stripeCacheRows, forecastRows, collectedRows] = await Promise.all([
     getWaitingListStateRows(),
     getStudentsArchiveRows(),
     getStripeAmountsCacheRows(),
+    getStripeForecastMonthlyRows(),
     getStripeCollectedMonthlyRows(),
   ]);
   const roster = buildRosterMovement({
@@ -308,6 +310,16 @@ export default async function AdminFinancePage({ searchParams }) {
     snapshotRows,
     currentStripeWeekly: revenue.byPaymentMode.stripe.weekly,
   });
+  const stripeReconciliation = buildStripeReconciliation({ forecastRows, collectedRows });
+  const openForecastRow = findMonthlyStripeForecast(forecastRows, { month: currentMonthKey() });
+  const openStripeForecast = openForecastRow ? {
+    month: openForecastRow.month,
+    forecastedAt: openForecastRow.forecasted_at,
+    forecastTotal: Number.parseFloat(openForecastRow.forecast_total),
+    coveragePct: Number.parseFloat(openForecastRow.coverage_pct),
+    unpricedCount: Number.parseInt(openForecastRow.unpriced_count, 10) || 0,
+    approximateCount: Number.parseInt(openForecastRow.approximate_count, 10) || 0,
+  } : null;
 
   const marginTone = totals.marginMonthly >= 0 ? 'border-emerald-200 bg-emerald-50' : 'border-rose-200 bg-rose-50';
   const today = new Date().toISOString().slice(0, 10);
@@ -380,6 +392,12 @@ export default async function AdminFinancePage({ searchParams }) {
           detail: 'Stale Stripe cache rows are ignored and those students fall back to the price table until the refresh runs.',
         }
       : null,
+    !openStripeForecast
+      ? {
+          title: `Blind Stripe forecast for ${currentMonthKey()} is not locked`,
+          detail: 'The next Stripe refresh must save the dashboard-only forecast before it reads Stripe. Until then, this month cannot produce a valid blind result.',
+        }
+      : null,
   ].filter(Boolean);
 
   if (view !== 'legacy') {
@@ -400,6 +418,8 @@ export default async function AdminFinancePage({ searchParams }) {
         pauseForecast={pauseForecast}
         attentionItems={attentionItems}
         calibration={calibration}
+        stripeReconciliation={stripeReconciliation}
+        openStripeForecast={openStripeForecast}
         roster={roster}
         spend={spend}
         today={today}

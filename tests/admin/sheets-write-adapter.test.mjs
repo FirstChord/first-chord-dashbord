@@ -18,10 +18,13 @@ import {
   FINANCE_SNAPSHOT_HEADERS,
   FINANCE_SNAPSHOT_SHEET,
   getSheetValues,
+  STRIPE_FORECAST_MONTHLY_HEADERS,
+  STRIPE_FORECAST_MONTHLY_SHEET,
   upsertManagedSheetRow,
   withSheetsRetry,
 } from '../../lib/admin/sheets/core.mjs';
 import { appendFinanceSnapshotRow } from '../../lib/admin/sheets/finance.mjs';
+import { appendStripeForecastMonthlyRow } from '../../lib/admin/sheets/stripe-cache.mjs';
 import { updateStudentSheetRow } from '../../lib/admin/sheets/students.mjs';
 
 // --- the fake -----------------------------------------------------------
@@ -186,6 +189,35 @@ test('a deterministic monthly finance snapshot appends once and then becomes a n
     sheets.calls.filter((call) => call.kind === 'append' && call.sheet === FINANCE_SNAPSHOT_SHEET).length,
     1,
   );
+});
+
+test('a monthly Stripe forecast is first-write-wins at the Sheets boundary', async () => {
+  counter += 1;
+  process.env.GOOGLE_SPREADSHEET_ID = `stripe-forecast-sheet-id-${counter}`;
+  clearSheetReadCacheForTests();
+  const sheets = fakeSheets({ tabs: { [STRIPE_FORECAST_MONTHLY_SHEET]: [STRIPE_FORECAST_MONTHLY_HEADERS] } });
+  globalThis.__firstChordSheetsClientPromise = Promise.resolve(sheets);
+  const row = {
+    month: '2026-08',
+    forecasted_at: '2026-08-03T05:00:00.000Z',
+    forecast_total: 12345,
+    items_json: '[]',
+  };
+
+  assert.deepEqual(await appendStripeForecastMonthlyRow(row), {
+    appended: true,
+    month: '2026-08',
+  });
+  assert.deepEqual(await appendStripeForecastMonthlyRow({ ...row, forecast_total: 99999 }), {
+    appended: false,
+    month: '2026-08',
+  });
+  assert.equal(
+    sheets.calls.filter((call) => call.kind === 'append' && call.sheet === STRIPE_FORECAST_MONTHLY_SHEET).length,
+    1,
+  );
+  const totalIndex = STRIPE_FORECAST_MONTHLY_HEADERS.indexOf('forecast_total');
+  assert.equal(sheets.data[STRIPE_FORECAST_MONTHLY_SHEET][1][totalIndex], 12345);
 });
 
 // --- row targeting ------------------------------------------------------

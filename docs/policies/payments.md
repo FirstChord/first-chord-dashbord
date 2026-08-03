@@ -1,7 +1,7 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: 2026-07-20
+last_verified: 2026-08-03
 ---
 # Payments Rules
 
@@ -19,6 +19,26 @@ authorise Stripe mutation.
   provider-side money movement occurred.
 - Stripe snapshot tabs are timestamped caches, not provider truth.
 - Pause History is evidence used only by the explicit reconciliation workflow.
+
+## Blind Monthly Stripe Proof
+
+The monthly forecast is a test of dashboard completeness, not an alternative
+source of payment truth. `Stripe_Forecast_Monthly` locks one first-write-wins row
+from dashboard-owned roster, price, expectation, schedule and structured-pause
+evidence. The Stripe refresh endpoint must persist that row before it makes any
+Stripe request; failure to lock the forecast means no provider read or cache
+write occurs.
+
+After the month closes, `Stripe_Collected_Monthly` reveals paid invoices created
+in that month. Subscription ID is the preferred student match. A customer-only
+invoice is matched only when that customer identifies one student; ambiguity
+stays visible as unmatched money. The finance page reports both the net total
+gap and the sum of student-level errors. The latter is the integrity measure:
+two wrong student amounts must not cancel into an apparently correct headline.
+
+Neither record authorises a Stripe mutation, changes payment expectation, or
+proves an accounting/bank balance. Forecast discrepancies are investigation
+evidence; Stripe remains the provider truth.
 
 Allowed payment modes are `stripe`, `manual`, and `unknown`. Approved manual
 payment students are not evaluated as broken Stripe students.

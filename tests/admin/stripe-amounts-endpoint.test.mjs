@@ -21,6 +21,13 @@ function createHandler(overrides = {}) {
   return createStripeAmountsPostHandler({
     getSecret: () => SECRET,
     now: () => AT,
+    getForecastRows: async () => [],
+    buildForecastRow: async ({ month, forecastedAt }) => ({
+      month,
+      forecasted_at: forecastedAt.toISOString(),
+      forecast_total: 456,
+    }),
+    appendForecastRow: async () => ({ appended: true }),
     getStudents: async () => [{ mmsId: 'student-1' }],
     fetchSubscriptions: async () => [{ id: 'subscription-1' }],
     buildCacheRows: () => ({
@@ -94,18 +101,59 @@ test('Stripe amounts endpoint refreshes both caches against one fixed capture ti
     month: '2026-07',
     collected_total: 123.45,
     invoice_count: 1,
+    matched_total: 0,
+    matched_invoice_count: 0,
+    unmatched_total: 123.45,
+    unmatched_invoice_count: 1,
+    student_breakdown_json: '[]',
     currency: 'gbp',
     refreshed_at: '2026-08-03T05:30:00.000Z',
   });
   assert.deepEqual(await response.json(), {
     success: true,
+    forecastMonth: '2026-08',
+    forecastLocked: true,
+    forecastSkipped: false,
     cachedStudents: 2,
     unmatchedStudents: 3,
     unmatchedSubscriptions: 4,
     collectedMonth: '2026-07',
     collectedTotal: 123.45,
     invoiceCount: 1,
+    unmatchedTotal: 123.45,
+    unmatchedInvoiceCount: 1,
   });
+});
+
+test('Stripe endpoint durably locks the forecast before any provider read', async () => {
+  const order = [];
+  const handler = createHandler({
+    getForecastRows: async () => { order.push('read forecast'); return []; },
+    buildForecastRow: async ({ month }) => { order.push('build forecast'); return { month }; },
+    appendForecastRow: async () => { order.push('append forecast'); return { appended: true }; },
+    fetchSubscriptions: async () => { order.push('read subscriptions'); return []; },
+    fetchPaidInvoices: async () => { order.push('read invoices'); return []; },
+  });
+
+  const response = await handler(request());
+  assert.equal(response.status, 200);
+  assert.deepEqual(order.slice(0, 3), ['read forecast', 'build forecast', 'append forecast']);
+  assert.equal(order.indexOf('read subscriptions') > order.indexOf('append forecast'), true);
+  assert.equal(order.indexOf('read invoices') > order.indexOf('append forecast'), true);
+});
+
+test('Stripe endpoint makes no provider read when the blind forecast cannot be locked', async () => {
+  let providerReads = 0;
+  const handler = createHandler({
+    appendForecastRow: async () => { throw new Error('Forecast sheet unavailable'); },
+    fetchSubscriptions: async () => { providerReads += 1; return []; },
+    fetchPaidInvoices: async () => { providerReads += 1; return []; },
+  });
+
+  const response = await handler(request());
+  assert.equal(response.status, 500);
+  assert.deepEqual(await response.json(), { error: 'Forecast sheet unavailable' });
+  assert.equal(providerReads, 0);
 });
 
 test('Stripe amounts endpoint completes provider reads before either cache write', async () => {

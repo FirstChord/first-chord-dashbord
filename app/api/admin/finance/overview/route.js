@@ -11,6 +11,7 @@ import {
   getWaitingListStateRows,
   getStripeAmountsCacheRows,
   getStripeCollectedMonthlyRows,
+  getStripeForecastMonthlyRows,
 } from '@/lib/admin/sheets';
 import { enrichScheduleContextsWithSharedSlots } from '@/lib/admin/schedule-context-helpers.mjs';
 import { parseTutorPay } from '@/lib/admin/cost-helpers.mjs';
@@ -20,6 +21,7 @@ import { buildFinanceCoverage } from '@/lib/admin/finance-coverage.mjs';
 import { buildFinanceTrend } from '@/lib/admin/finance-trend.mjs';
 import { buildForwardOutlook } from '@/lib/admin/forward-outlook.mjs';
 import { buildCalibration, buildStripeAmountsMap } from '@/lib/admin/stripe-amounts-helpers.mjs';
+import { buildStripeReconciliation, currentMonthKey, findMonthlyStripeForecast } from '@/lib/admin/stripe-forecast-helpers.mjs';
 
 // Read-only structured finance picture — the same builders the finance page uses,
 // exposed as JSON so the numbers can be *questioned* (by an agent, a script, or
@@ -36,7 +38,7 @@ export async function GET(request) {
   const trendPeriod = url.searchParams.get('period') === 'monthly' ? 'monthly' : 'weekly';
 
   try {
-    const [students, scheduleRows, tutorPayRows, expenseRows, expenseLogRows, snapshotRows, planningRows, waitingStateRows, stripeCacheRows, collectedRows] = await Promise.all([
+    const [students, scheduleRows, tutorPayRows, expenseRows, expenseLogRows, snapshotRows, planningRows, waitingStateRows, stripeCacheRows, forecastRows, collectedRows] = await Promise.all([
       getOperationalAdminStudents(),
       getScheduleContextRows(),
       getTutorPayRows(),
@@ -46,6 +48,7 @@ export async function GET(request) {
       getPlanningItemRows(),
       getWaitingListStateRows(),
       getStripeAmountsCacheRows(),
+      getStripeForecastMonthlyRows(),
       getStripeCollectedMonthlyRows(),
     ]);
 
@@ -77,6 +80,8 @@ export async function GET(request) {
       snapshotRows,
       currentStripeWeekly: overview.revenue.byPaymentMode.stripe.weekly,
     });
+    const stripeReconciliation = buildStripeReconciliation({ forecastRows, collectedRows });
+    const openStripeForecast = findMonthlyStripeForecast(forecastRows, { month: currentMonthKey() });
 
     return Response.json({
       generatedAt: new Date().toISOString(),
@@ -120,6 +125,10 @@ export async function GET(request) {
         seasonal: outlook.seasonal,
       },
       calibration,
+      stripeProof: {
+        openForecast: openStripeForecast,
+        reconciliation: stripeReconciliation,
+      },
     });
   } catch (error) {
     return Response.json({ error: error.message || 'Finance overview failed' }, { status: 500 });

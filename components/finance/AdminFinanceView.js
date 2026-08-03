@@ -140,7 +140,82 @@ function ActionLink({ href, children, primary = false }) {
   );
 }
 
-function Overview({ totals, revenue, trend, scenario, pauseForecast, attentionItems }) {
+function formatSignedMoney(value) {
+  if (!Number.isFinite(value)) return '—';
+  if (value === 0) return formatMoney(0);
+  return `${value > 0 ? '+' : '−'}${formatMoney(Math.abs(value))}`;
+}
+
+function StripeProof({ reconciliation = {}, openForecast = null }) {
+  const complete = reconciliation.forecastPresent && reconciliation.actualPresent;
+  const largest = (reconciliation.differences || []).slice(0, 8);
+  const statusLabel = (status) => ({
+    unforecast_collection: 'Collected but not forecast',
+    no_paid_invoice: 'Forecast but no paid invoice',
+    amount_mismatch: 'Amount differs',
+    unpriced_forecast: 'Dashboard could not price',
+  })[status] || status;
+
+  return (
+    <section className="rounded-[1.5rem] border border-blue-200 bg-white/90 p-6 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-600">Foundation test</p>
+          <h2 className="mt-1 text-lg font-semibold text-slate-900">Can the dashboard predict Stripe?</h2>
+          <p className="mt-1 max-w-3xl text-sm text-slate-500">
+            The forecast is saved before the Stripe refresh is allowed to read any provider fact. Student-level error prevents equal mistakes from cancelling into a reassuring total.
+          </p>
+        </div>
+        <ScopeBadge>Blind monthly test</ScopeBadge>
+      </div>
+
+      {complete ? (
+        <>
+          <p className="mt-5 text-sm font-semibold text-slate-700">Result for {reconciliation.month}</p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-500">Locked forecast</p><p className="mt-1 text-2xl font-semibold tabular-nums text-slate-950">{formatMoney(reconciliation.forecastTotal)}</p></div>
+            <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-500">Stripe collected</p><p className="mt-1 text-2xl font-semibold tabular-nums text-slate-950">{formatMoney(reconciliation.collectedTotal)}</p><p className="mt-1 text-xs text-slate-500">{reconciliation.invoiceCount ?? '—'} paid invoices</p></div>
+            <div className={`rounded-2xl p-4 ${Math.abs(reconciliation.deltaPct || 0) <= 2 ? 'bg-emerald-50' : 'bg-amber-50'}`}><p className="text-xs text-slate-500">Net gap</p><p className="mt-1 text-2xl font-semibold tabular-nums text-slate-950">{formatSignedMoney(reconciliation.netDifference)}</p><p className="mt-1 text-xs text-slate-500">{Number.isFinite(reconciliation.deltaPct) ? `${reconciliation.deltaPct > 0 ? '+' : ''}${reconciliation.deltaPct}%` : '—'}</p></div>
+            <div className="rounded-2xl bg-violet-50 p-4"><p className="text-xs text-slate-500">Student-level error</p><p className="mt-1 text-2xl font-semibold tabular-nums text-slate-950">{Number.isFinite(reconciliation.totalAbsoluteError) ? formatMoney(reconciliation.totalAbsoluteError) : '—'}</p><p className="mt-1 text-xs text-slate-500">gross misses; cannot cancel</p></div>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-600">
+            <span><strong className="text-slate-900">{reconciliation.matchedCollectionPct ?? '—'}%</strong> of collections matched to a student</span>
+            <span><strong className="text-slate-900">{reconciliation.mismatchCount}</strong> student differences</span>
+            {reconciliation.offsettingError > 0 ? <span><strong className="text-slate-900">{formatMoney(reconciliation.offsettingError)}</strong> of errors cancelled in the headline</span> : null}
+            {reconciliation.unmatchedActualTotal > 0 ? <span><strong className="text-slate-900">{formatMoney(reconciliation.unmatchedActualTotal)}</strong> unmatched in Stripe</span> : null}
+          </div>
+          {largest.length ? (
+            <details className="mt-5 border-t border-slate-100 pt-4">
+              <summary className="cursor-pointer text-sm font-semibold text-slate-700">Largest differences</summary>
+              <div className="mt-3 divide-y divide-slate-100">
+                {largest.map((item) => (
+                  <div key={item.mmsId} className="grid gap-1 py-3 text-sm sm:grid-cols-[1fr_auto_auto] sm:gap-5">
+                    <div><p className="font-medium text-slate-900">{item.studentName || item.mmsId}</p><p className="text-xs text-slate-500">{statusLabel(item.status)}</p></div>
+                    <p className="text-slate-500">forecast {Number.isFinite(item.expectedAmount) ? formatMoney(item.expectedAmount) : 'unpriced'} · actual {formatMoney(item.actualAmount)}</p>
+                    <p className={`font-semibold tabular-nums ${item.difference > 0 ? 'text-amber-700' : 'text-rose-700'}`}>{formatSignedMoney(item.difference)}</p>
+                  </div>
+                ))}
+              </div>
+            </details>
+          ) : <p className="mt-4 text-sm font-semibold text-emerald-700">Every matched student landed on the forecast.</p>}
+        </>
+      ) : openForecast ? (
+        <div className="mt-5 rounded-2xl bg-blue-50 p-5">
+          <p className="text-sm font-semibold text-blue-950">{openForecast.month} forecast is locked</p>
+          <p className="mt-1 text-3xl font-semibold tabular-nums text-slate-950">{formatMoney(openForecast.forecastTotal)}</p>
+          <p className="mt-2 text-sm text-blue-900">
+            Saved {openForecast.forecastedAt ? new Date(openForecast.forecastedAt).toLocaleString('en-GB') : 'before reveal'} with {Number.isFinite(openForecast.coveragePct) ? `${openForecast.coveragePct}%` : 'unknown'} pricing coverage. Stripe collections stay out of this record; the first scored result appears after the month closes.
+          </p>
+          {openForecast.unpricedCount || openForecast.approximateCount ? <p className="mt-2 text-xs text-blue-800">{openForecast.unpricedCount} unpriced · {openForecast.approximateCount} calendar/price assumptions to test</p> : null}
+        </div>
+      ) : (
+        <p className="mt-5 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900">Waiting for the Stripe refresh to lock the first dashboard-only forecast. No result will be claimed until a forecast predates its actuals.</p>
+      )}
+    </section>
+  );
+}
+
+function Overview({ totals, revenue, trend, scenario, pauseForecast, attentionItems, stripeReconciliation, openStripeForecast }) {
   const negative = totals.marginMonthly < 0;
   const visibleAttention = attentionItems.slice(0, 3);
   return (
@@ -160,6 +235,8 @@ function Overview({ totals, revenue, trend, scenario, pauseForecast, attentionIt
           <BreakEvenBar active={revenue.active.count} target={scenario.breakEvenActiveCount} />
         </div>
       </section>
+
+      <StripeProof reconciliation={stripeReconciliation} openForecast={openStripeForecast} />
 
       <section className="rounded-[1.5rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -296,13 +373,13 @@ function DetailsView({ totals, revenue, cost, expenses, coverage, attentionItems
           </details>
         </div>
         <div className="rounded-[1.5rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">Estimate vs Stripe · {calibration.month}</h2>
+          <h2 className="text-lg font-semibold text-slate-900">Legacy run-rate comparison · {calibration.month}</h2>
           <div className="mt-4 divide-y divide-slate-100">
             <DetailRow label="Stripe collected" value={Number.isFinite(calibration.collectedTotal) ? formatMoney(calibration.collectedTotal) : '—'} />
             <DetailRow label="Estimated Stripe billing" value={calibration.estimatedStripeMonthly === null ? '—' : formatMoney(calibration.estimatedStripeMonthly)} />
             <DetailRow label="Gap" value={calibration.deltaPct === null ? '—' : `${calibration.deltaPct > 0 ? '+' : ''}${calibration.deltaPct}%`} strong />
           </div>
-          <p className="mt-4 text-xs leading-5 text-slate-500">{describeCalibrationBasis(calibration)}</p>
+          <p className="mt-4 text-xs leading-5 text-slate-500">{describeCalibrationBasis(calibration)} This older aggregate is retained as context; the Overview blind test is the scored measure.</p>
         </div>
       </section>
 
@@ -368,6 +445,8 @@ export default function AdminFinanceView({
   pauseForecast,
   attentionItems,
   calibration,
+  stripeReconciliation,
+  openStripeForecast,
   roster,
   spend,
   today,
@@ -380,7 +459,7 @@ export default function AdminFinanceView({
       {view === 'plan' ? <PlanView activeNow={revenue.active.count} pausedCount={revenue.paused.count} scenario={scenario} scenarioStudents={scenarioStudents} scenarioPricePct={scenarioPricePct} trendPeriod={trendPeriod} /> : null}
       {view === 'details' ? <DetailsView totals={totals} revenue={revenue} cost={cost} expenses={expenses} coverage={coverage} attentionItems={attentionItems} calibration={calibration} roster={roster} trend={trend} /> : null}
       {view === 'spend' ? <SpendView today={today} spend={spend} totals={totals} addExpenseLogAction={addExpenseLogAction} deleteExpenseLogAction={deleteExpenseLogAction} /> : null}
-      {!['plan', 'details', 'spend'].includes(view) ? <Overview totals={totals} revenue={revenue} trend={trend} scenario={scenario} pauseForecast={pauseForecast} attentionItems={attentionItems} /> : null}
+      {!['plan', 'details', 'spend'].includes(view) ? <Overview totals={totals} revenue={revenue} trend={trend} scenario={scenario} pauseForecast={pauseForecast} attentionItems={attentionItems} stripeReconciliation={stripeReconciliation} openStripeForecast={openStripeForecast} /> : null}
     </div>
   );
 }

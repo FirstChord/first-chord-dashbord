@@ -15,6 +15,7 @@ import {
   SONG_OUTCOMES_HEADERS,
   SONG_REQUESTS_HEADERS,
   SONG_STATUS_LOG_HEADERS,
+  STRIPE_FORECAST_MONTHLY_HEADERS,
   STUDENT_LIFECYCLE_HEADERS,
   STUDENT_PORTAL_ACCESS_HEADERS,
 } from '../../lib/admin/sheets/core.mjs';
@@ -30,6 +31,7 @@ import {
 } from '../../lib/admin/sheets/song-assignments.mjs';
 import { buildProposalSheetRow } from '../../lib/admin/sheets/proposals.mjs';
 import { buildStudentPortalAccessSheetRow } from '../../lib/admin/sheets/student-portal-access.mjs';
+import { buildStripeForecastRow } from '../../lib/admin/stripe-forecast-helpers.mjs';
 import { BACKUP_TABS, NON_BACKED_UP_TABS } from '../../lib/admin/backup-tabs.mjs';
 
 // Students headers are external truth, so the definitions accept them as a
@@ -99,6 +101,7 @@ const BUILDER_CONTRACTS = [
   ['Student_Portal_Access', STUDENT_PORTAL_ACCESS_HEADERS, buildStudentPortalAccessSheetRow],
   ['Student_Lifecycle', STUDENT_LIFECYCLE_HEADERS, buildStudentLifecycleRow],
   ['Lifecycle_Snapshot', LIFECYCLE_SNAPSHOT_HEADERS, buildLifecycleSnapshotRow],
+  ['Stripe_Forecast_Monthly', STRIPE_FORECAST_MONTHLY_HEADERS, buildStripeForecastRow],
 ];
 
 test('row builders emit exactly their sheet headers', () => {

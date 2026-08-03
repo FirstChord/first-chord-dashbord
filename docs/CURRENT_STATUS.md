@@ -26,6 +26,19 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
+- **Blind Stripe foundation test (2026-08-03):** finance now locks one
+  first-write-wins monthly forecast from dashboard-owned roster, price,
+  expectation, schedule weekday and structured pause evidence before the Stripe
+  cache job is allowed to make any provider request. A failed forecast write
+  blocks the reveal rather than quietly turning it into a retrospective
+  estimate. The later collection cache preserves a compact per-student invoice
+  breakdown, preferring subscription identity and leaving ambiguous customer-
+  only money unmatched. `/admin/finance` therefore shows both the headline net
+  gap and gross student-level error: two opposite student mistakes can no longer
+  cancel into a reassuring total. Existing aggregate calibration remains
+  labelled legacy context; the first scored blind result appears after the
+  first locked month closes. This is forecast/reconciliation only—Stripe remains
+  provider truth and no payment action was added.
 - **Executable finance cron contracts (2026-08-03):** the finance snapshot and
   Stripe cache HTTP boundaries now live in framework-free handler factories
   exercised with fake providers. Tests prove missing/bad secrets cause no work,

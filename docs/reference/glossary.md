@@ -137,7 +137,18 @@ Real billing amounts read from Stripe subscriptions, as opposed to the price-tab
 
 ## Calibration (finance)
 
-Comparing what Stripe actually collected in a month (`Stripe_Collected_Monthly`) against what the estimate said Stripe-managed students should bill. A growing gap means the model is drifting from reality — the "Estimate vs reality" panel on `/admin/finance`.
+The old aggregate comparison between a finance run-rate snapshot and monthly
+Stripe collections. It remains as historical context, but it was not a strict
+blind test and equal student errors could cancel.
+
+## Blind Stripe test
+
+One current-month forecast is locked in `Stripe_Forecast_Monthly` before the
+Stripe refresh is allowed to read subscriptions or invoices. After month close,
+`Stripe_Collected_Monthly` reveals the actual. **Net gap** compares the two
+headline totals. **Student-level error** adds every per-student miss plus
+unmatched Stripe money, so opposite mistakes cannot cancel. A forecast is
+derived evidence, and the reveal is a provider cache; Stripe remains truth.
 
 ## Capture replay identity (incoming inbox)
 

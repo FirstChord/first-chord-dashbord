@@ -99,21 +99,52 @@ test('buildStripeAmountsMap filters stale and unpriced rows', () => {
   assert.equal(amounts.sdt_stale, undefined);
 });
 
-test('summariseCollectedInvoices sums paid invoices in the requested month only', () => {
+test('summariseCollectedInvoices sums paid invoices and preserves a student breakdown', () => {
   const june = Math.floor(new Date('2026-06-15T12:00:00Z').getTime() / 1000);
   const july = Math.floor(new Date('2026-07-01T12:00:00Z').getTime() / 1000);
   const invoices = [
-    { status: 'paid', amount_paid: 2500, created: june },
-    { status: 'paid', amount_paid: 3300, created: june },
+    { status: 'paid', amount_paid: 2500, created: june, subscription: 'sub_a', customer: 'cus_a' },
+    { status: 'paid', amount_paid: 3300, created: june, parent: { subscription_details: { subscription: 'sub_b' } }, customer: 'cus_shared' },
+    { status: 'paid', amount_paid: 1000, created: june, customer: 'cus_unknown' },
     { status: 'paid', amount_paid: 2500, created: july }, // wrong month
     { status: 'open', amount_paid: 2500, created: june }, // not paid
     { status: 'paid', amount_paid: 0, created: june }, // nothing collected
   ];
-  const summary = summariseCollectedInvoices(invoices, { month: '2026-06' });
+  const students = [
+    { mmsId: 'a', fullName: 'A', stripeSubscriptionId: 'sub_a', stripeCustomerId: 'cus_a' },
+    { mmsId: 'b', fullName: 'B', stripeSubscriptionId: 'sub_b', stripeCustomerId: 'cus_shared' },
+    { mmsId: 'c', fullName: 'C', stripeSubscriptionId: 'sub_c', stripeCustomerId: 'cus_shared' },
+  ];
+  const summary = summariseCollectedInvoices(invoices, { month: '2026-06', students });
 
   assert.equal(summary.month, '2026-06');
-  assert.equal(summary.collectedTotal, 58);
-  assert.equal(summary.invoiceCount, 2);
+  assert.equal(summary.collectedTotal, 68);
+  assert.equal(summary.invoiceCount, 3);
+  assert.equal(summary.matchedTotal, 58);
+  assert.equal(summary.matchedInvoiceCount, 2);
+  assert.equal(summary.unmatchedTotal, 10);
+  assert.equal(summary.unmatchedInvoiceCount, 1);
+  assert.deepEqual(summary.studentBreakdown, [
+    { mms_id: 'a', student_name: 'A', invoice_count: 1, amount: 25 },
+    { mms_id: 'b', student_name: 'B', invoice_count: 1, amount: 33 },
+  ]);
+});
+
+test('summariseCollectedInvoices refuses an ambiguous customer-only match', () => {
+  const created = Math.floor(new Date('2026-06-15T12:00:00Z').getTime() / 1000);
+  const summary = summariseCollectedInvoices([
+    { status: 'paid', amount_paid: 2500, created, customer: 'cus_family' },
+  ], {
+    month: '2026-06',
+    students: [
+      { mmsId: 'a', stripeCustomerId: 'cus_family' },
+      { mmsId: 'b', stripeCustomerId: 'cus_family' },
+    ],
+  });
+
+  assert.equal(summary.matchedTotal, 0);
+  assert.equal(summary.unmatchedTotal, 25);
+  assert.deepEqual(summary.studentBreakdown, []);
 });
 
 test('previousMonthKey returns the last full calendar month, across year ends', () => {
