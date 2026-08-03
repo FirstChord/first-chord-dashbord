@@ -1,0 +1,125 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+
+import { createStripeAmountsPostHandler } from '../../lib/admin/stripe-amounts-endpoint.mjs';
+import {
+  previousMonthKey,
+  summariseCollectedInvoices,
+} from '../../lib/admin/stripe-amounts-helpers.mjs';
+
+const AT = new Date('2026-08-03T05:30:00.000Z');
+const SECRET = 'finance-secret';
+
+function request(secret = SECRET) {
+  return new Request('https://dashboard.test/api/cron/stripe-amounts', {
+    method: 'POST',
+    headers: secret === null ? {} : { 'x-firstchord-finance-secret': secret },
+  });
+}
+
+function createHandler(overrides = {}) {
+  return createStripeAmountsPostHandler({
+    getSecret: () => SECRET,
+    now: () => AT,
+    getStudents: async () => [{ mmsId: 'student-1' }],
+    fetchSubscriptions: async () => [{ id: 'subscription-1' }],
+    buildCacheRows: () => ({
+      rows: [{ mms_id: 'student-1', monthly_amount: 100 }],
+      unmatchedStudents: 0,
+      unmatchedSubscriptions: 0,
+    }),
+    replaceCacheRows: async () => {},
+    previousMonth: previousMonthKey,
+    fetchPaidInvoices: async () => [],
+    summariseInvoices: summariseCollectedInvoices,
+    upsertCollectedMonth: async () => {},
+    ...overrides,
+  });
+}
+
+test('Stripe amounts endpoint rejects unauthorised calls before any provider read', async () => {
+  let providerReads = 0;
+  const unconfigured = createHandler({
+    getSecret: () => '',
+    fetchSubscriptions: async () => { providerReads += 1; return []; },
+  });
+  const missingConfigResponse = await unconfigured(request());
+  assert.equal(missingConfigResponse.status, 503);
+
+  const configured = createHandler({
+    fetchSubscriptions: async () => { providerReads += 1; return []; },
+  });
+  const badSecretResponse = await configured(request('finance-secrex'));
+  assert.equal(badSecretResponse.status, 401);
+  assert.equal(providerReads, 0);
+});
+
+test('Stripe amounts endpoint refreshes both caches against one fixed capture time', async () => {
+  const students = [{ mmsId: 'student-1' }];
+  const subscriptions = [{ id: 'subscription-1' }];
+  const rows = [{ mms_id: 'student-1' }, { mms_id: 'student-2' }];
+  let buildArgs = null;
+  let replacedRows = null;
+  let invoiceMonth = '';
+  let collectedRow = null;
+  const handler = createHandler({
+    getStudents: async () => students,
+    fetchSubscriptions: async () => subscriptions,
+    buildCacheRows: (receivedSubscriptions, receivedStudents, options) => {
+      buildArgs = { receivedSubscriptions, receivedStudents, options };
+      return { rows, unmatchedStudents: 3, unmatchedSubscriptions: 4 };
+    },
+    replaceCacheRows: async (receivedRows) => { replacedRows = receivedRows; },
+    fetchPaidInvoices: async (month) => {
+      invoiceMonth = month;
+      return [{
+        status: 'paid',
+        created: Date.parse('2026-07-12T10:00:00.000Z') / 1000,
+        amount_paid: 12345,
+      }];
+    },
+    upsertCollectedMonth: async (row) => { collectedRow = row; },
+  });
+
+  const response = await handler(request());
+  assert.equal(response.status, 200);
+  assert.deepEqual(buildArgs, {
+    receivedSubscriptions: subscriptions,
+    receivedStudents: students,
+    options: { now: AT },
+  });
+  assert.equal(replacedRows, rows);
+  assert.equal(invoiceMonth, '2026-07');
+  assert.deepEqual(collectedRow, {
+    month: '2026-07',
+    collected_total: 123.45,
+    invoice_count: 1,
+    currency: 'gbp',
+    refreshed_at: '2026-08-03T05:30:00.000Z',
+  });
+  assert.deepEqual(await response.json(), {
+    success: true,
+    cachedStudents: 2,
+    unmatchedStudents: 3,
+    unmatchedSubscriptions: 4,
+    collectedMonth: '2026-07',
+    collectedTotal: 123.45,
+    invoiceCount: 1,
+  });
+});
+
+test('Stripe amounts endpoint completes provider reads before either cache write', async () => {
+  let cacheWrites = 0;
+  let collectionWrites = 0;
+  const handler = createHandler({
+    fetchPaidInvoices: async () => { throw new Error('Stripe invoices unavailable'); },
+    replaceCacheRows: async () => { cacheWrites += 1; },
+    upsertCollectedMonth: async () => { collectionWrites += 1; },
+  });
+
+  const response = await handler(request());
+  assert.equal(response.status, 500);
+  assert.deepEqual(await response.json(), { error: 'Stripe invoices unavailable' });
+  assert.equal(cacheWrites, 0);
+  assert.equal(collectionWrites, 0);
+});

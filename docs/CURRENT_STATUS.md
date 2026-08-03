@@ -26,6 +26,13 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
+- **Executable finance cron contracts (2026-08-03):** the finance snapshot and
+  Stripe cache HTTP boundaries now live in framework-free handler factories
+  exercised with fake providers. Tests prove missing/bad secrets cause no work,
+  monthly requests reach the idempotent skip, weekly requests append, Stripe
+  refreshes both caches against one fixed capture time, and provider errors
+  return failure without being mistaken for success. Next route files now only
+  wire those tested boundaries to the real Sheets and Stripe adapters.
 - **Zero-warning maintenance feedback (2026-08-03):** all 38 accumulated lint
   warnings are resolved, including six Hook dependency warnings that could hold
   stale tutor, schedule, or inbox closures. Lint now rejects the next warning

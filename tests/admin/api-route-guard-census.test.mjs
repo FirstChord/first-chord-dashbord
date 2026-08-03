@@ -33,7 +33,7 @@ const GUARD_PATTERNS = {
   tutor: /requireTutorDashboardAccess/,
   admin: /user\?\.isAdmin|isAllowedAdminEmail|requireAdmin/,
   token: /verifyStudentNotesToken|verifyStatementToken|verifyStudentNotesSession|authorizeNotesRequest|verifyTutorSurfaceToken|verifyStudentNotesCode/,
-  secret: /x-firstchord-[a-z-]+-secret|CRON_SECRET|PRACTICE_CHAT_API_SECRET|authenticatePracticeChatRequest|SCHEDULE_REFRESH_SECRET/,
+  secret: /x-firstchord-[a-z-]+-secret|CRON_SECRET|PRACTICE_CHAT_API_SECRET|authenticatePracticeChatRequest|SCHEDULE_REFRESH_SECRET|createFinanceSnapshotPostHandler|createStripeAmountsPostHandler/,
 };
 
 function guardsFor(source) {
