@@ -14,6 +14,10 @@ prefer `npm run code-map:find -- "term"`; for change radius, use
 `npm run code-map:impact -- path/to/file`. Do not load this entire document
 into an agent context when a targeted search will do.
 
+The visible grid covers `lib/admin`, `lib/songs`, and every Next route.
+Find and impact queries also use a wider static import graph across `app`,
+`components`, `lib`, `scripts`, and `tests`.
+
 A **source note** is an excerpt from the first standalone pre-export comment
 (or an explicit `@fileoverview`); it is not an invented summary. **Direct test
 references** mean a test statically imports or re-exports that exact module.

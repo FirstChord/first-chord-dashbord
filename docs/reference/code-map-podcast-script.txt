@@ -1,0 +1,43 @@
+Understanding the First Chord code map
+
+Imagine the dashboard repository as a city that is being rebuilt every day. New streets appear, old buildings disappear, and the purpose of a room can change while the address stays the same. When a coding agent arrives to do a task, its first problem is not usually writing code. Its first problem is working out where it is.
+
+Before the code map, an agent would begin with a broad search. It might look for words like payroll, Wise, Stripe, or practice notes. That works, but it is repetitive. Every new session pays the same orientation cost. The search may return implementation files, old documents, tests, interface copy, and unrelated references all mixed together. The agent then has to rebuild a mental map from scratch before it can make a safe change.
+
+The First Chord navigation system now has two layers. The first layer is the Workflow Map in the agent guide. That is the neighbourhood map. It says that a question belongs to finance, payroll, waiting, planning, Practice Chat, or another broad area. It also points to the safety documents that explain who owns the data and which actions need human approval.
+
+The generated code map is the second layer. It is the street and building map. It helps answer the next question. Within this area, which exact module contains the relevant behaviour, which names does it export, which tests import it, and which production files depend on it?
+
+The important word is generated. Nobody sits down and writes a second description of the codebase. The repository remains the owner of the facts. A script reads the current files and derives the map from what is actually present. That means a code change and its navigation evidence move together.
+
+The system builds an in memory index. For the visible grid, it scans the admin library, the songs library, and every route in the application. For each module it records the file path, the first meaningful comment written before an export, the exported names and their line numbers, and any tests that directly import that module.
+
+That first comment is called the source note. It is deliberately not an artificial intelligence summary. If the code says that a module is the idempotent boundary for finance snapshots, the map can repeat that sentence. If the code contains no useful purpose comment, the cell stays blank. The system would rather show missing information than invent a confident explanation.
+
+The Markdown document is the grid view of this index. It groups modules by directory and gives a human a browseable table. The grid is useful when you want to look around, but agents normally should not load the whole thing. A targeted query is cheaper and more precise.
+
+The find query works like a small search engine for current code facts. It compares the search words with module paths, source notes, export names, and direct test paths. Matches in export names receive strong weight, because an exact function name is often the clearest signal. Matches in paths and purpose notes also count. The result is a ranked shortlist rather than a wall of every textual occurrence in the repository.
+
+For example, a search for finance snapshot brings together the scheduled route, the idempotent runner, the finance calculation helpers, the Sheets adapter, and their focused tests. An agent can begin with that small set and inspect current implementation rather than searching the whole repository several different ways.
+
+The impact query answers the opposite question. Find starts with an idea and asks where it lives. Impact starts with a file and asks what depends on it.
+
+To do that, the system creates a wider import graph across application pages, components, libraries, scripts, and tests. Every static import is a directional connection. If a route imports a handler, and the handler imports a runner, those files form a chain. The impact query walks that graph backwards from the changed file toward its consumers. It reports production consumers, related tests, scripts, and application entry points. It also reports distance, meaning how many import steps separate the result from the target.
+
+This is especially useful before editing a shared helper. A helper may look small, but the impact graph can reveal that it feeds an admin page, a scheduled route, two tests, and a maintenance script. The agent gets a practical review and verification boundary before touching the code. When no file is supplied, impact examines the current worktree changes, which makes it a useful pre commit check.
+
+The recent health check showed why this matters. A find query assembled the complete finance snapshot path in one pass. The grid honestly showed that the two scheduled finance routes had no direct executable contract tests. That blank was not treated as proof that nothing was tested. It was treated as a question worth investigating.
+
+The lower level calculations were well tested, but the HTTP boundary was not. The handlers were therefore extracted into framework free modules with fake provider dependencies. Tests could then execute secret rejection, monthly idempotency, weekly appends, Stripe calibration, and failure behaviour without contacting Stripe or Google Sheets. After that change, the map showed a clean relationship from each tested handler to its production route.
+
+The map also helped scope a broad maintenance pass. Instead of opening the entire repository, the impact report identified the relevant modules, tests, and entry points. That made it practical to remove dead fallback code, clear warning noise, and check the affected React behaviour without pretending every file was equally relevant.
+
+There are important limits. A test importing a module does not prove that every behaviour is asserted. A blank test cell does not prove that no indirect test reaches the code. Static analysis can miss a file selected dynamically at runtime. The map is evidence for navigation, not a substitute for reading code, tests, and the authoritative workflow documents.
+
+The system stays honest through regeneration. The committed grid carries a fingerprint of its derived facts. During checks, the repository rebuilds the expected map in memory and compares it with the committed file. If exports, source notes, or direct test relationships changed and the grid was not regenerated, the check fails. It also rejects export syntax that the parser cannot understand and verifies that the hand written Workflow Map still points to real paths and tests.
+
+For a new agent, the practical flow is now simple. Read the current status and data boundaries. Use the Workflow Map to choose the neighbourhood. Run a find query to locate the likely modules and tests. Read those files. Run impact on the file that may change. Make the smallest safe edit, run the focused tests, then regenerate and check the map before delivery.
+
+The deeper benefit is not just a faster first search. Over months of building dashboard slices, the repository accumulates more modules, more workflows, and more safety boundaries. Without a navigation layer, every increase in capability also increases the cost of orientation. The generated map changes that relationship. The codebase can grow while the first step remains a narrow question answered from current evidence.
+
+That is why this is better than training a model on the repository. A trained model would remember an old city. The code map asks the city what exists today.

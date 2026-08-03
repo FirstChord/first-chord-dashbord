@@ -35,8 +35,9 @@ npm run code-map:impact -- lib/admin/wise-helpers.mjs
 
 `code-map:find` returns matching modules, source-authored notes, exports with line
 numbers, direct test references, and direct production consumers.
-`code-map:impact` follows conservative static imports to related tests, scripts,
-and app entrypoints; with no path arguments it inspects the current git diff.
+`code-map:impact` walks outward from a target through the reverse static-import
+graph to related tests, scripts, and app entrypoints; with no path arguments it
+inspects the current git diff.
 Both commands accept `--json` for agents or other tools. Static evidence can miss
 dynamic/runtime relationships, so impact output narrows inspection rather than
 replacing it. The browsable [generated code map](docs/reference/code-map.md) is

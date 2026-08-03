@@ -9,6 +9,32 @@ Plain-English explanations of technical terms used in the admin dashboard. This 
 
 - **Path template** — a named ordered list of catalogue song IDs (`lib/config/path-templates.mjs`, canonical hand-edited). "Assign path" instantiates it into per-student `Song_Assignments` rows; the student copy is personal from then on.
 
+## Code map, query, impact, and grid
+
+The **code map** is a deterministic index generated from the current repository,
+not a hand-written architecture claim and not model memory. Its browseable
+**grid** is `docs/reference/code-map.md`: grouped rows showing a scoped module's
+path, first source-authored pre-export note, exports with line numbers, and tests
+that directly import it. The visible grid covers `lib/admin`, `lib/songs`, and
+every Next route handler.
+
+A **find query** ranks modules using the words in their path, source note,
+exports, and direct-test paths. It is the quickest route from a domain question
+such as “Wise payout” to a small set of current files. An **impact query** starts
+from one or more changed files and walks the reverse static-import graph through
+`app`, `components`, `lib`, `scripts`, and `tests`. It reports downstream
+consumers, related tests, scripts, and app entrypoints, with distance meaning the
+number of import steps from the target. With no paths, it uses the current git
+worktree changes.
+
+These are navigation signals, not proofs. A direct test import does not prove
+that the relevant behaviour is asserted; a blank test cell does not prove that
+no indirect test exists; and a static graph can miss runtime-selected or
+constructed relationships. The map narrows what an agent must inspect before it
+reads the current code, focused docs, and tests. `npm run code-map:check`
+regenerates the artifact in memory, checks the hand-authored Workflow Map, and
+fails CI on drift or export syntax the parser cannot account for.
+
 ## Student lifecycle
 
 Careful: **"lifecycle" means two unrelated things in this system.** The older one

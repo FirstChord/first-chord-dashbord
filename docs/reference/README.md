@@ -12,6 +12,9 @@ Use this folder for lookup material rather than operating sequence.
 - [Generated code map](./code-map.md) — browseable source/export/test lookup,
   including every Next route handler; prefer `npm run code-map:find` for narrow
   agent queries
+- [Code-map podcast script](./code-map-podcast-script.txt) — a plain-English,
+  TTS-ready explanation of the generated grid, ranked query, impact graph, and
+  safe agent workflow
 - [Repository and environment map](./repository-environment.md)
 - [Student registry](./student-registry.md)
 - [Student registry validation](./student-registry-validation.md)
