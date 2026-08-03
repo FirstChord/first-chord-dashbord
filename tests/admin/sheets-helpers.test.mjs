@@ -2,10 +2,47 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  buildStudentFieldUpdateBatch,
   buildStudentPaymentExpectationBatch,
   columnNumberToLetter,
   findTutorInsertRow,
 } from '../../lib/admin/sheets-helpers.mjs';
+
+test('buildStudentFieldUpdateBatch writes only named changed cells from a freshly located row', () => {
+  const batch = buildStudentFieldUpdateBatch({
+    headers: ['Student forename', 'mms_id', 'payment_expectation', 'Tutor'],
+    rows: [
+      ['Ada', 'sdt_ada', 'stripe_active_expected', 'Arion'],
+      ['Sam', 'sdt_sam', 'stripe_active_expected', 'Dean'],
+    ],
+    mmsId: 'sdt_sam',
+    updates: {
+      payment_expectation: 'stripe_paused_expected',
+      Tutor: 'Dean',
+    },
+  });
+
+  assert.deepEqual(batch, {
+    rowNumber: 3,
+    changedCellCount: 1,
+    data: [{
+      range: 'Students!C3',
+      values: [['stripe_paused_expected']],
+    }],
+  });
+});
+
+test('buildStudentFieldUpdateBatch rejects a stale target instead of guessing a row', () => {
+  assert.throws(
+    () => buildStudentFieldUpdateBatch({
+      headers: ['mms_id', 'Tutor'],
+      rows: [['sdt_ada', 'Arion']],
+      mmsId: 'sdt_missing',
+      updates: { Tutor: 'Dean' },
+    }),
+    /was not found/,
+  );
+});
 
 test('columnNumberToLetter converts spreadsheet columns correctly', () => {
   assert.equal(columnNumberToLetter(1), 'A');

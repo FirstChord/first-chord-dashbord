@@ -17,10 +17,12 @@ import {
   ensureManagedSheet,
   FINANCE_SNAPSHOT_HEADERS,
   FINANCE_SNAPSHOT_SHEET,
+  getSheetValues,
   upsertManagedSheetRow,
   withSheetsRetry,
 } from '../../lib/admin/sheets/core.mjs';
 import { appendFinanceSnapshotRow } from '../../lib/admin/sheets/finance.mjs';
+import { updateStudentSheetRow } from '../../lib/admin/sheets/students.mjs';
 
 // --- the fake -----------------------------------------------------------
 
@@ -38,6 +40,16 @@ function parseRange(range = '') {
 function startRowOf(a1) {
   const match = /^[A-Z]*(\d+):/.exec(a1);
   return match ? Number(match[1]) : null;
+}
+
+function cellCoordinates(a1) {
+  const match = /^([A-Z]+)(\d+)$/.exec(a1);
+  if (!match) return null;
+  let column = 0;
+  for (const character of match[1]) {
+    column = (column * 26) + character.charCodeAt(0) - 64;
+  }
+  return { rowIndex: Number(match[2]) - 1, columnIndex: column - 1 };
 }
 
 function fakeSheets({ tabs = {}, failures = {} } = {}) {
@@ -94,6 +106,20 @@ function fakeSheets({ tabs = {}, failures = {} } = {}) {
           values.forEach((row, offset) => {
             data[sheet][startRow - 1 + offset] = [...row];
           });
+          return { data: {} };
+        },
+        batchUpdate: async ({ requestBody }) => {
+          maybeThrow('batchUpdate');
+          for (const entry of requestBody.data || []) {
+            const { sheet, a1 } = parseRange(entry.range);
+            const coordinates = cellCoordinates(a1);
+            if (!coordinates) throw new Error(`Unsupported fake batch range: ${entry.range}`);
+            const value = entry.values?.[0]?.[0] ?? '';
+            calls.push({ kind: 'valueBatchUpdate', sheet, a1, value });
+            data[sheet] = data[sheet] || [];
+            data[sheet][coordinates.rowIndex] = data[sheet][coordinates.rowIndex] || [];
+            data[sheet][coordinates.rowIndex][coordinates.columnIndex] = value;
+          }
           return { data: {} };
         },
         append: async ({ range, requestBody }) => {
@@ -163,6 +189,38 @@ test('a deterministic monthly finance snapshot appends once and then becomes a n
 });
 
 // --- row targeting ------------------------------------------------------
+
+test('student edits bypass cached rows and preserve unrelated concurrent cells', async () => {
+  counter += 1;
+  process.env.GOOGLE_SPREADSHEET_ID = `students-sheet-id-${counter}`;
+  clearSheetReadCacheForTests();
+  const sheets = fakeSheets({
+    tabs: {
+      Students: [
+        ['mms_id', 'Student forename', 'Tutor', 'admin_note'],
+        ['sdt_1', 'Ada', 'Arion', 'old note'],
+      ],
+    },
+  });
+  globalThis.__firstChordSheetsClientPromise = Promise.resolve(sheets);
+
+  await getSheetValues('Students');
+  sheets.data.Students[1][3] = 'manual concurrent edit';
+
+  const result = await updateStudentSheetRow('sdt_1', { Tutor: 'Dean' });
+
+  assert.deepEqual(result, { rowNumber: 2, changedCellCount: 1 });
+  assert.deepEqual(sheets.data.Students[1], ['sdt_1', 'Ada', 'Dean', 'manual concurrent edit']);
+  assert.deepEqual(
+    sheets.calls.filter((call) => call.kind === 'valueBatchUpdate'),
+    [{ kind: 'valueBatchUpdate', sheet: 'Students', a1: 'C2', value: 'Dean' }],
+  );
+  assert.equal(
+    sheets.calls.filter((call) => call.kind === 'get' && call.sheet === 'Students').length,
+    2,
+    'the mutation must fetch live rows even when a cache entry exists',
+  );
+});
 
 test('an existing row is updated in place at the correct 1-indexed sheet row', async () => {
   // The +2 in `targetRowIndex + 2` is the header row plus 1-indexing. Getting

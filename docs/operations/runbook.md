@@ -315,6 +315,10 @@ Read availability is fail-safe: a failed production GitHub registry read falls
 back to the registry snapshot bundled into the deployed commit. The fallback is
 read-only. Registry writes still require a successful fresh GitHub read and
 authenticated GitHub update, so an expired token cannot authorise a stale write.
+If another registry commit lands between read and write, the dashboard fetches
+the new file, reapplies only the requested student mutation, and retries once.
+It must never retry merely by pairing stale whole-file contents with the newer
+SHA, because that would erase the concurrent commit while reporting success.
 
 Recovery:
 

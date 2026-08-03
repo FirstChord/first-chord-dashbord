@@ -26,6 +26,17 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
+- **Concurrent write collision reduction (2026-08-03):** `Students` mutations
+  now bypass the Sheets read cache before resolving an MMS ID. Normal student
+  edits send only the specifically changed cells instead of rewriting every
+  field in the row, payment-expectation batches locate their targets from a
+  fresh read, and archive/delete re-locates the student after the archive append
+  before deleting a row. Sheets is still last-write-wins rather than
+  transactional, but unrelated manual/admin edits no longer get copied back
+  from a stale full-row snapshot. Production registry writes now handle a
+  GitHub SHA conflict by fetching the latest file and reapplying the requested
+  student mutation; the previous retry paired the new SHA with stale contents
+  and could silently erase the concurrent commit.
 - **Production dependency and provider-liveness hardening (2026-08-03):** the
   production npm audit moved from 14 advisories (one critical, seven high) to
   zero without changing framework/auth majors. Two unused production packages
