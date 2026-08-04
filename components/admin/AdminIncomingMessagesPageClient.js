@@ -486,6 +486,7 @@ function ReplyPanel({ entry, initialReply = '', planningId = '', title = 'Reply'
 function SuggestedReplyBlock({ entry, proposal, onDecideReply, isPending }) {
   const [text, setText] = useState(proposal.proposalBody || '');
   const edited = text.trim() !== (proposal.proposalBody || '').trim();
+  const suggestionLabel = `${proposal.createdBy || ''}`.startsWith('model:') ? 'AI draft' : 'Standard reply';
 
   async function handleApprove() {
     try {
@@ -505,7 +506,7 @@ function SuggestedReplyBlock({ entry, proposal, onDecideReply, isPending }) {
 
   return (
     <div className="mt-4 rounded-2xl border border-violet-100 bg-violet-50/40 px-3 py-3">
-      <p className="text-xs font-semibold text-violet-900">Suggested reply</p>
+      <p className="text-xs font-semibold text-violet-900">{suggestionLabel}</p>
       <textarea
         value={text}
         onChange={(event) => setText(event.target.value)}
@@ -733,6 +734,7 @@ function MessageCard({ entry, studentOptions, onReview, onSnooze, onDelete, onCo
   const canQuickReply = isOpen
     && !entry.isSnoozed
     && !replyProposal
+    && !decidedReply
     && !isIncomingPlaceholderText(entry.messageText);
   const outcomeLabel = labelIncomingResolutionType(entry.resolutionType) || labelIncomingStatus(entry.status);
   const detailsId = `incoming-details-${entry.incomingId}`;
@@ -745,10 +747,17 @@ function MessageCard({ entry, studentOptions, onReview, onSnooze, onDelete, onCo
     setIsPlanOpen(true);
   }
 
-  function openReply() {
+  async function openReply() {
     setIsMoreOpen(false);
     setIsLaterOpen(false);
     setIsPlanOpen(false);
+    setIsReplyOpen(false);
+    if (canDraftReply) {
+      const drafted = await onDraftReply(entry);
+      if (drafted) return;
+    }
+    // Feature off, policy/provider failure, or timeout: keep Reply useful with
+    // the deterministic editable template instead of trapping the workflow.
     setIsReplyOpen(true);
   }
 
@@ -857,7 +866,7 @@ function MessageCard({ entry, studentOptions, onReview, onSnooze, onDelete, onCo
             onClick={openReply}
             className="min-h-11 flex-1 rounded-full border border-violet-200 bg-violet-50 px-3 text-xs font-semibold text-violet-800 transition active:scale-[0.98] disabled:opacity-60"
           >
-            Reply
+            {isPending && canDraftReply ? 'Writing…' : 'Reply'}
           </button>
         ) : null}
         {isOpen && !entry.isSnoozed ? (
@@ -926,16 +935,6 @@ function MessageCard({ entry, studentOptions, onReview, onSnooze, onDelete, onCo
             {entry.reviewedBy || entry.reviewedAt ? <><dt className="font-semibold text-slate-500">Last action</dt><dd>{entry.reviewedBy || 'Admin'}{entry.reviewedAt ? ` · ${formatDateTime(entry.reviewedAt)}` : ''}</dd></> : null}
           </dl>
           <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-200 pt-3">
-            {canDraftReply && !draftReplyIsPrimary ? (
-              <button
-                type="button"
-                disabled={isPending}
-                onClick={() => onDraftReply(entry)}
-                className="min-h-10 rounded-full border border-violet-200 bg-white px-3 text-xs font-semibold text-violet-800 disabled:opacity-60"
-              >
-                Draft reply
-              </button>
-            ) : null}
             {isOpen ? (
               <button
                 type="button"
@@ -1095,20 +1094,6 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
       return false;
     } finally {
       setPendingId('');
-    }
-  }
-
-  // Sequential on purpose: one model call at a time, and the server's
-  // per-admin rate limit (10/min) is the natural stop.
-  async function handleDraftAllOpen() {
-    const eligible = inbox.filter((entry) => ['inbox', 'needs_review'].includes(entry.status)
-      && !entry.isSnoozed
-      && !replyProposals[entry.incomingId]
-      && !decidedReplies[entry.incomingId]
-      && !isIncomingPlaceholderText(entry.messageText));
-    for (const entry of eligible) {
-      const ok = await handleDraftReply(entry);
-      if (!ok) break;
     }
   }
 
@@ -1340,16 +1325,6 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {replyDraftingAvailable && openCount > 0 ? (
-            <button
-              type="button"
-              onClick={handleDraftAllOpen}
-              disabled={Boolean(pendingId)}
-              className="mt-1 rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-semibold text-violet-800 disabled:opacity-60"
-            >
-              Draft all open
-            </button>
-          ) : null}
           <button
             type="button"
             onClick={refreshInbox}

@@ -108,6 +108,7 @@ export async function POST(request) {
         outcome: 'proposed',
         policyCase: result.policyCase,
         noticeWindow: result.noticeWindow,
+        acknowledgementOnly: result.acknowledgementOnly,
         neutralFallback: result.neutralFallback,
         ...(result.modelMeta || {}),
       }));

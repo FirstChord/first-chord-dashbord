@@ -161,6 +161,32 @@ test('the ambiguity rule: no lesson date from anywhere means neutral fallback', 
   assert.deepEqual(context.allowedFacts, []);
 });
 
+test('a clear general message may get a message-aware acknowledgement but no school facts', () => {
+  const context = buildReplyPolicyContext({
+    record: {
+      messageText: 'Olivia is delighted with her exam results — thanks for all your help!',
+      suspectedCategory: 'general',
+      messageAt: '2026-08-04T16:46:00Z',
+    },
+  });
+  assert.equal(context.policyCase, 'general');
+  assert.equal(context.acknowledgementOnly, true);
+  assert.equal(context.neutralFallback, false);
+  assert.deepEqual(context.allowedFacts, []);
+});
+
+test('an ambiguous schedule message stays on the deterministic fallback path', () => {
+  const context = buildReplyPolicyContext({
+    record: {
+      messageText: 'Could we change the lesson time?',
+      suspectedCategory: 'schedule',
+      messageAt: '2026-08-04T16:46:00Z',
+    },
+  });
+  assert.equal(context.acknowledgementOnly, true);
+  assert.equal(context.neutralFallback, true);
+});
+
 // --- deterministic draft validation -------------------------------------------
 
 const INSIDE_WEEK_CONTEXT = oneOffContext({
@@ -268,6 +294,31 @@ test('the neutral fallback draft passes its own validation and commits to nothin
 
   const committed = validateIncomingReplyDraft('Hi [PARENT_FIRST], no problem, that lesson is cancelled.', context);
   assert.ok(committed.errors.includes('policy_outcome_in_neutral_draft'));
+});
+
+test('general acknowledgements can be warm but cannot promise an operational outcome', () => {
+  const context = buildReplyPolicyContext({
+    record: {
+      messageText: 'Olivia is delighted with her exam results — thanks for all your help!',
+      suspectedCategory: 'general',
+      messageAt: '2026-08-04T16:46:00Z',
+    },
+  });
+  const warm = validateIncomingReplyDraft(
+    'Hi [PARENT_FIRST], that is brilliant news — please tell [STUDENT_FIRST] a huge well done from us! Thanks for letting us know.',
+    context,
+  );
+  assert.deepEqual(warm.errors, []);
+
+  for (const draft of [
+    'Hi [PARENT_FIRST], we’ll refund that payment for you.',
+    'Hi [PARENT_FIRST], we can change the lesson time.',
+    'Hi [PARENT_FIRST], I will call you tomorrow.',
+    'Hi [PARENT_FIRST], that payment will be refunded.',
+    'Hi [PARENT_FIRST], the lesson is now cancelled.',
+  ]) {
+    assert.ok(validateIncomingReplyDraft(draft, context).errors.includes('unsupported_operational_commitment'));
+  }
 });
 
 test('materialising placeholders substitutes first names with warm fallbacks', () => {

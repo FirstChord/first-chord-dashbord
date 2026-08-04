@@ -1,21 +1,20 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: 2026-07-19
+last_verified: 2026-08-04
 ---
 # AI Runtime Integration
 
-Last verified against code and production behaviour: 2026-07-19
+Last verified against code and production behaviour: 2026-08-04
 
 This is the canonical engineering reference for the dashboard's model runtime.
 Read it before adding or changing any dashboard AI feature. The issue briefing
 is the reference integration described in detail below. It is a deliberately
 thin, tool-free layer over deterministic context; it is not an agent framework.
 
-A second integration built on the same pattern exists as of 2026-07-19: the
-proposals-inbox reply lane (`lib/admin/incoming-reply-ai-{contract,provider}.mjs`,
-flag `ADMIN_AI_REPLY_DRAFT_ENABLED`, parked for a later experiment; sign-off is
-still required before enabling). Its contract, its
+A second integration built on the same pattern is the bounded proposals-inbox
+reply lane (`lib/admin/incoming-reply-ai-{contract,provider}.mjs`, flag
+`ADMIN_AI_REPLY_DRAFT_ENABLED`, approved for a per-card pilot on 2026-08-04). Its contract, its
 free-text redaction decision and its deterministic cancellation-policy
 validator are documented in `docs/architecture/ai/tool-contracts.md` under
 `incoming_reply_draft.propose`; everything below about key scope, provider data
@@ -270,6 +269,7 @@ Production variables belong only on the canonical admin Railway service:
 | Variable | Required value/purpose |
 | --- | --- |
 | `ADMIN_AI_ISSUE_BRIEFING_ENABLED` | `true` enables the button; `false` is the immediate kill switch |
+| `ADMIN_AI_REPLY_DRAFT_ENABLED` | `true` makes one card's **Reply** press request one bounded draft; `false` routes Reply directly to the standard template |
 | `ADMIN_AI_OPENAI_API_KEY` | Dedicated server-side OpenAI project key |
 | `ADMIN_AI_OPENAI_MODEL` | Optional; defaults to `gpt-5.6-luna` |
 
@@ -387,6 +387,8 @@ Run after any route, provider, prompt, model, schema or validation change:
 ```bash
 node --test tests/admin/issue-explanation-ai-contract.test.mjs
 node --test tests/admin/issue-explanation-ai-route-boundary.test.mjs
+node --test tests/admin/incoming-reply-policy.test.mjs
+node --test tests/admin/incoming-reply-ai-contract.test.mjs
 node --test tests/admin/*.test.mjs
 npm run hygiene:check
 npm run lint
@@ -412,11 +414,23 @@ Manual production smoke test:
 8. Test at least one recorded-only or ambiguous issue and ensure uncertainty is
    preserved.
 
+For the incoming-reply pilot, press **Reply** on one suitable open card. Confirm
+an editable **AI draft** appears, no plan/message status changes, and **Copy &
+open WhatsApp** still requires choosing the chat and tapping Send. Check a clear
+general message for a warm acknowledgement without an operational promise, and
+an ambiguous schedule/absence message for the deterministic **Standard reply**.
+Do not use a bulk sample of live messages for smoke testing.
+
 Rollback is configuration-first: set
 `ADMIN_AI_ISSUE_BRIEFING_ENABLED=false` and restart/redeploy the canonical admin
 service. The deterministic explanation remains operational and no data repair
 or provider reconciliation is needed. Rotate only the dedicated admin AI key if
 key exposure is suspected.
+
+For reply drafting, set `ADMIN_AI_REPLY_DRAFT_ENABLED=false`. The visible
+**Reply** action remains available and opens the deterministic editable template;
+existing proposals and decisions remain reviewable, and no provider or message
+state repair is required.
 
 ## Pattern For Future AI Integrations
 

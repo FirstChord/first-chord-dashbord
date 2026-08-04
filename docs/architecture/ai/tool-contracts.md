@@ -1,19 +1,18 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: null
+last_verified: 2026-08-04
 ---
 # Approved AI Tool Contracts
 
-Last updated: 2026-07-19
+Last updated: 2026-08-04
 
 This is the allowlist and design boundary for AI assistance inside the
-dashboard. The optional issue-briefing pilot is the only enabled model runtime:
-it makes one server-side, tool-free call over the already-redacted deterministic
-issue explanation. A second tool-free reply-proposal runtime is built but was
-parked for a later experiment on 2026-07-20; the explicit privacy and policy
-sign-off below is still required before enabling it. Neither grants
-an agent access to an integration or action. Other capabilities remain
+dashboard. The optional issue briefing and the bounded incoming-reply pilot are
+the only implemented model runtimes. Each makes one server-side, tool-free call over
+a narrow deterministic projection, and the reply pilot runs only when an admin
+presses **Reply** on that exact message. Neither grants an agent access to an
+integration or action. Other capabilities remain
 unavailable to a model or user until their privacy review, tests, UI boundary,
 provider/retention decision, and logging exist.
 
@@ -68,7 +67,7 @@ These names reserve narrow contracts; they are not callable tools today.
 | `operations_guidance.read` | Find the right policy or recovery step quickly | Fixed allowlist of runbook/policy document IDs and sections | Quoted-short guidance, source link, and whether human escalation is needed | Read arbitrary repository files, use shell, inspect secrets, or invent recovery steps | Read-only. Retrieval tests require citations, bounded results, and abstention when the allowlist has no answer | Pure fixed index/search implemented; no arbitrary file read, route, UI, or model |
 | `incoming_classification.propose` | Reduce manual triage of captured WhatsApp messages | Redacted message text, existing classification enum, deterministic date candidates, and bounded student candidates | Proposed category/dates/student, evidence spans, ambiguity flags, and `needs_review` abstention | Create a pause, planning item, archive decision, payment change, message, or new student match outside supplied candidates | Human reviews before any conversion/archive. Evaluate against corrected classifications/dates and false-auto-archive cases. Remove names/phones from evaluation fixtures | Synthetic classification/date/abstention/privacy harness implemented; proposal runtime and production holdout do not exist |
 | `communication_draft.propose` | Prepare a reply from confirmed context and policy | Confirmed student/workflow facts, approved policy snippets, audience/tone chosen by the admin | Draft text plus cited facts and unresolved placeholders | Select or reveal a recipient, send/copy/log as sent, claim delivery, or invent a promise/date | Human edits and approves in the existing communication workflow. Evaluate approved edits, unsupported claims, tone, and safeguarding leakage | Pure low-risk context/proposal validator implemented for acknowledgement cases; no contact-role lookup, UI, provider, copy, log, or send |
-| `incoming_reply_draft.propose` | Draft a suggested WhatsApp reply for an open `Incoming_Message_Inbox` row, enforcing the Lesson Cancellation Policy | Redacted parent message text (known names → placeholders; emails/phones/URLs stripped; bounded length) plus a deterministic policy context: policy case (one-off vs permanent vs ending vs break), computed notice window (lesson date from message extraction or `Schedule_Context` vs message date), and the fixed allowed policy facts for that case/window | A draft reply citing only allowed policy facts, with `[PARENT_FIRST]`/`[STUDENT_FIRST]` placeholders the server substitutes after validation. Ambiguous cases never reach the model: a deterministic neutral acknowledgement is proposed instead | Offer a one-off reschedule/swap/make-up; state a charge/no-charge/video outcome the computed notice window does not support; promise a video on a same-day cancellation; send, copy, log-as-sent, or reveal a recipient; open with anything but Hi/Hello/Hey | Human decides on the inbox row: **Use this** (clipboard + `Communication_Log`), **Edit then approve** (edited text logged; diff is telemetry), or **Discard**. Deterministic validator (`validateIncomingReplyDraft`) runs on the complete model text before anything is stored or rendered; the cancellation-policy rules are its test cases. Telemetry: used-unmodified vs edited vs discarded per proposal in the `Proposals` tab | Built 2026-07-19 behind `ADMIN_AI_REPLY_DRAFT_ENABLED` (default off). **Status: PARKED 2026-07-20 for a later experiment. Finn sign-off remains required before the flag is enabled and any model reads a real parent message.** See sign-off notes below |
+| `incoming_reply_draft.propose` | Draft a suggested WhatsApp reply for one open `Incoming_Message_Inbox` row, enforcing the Lesson Cancellation Policy | Redacted parent message text (known names → placeholders; emails/phones/URLs stripped; bounded length) plus a deterministic policy context: policy case (one-off vs permanent vs ending vs break), computed notice window (lesson date from message extraction or `Schedule_Context` vs message date), and the fixed allowed policy facts for that case/window | A draft reply citing only allowed policy facts, with `[PARENT_FIRST]`/`[STUDENT_FIRST]` placeholders the server substitutes after validation. A clear general message may receive a warm acknowledgement but no school-policy or operational promise. Ambiguous cases never reach the model: a deterministic neutral acknowledgement is proposed instead | Offer a one-off reschedule/swap/make-up; state a charge/no-charge/video outcome the computed notice window does not support; promise a refund, cancellation, pause, schedule/payment change, call, message, or other school action without an allowed fact; send, copy, log-as-sent, reveal a recipient, or draft in bulk | Pressing **Reply** on one card is consent for that message's redacted text to be processed. The human edits the result, then **Copy & open WhatsApp** records the copy in `Communication_Log` and opens WhatsApp; the human still chooses the chat and taps Send. Deterministic validation runs before display/storage. Proposal telemetry distinguishes used, edited and discarded; the original message is not copied into `Proposals` evidence | **Bounded per-card pilot approved 2026-08-04** behind `ADMIN_AI_REPLY_DRAFT_ENABLED`. No cron, pre-generation, or bulk drafting. Provider/validation failure falls back to the standard editable reply |
 
 ### Live deterministic issue explanation
 
@@ -110,12 +109,12 @@ it cannot correct issue truth or workflow state. Routine prompts, model output,
 student identifiers and context are not logged. Disable
 `ADMIN_AI_ISSUE_BRIEFING_ENABLED` to remove the model path immediately.
 
-### Incoming reply drafting — sign-off notes (PARKED, 2026-07-20)
+### Incoming reply drafting — bounded pilot approved 2026-08-04
 
-The proposals-inbox V1 lane (`incoming_reply_draft.propose`) is implemented but
-**not enabled**. Finn chose on 2026-07-20 to leave it parked and experiment
-later; this is not an immediate enablement task. Before any future pilot sets
-`ADMIN_AI_REPLY_DRAFT_ENABLED=true` on Railway, Finn must explicitly accept:
+Finn explicitly approved the narrow, one-message-at-a-time pilot on 2026-08-04
+after reviewing the following boundaries. This product approval permits the
+Railway flag to be enabled; it does not complete the wider parent-facing privacy
+notice or the repository's still-proposed retention schedule.
 
 1. **Parent message text reaches OpenAI.** Unlike the issue pilot, the model
    input includes the (redacted) free-text parent message. Redaction replaces
@@ -135,12 +134,16 @@ later; this is not an immediate enablement task. Before any future pilot sets
    inside-the-week drafts offer Zoom or a practice video; permanent slot
    changes get a warm welcome and route to Finn; ambiguity always produces a
    neutral acknowledgement that commits to nothing.
-4. **Retention.** `Proposals` rows hold the redacted evidence and the proposal
-   body; a 12-month rolling prune is proposed in the
+4. **Retention.** `Proposals` holds the generated/materialised proposal body,
+   source-text hash, bounded policy/model context and human decision. It does
+   not retain another copy of the redacted parent message. A 12-month rolling
+   prune remains proposed in the
    [data-protection map](../../policies/data-protection.md).
 
-Producer is human-triggered only (no cron), fails closed on validation, and the
-UI works identically with the flag off (buttons simply absent).
+Producer consent is the card's **Reply** press only. There is no cron, bulk
+draft action, background pre-generation or retry. Validation fails closed; a
+provider/validation failure opens the deterministic editable template instead.
+With the flag off, **Reply** goes directly to that same standard template.
 
 ## Explicitly Not Allowlisted
 

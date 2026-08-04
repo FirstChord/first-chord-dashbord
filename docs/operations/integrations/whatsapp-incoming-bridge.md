@@ -66,13 +66,16 @@ any extracted first/return dates are visible and editable. Clicking **Make plan*
 uses those reviewed values; clearing a false date clears it from the draft. The
 inbox row remains open until the existing idempotent Planning write succeeds.
 
-**Reply** opens an editable deterministic school template without sending parent
-text to a model. **Copy & open WhatsApp** copies the final text, records the copy
-in `Communication_Log`, and opens WhatsApp's chat chooser with the same text
+**Reply** is the deliberate per-message boundary. When the bounded pilot is
+enabled, that press sends only this message's redacted, length-bounded text and
+deterministic policy context for one AI draft; there is no bulk or background
+generation. Ambiguous policy evidence never reaches the model. If the provider,
+timeout or validator fails—or the flag is off—the same button opens the standard
+editable template. **Copy & open WhatsApp** records the copy in
+`Communication_Log` and opens WhatsApp's chat chooser with the final text
 prefilled. WhatsApp does not expose a supported deep link to a private lesson
 group, so the admin still chooses the chat and taps Send. Copied remains intent
-to send, not delivery evidence. The separately feature-gated AI proposal
-experiment remains parked and unchanged.
+to send, not delivery evidence.
 
 Classifier labels, evidence, correction, no-action and test-row deletion stay
 behind the single More disclosure. A later school message is shown as a compact

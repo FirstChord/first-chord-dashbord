@@ -1,7 +1,7 @@
 ---
 status: supporting
 audience: [human, agent]
-last_verified: 2026-08-03
+last_verified: 2026-08-04
 ---
 # Data Protection Map And Open Decisions
 
@@ -21,6 +21,7 @@ clear access boundaries, and plain-language transparency matter especially.
 | `Practice_Notes_Log` and Gmail Sent | progress notes, recipient, delivery IDs; lesson-note service | 2 years after leaving; align both stores |
 | `Student_Portal_Access` | encrypted family notes code, credential verifier/version, and staff rollout confirmations | enrolled; remove through the established leaving/portal-removal flow |
 | `Incoming_Message_Inbox`, `WhatsApp_Group_Map`, local bridge cache | parent messages, phones, group/student mapping for lesson administration | handled/ignored inbox rows 12 months; cache 14 days/2,000 by default; confirmed map while operationally needed |
+| `Proposals` | generated reply body, source-text hash, bounded policy/model metadata, and the admin's use/edit/discard decision; no copied inbox message text | 12-month rolling prune proposed; not yet automated |
 | `Communication_Log`, `Parent_Understanding_State` | copied parent communication and human relationship notes | communications 2 years; review subjective understanding notes yearly |
 | planning, absence, pause, issue and event lanes | named operational workflow and audit evidence | workflow rows while active/useful; `Event_Log` proposed 2 years; never erase evidence to fake recovery |
 | song/path/assignment/request/outcome lanes | student IDs, tutor names, learning telemetry and free-text outcomes | review periodically; do not turn tutor-linked outcomes into performance ranking |
@@ -29,7 +30,7 @@ clear access boundaries, and plain-language transparency matter especially.
 | Stripe/MMS/Google/Wise/Soundslice/GitHub | provider-held data required for payments, lessons, content, hosting and code | governed by the school purpose plus provider terms/DPA |
 | Railway PostgreSQL `practice_note_delivery_claims` | pseudonymous delivery key and acting tutor used to prevent duplicate sends | retain while it is required to prove/block delivery replay; no note body |
 | local Sheets backups | copies of managed operational tabs | bounded backup-set count; off-machine copies must use the same window |
-| OpenAI proposal/briefing inputs | bounded redacted operational projections when an explicitly enabled pilot calls the model | ephemeral provider processing plus minimal decision/evaluation telemetry; reply pilot remains off pending sign-off |
+| OpenAI proposal/briefing inputs | bounded redacted operational projections when an explicitly enabled pilot calls the model | ephemeral provider processing plus minimal decision/evaluation telemetry; the reply pilot is explicit-press, one message at a time |
 
 The complete tab/key/writer inventory is [State tabs](../architecture/data/state-tabs.md).
 When a store or purpose is added there, update this map in the same change.
@@ -50,9 +51,11 @@ When a store or purpose is added there, update this map in the same change.
 4. The Practice Chat transcription relay currently exposes its raw OpenAI key to
    browsers. Follow the active staged cutover and rotate that key; this is a
    credential exposure, not a retention-policy choice.
-5. Reply-proposal generation may send redacted parent text to OpenAI. Unknown
-   names/indirect identifiers can survive deterministic redaction. The feature
-   stays off until explicit policy/privacy sign-off.
+5. Pressing **Reply** on an inbox card may send that message's redacted text to
+   OpenAI. Unknown names/indirect identifiers can survive deterministic
+   redaction. Finn accepted that residual risk for a bounded per-card pilot on
+   2026-08-04. There is no bulk/background drafting, and `Proposals` does not
+   duplicate the model-input message text.
 
 ## Leaving And Rights Requests
 
@@ -79,7 +82,8 @@ date or legal exception. Review its output per tab before any manual pruning.
 - publish a parent-facing privacy notice and contact route
 - choose tutor-dashboard and student-note access changes
 - confirm repository access and FileVault/off-machine backup protection
-- agree the OpenAI reply-proposal processing terms before enabling its flag
+- include the bounded OpenAI reply-proposal processing in the parent-facing
+  privacy notice and verify the applicable provider/DPA settings
 - define and rehearse a reviewed per-student deletion/export procedure
 
 Until then, minimisation improvements that do not destroy required history are

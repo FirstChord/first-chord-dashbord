@@ -45,9 +45,15 @@ deliberate school-improvement prompt.
   than becoming an extended absence merely because a return date was mentioned.
   Mobile cards now lead with student, sender and original message rather than
   classifier badges. The action row now says what happens: **Plan** and
-  **Reply**, followed by compact Later, Done and More controls. Reply opens an
-  editable deterministic school template; **Copy & open WhatsApp** puts the text
-  on the clipboard and opens WhatsApp's chat chooser with it prefilled. The
+  **Reply**, followed by compact Later, Done and More controls. Reply is now the
+  one-message-at-a-time consent boundary for the bounded AI drafting pilot; it
+  falls back to the editable standard template whenever drafting is disabled,
+  unavailable or rejected by deterministic validation. General drafts may
+  acknowledge the actual message but cannot promise operational outcomes;
+  ambiguous policy evidence never reaches the model. There is no bulk or
+  background drafting, and proposal evidence no longer duplicates the parent
+  message. **Copy & open WhatsApp** puts the final text on the clipboard and
+  opens WhatsApp's chat chooser with it prefilled. The
   human still chooses the conversation and taps Send, and the copy remains a
   Communication Log record rather than proof of sending. No-action, evidence,
   classifier detail, correction and test deletion sit behind one More
@@ -409,9 +415,6 @@ Canonical details live in [state ownership](./architecture/data/ownership.md),
   the pilot, so the security transition is not complete. After usability checks,
   pilot one exact-email scoped tutor and then close/redirect the legacy route.
   See the [active pilot plan](./plans/active/tutor-dashboard-auth-pilot.md).
-- **Reply proposal experiment:** leave the feature flag off until Finn explicitly
-  starts a one-by-one pilot and accepts the privacy/policy terms. Avoid a bulk
-  “draft all” start.
 - **Incoming-message follow-ups:** settle retention/lawful-basis wording, capture
   the lesson group during onboarding, add removal for sibling mappings if needed,
   prune the ineffective inactivity-timestamp path, and separately review/remove

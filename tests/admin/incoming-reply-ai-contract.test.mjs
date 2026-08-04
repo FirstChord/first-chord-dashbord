@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 
 import {
   buildIncomingReplyAiInput,
+  buildStoredReplyModelContext,
   redactIncomingMessageText,
   validateIncomingReplyAiOutput,
 } from '../../lib/admin/incoming-reply-ai-contract.mjs';
@@ -28,6 +29,16 @@ function ambiguousContext() {
       messageText: 'Hi, could we change the lesson time?',
       suspectedCategory: 'schedule',
       messageAt: '2026-07-20T09:00:00Z',
+    },
+  });
+}
+
+function generalContext() {
+  return buildReplyPolicyContext({
+    record: {
+      messageText: 'Olivia is delighted with her exam results — thanks for all your help!',
+      suspectedCategory: 'general',
+      messageAt: '2026-08-04T16:46:00Z',
     },
   });
 }
@@ -70,8 +81,19 @@ test('a surviving identifier in the redacted message is refused', () => {
 
 test('the projected input carries only the policy context and redacted message', () => {
   const input = buildIncomingReplyAiInput(insideWeekContext(), { redactedMessage: '[STUDENT_FIRST] cannot make 23 July' });
-  assert.deepEqual(Object.keys(input.context).sort(), ['allowedFacts', 'kind', 'lessonDateIso', 'message', 'noticeWindow', 'policyCase', 'schemaVersion']);
+  assert.deepEqual(Object.keys(input.context).sort(), ['acknowledgementOnly', 'allowedFacts', 'kind', 'lessonDateIso', 'message', 'noticeWindow', 'policyCase', 'schemaVersion']);
   assert.deepEqual(input.allowedFactIds, ['charged_inside_week', 'zoom_at_slot', 'practice_video']);
+});
+
+test('stored model context omits the parent message while preserving auditable rules', () => {
+  const input = buildIncomingReplyAiInput(generalContext(), {
+    redactedMessage: '[STUDENT_FIRST] has some brilliant exam news',
+  });
+  const stored = buildStoredReplyModelContext(input.context);
+  assert.equal(stored.acknowledgementOnly, true);
+  assert.equal(stored.policyCase, 'general');
+  assert.equal(Object.hasOwn(stored, 'message'), false);
+  assert.ok(!JSON.stringify(stored).includes('exam news'));
 });
 
 // --- output validation -----------------------------------------------------------
@@ -136,6 +158,33 @@ test('provider returns a validated draft on a compliant response', async () => {
   });
   assert.ok(result.draft.startsWith('Hi [PARENT_FIRST]'));
   assert.equal(result.usage.totalTokens, 150);
+});
+
+test('provider can draft a warm general acknowledgement with no invented facts', async () => {
+  const result = await generateIncomingReplyDraft(generalContext(), {
+    redactedMessage: '[STUDENT_FIRST] is delighted with her exam results',
+    env: FAKE_ENV,
+    fetchImpl: fakeFetch({
+      draft: 'Hi [PARENT_FIRST], that is brilliant news — please tell [STUDENT_FIRST] a huge well done from us! Thanks for letting us know.',
+      usedFactIds: [],
+    }),
+  });
+  assert.equal(result.usedFactIds.length, 0);
+});
+
+test('provider rejects an operational promise in a general acknowledgement', async () => {
+  await assert.rejects(
+    generateIncomingReplyDraft(generalContext(), {
+      redactedMessage: '[STUDENT_FIRST] is delighted with her exam results',
+      env: FAKE_ENV,
+      fetchImpl: fakeFetch({
+        draft: 'Hi [PARENT_FIRST], lovely news — we’ll update everything for you.',
+        usedFactIds: [],
+      }),
+    }),
+    (error) => error.code === 'invalid_draft'
+      && error.details.includes('unsupported_operational_commitment'),
+  );
 });
 
 test('provider fails closed when the model output violates the policy', async () => {
