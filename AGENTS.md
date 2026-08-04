@@ -33,8 +33,10 @@ npm run code-map:find -- "Wise payout"
 npm run code-map:impact -- lib/admin/wise-helpers.mjs
 ```
 
-`code-map:find` returns matching modules, source-authored notes, exports with line
-numbers, direct test references, and direct production consumers.
+`code-map:find` returns matching modules, explicit source-authored module
+overviews, exports with line numbers, direct test references, and direct
+production consumers. An overview appears only when the file declares
+`@fileoverview`; ordinary implementation comments never influence navigation.
 `code-map:impact` walks outward from a target through the reverse static-import
 graph to related tests, scripts, and app entrypoints; with no path arguments it
 inspects the current git diff.

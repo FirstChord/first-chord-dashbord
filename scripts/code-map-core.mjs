@@ -7,7 +7,7 @@ export const CODE_MAP_RELATIVE_PATH = 'docs/reference/code-map.md';
 const CODE_EXTENSIONS = ['.js', '.jsx', '.mjs', '.ts', '.tsx'];
 const MAPPED_ROOTS = ['lib/admin', 'lib/songs'];
 const GRAPH_ROOTS = ['app', 'components', 'lib', 'scripts', 'tests'];
-const MAX_SOURCE_NOTE_LENGTH = 220;
+const MAX_MODULE_OVERVIEW_LENGTH = 220;
 const IGNORED_DIRECTORIES = new Set(['.git', '.next', 'backups', 'coverage', 'node_modules']);
 
 function toPosix(value) {
@@ -80,8 +80,8 @@ function cleanCommentText(raw) {
 function firstSentence(value) {
   if (!value) return '';
   const sentence = value.match(/^(.+?[.!?])(?:\s|$)/u)?.[1] || value;
-  if (sentence.length <= MAX_SOURCE_NOTE_LENGTH) return sentence;
-  const shortened = sentence.slice(0, MAX_SOURCE_NOTE_LENGTH - 1);
+  if (sentence.length <= MAX_MODULE_OVERVIEW_LENGTH) return sentence;
+  const shortened = sentence.slice(0, MAX_MODULE_OVERVIEW_LENGTH - 1);
   const wordBoundary = shortened.lastIndexOf(' ');
   return `${shortened.slice(0, Math.max(wordBoundary, 80)).trim()}…`;
 }
@@ -125,20 +125,20 @@ function commentCandidates(sourceBeforeFirstExport) {
   return candidates;
 }
 
-export function extractSourceNote(source) {
+function declaresFileOverview(raw) {
+  return /^\s*(?:(?:\/\/|\/\*\*?|\*)\s*)?@fileoverview\b/mu.test(raw);
+}
+
+export function extractModuleOverview(source) {
   const firstExport = source.search(/^[ \t]*export\b/mu);
   const before = firstExport === -1 ? source : source.slice(0, firstExport);
   const candidates = commentCandidates(before);
-  const explicit = candidates.find(({ raw }) => /@fileoverview\b/u.test(raw));
-  const selected = explicit || candidates.find(({ raw }) => {
-    const value = cleanCommentText(raw);
-    return value && !/^(?:eslint|istanbul|prettier)\b/iu.test(value) && !/^-+$/u.test(value);
-  });
-  if (!selected) return { text: '', line: null, explicit: false };
+  const explicit = candidates.find(({ raw }) => declaresFileOverview(raw));
+  if (!explicit) return { text: '', line: null, explicit: false };
   return {
-    text: firstSentence(cleanCommentText(selected.raw)),
-    line: lineNumberAt(source, selected.offset),
-    explicit: Boolean(explicit),
+    text: firstSentence(cleanCommentText(explicit.raw)),
+    line: lineNumberAt(source, explicit.offset),
+    explicit: true,
   };
 }
 
@@ -260,7 +260,7 @@ function isTestPath(sourcePath) {
 function fingerprintFor(records) {
   const facts = records.map((record) => ({
     path: record.path,
-    sourceNote: record.sourceNote,
+    moduleOverview: record.moduleOverview,
     exports: record.exports,
     directTests: record.directTests,
   }));
@@ -276,7 +276,7 @@ export function buildCodeIndex({ repoRoot }) {
     const consumers = [...(graph.consumersByFile.get(sourcePath) || [])].sort();
     return {
       path: sourcePath,
-      sourceNote: extractSourceNote(source),
+      moduleOverview: extractModuleOverview(source),
       exports,
       unsupportedExportLines: findUnsupportedExportLines(source, exports),
       directTests: consumers.filter(isTestPath),
@@ -317,6 +317,10 @@ function renderTests(tests) {
   return tests.map((testPath) => codeLink(testPath, path.basename(testPath))).join(', ');
 }
 
+function trustedModuleOverview(record) {
+  return record.moduleOverview?.explicit ? record.moduleOverview.text : '';
+}
+
 export function renderCodeMap(index) {
   const groups = new Map();
   for (const record of index.records) {
@@ -350,24 +354,27 @@ export function renderCodeMap(index) {
     'Find and impact queries also use a wider static import graph across `app`,',
     '`components`, `lib`, `scripts`, and `tests`.',
     '',
-    'A **source note** is an excerpt from the first standalone pre-export comment',
-    '(or an explicit `@fileoverview`); it is not an invented summary. **Direct test',
+    'A **module overview** appears only when the source explicitly declares one with',
+    '`@fileoverview`; ordinary comments attached to constants or implementation details',
+    'are never treated as module purpose. **Direct test',
     'references** mean a test statically imports or re-exports that exact module.',
-    'A blank association does not prove that the module is untested, and static import',
+    'A blank overview means no explicit module description exists. A blank test',
+    'association does not prove that the module is untested, and static import',
     'analysis cannot prove that dynamic/runtime consumers do not exist.',
     '',
     `Indexed: ${index.records.length} modules, ${index.records.reduce((sum, record) => sum + record.exports.length, 0)} export entries.`,
+    `Explicit module overviews: ${index.records.filter((record) => trustedModuleOverview(record)).length}/${index.records.length}.`,
   ];
 
   for (const [directory, records] of [...groups.entries()].sort(([left], [right]) => left.localeCompare(right))) {
-    output.push('', `## ${directory}`, '', '| Path | Source note | Exports | Direct test references |', '|---|---|---|---|');
+    output.push('', `## ${directory}`, '', '| Path | Module overview | Exports | Direct test references |', '|---|---|---|---|');
     for (const record of records.sort((left, right) => left.path.localeCompare(right.path))) {
       let label = path.posix.basename(record.path);
       if (directory === 'app/api/admin routes') label = record.path.slice('app/api/admin/'.length);
       else if (directory === 'app/api/cron routes') label = record.path.slice('app/api/cron/'.length);
       else if (directory === 'app/api routes') label = record.path.slice('app/api/'.length);
       else if (directory === 'app routes outside app/api') label = record.path.slice('app/'.length);
-      output.push(`| ${codeLink(record.path, label)} | ${escapeTableText(record.sourceNote.text) || '—'} | ${renderExports(record.exports)} | ${renderTests(record.directTests)} |`);
+      output.push(`| ${codeLink(record.path, label)} | ${escapeTableText(trustedModuleOverview(record)) || '—'} | ${renderExports(record.exports)} | ${renderTests(record.directTests)} |`);
     }
   }
   return `${output.join('\n')}\n`;
@@ -384,18 +391,18 @@ export function searchCodeIndex(index, query, { limit = 12 } = {}) {
 
   return index.records.map((record) => {
     const pathText = normaliseSearch(record.path);
-    const noteText = normaliseSearch(record.sourceNote.text);
+    const overviewText = normaliseSearch(trustedModuleOverview(record));
     const exportText = normaliseSearch(record.exports.map((entry) => entry.name).join(' '));
     const testText = normaliseSearch(record.directTests.join(' '));
-    const allText = `${pathText} ${noteText} ${exportText} ${testText}`;
+    const allText = `${pathText} ${overviewText} ${exportText} ${testText}`;
     let score = 0;
     if (pathText.includes(normalisedQuery)) score += 90;
     if (exportText.includes(normalisedQuery)) score += 110;
-    if (noteText.includes(normalisedQuery)) score += 70;
+    if (overviewText.includes(normalisedQuery)) score += 70;
     for (const term of terms) {
       if (pathText.includes(term)) score += 24;
       if (exportText.includes(term)) score += 30;
-      if (noteText.includes(term)) score += 18;
+      if (overviewText.includes(term)) score += 18;
       if (testText.includes(term)) score += 8;
     }
     if (terms.every((term) => allText.includes(term))) score += 45;

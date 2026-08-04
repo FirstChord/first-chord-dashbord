@@ -107,6 +107,11 @@ deliberate school-improvement prompt.
 - **Agent readiness and finance measurement resilience (2026-08-03):** current
   source now produces one deterministic module/export/test index instead of
   freezing repository facts into model weights or a hand-maintained guide.
+  Module descriptions now enter that index only through an explicit
+  `@fileoverview`; ordinary comments on constants and implementation details are
+  blank and cannot affect query ranking. The generated grid reports overview
+  coverage so gaps can be improved deliberately without presenting heuristic
+  guesses as facts.
   Narrow search and conservative impact queries cover every Next route handler,
   and the matching route-security census exposed three obsolete scaffold routes
   that have now been removed. CI blocks map drift and unsupported export syntax;

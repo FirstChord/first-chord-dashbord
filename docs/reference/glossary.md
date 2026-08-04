@@ -14,18 +14,19 @@ Plain-English explanations of technical terms used in the admin dashboard. This 
 The **code map** is a deterministic index generated from the current repository,
 not a hand-written architecture claim and not model memory. Its browseable
 **grid** is `docs/reference/code-map.md`: grouped rows showing a scoped module's
-path, first source-authored pre-export note, exports with line numbers, and tests
-that directly import it. The visible grid covers `lib/admin`, `lib/songs`, and
-every Next route handler.
+path, explicit `@fileoverview` description where one exists, exports with line
+numbers, and tests that directly import it. Ordinary implementation comments
+are excluded rather than guessed to be module purpose. The visible grid covers
+`lib/admin`, `lib/songs`, and every Next route handler.
 
-A **find query** ranks modules using the words in their path, source note,
-exports, and direct-test paths. It is the quickest route from a domain question
-such as “Wise payout” to a small set of current files. An **impact query** starts
-from one or more changed files and walks the reverse static-import graph through
-`app`, `components`, `lib`, `scripts`, and `tests`. It reports downstream
-consumers, related tests, scripts, and app entrypoints, with distance meaning the
-number of import steps from the target. With no paths, it uses the current git
-worktree changes.
+A **find query** ranks modules using the words in their path, explicit module
+overview, exports, and direct-test paths. It is the quickest route from a domain
+question such as “Wise payout” to a small set of current files. An **impact
+query** starts from one or more changed files and walks the reverse static-import
+graph through `app`, `components`, `lib`, `scripts`, and `tests`. It reports
+downstream consumers, related tests, scripts, and app entrypoints, with distance
+meaning the number of import steps from the target. With no paths, it uses the
+current git worktree changes.
 
 These are navigation signals, not proofs. A direct test import does not prove
 that the relevant behaviour is asserted; a blank test cell does not prove that

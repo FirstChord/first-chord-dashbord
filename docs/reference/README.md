@@ -1,7 +1,7 @@
 ---
 status: supporting
 audience: [human, agent]
-last_verified: 2026-08-03
+last_verified: 2026-08-04
 ---
 
 # Reference
@@ -9,9 +9,9 @@ last_verified: 2026-08-03
 Use this folder for lookup material rather than operating sequence.
 
 - [Glossary](./glossary.md)
-- [Generated code map](./code-map.md) — browseable source/export/test lookup,
-  including every Next route handler; prefer `npm run code-map:find` for narrow
-  agent queries
+- [Generated code map](./code-map.md) — browseable explicit-overview/export/test
+  lookup, including every Next route handler; prefer `npm run code-map:find` for
+  narrow agent queries
 - [Code-map podcast script](./code-map-podcast-script.txt) — a plain-English,
   TTS-ready explanation of the generated grid, ranked query, impact graph, and
   safe agent workflow

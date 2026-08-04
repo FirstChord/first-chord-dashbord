@@ -9,7 +9,7 @@ import {
   buildImpactReport,
   extractExports,
   extractImportSpecifiers,
-  extractSourceNote,
+  extractModuleOverview,
   findUnsupportedExportLines,
   renderCodeMap,
   searchCodeIndex,
@@ -37,23 +37,33 @@ export default class Example {}
   assert.deepEqual(findUnsupportedExportLines('export type Example = string;\n'), [1]);
 });
 
-test('extractSourceNote prefers fileoverview and does not mistake URL text for a comment', () => {
+test('extractModuleOverview accepts only an explicit fileoverview', () => {
   const source = `const API = 'https://example.com';
 // Implementation detail that is not the module overview.
 /** @fileoverview Finds the current source without inventing a summary. More detail. */
 export function find() {}
 `;
-  assert.deepEqual(extractSourceNote(source), {
+  assert.deepEqual(extractModuleOverview(source), {
     text: 'Finds the current source without inventing a summary.',
     line: 3,
     explicit: true,
   });
-  assert.deepEqual(extractSourceNote("const API = 'https://example.com';\nexport const API_URL = API;\n"), {
+  assert.deepEqual(extractModuleOverview(`// Cache TTL for the constant below.
+const CACHE_TTL_MS = 60_000;
+export const API_URL = 'https://example.com';
+`), {
     text: '',
     line: null,
     explicit: false,
   });
-  assert.deepEqual(extractSourceNote(`/* Earlier block
+  assert.deepEqual(extractModuleOverview(`// Future module summaries should use @fileoverview explicitly.
+export const VALUE = true;
+`), {
+    text: '',
+    line: null,
+    explicit: false,
+  });
+  assert.deepEqual(extractModuleOverview(`/* Earlier block
  * spanning two lines.
  */
 /** @fileoverview Later explicit overview wins. */
@@ -89,6 +99,7 @@ function makeFixtureRepo() {
   const files = {
     'lib/admin/wise-helpers.mjs': `/** @fileoverview Builds a Wise payout batch. */\nexport function buildWiseBatch() {}\n`,
     'lib/admin/payroll.mjs': `import { buildWiseBatch } from './wise-helpers.mjs';\nexport function preparePayroll() { return buildWiseBatch(); }\n`,
+    'lib/admin/misleading-cache.mjs': `// Frobnicator lifespan detail for the constant below.\nconst CACHE_TTL_MS = 60_000;\nexport function unrelatedWork() {}\n`,
     'app/api/admin/payroll/route.js': `import { preparePayroll } from '@/lib/admin/payroll.mjs';\nexport async function GET() { return preparePayroll(); }\n`,
     'app/api/cron/payroll/route.js': `import { preparePayroll } from '@/lib/admin/payroll.mjs';\nexport async function POST() { return preparePayroll(); }\n`,
     'app/public-export/route.js': `export async function GET() {}\n`,
@@ -109,12 +120,19 @@ test('the shared index powers direct test references, search, impact, and determ
   t.after(() => fs.rmSync(repoRoot, { recursive: true, force: true }));
   const index = buildCodeIndex({ repoRoot });
   const wise = index.recordsByPath.get('lib/admin/wise-helpers.mjs');
+  const misleading = index.recordsByPath.get('lib/admin/misleading-cache.mjs');
 
   assert.ok(index.recordsByPath.has('app/api/cron/payroll/route.js'));
   assert.ok(index.recordsByPath.has('app/public-export/route.js'));
   assert.deepEqual(wise.directTests, ['tests/admin/wise-batch-contract.test.mjs']);
   assert.deepEqual(wise.directConsumers, ['lib/admin/payroll.mjs']);
+  assert.deepEqual(misleading.moduleOverview, { text: '', line: null, explicit: false });
   assert.equal(searchCodeIndex(index, 'Wise payout')[0].record.path, 'lib/admin/wise-helpers.mjs');
+  assert.equal(
+    searchCodeIndex(index, 'frobnicator lifespan').some(({ record }) => record.path === misleading.path),
+    false,
+    'an ordinary implementation comment must not influence navigation search',
+  );
 
   const [impact] = buildImpactReport(index, ['lib/admin/wise-helpers.mjs']);
   assert.deepEqual(impact.entrypoints, [
@@ -130,6 +148,9 @@ test('the shared index powers direct test references, search, impact, and determ
   const second = renderCodeMap(buildCodeIndex({ repoRoot }));
   assert.equal(first, second);
   assert.match(first, /Source fingerprint: `[a-f0-9]{16}`/u);
+  assert.match(first, /Module overview/u);
+  assert.match(first, /Explicit module overviews: 1\/6/u);
+  assert.doesNotMatch(first, /Frobnicator lifespan detail/u);
   assert.match(first, /Direct test references/u);
   assert.match(first, /## app\/api\/cron routes/u);
   assert.match(first, /## app routes outside app\/api/u);

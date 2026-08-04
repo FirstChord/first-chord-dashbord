@@ -57,7 +57,7 @@ function serialiseFindResult({ record, score }, query) {
   return {
     path: record.path,
     score,
-    sourceNote: record.sourceNote,
+    moduleOverview: record.moduleOverview,
     exports: exports.slice(0, 20),
     omittedExportCount: Math.max(0, exports.length - 20),
     directTests: record.directTests,
@@ -71,7 +71,7 @@ function printFindResults(index, query, results) {
   for (const [position, { record }] of results.entries()) {
     const exports = matchedExports(record, query).map((entry) => `${entry.name} (${record.path}:${entry.line})`);
     console.log(`\n${position + 1}. ${record.path}`);
-    if (record.sourceNote.text) console.log(`   source note: ${record.sourceNote.text}`);
+    if (record.moduleOverview.text) console.log(`   module overview: ${record.moduleOverview.text}`);
     console.log(`   exports: ${compactList(exports)}`);
     console.log(`   direct tests: ${compactList(record.directTests)}`);
     console.log(`   direct production consumers: ${compactList(record.directConsumers)}`);
@@ -92,7 +92,7 @@ function printImpactReports(reports) {
       continue;
     }
     if (!report.indexed) console.log('  not part of the generated map scope; graph evidence follows where available');
-    if (report.source?.sourceNote.text) console.log(`  source note: ${report.source.sourceNote.text}`);
+    if (report.source?.moduleOverview.text) console.log(`  module overview: ${report.source.moduleOverview.text}`);
     console.log(`  direct production consumers: ${compactList(report.directConsumers)}`);
     console.log(`  related tests: ${compactList(pathDistanceList(report.relatedTests), 20)}`);
     console.log(`  app entrypoints: ${compactList(pathDistanceList(report.entrypoints), 20)}`);
