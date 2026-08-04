@@ -1,7 +1,7 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: 2026-07-26
+last_verified: 2026-08-04
 ---
 # WhatsApp Incoming Bridge
 
@@ -14,6 +14,19 @@ WhatsApp sender or a source of operational truth.
 Manual **Quick capture** on `/admin/incoming-messages` is the fallback for direct
 messages, unconfirmed groups, bridge downtime, and anything missed while the
 bridge was offline. Starring is not a capture path.
+
+## Home-Screen App
+
+The dashboard has one installable admin web app, **FC Messages**. Its stable
+identity and launch target are `/admin/incoming-messages`, and its standalone
+bottom bar links to Inbox, Planning, and Overview. Do not add another manifest
+for an individual admin route: overlapping same-origin `/admin` manifests
+caused iOS to install the old Planning launch target while the user was on
+Inbox.
+
+On iPhone, use Safari's **Add to Home Screen** and leave **Open as Web App** on.
+iOS persists the launch metadata at installation, so an icon installed before a
+launch-target correction must be removed and installed again.
 
 ## Active Capture Contract
 

@@ -7,9 +7,12 @@ export const metadata = {
   },
   description: 'First Chord internal operating dashboard',
   manifest: '/manifest.webmanifest',
+  icons: {
+    apple: '/fc-logo-square.png',
+  },
   appleWebApp: {
     capable: true,
-    title: 'First Chord OS',
+    title: 'Messages',
     statusBarStyle: 'default',
   },
 }

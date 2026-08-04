@@ -26,6 +26,14 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
+- **One inbox-first admin web app (2026-08-04):** the competing Planning and
+  Messages manifests have been collapsed into the single **FC Messages** app,
+  preserving its `/admin/incoming-messages` identity and launch target. A fresh
+  home-screen install retains Inbox, Planning, and Overview in the standalone
+  bottom bar. This avoids iOS choosing the old Planning start URL from two
+  manifests with the same scope; icons made before this correction must be
+  removed and installed again because iOS stores launch metadata at install
+  time.
 - **Blind Stripe foundation test (2026-08-03):** finance now locks one
   first-write-wins monthly forecast from dashboard-owned roster, price,
   expectation, schedule weekday and structured pause evidence before the Stripe

@@ -1,16 +1,17 @@
 export default function manifest() {
   return {
-    name: 'First Chord OS',
-    short_name: 'First Chord',
-    description: 'First Chord internal operating dashboard',
-    start_url: '/admin/planning',
+    name: 'FC Messages',
+    short_name: 'Messages',
+    description: 'First Chord incoming message inbox',
+    id: '/admin/incoming-messages',
+    start_url: '/admin/incoming-messages',
     scope: '/admin',
     display: 'standalone',
     background_color: '#f8fafc',
     theme_color: '#f8fafc',
     icons: [
       {
-        src: '/first-chord-banner.png',
+        src: '/fc-logo-square.png',
         sizes: '512x512',
         type: 'image/png',
       },

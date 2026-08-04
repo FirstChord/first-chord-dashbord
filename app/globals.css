@@ -69,16 +69,15 @@ body {
   animation: fc-slide-in 0.25s ease-out;
 }
 
-/* Hidden when the app runs installed from a home-screen icon (PWA),
-   so single-purpose apps (Planning, Messages) open without the admin chrome */
+/* Hidden when the admin app runs from its home-screen icon, leaving the compact
+   standalone navigation below as the mobile shell. */
 @media (display-mode: standalone) {
   .standalone-hide {
     display: none !important;
   }
 }
 
-/* Shown ONLY inside an installed PWA: a minimal escape hatch, since the
-   admin header (and its nav) is hidden there */
+/* Shown only inside the installed admin app because its full header is hidden. */
 .standalone-only {
   display: none;
 }
