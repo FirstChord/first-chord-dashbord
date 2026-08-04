@@ -26,6 +26,19 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
+- **Sheets read budget and graceful quota failure (2026-08-04):** intermittent
+  "Application error" pages across `/admin` were a Google Sheets 429 — 60 reads
+  per minute per *user*, shared by the whole app through one service account.
+  `getSheetObjects` read straight past the cache, so every
+  `loadStudentContextCollection` spent three requests regardless of how recently
+  it had run; it now shares the read cache. Ordinary reads serve bounded-stale
+  data rather than failing when Sheets rate-limits, while forced (pre-write)
+  reads still fail loudly rather than act on an old copy. 429 gets a short retry
+  ladder because a per-minute quota does not clear in seconds and each attempt
+  spends more of it. A rolling read counter warns at 75% of the ceiling, and
+  `/admin` finally has an error boundary instead of Next's bare exception page.
+  The rule and its per-module tiers live in
+  [Sheets read discipline](./architecture/data/sheets-reads.md).
 - **Evidence-first message intake and Practice Note song links (2026-08-04):**
   incoming classification now separates topic, intent and actionability, so a
   social mention of summer, a music-book payment, or an already-settled slot no
@@ -296,64 +309,6 @@ deliberate school-improvement prompt.
   stale. Retry backoff also gained jitter — five workers retrying in lockstep
   were re-triggering the same HTTP 429 and left up to 14 students unread on a
   run; now one.
-- **Test-suite confidence pass (2026-07-27):** four gaps from the test-architecture
-  audit are closed, and the standing policy that came out of it is below under
-  *Testing policy*. The tutor-dashboard guard's decision logic moved to
-  `lib/tutor-auth-contract.mjs` with the session and admin lookups injected;
-  `lib/tutor-auth.js` is now a thin adapter, and behaviour is unchanged. That
-  makes the guard runnable under `node --test` for the first time — previously
-  the only coverage was a regex looking for its name in route source, which
-  passed with the guard moved below the data fetch it was meant to gate.
-  `tutor-auth-route-boundary.test.mjs` is replaced by
-  `api-route-guard-census.test.mjs`, which discovers every `app/api/**/route.js`
-  from disk rather than a hardcoded list, so a new unguarded route fails until
-  it is classified or declared public with a reason. Also added: signature
-  forgery coverage for the two token verifiers that had none, a fake Google
-  Sheets client exercising the write path's row targeting and column
-  arithmetic, and one composed pause-path test that runs Pause_History rows
-  through all five pause modules with only the write adapters stubbed. The
-  census also found `/api/token` and `app/proxy/token.js` to be unreferenced
-  copies of `app/api/auth/mms/route.js`, dead since the standalone-repo split;
-  both are removed and `auth/mms` remains canonical. `clientKeyFromRequest` now
-  has coverage, which surfaced the unlock rate-limit question — reviewed and
-  accepted as proportionate, recorded under *Deliberately not next*.
-  974 tests, build green.
-- **Pause-expectation Sheets quota fix (2026-07-27):** the explicit
-  preview-and-confirm action on `/admin/flags` still changes only
-  `Students.payment_expectation` and never Stripe, but its confirmed write path
-  now batches all attempt audits, Students cells, and completion audits into
-  three Sheets requests for the whole run instead of three requests per
-  student. Duplicate tutor rows for one MMS ID are collapsed to one decision
-  and all matching expectation cells are aligned. The Issues page now explains
-  the boundary beside the button in plain English.
-- **Half-onboarding prevention and recovery (2026-07-27):** onboarding now
-  verifies that the production GitHub token can write the registry and can read
-  its live source before any Sheets or MMS write. A `Students` row without a
-  registry entry is identified as a partial canonical record and directed to
-  the narrow `SHEETS ONLY` repair rather than a duplicate full onboarding run.
-  If a provider fails after a write, the result records the successful and
-  failed lanes accurately, renders as partially complete, and keeps Waiting and
-  post-onboarding follow-ups open until the canonical record, MMS activation,
-  billing profile, and first lesson are all confirmed.
-- **Tutor-absence dated payment handoff (2026-07-27; classification corrected
-  2026-08-03):** a new guided
-  cancellation no longer treats the undated
-  `Students.payment_expectation = stripe_paused_expected` flag as proof that
-  the affected lesson dates were handled. The follow-up Planning card is a
-  structured pause card with the payment tool first; message-only final cards
-  are reserved for an explicit per-lesson “payment not needed” decision.
-  Existing active message-only cards created by the old logic were parked
-  without rewriting terminal history or touching Stripe, MMS, student payment
-  fields, or parent messages. The original date capture remains an explicitly
-  non-pause parent tracker while those student-linked cards are open; wording
-  such as “linked pause cards” cannot make it display payment controls or enter
-  pause forecasting. Existing unset capture rows are recognised by their tutor,
-  date and no-student shape, so the correction needs no workflow-state repair.
-  Two-week initial-notice cards now expose their message, copy action and
-  evidence-gated completion directly in the due view; parking is named
-  explicitly and never claims the notice was sent.
-  The point-in-time repair evidence and repeatable regression check are in the
-  [tutor-absence contract](./workflows/tutors/absence-to-pause.md).
 ## Current operating contracts
 
 | Area | Current boundary |

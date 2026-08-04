@@ -284,6 +284,34 @@ if (addedReloads.length) {
   });
 }
 
+// Google allows 60 Sheets reads per minute per user, and one service account
+// serves the whole app, so read discipline is a shared budget rather than a
+// per-module concern. The rule and its per-module tiers live in
+// docs/architecture/data/sheets-reads.md.
+const addedDirectSheetReads = hasAddedLine(fileDiffs, (file, lines) => (
+  isCodeFile(file)
+  && file !== 'lib/admin/sheets/core.mjs'
+  && !file.startsWith('tests/')
+  && lines.some((line) => /sheets\.spreadsheets\.(values\.)?get\(/u.test(line))
+));
+if (addedDirectSheetReads.length) {
+  warnings.push({
+    title: 'New uncached Google Sheets read introduced',
+    body: `${addedDirectSheetReads.map(([file]) => `  - ${file}`).join('\n')}\n  Reads outside lib/admin/sheets/core.mjs skip the shared read cache and spend the 60/minute quota on every call. Use getSheetValues/getSheetObjects unless this genuinely cannot be cached.`,
+  });
+}
+
+const addedForcedReads = hasAddedLine(fileDiffs, (file, lines) => (
+  (file.startsWith('app/') || /^lib\/admin\/[^/]+\.(js|mjs)$/u.test(file))
+  && lines.some((line) => /getSheetValues\([^)]*force:\s*true/u.test(line))
+));
+if (addedForcedReads.length) {
+  warnings.push({
+    title: 'New forced (cache-bypassing) Sheets read introduced',
+    body: `${addedForcedReads.map(([file]) => `  - ${file}`).join('\n')}\n  force: true belongs in a write's read-modify-write step, not on a render or route path where it costs a fresh read per visit.`,
+  });
+}
+
 const addedAdminFetches = hasAddedLine(fileDiffs, (file, lines) => (
   /^components\/admin\//u.test(file)
   && lines.some((line) => /fetch\((['"])\/api\/admin\//u.test(line))

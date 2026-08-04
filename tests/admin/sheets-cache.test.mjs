@@ -3,7 +3,10 @@ import assert from 'node:assert/strict';
 import {
   clearSheetReadCacheForTests,
   getCachedSheetValues,
+  getSheetObjects,
+  getSheetsReadBudget,
   getStaleCachedSheetValues,
+  resetSheetsReadBudgetForTests,
   setCachedSheetValues,
 } from '../../lib/admin/sheets/core.mjs';
 
@@ -111,4 +114,74 @@ test('the Sheets client is built with a request timeout', async () => {
       else process.env[key] = value;
     }
   }
+});
+
+// --- read budget ---------------------------------------------------------
+// Google allows 60 Sheets reads per minute per user and one service account
+// serves the whole app, so an uncached reader is a production outage waiting for
+// a busy minute. getSheetObjects used to read straight through to the API, which
+// cost three requests per student-context load. See
+// docs/architecture/data/sheets-reads.md.
+
+function withFakeSheets({ values, onRead }, fn) {
+  const saved = {
+    spreadsheetId: process.env.GOOGLE_SPREADSHEET_ID,
+    client: globalThis.__firstChordSheetsClientPromise,
+  };
+  process.env.GOOGLE_SPREADSHEET_ID = `read-budget-${Math.random().toString(36).slice(2)}`;
+  clearSheetReadCacheForTests();
+  resetSheetsReadBudgetForTests();
+
+  globalThis.__firstChordSheetsClientPromise = Promise.resolve({
+    spreadsheets: {
+      values: {
+        get: async () => {
+          onRead?.();
+          return { data: { values } };
+        },
+      },
+    },
+  });
+
+  return Promise.resolve(fn()).finally(() => {
+    if (saved.spreadsheetId === undefined) delete process.env.GOOGLE_SPREADSHEET_ID;
+    else process.env.GOOGLE_SPREADSHEET_ID = saved.spreadsheetId;
+    if (saved.client === undefined) delete globalThis.__firstChordSheetsClientPromise;
+    else globalThis.__firstChordSheetsClientPromise = saved.client;
+    clearSheetReadCacheForTests();
+    resetSheetsReadBudgetForTests();
+  });
+}
+
+test('getSheetObjects serves repeat calls from the read cache', async () => {
+  let reads = 0;
+  await withFakeSheets({
+    values: [['mms_id', 'Student forename'], ['sdt_1', 'Ada']],
+    onRead: () => { reads += 1; },
+  }, async () => {
+    const first = await getSheetObjects('Students');
+    const second = await getSheetObjects('Students');
+
+    assert.deepEqual(first, [{ mms_id: 'sdt_1', 'Student forename': 'Ada' }]);
+    assert.deepEqual(second, first);
+    assert.equal(reads, 1, 'a second read of the same tab must not spend quota');
+  });
+});
+
+test('the read budget counts real API reads, not cache hits', async () => {
+  await withFakeSheets({ values: [['mms_id'], ['sdt_1']] }, async () => {
+    assert.equal(getSheetsReadBudget().reads, 0);
+
+    await getSheetObjects('Students');
+    assert.equal(getSheetsReadBudget().reads, 1, 'a cache miss spends quota');
+
+    await getSheetObjects('Students');
+    assert.equal(getSheetsReadBudget().reads, 1, 'a cache hit does not');
+  });
+});
+
+test('the read budget warns below the quota, not after it is spent', () => {
+  const { warnAt, quota } = getSheetsReadBudget();
+  assert.equal(quota, 60, 'Google allows 60 reads per minute per user');
+  assert.ok(warnAt < quota, 'the warning must arrive with headroom left to act on');
 });

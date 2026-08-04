@@ -269,3 +269,76 @@ test('swr cache: a fetch that predates a patch cannot land on top of it', async 
     Date.now = originalNow;
   }
 });
+
+// --- staleOnError --------------------------------------------------------
+// The production case this exists for: Google Sheets returns 429 (60 reads per
+// minute, shared by the whole app) while a page is rendering. Serving the last
+// known copy keeps the page up; throwing renders Next's bare "Application
+// error" screen. See docs/architecture/data/sheets-reads.md.
+
+test('swr cache: staleOnError serves an expired value when the fetch fails', async () => {
+  const cache = makeCache();
+  let calls = 0;
+  const fetcher = async () => {
+    calls += 1;
+    if (calls > 1) {
+      const error = new Error('Quota exceeded');
+      error.code = 429;
+      throw error;
+    }
+    return ['seed'];
+  };
+
+  await withMockedNow(1_000, () => cache.read('k', fetcher, { staleOnError: true }));
+
+  // Past the hard max (ttl 60s + swr 300s), so the caller would normally wait
+  // for a fresh fetch — and that fetch fails.
+  const served = await withMockedNow(1_000 + 400_000, () => (
+    cache.read('k', fetcher, { staleOnError: true })
+  ));
+
+  assert.deepEqual(served, ['seed'], 'expired data beats a failed render');
+  assert.equal(calls, 2, 'it still tried to refresh first');
+});
+
+test('swr cache: staleOnError does not serve stale while the source is healthy', async () => {
+  const cache = makeCache();
+  let calls = 0;
+  const fetcher = async () => { calls += 1; return [`fetch-${calls}`]; };
+
+  await withMockedNow(1_000, () => cache.read('k', fetcher, { staleOnError: true }));
+  const served = await withMockedNow(1_000 + 400_000, () => (
+    cache.read('k', fetcher, { staleOnError: true })
+  ));
+
+  assert.deepEqual(served, ['fetch-2'], 'a healthy fetch is always preferred');
+});
+
+test('swr cache: staleOnError still throws when there is nothing cached', async () => {
+  const cache = makeCache();
+  const fetcher = async () => { throw new Error('Quota exceeded'); };
+
+  await assert.rejects(
+    withMockedNow(1_000, () => cache.read('k', fetcher, { staleOnError: true })),
+    /Quota exceeded/,
+  );
+});
+
+test('swr cache: a forced read never falls back to stale data', async () => {
+  const cache = makeCache();
+  let calls = 0;
+  const fetcher = async () => {
+    calls += 1;
+    if (calls > 1) throw new Error('Quota exceeded');
+    return ['seed'];
+  };
+
+  await withMockedNow(1_000, () => cache.read('k', fetcher, { staleOnError: true }));
+
+  // force is how a write reads before it modifies. Serving the pre-write copy
+  // there would let the write act on data it has already superseded.
+  await assert.rejects(
+    withMockedNow(2_000, () => cache.read('k', fetcher, { force: true, staleOnError: true })),
+    /Quota exceeded/,
+  );
+});

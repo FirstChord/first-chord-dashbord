@@ -127,12 +127,21 @@ A cache keeps a temporary copy of data to avoid re-fetching. TTL ("time to live"
 
 - The Sheets read cache (`SHEETS_READ_TTL_MS` in `lib/admin/sheets/core.mjs`) is fresh for 60s, then uses bounded stale-while-revalidate for a short window. Recent stale rows can render instantly while the server refreshes the cache in the background; very old rows block for a fresh Google Sheets read. Dashboard writes call `invalidateSheetReadCache` for the affected tab, so the admin's own edits appear immediately. External writers are bounded by the hard max age.
 
+## Sheets read budget
+
+Google allows **60 Sheets read requests per minute per user**, and the whole app authenticates as one service account — so that single number is the ceiling for every page, route and cron together, not a per-module allowance.
+
+- Exceeding it returns HTTP 429. Because `/admin` is `force-dynamic`, the failure lands on whichever page renders next rather than on whoever caused it, which is why the symptom is "random pages occasionally break".
+- `lib/admin/sheets/core.mjs` counts real API reads (cache misses and retries — both spend quota) in a rolling minute and warns at 75%. That warning is the signal to cache or batch a caller; raising the threshold to silence it is the wrong move.
+- The rule and its per-module tiers are in [Sheets read discipline](../architecture/data/sheets-reads.md).
+
 ## Stale-While-Revalidate
 
 A cache pattern where the app serves a recently-stale value immediately, then refreshes it in the background for the next request.
 
 - Normally First Chord uses this with a hard cap: past it, the caller waits for a fresh read rather than seeing something very old.
 - **The payroll page is the deliberate exception** (`allowExpired`, 2026-07-29). A save re-renders that whole page inside its own POST, so blocking there meant the button's spinner waited on a ~950-row MMS fetch. It now renders whatever is cached *at any age* and refreshes behind the request — and says so in the header when what it served is past the usual cap, because cached context must show its freshness. "↻ Refresh MMS & recalculate" is the deliberate wait.
+- **`staleOnError`** is the opposite bargain to `allowExpired`: it never serves stale while the source is healthy, but if the fetch fails it serves the expired copy rather than throwing. Ordinary Sheets reads use it, so a 429 degrades to slightly-old data instead of an error page. Forced (pre-write) reads deliberately do not — a write must fail rather than act on a copy it has already superseded.
 - A write that knows exactly what it changed can **patch** the cache instead of dropping it (`patchScopeStale`) — recording attendance does this. Patched entries are marked stale, never fresh: the patch buys speed, not authority, and the source still gets the last word on the next read.
 - It is meant for admin speed, not for replacing source-of-truth checks. If a workflow must know live MMS, Stripe, or a just-edited Sheet value, use an explicit refresh or direct source read.
 

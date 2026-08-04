@@ -12,7 +12,7 @@ permissions, and technical boundaries live.
 - [System](./system/admin-loop.md): loop architecture, tutor/student surfaces,
   and student paths.
 - [Data](./data/state-tabs.md): state tabs, ownership, and the Sheets/database
-  boundary.
+  boundary, plus the shared [Sheets read budget](./data/sheets-reads.md).
 - [AI](./ai/runtime-integration.md): model runtime and the strict tool/proposal
   allowlist.
 - [Security](./security/tutor-student-surfaces.md): current public-surface trust
