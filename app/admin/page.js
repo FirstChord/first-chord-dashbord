@@ -8,6 +8,7 @@ import { buildPaymentOperationsSummary } from '@/lib/admin/payment-summary.mjs';
 import { getTutorAbsenceOverviewSummary } from '@/lib/admin/tutor-absence';
 import { getPlanningDashboard } from '@/lib/admin/planning';
 import { getAdminIssues } from '@/lib/admin/issues';
+import { getIssueWorkBucket } from '@/lib/admin/issues-client-helpers.mjs';
 import { getWaitingWorkflowStudents } from '@/lib/admin/waiting-workflow';
 import { getBridgeStatus, getIncomingMessageInbox } from '@/lib/admin/incoming-messages';
 import { getIncomingReplyProposals } from '@/lib/admin/incoming-reply-proposals';
@@ -279,7 +280,12 @@ export default async function AdminHomePage() {
   ]);
   const pendingReplyProposals = Object.keys(replyProposalsResult.openByIncomingId || {}).length;
   const issues = issuesResult.issues || [];
-  const activeIssues = issues.filter((issue) => ['open', 'acknowledged'].includes(issue.status));
+  // Count what the Issues page actually shows on arrival (its "Needs you" tab),
+  // not every open row. Counting all open/acknowledged issues here included ones
+  // parked under Waiting and Data health, and — most misleadingly — ones the
+  // system no longer detects, which the Issues page files under History. The tile
+  // then promised more to review than the page could show.
+  const activeIssues = issues.filter((issue) => getIssueWorkBucket(issue) === 'needs_you');
   const paymentSummary = buildPaymentOperationsSummary(students);
   const lifecycleCounts = buildLifecycleCounts(students);
   const waitingSummary = buildWaitingOverview(waitingStudents);
