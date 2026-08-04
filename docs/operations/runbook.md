@@ -88,9 +88,9 @@ These names come from real code reads of `process.env` and local token paths.
 | `TUTOR_DASHBOARD_FULL_ACCESS_EMAILS` | Non-admin operators who need every tutor profile | Listed exact addresses can select any tutor; a wrong entry grants broad tutor-dashboard access | Optional comma-separated exact emails. Existing admins already receive full access. Never whitelist an email domain. |
 | `TUTOR_DASHBOARD_EMAIL_MAP` | Exact tutor Google email → allowed tutor key(s) | A missing/wrong map blocks a tutor or could expose another tutor's roster | Optional JSON (`{"email":"Tom"}` or `{"email":["Finn","Tom"]}`) or compact `email=Tutor` pairs. Keep personal addresses in Railway, not Git. |
 | `ADMIN_AI_ISSUE_BRIEFING_ENABLED` | Optional admin Issues AI pilot | `false`/missing keeps the deterministic explanation working and the AI call unavailable | Set to `true` only after the dedicated key, privacy boundary and smoke check are ready. Set back to `false` for immediate rollback. |
-| `ADMIN_AI_REPLY_DRAFT_ENABLED` | Optional incoming-message reply proposal pilot | `false`/missing hides new-draft controls; stored proposals remain reviewable so decisions are not stranded | Leave unset until Finn accepts the privacy and policy terms in `docs/architecture/ai/tool-contracts.md`. Set to `true` only on the canonical admin Railway service; set back to `false` for immediate rollback. |
+| `ADMIN_AI_REPLY_DRAFT_ENABLED` | Bounded incoming-message reply proposal pilot | `false`/missing keeps **Reply** on the deterministic editable template; stored proposals remain reviewable so decisions are not stranded | Finn approved the per-card pilot on 2026-08-04 under `docs/architecture/ai/tool-contracts.md`. Set to `true` only on the canonical admin Railway service; set back to `false` for immediate rollback. |
 | `ADMIN_AI_OPENAI_API_KEY` | Server-side OpenAI Responses API call for issue briefing | AI pilot returns unavailable; deterministic Issues workflow is unaffected | Use a separate restricted/budget-capped project key on the canonical admin Railway service only. Do not reuse the historically exposed Practice Chat relay key. Never expose as `NEXT_PUBLIC_*`. |
-| `ADMIN_AI_OPENAI_MODEL` | Optional model override for the issue pilot | Defaults to `gpt-5.6-luna` | Change only with representative contract/evaluation checks; record the model used in pilot results. |
+| `ADMIN_AI_OPENAI_MODEL` | Optional model override shared by the bounded admin AI pilots | Defaults to `gpt-5.6-luna` | Change only with representative contract/evaluation checks; record the model used in pilot results. |
 | `GOOGLE_SPREADSHEET_ID` | Admin Sheets integration | Admin data reads/writes fail | Set to the main First Chord operational Sheet ID. FINN TO FILL IN exact Sheet link. |
 | `DATABASE_URL` | Practice Note delivery claim store | Execute route returns 503 before MMS or Gmail work | Railway PostgreSQL connection URL. Run `npm run ensure:practice-delivery-claims` when provisioning a new database. This database contains the narrow idempotency claim table, not general dashboard state. |
 | `SHEETS_REFRESH_TOKEN` | Google Sheets OAuth | Sheets reads/writes fail once token is invalid | Generate a new OAuth refresh token with Sheets scope, then update Railway. FINN TO FILL IN exact refresh procedure. |
@@ -192,11 +192,12 @@ materially misleading wording:
 
 If reply proposals fail validation, become slow, or produce materially
 misleading wording, set `ADMIN_AI_REPLY_DRAFT_ENABLED=false` on the canonical
-admin Railway service and redeploy/restart. This removes only the new-draft
-controls: stored proposals remain visible so an admin can use, edit, or discard
-them. No message is sent automatically and no Sheets/provider reconciliation is
-required. Inspect only privacy-safe request metadata; do not add parent message
-text, proposal bodies, student identifiers, or contact details to logs. Fix and
+admin Railway service and redeploy/restart. **Reply** then opens the standard
+editable template without a model call; stored proposals remain visible so an
+admin can use, edit, or discard them. No message is sent automatically and no
+Sheets/provider reconciliation is required. Inspect only privacy-safe request
+metadata; do not add parent message text, proposal bodies, student identifiers,
+or contact details to logs. Fix and
 evaluate with synthetic/redacted fixtures before re-enabling. If the shared
 restricted AI key may be exposed, rotate it and re-check both AI pilots.
 
