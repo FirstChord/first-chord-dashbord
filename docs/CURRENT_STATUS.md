@@ -38,12 +38,15 @@ deliberate school-improvement prompt.
   row, never proof of reply or blanket closure. Cards lead with Action needed,
   Reply needed, Check this, or No action; correction controls and their large
   student list are mounted only when opened. Practice Notes can now carry up to
-  twelve exact current-shelf `song_id` links plus title snapshots; both note
-  routes reject IDs outside that student's live assignments, student history
-  shows the links, and Signals aggregates linked note coverage without guessing
-  ordinary-English titles or sentiment from prose. The separate Firebase PWA
-  selector/send update is built and tested locally: tutors can tap only the
-  current-shelf songs used in the lesson. It still needs its own explicit
+  twelve tutor-confirmed catalogue `song_id` links plus title snapshots and six
+  explicitly unlisted raw titles. Both note routes reject unknown catalogue
+  IDs; student history shows catalogue and unlisted evidence separately, and
+  Signals aggregates linked notes plus an unlisted-repertoire review list
+  without inferring sentiment. The separate Firebase PWA selector/send update
+  is built and tested locally: exact note-title suggestions prioritise the
+  current shelf but remain unchecked until the tutor selects them; catalogue
+  search and an unlisted-title escape hatch cover everything else. It still
+  needs its own explicit
   commit/deploy before live notes submit those IDs. The occasional done/parked `Song_Outcomes`
   prompt remains supplementary evidence—the high-volume Practice Note stream is
   intended to become the main song-learning memory.
@@ -401,11 +404,12 @@ Canonical details live in [state ownership](./architecture/data/ownership.md),
 - **Practice Chat operational check:** use one approved real note to verify the
   recipient, MMS attendance, Gmail ID, Sheets audit, PostgreSQL claim, and
   duplicate response after relevant delivery changes.
-- **Activate Practice Note song links in the Firebase PWA:** the exact-song tap
-  selector and handoff are built/tested in its separate repository; review,
-  commit and deploy that project independently. Do not add fuzzy note matching
-  or auto-select every live shelf item; titles such as *Perfect*, *Yesterday*
-  and *Creep* make that look precise while producing false history.
+- **Activate Practice Note song capture in the Firebase PWA:** the desktop
+  side-panel review, exact-title suggestions, catalogue search, unlisted-title
+  escape hatch and handoff are built/tested in its separate repository; review,
+  commit and deploy that project independently. Keep suggestions unselected and
+  deterministic: titles such as *Perfect*, *Yesterday* and *Creep* make fuzzy or
+  context-free matching look precise while producing false history.
 - **Monolith splits:** remaining candidates and extraction discipline live in
   [the active split map](./plans/active/monolith-split.md).
 

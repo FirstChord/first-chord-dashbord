@@ -119,3 +119,14 @@ test('row builders emit exactly their sheet headers', () => {
     );
   }
 });
+
+test('Practice Notes keep reviewed catalogue links separate from unlisted observations', () => {
+  const songEvidenceStart = PRACTICE_NOTES_LOG_HEADERS.indexOf('song_ids_json');
+  assert.deepEqual(PRACTICE_NOTES_LOG_HEADERS.slice(songEvidenceStart, songEvidenceStart + 4), [
+    'song_ids_json',
+    'song_titles_json',
+    'unlisted_song_titles_json',
+    'song_link_version',
+  ]);
+  assert.equal(PRACTICE_NOTES_LOG_HEADERS.length, 38);
+});

@@ -67,9 +67,11 @@ student note read
 ```text
 Practice Chat music context
   -> current assigned/working/ready Song_Assignments
-  -> exact catalogue {songId, title, status} objects
-  -> optional tutor-selected IDs revalidated on note save
-  -> Practice_Notes_Log song links + read-only school learning signals
+  -> exact shelf objects + bounded public catalogue search metadata
+  -> deterministic note-title proposals, never preselected
+  -> tutor confirms a catalogue ID or records an explicitly unlisted title
+  -> server catalogue validation
+  -> Practice_Notes_Log reviewed links/observations + read-only learning signals
 ```
 
 ```text

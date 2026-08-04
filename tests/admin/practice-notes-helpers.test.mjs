@@ -130,6 +130,7 @@ test('normalisePracticeNotePayload accepts structured Practice Chat sections', (
     practiceGoals: 'Slow practice.',
     songIds: ['fc_song_ho_hey', 'fc_song_stand_by_me'],
     songTitles: ['Ho Hey', 'Stand By Me'],
+    unlistedSongTitles: ['Tutor original'],
     rawNoteText: '[What we did]\nWorked on rhythm.',
     mmsAttendanceId: 'atn_123',
     recipientEmail: 'parent@example.com',
@@ -155,7 +156,8 @@ test('normalisePracticeNotePayload accepts structured Practice Chat sections', (
   assert.equal(note.gmailMessageId, 'msg_123');
   assert.deepEqual(note.songIds, ['fc_song_ho_hey', 'fc_song_stand_by_me']);
   assert.deepEqual(note.songTitles, ['Ho Hey', 'Stand By Me']);
-  assert.equal(note.songLinkVersion, '1');
+  assert.deepEqual(note.unlistedSongTitles, ['Tutor original']);
+  assert.equal(note.songLinkVersion, '2');
 });
 
 test('buildPracticeNoteLogSheetRow serialises booleans for Sheets', () => {
@@ -168,7 +170,8 @@ test('buildPracticeNoteLogSheetRow serialises booleans for Sheets', () => {
     whatWeDid: 'Worked on rhythm.',
     songIds: ['fc_song_ho_hey'],
     songTitles: ['Ho Hey'],
-    songLinkVersion: '1',
+    unlistedSongTitles: ['Tutor original'],
+    songLinkVersion: '2',
     copiedToClipboard: true,
     attendanceStepOpened: false,
     mmsAttendanceSaved: true,
@@ -185,7 +188,8 @@ test('buildPracticeNoteLogSheetRow serialises booleans for Sheets', () => {
   assert.equal(row.student_mms_id, 'sdt_123');
   assert.equal(row.song_ids_json, '["fc_song_ho_hey"]');
   assert.equal(row.song_titles_json, '["Ho Hey"]');
-  assert.equal(row.song_link_version, '1');
+  assert.equal(row.unlisted_song_titles_json, '["Tutor original"]');
+  assert.equal(row.song_link_version, '2');
   assert.equal(row.copied_to_clipboard, 'TRUE');
   assert.equal(row.attendance_step_opened, 'FALSE');
   assert.equal(row.mms_attendance_saved, 'TRUE');
@@ -204,7 +208,8 @@ test('normalisePracticeNoteLogRow reads enriched audit fields', () => {
     raw_note_text: 'Lesson note',
     song_ids_json: '["fc_song_ho_hey"]',
     song_titles_json: '["Ho Hey"]',
-    song_link_version: '1',
+    unlisted_song_titles_json: '["Tutor original"]',
+    song_link_version: '2',
     mms_attendance_id: 'atn_123',
     mms_attendance_saved: 'TRUE',
     target_selection_label: 'Selected because it is the latest unrecorded lesson found for this student.',
@@ -224,7 +229,8 @@ test('normalisePracticeNoteLogRow reads enriched audit fields', () => {
   assert.equal(row.mmsAttendanceId, 'atn_123');
   assert.deepEqual(row.songIds, ['fc_song_ho_hey']);
   assert.deepEqual(row.songTitles, ['Ho Hey']);
-  assert.equal(row.songLinkVersion, '1');
+  assert.deepEqual(row.unlistedSongTitles, ['Tutor original']);
+  assert.equal(row.songLinkVersion, '2');
   assert.equal(row.mmsAttendanceSaved, true);
   assert.equal(row.recipientName, 'Ada Parent');
   assert.equal(row.emailSendStatus, 'sent');

@@ -22,11 +22,14 @@ count as reviewed learning evidence.
 
 ## Practice Note song link
 
-An optional stable catalogue `songId` attached to one Practice Note after the
-server confirms it is on that student's current song shelf. The stored title is
-only a readable snapshot; the ID is the join. Blank means no explicit link, not
-proof that no song was used. The dashboard does not guess links or liking from
-ordinary-English titles in note prose.
+An optional stable catalogue `songId` attached to one Practice Note after a
+tutor selects it and the server confirms it exists in the canonical catalogue.
+Practice Chat can propose exact-title matches from the note, prioritising the
+current shelf, but proposals are never selected automatically. A raw title
+outside the catalogue is stored separately as an unlisted observation for
+review, not promoted into a Song fact. The stored catalogue title is only a
+readable snapshot; the ID is the join. Blank means no explicit link, not proof
+that no song was used. The dashboard does not infer liking from note prose.
 
 ## Code map, query, impact, and grid
 

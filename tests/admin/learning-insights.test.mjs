@@ -8,7 +8,7 @@ test('buildLearningInsights separates confirmed delivery, unknown delivery, and 
     now: new Date('2026-07-10T12:00:00Z'),
     practiceNotes: [
       { createdAt: '2026-07-09T12:00:00Z', studentMmsId: 'sdt_1', emailSendStatus: 'sent', practiceGoals: 'Scales', progressChallenges: 'Timing', songIds: ['fc_song_a'], songTitles: ['Ho Hey'] },
-      { createdAt: '2026-07-09T12:00:00Z', mmsAttendanceSaved: true },
+      { createdAt: '2026-07-09T12:00:00Z', studentMmsId: 'sdt_2', mmsAttendanceSaved: true, unlistedSongTitles: ['Tutor Original'] },
       { createdAt: '2026-07-09T12:00:00Z', emailSendStatus: 'not_sent_absent' },
       { createdAt: '2026-05-01T12:00:00Z', emailSendStatus: 'sent' },
     ],
@@ -21,7 +21,9 @@ test('buildLearningInsights separates confirmed delivery, unknown delivery, and 
   assert.equal(insights.practice.withGoals, 1);
   assert.equal(insights.practice.withChallenges, 1);
   assert.equal(insights.practice.songLinked, 1);
-  assert.equal(insights.practice.songUnlinked, 2);
+  assert.equal(insights.practice.unlistedSongNotes, 1);
+  assert.equal(insights.practice.songObserved, 2);
+  assert.equal(insights.practice.songUnlinked, 1);
   assert.deepEqual(insights.practice.songs, [{
     songId: 'fc_song_a',
     label: 'Ho Hey',
@@ -30,6 +32,12 @@ test('buildLearningInsights separates confirmed delivery, unknown delivery, and 
     withChallenges: 1,
     withGoals: 1,
     detail: '1 student · 1 linked note with challenges · 1 with goals',
+  }]);
+  assert.deepEqual(insights.practice.unlistedSongs, [{
+    label: 'Tutor Original',
+    count: 1,
+    students: 1,
+    detail: '1 student · awaiting catalogue review',
   }]);
 });
 

@@ -6,6 +6,8 @@ import {
   buildTranscriptionPrompt,
   inferInstrument,
   resolveSelectedPracticeNoteSongs,
+  resolveUnlistedPracticeNoteSongs,
+  selectCatalogueSongs,
   selectLiveSongs,
   selectLiveSongTitles,
 } from '../../lib/admin/practice-chat-music-context.mjs';
@@ -37,7 +39,7 @@ test('returns stable live song objects for Practice Note links', () => {
   ]);
 });
 
-test('validates selected note songs against this student current shelf', () => {
+test('validates selected note songs against the canonical catalogue', () => {
   assert.deepEqual(resolveSelectedPracticeNoteSongs({
     songIds: ['fc_song_b', 'fc_song_a'],
     assignments,
@@ -48,13 +50,22 @@ test('validates selected note songs against this student current shelf', () => {
     errors: [],
   });
 
-  const invalid = resolveSelectedPracticeNoteSongs({
+  assert.deepEqual(resolveSelectedPracticeNoteSongs({
     songIds: ['fc_song_d'],
     assignments,
     catalogue,
+  }), {
+    songIds: ['fc_song_d'],
+    songTitles: ['Stand By Me'],
+    errors: [],
+  });
+
+  const invalid = resolveSelectedPracticeNoteSongs({
+    songIds: ['fc_song_missing'],
+    catalogue,
   });
   assert.deepEqual(invalid.songIds, []);
-  assert.match(invalid.errors[0], /not on this student's current shelf/u);
+  assert.match(invalid.errors[0], /not in the First Chord catalogue/u);
 
   const tooMany = resolveSelectedPracticeNoteSongs({
     songIds: Array.from({ length: 13 }, (_, index) => `song_${index}`),
@@ -63,6 +74,27 @@ test('validates selected note songs against this student current shelf', () => {
   });
   assert.deepEqual(tooMany.songIds, []);
   assert.match(tooMany.errors[0], /no more than 12/u);
+});
+
+test('returns bounded catalogue metadata for deliberate tutor search', () => {
+  assert.deepEqual(selectCatalogueSongs({ catalogue }), [
+    { songId: 'fc_song_c', title: 'Green Onions', artist: 'Booker T', contentType: 'song' },
+    { songId: 'fc_song_a', title: 'Ho Hey', artist: 'The Lumineers', contentType: 'song' },
+    { songId: 'fc_song_d', title: 'Stand By Me', artist: 'Ben E. King', contentType: 'song' },
+    { songId: 'fc_song_b', title: 'Sweet Home Chicago', artist: 'Robert Johnson', contentType: 'song' },
+  ]);
+});
+
+test('keeps bounded unlisted titles as observations', () => {
+  assert.deepEqual(resolveUnlistedPracticeNoteSongs({
+    titles: [' Tutor original ', 'Tutor original', 'New warm-up'],
+  }), {
+    titles: ['Tutor original', 'New warm-up'],
+    errors: [],
+  });
+  assert.match(resolveUnlistedPracticeNoteSongs({
+    titles: Array.from({ length: 7 }, (_, index) => `Song ${index}`),
+  }).errors[0], /no more than 6/u);
 });
 
 test('excludes parked songs', () => {
@@ -154,6 +186,7 @@ test('full context bundles instrument, titles, and prompt', () => {
     { songId: 'fc_song_a', title: 'Ho Hey', status: 'working' },
     { songId: 'fc_song_b', title: 'Sweet Home Chicago', status: 'assigned' },
   ]);
+  assert.equal(context.catalogueSongs.length, 4);
   assert.deepEqual(context.songTitles, ['Ho Hey', 'Sweet Home Chicago']);
   assert.match(context.prompt, /Sweet Home Chicago/);
 });

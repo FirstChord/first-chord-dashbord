@@ -17,7 +17,10 @@ import {
   isPracticeNoteDeliveryInProgress,
   normalisePracticeNotePayload,
 } from '@/lib/admin/practice-notes-helpers.mjs';
-import { resolveSelectedPracticeNoteSongs } from '@/lib/admin/practice-chat-music-context.mjs';
+import {
+  resolveSelectedPracticeNoteSongs,
+  resolveUnlistedPracticeNoteSongs,
+} from '@/lib/admin/practice-chat-music-context.mjs';
 import {
   buildPracticeNoteClaimFailureResponse,
   buildPracticeNoteManualFollowUpPayload,
@@ -29,7 +32,7 @@ import {
   finalisePracticeNoteDeliveryClaim,
   releasePracticeNoteDeliveryClaim,
 } from '@/lib/admin/practice-note-delivery-claims.mjs';
-import { getPracticeNoteLogRows, getSongAssignmentRows, upsertPracticeNoteLogRow } from '@/lib/admin/sheets';
+import { getPracticeNoteLogRows, upsertPracticeNoteLogRow } from '@/lib/admin/sheets';
 import { authenticatePracticeChatRequest, corsHeaders } from '@/lib/admin/practice-chat-auth.mjs';
 import { getAdminStudentByMmsId } from '@/lib/admin/students';
 
@@ -94,14 +97,18 @@ export async function POST(request) {
       : Array.isArray(snapshot.songIds)
         ? snapshot.songIds
         : [];
+    const requestedUnlistedSongTitles = Array.isArray(body.unlistedSongTitles)
+      ? body.unlistedSongTitles
+      : Array.isArray(snapshot.unlistedSongTitles)
+        ? snapshot.unlistedSongTitles
+        : [];
     const songLinks = requestedSongIds.length
-      ? resolveSelectedPracticeNoteSongs({
-          songIds: requestedSongIds,
-          assignments: await getSongAssignmentRows(studentId),
-        })
+      ? resolveSelectedPracticeNoteSongs({ songIds: requestedSongIds })
       : { songIds: [], songTitles: [], errors: [] };
-    if (songLinks.errors.length) {
-      return Response.json({ error: songLinks.errors.join(', ') }, { status: 400, headers });
+    const unlistedSongs = resolveUnlistedPracticeNoteSongs({ titles: requestedUnlistedSongTitles });
+    const songErrors = [...songLinks.errors, ...unlistedSongs.errors];
+    if (songErrors.length) {
+      return Response.json({ error: songErrors.join(', ') }, { status: 400, headers });
     }
 
     if (mode === 'execute' && body.confirmLevel2Pilot !== true && body.confirmTestStudent !== true) {
@@ -170,6 +177,9 @@ export async function POST(request) {
       rawNoteText: effectiveNoteText,
       songIds: songLinks.songIds.length ? songLinks.songIds : existingDelivery?.songIds || [],
       songTitles: songLinks.songTitles.length ? songLinks.songTitles : existingDelivery?.songTitles || [],
+      unlistedSongTitles: unlistedSongs.titles.length
+        ? unlistedSongs.titles
+        : existingDelivery?.unlistedSongTitles || [],
       copiedToClipboard: false,
       attendanceStepOpened: true,
       mmsEventId: target.eventId || '',

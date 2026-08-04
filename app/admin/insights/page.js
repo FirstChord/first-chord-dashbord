@@ -108,12 +108,13 @@ export default async function AdminInsightsPage() {
         </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <InsightCard label="Notes logged" value={practice.total} href="/admin/students" copy={`${practice.withGoals} include practice goals · ${practice.withChallenges} include challenges`} />
-          <InsightCard label="Linked to a song" value={practice.songLinked} href="/admin/students" copy={`${practice.songUnlinked} notes have no explicit song link. Titles in prose are not guessed.`} />
+          <InsightCard label="Song captured" value={practice.songObserved} href="/admin/students" copy={`${practice.songLinked} catalogue-linked · ${practice.unlistedSongNotes} with an unlisted title · ${practice.songUnlinked} with no song recorded`} />
           <InsightCard label="Delivery confirmed" value={practice.sent} href="/admin/students" copy={`${practice.failed} failed · ${practice.attendanceOnly} attendance-only`} />
           <InsightCard label="Created 1+ day later" value={practice.lateCreated} href="/admin/students" copy={`${practice.deliveryUntracked} logged notes have untracked delivery. Neither number judges teaching.`} />
         </div>
         <div className="grid gap-4 lg:grid-cols-2">
-          <ThemeList title="Songs appearing in linked practice notes" rows={practice.songs} empty="No Practice Notes have explicit song links yet. Existing prose is not title-matched by guesswork." />
+          <ThemeList title="Catalogue songs in Practice Notes" rows={practice.songs} empty="No Practice Notes have tutor-confirmed catalogue links yet." />
+          <ThemeList title="Unlisted repertoire to review" rows={practice.unlistedSongs} empty="No tutors have recorded an unlisted song in this period." />
         </div>
       </section>
 

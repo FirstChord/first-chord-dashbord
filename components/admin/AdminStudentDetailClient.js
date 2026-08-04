@@ -616,6 +616,15 @@ export default function AdminStudentDetailClient({
                     ))}
                   </div>
                 ) : null}
+                {Array.isArray(note.unlistedSongTitles) && note.unlistedSongTitles.length ? (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {note.unlistedSongTitles.map((title, index) => (
+                      <span key={`${title}-${index}`} className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-900">
+                        Unlisted: {title}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
                 <p className="mt-3 text-sm text-slate-700 whitespace-pre-line">{notePreview(note)}</p>
                 <div className="mt-3 grid gap-2 text-xs text-slate-500 md:grid-cols-2">
                   <p>
