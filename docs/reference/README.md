@@ -10,8 +10,9 @@ Use this folder for lookup material rather than operating sequence.
 
 - [Glossary](./glossary.md)
 - [Generated code map](./code-map.md) — browseable explicit-overview/export/test
-  lookup, including every Next route handler; prefer `npm run code-map:find` for
-  narrow agent queries
+  lookup, including every Next route handler, with labelled path/export fallback
+  matches from the wider source graph; prefer `npm run code-map:find` for narrow
+  symbol queries and `rg` for file-body concepts
 - [Code-map podcast script](./code-map-podcast-script.txt) — a plain-English,
   TTS-ready explanation of the generated grid, ranked query, impact graph, and
   safe agent workflow

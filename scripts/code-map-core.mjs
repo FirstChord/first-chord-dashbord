@@ -10,6 +10,14 @@ const GRAPH_ROOTS = ['app', 'components', 'lib', 'scripts', 'tests'];
 const MAX_MODULE_OVERVIEW_LENGTH = 220;
 const IGNORED_DIRECTORIES = new Set(['.git', '.next', 'backups', 'coverage', 'node_modules']);
 
+export const CODE_MAP_SEARCH_SCOPE = Object.freeze({
+  primary: Object.freeze(['lib/admin/**', 'lib/songs/**', 'app/**/route.{js,mjs,ts}']),
+  outsideScopeFallback: Object.freeze(GRAPH_ROOTS.map((root) => `${root}/**`)),
+  primaryFields: Object.freeze(['path', 'export', 'explicit_module_overview', 'direct_test_path']),
+  outsideScopeFallbackFields: Object.freeze(['path', 'export']),
+  searchesFileBodies: false,
+});
+
 function toPosix(value) {
   return value.split(path.sep).join('/');
 }
@@ -237,9 +245,16 @@ export function buildImportGraph({ repoRoot, sourcePaths = collectGraphSourcePat
   const knownPaths = new Set(sourcePaths);
   const importsByFile = new Map();
   const consumersByFile = new Map(sourcePaths.map((sourcePath) => [sourcePath, new Set()]));
+  const factsByFile = new Map();
 
   for (const sourcePath of sourcePaths) {
     const source = fs.readFileSync(path.join(repoRoot, sourcePath), 'utf8');
+    const exports = extractExports(source);
+    factsByFile.set(sourcePath, {
+      moduleOverview: extractModuleOverview(source),
+      exports,
+      unsupportedExportLines: findUnsupportedExportLines(source, exports),
+    });
     const resolved = new Set(extractImportSpecifiers(source)
       .map((specifier) => resolveImport(repoRoot, sourcePath, specifier, knownPaths))
       .filter(Boolean));
@@ -250,7 +265,7 @@ export function buildImportGraph({ repoRoot, sourcePaths = collectGraphSourcePat
     }
   }
 
-  return { sourcePaths, importsByFile, consumersByFile };
+  return { sourcePaths, importsByFile, consumersByFile, factsByFile };
 }
 
 function isTestPath(sourcePath) {
@@ -269,24 +284,28 @@ function fingerprintFor(records) {
 
 export function buildCodeIndex({ repoRoot }) {
   const mappedPaths = collectMappedSourcePaths(repoRoot);
+  const mappedPathSet = new Set(mappedPaths);
   const graph = buildImportGraph({ repoRoot });
-  const records = mappedPaths.map((sourcePath) => {
-    const source = fs.readFileSync(path.join(repoRoot, sourcePath), 'utf8');
-    const exports = extractExports(source);
+  const graphRecords = graph.sourcePaths.map((sourcePath) => {
     const consumers = [...(graph.consumersByFile.get(sourcePath) || [])].sort();
+    const facts = graph.factsByFile.get(sourcePath);
     return {
       path: sourcePath,
-      moduleOverview: extractModuleOverview(source),
-      exports,
-      unsupportedExportLines: findUnsupportedExportLines(source, exports),
+      indexed: mappedPathSet.has(sourcePath),
+      moduleOverview: facts.moduleOverview,
+      exports: facts.exports,
+      unsupportedExportLines: facts.unsupportedExportLines,
       directTests: consumers.filter(isTestPath),
       directConsumers: consumers.filter((consumer) => !isTestPath(consumer)),
     };
   });
+  const records = graphRecords.filter((record) => record.indexed);
   return {
     repoRoot,
     records,
     recordsByPath: new Map(records.map((record) => [record.path, record])),
+    graphRecords,
+    graphRecordsByPath: new Map(graphRecords.map((record) => [record.path, record])),
     graph,
     fingerprint: fingerprintFor(records),
   };
@@ -350,9 +369,14 @@ export function renderCodeMap(index) {
     '`npm run code-map:impact -- path/to/file`. Do not load this entire document',
     'into an agent context when a targeted search will do.',
     '',
-    'The visible grid covers `lib/admin`, `lib/songs`, and every Next route.',
-    'Find and impact queries also use a wider static import graph across `app`,',
-    '`components`, `lib`, `scripts`, and `tests`.',
+    'The visible grid and primary find results cover `lib/admin`, `lib/songs`,',
+    'and every Next route. A wider static import graph across `app`, `components`,',
+    '`lib`, `scripts`, and `tests` supplies consumer/test evidence and a labelled',
+    'path/export fallback for files outside the grid.',
+    '',
+    '`code-map:find` is a symbol/path metadata search, not a file-body search.',
+    'Use `rg` for implementation text or broad concepts. A zero primary result',
+    'does not mean the code does not exist; inspect the outside-scope fallback.',
     '',
     'A **module overview** appears only when the source explicitly declares one with',
     '`@fileoverview`; ordinary comments attached to constants or implementation details',
@@ -408,6 +432,41 @@ export function searchCodeIndex(index, query, { limit = 12 } = {}) {
     if (terms.every((term) => allText.includes(term))) score += 45;
     return { record, score };
   })
+    .filter((result) => result.score > 0)
+    .sort((left, right) => right.score - left.score || left.record.path.localeCompare(right.record.path))
+    .slice(0, limit);
+}
+
+export function searchOutsideCodeIndex(index, query, { limit = 8 } = {}) {
+  const normalisedQuery = normaliseSearch(query);
+  if (!normalisedQuery) return [];
+
+  return index.graphRecords
+    .filter((record) => !record.indexed)
+    .map((record) => {
+      const pathText = normaliseSearch(record.path);
+      const basenameText = normaliseSearch(path.basename(record.path, path.extname(record.path)));
+      const exportNames = record.exports.map((entry) => normaliseSearch(entry.name));
+      const reasons = [];
+      let score = 0;
+
+      if (exportNames.includes(normalisedQuery)) {
+        score += 300;
+        reasons.push('exact export');
+      } else if (exportNames.some((name) => name.includes(normalisedQuery))) {
+        score += 220;
+        reasons.push('export');
+      }
+      if (basenameText === normalisedQuery) {
+        score += 260;
+        reasons.push('exact filename');
+      } else if (pathText.includes(normalisedQuery)) {
+        score += 180;
+        reasons.push('path');
+      }
+
+      return { record, score, reasons };
+    })
     .filter((result) => result.score > 0)
     .sort((left, right) => right.score - left.score || left.record.path.localeCompare(right.record.path))
     .slice(0, limit);

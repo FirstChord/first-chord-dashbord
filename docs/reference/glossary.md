@@ -21,12 +21,16 @@ are excluded rather than guessed to be module purpose. The visible grid covers
 
 A **find query** ranks modules using the words in their path, explicit module
 overview, exports, and direct-test paths. It is the quickest route from a domain
-question such as “Wise payout” to a small set of current files. An **impact
-query** starts from one or more changed files and walks the reverse static-import
-graph through `app`, `components`, `lib`, `scripts`, and `tests`. It reports
-downstream consumers, related tests, scripts, and app entrypoints, with distance
-meaning the number of import steps from the target. With no paths, it uses the
-current git worktree changes.
+question such as “Wise payout” to a small set of current files. Its primary scope
+is `lib/admin`, `lib/songs`, and Next routes. Exact path/export matches elsewhere
+in the wider source graph appear separately as outside-scope fallbacks; a zero
+primary result is not evidence that code does not exist. Find is a symbol/path
+metadata index, not a file-body search, so implementation text and broad concepts
+belong in `rg`. An **impact query** starts from one or more changed files and walks
+the reverse static-import graph through `app`, `components`, `lib`, `scripts`,
+and `tests`. It reports downstream consumers, related tests, scripts, and app
+entrypoints, with distance meaning the number of import steps from the target.
+With no paths, it uses the current git worktree changes.
 
 These are navigation signals, not proofs. A direct test import does not prove
 that the relevant behaviour is asserted; a blank test cell does not prove that

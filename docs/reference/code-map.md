@@ -14,9 +14,14 @@ prefer `npm run code-map:find -- "term"`; for change radius, use
 `npm run code-map:impact -- path/to/file`. Do not load this entire document
 into an agent context when a targeted search will do.
 
-The visible grid covers `lib/admin`, `lib/songs`, and every Next route.
-Find and impact queries also use a wider static import graph across `app`,
-`components`, `lib`, `scripts`, and `tests`.
+The visible grid and primary find results cover `lib/admin`, `lib/songs`,
+and every Next route. A wider static import graph across `app`, `components`,
+`lib`, `scripts`, and `tests` supplies consumer/test evidence and a labelled
+path/export fallback for files outside the grid.
+
+`code-map:find` is a symbol/path metadata search, not a file-body search.
+Use `rg` for implementation text or broad concepts. A zero primary result
+does not mean the code does not exist; inspect the outside-scope fallback.
 
 A **module overview** appears only when the source explicitly declares one with
 `@fileoverview`; ordinary comments attached to constants or implementation details

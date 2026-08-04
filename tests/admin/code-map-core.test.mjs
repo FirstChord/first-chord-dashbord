@@ -7,12 +7,14 @@ import test from 'node:test';
 import {
   buildCodeIndex,
   buildImpactReport,
+  CODE_MAP_SEARCH_SCOPE,
   extractExports,
   extractImportSpecifiers,
   extractModuleOverview,
   findUnsupportedExportLines,
   renderCodeMap,
   searchCodeIndex,
+  searchOutsideCodeIndex,
   validateAgentWorkflowMap,
 } from '../../scripts/code-map-core.mjs';
 
@@ -103,6 +105,8 @@ function makeFixtureRepo() {
     'app/api/admin/payroll/route.js': `import { preparePayroll } from '@/lib/admin/payroll.mjs';\nexport async function GET() { return preparePayroll(); }\n`,
     'app/api/cron/payroll/route.js': `import { preparePayroll } from '@/lib/admin/payroll.mjs';\nexport async function POST() { return preparePayroll(); }\n`,
     'app/public-export/route.js': `export async function GET() {}\n`,
+    'components/admin/ui/ActionButton.js': `export function ActionButton() { return 'body-only rainbow phrase'; }\n`,
+    'components/admin/UsesActionButton.js': `import { ActionButton } from './ui/ActionButton.js';\nexport function UsesActionButton() { return ActionButton(); }\n`,
     'tests/admin/wise-batch-contract.test.mjs': `import { buildWiseBatch } from '../../lib/admin/wise-helpers.mjs';\n`,
     'tests/admin/payroll-route.test.mjs': `import '../../app/api/admin/payroll/route.js';\n`,
     'AGENTS.md': `## Workflow Map\n\n| Area | Code | Tests |\n|---|---|---|\n| Payroll | \`lib/admin/wise-*.mjs\`, \`app/api/admin/payroll/\` | \`wise-batch-contract\` |\n\n## Next\n`,
@@ -121,13 +125,25 @@ test('the shared index powers direct test references, search, impact, and determ
   const index = buildCodeIndex({ repoRoot });
   const wise = index.recordsByPath.get('lib/admin/wise-helpers.mjs');
   const misleading = index.recordsByPath.get('lib/admin/misleading-cache.mjs');
+  const actionButton = index.graphRecordsByPath.get('components/admin/ui/ActionButton.js');
 
   assert.ok(index.recordsByPath.has('app/api/cron/payroll/route.js'));
   assert.ok(index.recordsByPath.has('app/public-export/route.js'));
   assert.deepEqual(wise.directTests, ['tests/admin/wise-batch-contract.test.mjs']);
   assert.deepEqual(wise.directConsumers, ['lib/admin/payroll.mjs']);
   assert.deepEqual(misleading.moduleOverview, { text: '', line: null, explicit: false });
+  assert.equal(actionButton.indexed, false);
+  assert.equal(index.recordsByPath.has(actionButton.path), false);
   assert.equal(searchCodeIndex(index, 'Wise payout')[0].record.path, 'lib/admin/wise-helpers.mjs');
+  assert.deepEqual(searchCodeIndex(index, 'ActionButton'), []);
+  assert.equal(searchOutsideCodeIndex(index, 'ActionButton')[0].record.path, actionButton.path);
+  assert.deepEqual(searchOutsideCodeIndex(index, 'ActionButton')[0].reasons, [
+    'exact export',
+    'exact filename',
+  ]);
+  assert.deepEqual(actionButton.directConsumers, ['components/admin/UsesActionButton.js']);
+  assert.deepEqual(searchOutsideCodeIndex(index, 'rainbow phrase'), []);
+  assert.equal(CODE_MAP_SEARCH_SCOPE.searchesFileBodies, false);
   assert.equal(
     searchCodeIndex(index, 'frobnicator lifespan').some(({ record }) => record.path === misleading.path),
     false,
@@ -151,6 +167,7 @@ test('the shared index powers direct test references, search, impact, and determ
   assert.match(first, /Module overview/u);
   assert.match(first, /Explicit module overviews: 1\/6/u);
   assert.doesNotMatch(first, /Frobnicator lifespan detail/u);
+  assert.doesNotMatch(first, /ActionButton/u, 'outside-scope fallbacks must not expand the browsable grid');
   assert.match(first, /Direct test references/u);
   assert.match(first, /## app\/api\/cron routes/u);
   assert.match(first, /## app routes outside app\/api/u);

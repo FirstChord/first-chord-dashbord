@@ -37,6 +37,11 @@ npm run code-map:impact -- lib/admin/wise-helpers.mjs
 overviews, exports with line numbers, direct test references, and direct
 production consumers. An overview appears only when the file declares
 `@fileoverview`; ordinary implementation comments never influence navigation.
+Primary results cover `lib/admin`, `lib/songs`, and Next routes. Exact path or
+export matches elsewhere in `app`, `components`, `lib`, `scripts`, or `tests`
+appear in a labelled outside-scope fallback. Find does not search file bodies;
+use `rg` for implementation text or broad concepts, and never treat zero primary
+matches as proof that code does not exist.
 `code-map:impact` walks outward from a target through the reverse static-import
 graph to related tests, scripts, and app entrypoints; with no path arguments it
 inspects the current git diff.

@@ -111,7 +111,10 @@ deliberate school-improvement prompt.
   `@fileoverview`; ordinary comments on constants and implementation details are
   blank and cannot affect query ranking. The generated grid reports overview
   coverage so gaps can be improved deliberately without presenting heuristic
-  guesses as facts.
+  guesses as facts. Find now states its primary scope and file-body limitation,
+  and exact path/export matches elsewhere in the wider source graph appear as a
+  labelled fallback with consumers/tests. Zero primary matches therefore cannot
+  silently imply that a component or helper does not exist.
   Narrow search and conservative impact queries cover every Next route handler,
   and the matching route-security census exposed three obsolete scaffold routes
   that have now been removed. CI blocks map drift and unsupported export syntax;

@@ -7,8 +7,10 @@ import {
   buildCodeIndex,
   buildImpactReport,
   CODE_MAP_RELATIVE_PATH,
+  CODE_MAP_SEARCH_SCOPE,
   renderCodeMap,
   searchCodeIndex,
+  searchOutsideCodeIndex,
   validateAgentWorkflowMap,
 } from './code-map-core.mjs';
 
@@ -52,11 +54,12 @@ function matchedExports(record, query) {
   return matched.length ? matched : record.exports;
 }
 
-function serialiseFindResult({ record, score }, query) {
+function serialiseFindResult({ record, score, reasons = [] }, query) {
   const exports = matchedExports(record, query);
   return {
     path: record.path,
     score,
+    reasons,
     moduleOverview: record.moduleOverview,
     exports: exports.slice(0, 20),
     omittedExportCount: Math.max(0, exports.length - 20),
@@ -65,16 +68,31 @@ function serialiseFindResult({ record, score }, query) {
   };
 }
 
-function printFindResults(index, query, results) {
-  console.log(`Code map matches for "${query}" (${results.length})`);
+function printFindRecord({ record, reasons = [] }, query, position) {
+  const exports = matchedExports(record, query).map((entry) => `${entry.name} (${record.path}:${entry.line})`);
+  console.log(`\n${position}. ${record.path}${reasons.length ? ` [${reasons.join(', ')}]` : ''}`);
+  if (record.moduleOverview.text) console.log(`   module overview: ${record.moduleOverview.text}`);
+  console.log(`   exports: ${compactList(exports)}`);
+  console.log(`   direct tests: ${compactList(record.directTests)}`);
+  console.log(`   direct production consumers: ${compactList(record.directConsumers)}`);
+}
+
+function printFindResults(query, results, outsideScopeMatches) {
+  console.log(`Primary code map matches for "${query}" (${results.length})`);
+  console.log('Primary scope: lib/admin, lib/songs, and Next route files.');
+  console.log('Symbol/path metadata only — file bodies are not searched; use rg for implementation text or broad concepts.');
   console.log('Static source evidence only; inspect current code before changing behavior.');
-  for (const [position, { record }] of results.entries()) {
-    const exports = matchedExports(record, query).map((entry) => `${entry.name} (${record.path}:${entry.line})`);
-    console.log(`\n${position + 1}. ${record.path}`);
-    if (record.moduleOverview.text) console.log(`   module overview: ${record.moduleOverview.text}`);
-    console.log(`   exports: ${compactList(exports)}`);
-    console.log(`   direct tests: ${compactList(record.directTests)}`);
-    console.log(`   direct production consumers: ${compactList(record.directConsumers)}`);
+  if (!results.length) {
+    console.log('\nNo primary-scope match. This does not mean the code does not exist.');
+  }
+  results.forEach((result, position) => printFindRecord(result, query, position + 1));
+
+  if (outsideScopeMatches.length) {
+    console.log(`\nOutside primary map scope — path/export matches (${outsideScopeMatches.length})`);
+    console.log('These files participate in the wider import graph but are not rows in the browsable grid.');
+    outsideScopeMatches.forEach((result, position) => printFindRecord(result, query, position + 1));
+  } else if (!results.length) {
+    console.log('\nNo path/export match was found in the wider app, components, lib, scripts, or tests graph.');
   }
 }
 
@@ -124,7 +142,7 @@ if (command === 'generate') {
     repoRoot,
     source: fs.readFileSync(path.join(repoRoot, 'AGENTS.md'), 'utf8'),
   }));
-  for (const record of index.records) {
+  for (const record of index.graphRecords) {
     if (record.unsupportedExportLines.length) {
       errors.push(`${record.path}: unsupported export syntax on line${record.unsupportedExportLines.length === 1 ? '' : 's'} ${record.unsupportedExportLines.join(', ')}`);
     }
@@ -142,15 +160,18 @@ if (command === 'generate') {
     process.exit(1);
   }
   const results = searchCodeIndex(index, query);
+  const outsideScopeMatches = searchOutsideCodeIndex(index, query);
   if (json) {
     console.log(JSON.stringify({
       query,
+      scope: CODE_MAP_SEARCH_SCOPE,
       results: results.map((result) => serialiseFindResult(result, query)),
+      outsideScopeMatches: outsideScopeMatches.map((result) => serialiseFindResult(result, query)),
     }, null, 2));
   } else {
-    printFindResults(index, query, results);
+    printFindResults(query, results, outsideScopeMatches);
   }
-  if (!results.length) process.exitCode = 2;
+  if (!results.length && !outsideScopeMatches.length) process.exitCode = 2;
 } else if (command === 'impact') {
   const targets = args.length ? args : changedFiles();
   if (!targets.length) {
