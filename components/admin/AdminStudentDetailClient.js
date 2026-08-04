@@ -607,6 +607,15 @@ export default function AdminStudentDetailClient({
                     {noteStatusLabel(note)}
                   </span>
                 </div>
+                {Array.isArray(note.songTitles) && note.songTitles.length ? (
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {note.songTitles.map((title, index) => (
+                      <span key={`${note.songIds?.[index] || title}-${index}`} className="rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-800">
+                        {title}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
                 <p className="mt-3 text-sm text-slate-700 whitespace-pre-line">{notePreview(note)}</p>
                 <div className="mt-3 grid gap-2 text-xs text-slate-500 md:grid-cols-2">
                   <p>

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import { parsePauseWindowsFromPlanning } from '../../lib/admin/pause-forecast.mjs';
 import {
+  applyIncomingClassificationReview,
   applyIncomingMessageTextUpdate,
   assessBridgeHealth,
   buildGroupSyncPlan,
@@ -32,6 +33,7 @@ import {
   labelIncomingResolutionType,
   normaliseIncomingMessagePayload,
   normalisePhone,
+  selectReplyEvidenceTarget,
 } from '../../lib/admin/incoming-message-helpers.mjs';
 import { isPausePlanningItem } from '../../lib/admin/planning-client-helpers.mjs';
 
@@ -103,6 +105,61 @@ test('classifyIncomingMessage treats summer last-lesson wording as a break, not 
   assert.match(result.reasons.join(' '), /summer|holiday/u);
 });
 
+test('classification separates topic words from whether school action is actually needed', () => {
+  const noActionCases = [
+    'Hope you had a lovely summer',
+    'We had a lovely summer holiday',
+    'Summer is finally here',
+    'The holiday photos are lovely',
+    'The summer concert was brilliant',
+    'How was your holiday?',
+    'Away for the weekend but lessons are normal',
+    'I paid for the music book yesterday',
+    'Bank holiday is fine, no change to lessons',
+    'I am worried about the exam but looking forward to it',
+    'The new slot works, thanks',
+    'Back to school and excited',
+    'The payment went through, all sorted',
+    'I was ill so only saw this now',
+    'I cannot make the parent call but the lesson is fine',
+    'Sorry for the slow reply, caught up with holidays',
+  ];
+
+  for (const message of noActionCases) {
+    const result = classifyIncomingMessage(message);
+    assert.equal(result.actionability, 'no_action', message);
+    assert.equal(decideAutoCaptureStatus({
+      suspectedCategory: result.category,
+      classificationActionability: result.actionability,
+      messageText: message,
+    }), 'ignored', message);
+  }
+
+  const question = classifyIncomingMessage('What time is the showcase?');
+  assert.equal(question.category, 'schedule');
+  assert.equal(question.intent, 'question');
+  assert.equal(question.actionability, 'reply_needed');
+
+  const summerChange = classifyIncomingMessage('Alex will be away on holiday during July and August');
+  assert.equal(summerChange.category, 'summer_break');
+  assert.equal(summerChange.actionability, 'action_needed');
+
+  const absenceWithPoliteClose = classifyIncomingMessage('Alex cannot make his lesson on Friday, see you next week');
+  assert.equal(absenceWithPoliteClose.category, 'one_off_absence');
+  assert.equal(absenceWithPoliteClose.actionability, 'action_needed');
+
+  const concernWithPoliteClose = classifyIncomingMessage('I am worried Alex is struggling and look forward to talking');
+  assert.equal(concernWithPoliteClose.category, 'concern');
+  assert.equal(concernWithPoliteClose.actionability, 'reply_needed');
+
+  const actionAfterGreeting = classifyIncomingMessage('Hope you had a lovely summer. Alex cannot make his lesson on Friday.');
+  assert.equal(actionAfterGreeting.category, 'one_off_absence');
+  assert.equal(actionAfterGreeting.actionability, 'action_needed');
+
+  const actionAfterResolvedUpdate = classifyIncomingMessage('The old payment is all sorted, but can we move the lesson to Thursday?');
+  assert.equal(actionAfterResolvedUpdate.actionability, 'action_needed');
+});
+
 test('matchIncomingMessageToStudent prefers phone matches', () => {
   const match = matchIncomingMessageToStudent({
     senderPhone: '+44 7788 626616',
@@ -133,6 +190,10 @@ test('buildIncomingMessageRecord adds category, match, and raw payload', () => {
   assert.equal(record.suspectedCategory, 'extended_absence');
   assert.equal(record.matchedMmsId, 'sdt_alex');
   assert.equal(record.status, 'inbox');
+  assert.equal(record.proposedCategory, 'extended_absence');
+  assert.equal(record.classificationActionability, 'action_needed');
+  assert.equal(record.classificationDecision, 'unreviewed');
+  assert.equal(record.classificationVersion, '2');
   assert.match(record.matchReasons, /attendance|pause|lesson cover/u);
   assert.match(record.rawJson, /Alex Chang/u);
 });
@@ -684,6 +745,17 @@ test('matchTutorSenderName recognises the group tutor by push name, never a bare
   assert.equal(matchTutorSenderName('Dean Louden', ''), '');
 });
 
+test('reply evidence attaches only to the nearest preceding open message', () => {
+  const target = selectReplyEvidenceTarget([
+    { incomingId: 'old', chatId: 'group', status: 'inbox', messageAt: '2026-07-01T09:00:00Z' },
+    { incomingId: 'latest', chatId: 'group', status: 'needs_review', messageAt: '2026-07-01T10:00:00Z' },
+    { incomingId: 'future', chatId: 'group', status: 'inbox', messageAt: '2026-07-01T12:00:00Z' },
+    { incomingId: 'other', chatId: 'other', status: 'inbox', messageAt: '2026-07-01T10:30:00Z' },
+  ], { chatId: 'group', repliedAt: '2026-07-01T11:00:00Z' });
+
+  assert.equal(target.incomingId, 'latest');
+});
+
 test('decideAutoCaptureStatus archives no-signal chatter and keeps work open', () => {
   assert.equal(decideAutoCaptureStatus({ suspectedCategory: 'general', messageText: 'Thanks! See you then' }), 'ignored');
   assert.equal(decideAutoCaptureStatus({ suspectedCategory: 'one_off_absence', messageText: 'Alex is off sick today' }), 'inbox');
@@ -693,6 +765,31 @@ test('decideAutoCaptureStatus archives no-signal chatter and keeps work open', (
     messageText: 'Just to note the 24th of June',
     messageAt: '2026-06-19T10:00:00.000Z',
   }), 'inbox');
+  assert.equal(decideAutoCaptureStatus({ classificationActionability: 'uncertain' }), 'needs_review');
+  assert.equal(decideAutoCaptureStatus({ classificationActionability: 'reply_needed' }), 'inbox');
+});
+
+test('human classification review preserves the proposal and distinguishes acceptance from correction', () => {
+  const proposed = {
+    suspectedCategory: 'summer_break',
+    proposedCategory: 'summer_break',
+    proposedIntent: 'notification',
+    proposedActionability: 'action_needed',
+    classificationActionability: 'action_needed',
+  };
+
+  const accepted = applyIncomingClassificationReview(proposed, {});
+  assert.equal(accepted.classificationDecision, 'accepted');
+
+  const corrected = applyIncomingClassificationReview(proposed, {
+    category: 'general',
+    actionability: 'no_action',
+  });
+  assert.equal(corrected.proposedCategory, 'summer_break');
+  assert.equal(corrected.proposedActionability, 'action_needed');
+  assert.equal(corrected.suspectedCategory, 'general');
+  assert.equal(corrected.classificationActionability, 'no_action');
+  assert.equal(corrected.classificationDecision, 'corrected');
 });
 
 test('isAutoArchivedMessage separates rule-archived rows from human decisions', () => {
@@ -741,6 +838,8 @@ test('one-tap convert needs a high-confidence match and a specific category', ()
     matchedMmsId: 'sdt_alex',
     matchConfidence: 'high',
     suspectedCategory: 'extended_absence',
+    classificationActionability: 'action_needed',
+    classificationConfidence: 'high',
     messageText: 'Alex is away for two weeks',
     status: 'inbox',
   };

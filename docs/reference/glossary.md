@@ -9,6 +9,25 @@ Plain-English explanations of technical terms used in the admin dashboard. This 
 
 - **Path template** — a named ordered list of catalogue song IDs (`lib/config/path-templates.mjs`, canonical hand-edited). "Assign path" instantiates it into per-student `Song_Assignments` rows; the student copy is personal from then on.
 
+## Incoming topic, intent, and actionability
+
+An incoming message's **topic** is what it mentions, such as schedule, payment,
+or summer break. Its **intent** is the communication shape—request, question,
+notification, acknowledgement, social message, or unclear. Its
+**actionability** is the workflow decision: action needed, reply needed, check
+this, or no action. Keeping these axes separate means “hope you had a lovely
+summer” can mention summer without becoming a pause task. Machine proposals and
+human-final values are retained separately; only explicit accepts/corrections
+count as reviewed learning evidence.
+
+## Practice Note song link
+
+An optional stable catalogue `songId` attached to one Practice Note after the
+server confirms it is on that student's current song shelf. The stored title is
+only a readable snapshot; the ID is the join. Blank means no explicit link, not
+proof that no song was used. The dashboard does not guess links or liking from
+ordinary-English titles in note prose.
+
 ## Code map, query, impact, and grid
 
 The **code map** is a deterministic index generated from the current repository,

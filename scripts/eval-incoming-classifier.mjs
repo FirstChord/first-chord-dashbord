@@ -16,14 +16,19 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { extractDatesFromMessage } from '../lib/admin/incoming-date-helpers.mjs';
 import { classifyIncomingMessage } from '../lib/admin/incoming-message-helpers.mjs';
-import { scoreIncomingClassifier, scoreIncomingDateExtraction } from '../lib/admin/incoming-eval-helpers.mjs';
+import {
+  scoreIncomingActionability,
+  scoreIncomingClassifier,
+  scoreIncomingDateExtraction,
+} from '../lib/admin/incoming-eval-helpers.mjs';
 
 const fixturePath = path.join(path.dirname(fileURLToPath(import.meta.url)), '../tests/admin/fixtures/incoming-eval-set.json');
 const fixture = JSON.parse(readFileSync(fixturePath, 'utf8'));
-const { messages } = fixture;
+const { messages, actionabilityCases = [] } = fixture;
 
 const report = scoreIncomingClassifier(messages, classifyIncomingMessage);
 const dateReport = scoreIncomingDateExtraction(messages, extractDatesFromMessage);
+const actionabilityReport = scoreIncomingActionability(actionabilityCases, classifyIncomingMessage);
 
 console.log(`Fixture: schema ${fixture.schemaVersion} · ${fixture.dataOrigin}`);
 console.log(`Messages: ${report.total}`);
@@ -32,6 +37,8 @@ console.log(`Family accuracy: ${(report.familyAccuracy * 100).toFixed(1)}% (${re
 console.log(`Actionable vs noise: ${(report.actionableAccuracy * 100).toFixed(1)}% (${report.actionableCorrect}/${report.total})`);
 console.log(`Harmful auto-archives: ${report.harmfulAutoArchives}/${report.expectedActionable}`);
 console.log(`Date extraction: ${(dateReport.exactAccuracy * 100).toFixed(1)}% (${dateReport.exactCorrect}/${dateReport.total})`);
+console.log(`Actionability: ${(actionabilityReport.exactAccuracy * 100).toFixed(1)}% (${actionabilityReport.exactCorrect}/${actionabilityReport.total})`);
+console.log(`Actionability harmful auto-archives: ${actionabilityReport.harmfulAutoArchives}/${actionabilityReport.expectedOpen}`);
 
 console.log('\nPer-label (exact):');
 for (const [label, stats] of Object.entries(report.perLabel)) {
@@ -49,6 +56,14 @@ if (report.misses.length) {
   console.log('\nMisses:');
   for (const miss of report.misses) {
     console.log(`  #${miss.id} expected ${miss.expected}, got ${miss.predicted}${miss.sameFamily ? ' (same family)' : ''}`);
+    console.log(`     ${miss.text.slice(0, 110).replace(/\n/gu, ' ')}`);
+  }
+}
+
+if (actionabilityReport.misses.length) {
+  console.log('\nActionability misses:');
+  for (const miss of actionabilityReport.misses) {
+    console.log(`  #${miss.id} expected ${miss.expected}, got ${miss.predicted}`);
     console.log(`     ${miss.text.slice(0, 110).replace(/\n/gu, ' ')}`);
   }
 }

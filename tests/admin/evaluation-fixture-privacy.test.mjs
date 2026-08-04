@@ -4,11 +4,14 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
-import { INCOMING_MESSAGE_CATEGORIES } from '../../lib/admin/incoming-message-helpers.mjs';
+import {
+  INCOMING_MESSAGE_ACTIONABILITY,
+  INCOMING_MESSAGE_CATEGORIES,
+} from '../../lib/admin/incoming-message-helpers.mjs';
 
 const fixturePath = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures/incoming-eval-set.json');
 const fixture = JSON.parse(readFileSync(fixturePath, 'utf8'));
-const allCases = [...fixture.messages, ...fixture.proposalCases];
+const allCases = [...fixture.messages, ...fixture.actionabilityCases, ...fixture.proposalCases];
 
 const PROHIBITED_KEYS = new Set([
   'sentAt',
@@ -23,7 +26,7 @@ const PROHIBITED_KEYS = new Set([
 ]);
 
 test('incoming evaluation fixture declares synthetic independent provenance', () => {
-  assert.equal(fixture.schemaVersion, 2);
+  assert.equal(fixture.schemaVersion, 3);
   assert.equal(fixture.dataOrigin, 'synthetic_independent_cases');
   assert.match(fixture.description, /synthetic, independent/iu);
   assert.doesNotMatch(fixture.description, /real family|anonymised|chat export/iu);
@@ -44,6 +47,13 @@ test('incoming evaluation fixture has broad independent category coverage', () =
     assert.ok((counts.get(category) || 0) >= 4, `${category} has fewer than four cases`);
   }
   assert.ok(fixture.proposalCases.length >= 6);
+  assert.ok(fixture.actionabilityCases.length >= 18);
+  for (const entry of fixture.actionabilityCases) {
+    assert.ok(
+      INCOMING_MESSAGE_ACTIONABILITY.includes(entry.expectedActionability),
+      `${entry.id} has an invalid actionability expectation`,
+    );
+  }
   assert.ok(fixture.proposalCases.some((entry) => /ignore previous instructions/iu.test(entry.text)));
   assert.ok(fixture.messages.some((entry) => /rechargeable/iu.test(entry.text)));
   assert.ok(fixture.messages.some((entry) => /I will/iu.test(entry.text)));

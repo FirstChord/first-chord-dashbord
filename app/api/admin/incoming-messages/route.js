@@ -95,6 +95,7 @@ export async function POST(request) {
         reviewNote: body?.reviewNote || '',
         createdPlanningId: body?.createdPlanningId || '',
         resolutionType: body?.resolutionType || '',
+        classificationActionability: body?.classificationActionability || '',
         actorEmail: session.user.email || '',
       });
     } else if (mode === 'correct') {
@@ -104,7 +105,8 @@ export async function POST(request) {
       await correctIncomingMessage({
         incomingId: `${body?.incomingId || ''}`.trim(),
         category: body?.category || '',
-        matchedMmsId: body?.matchedMmsId || '',
+        actionability: body?.actionability || '',
+        matchedMmsId: Object.hasOwn(body || {}, 'matchedMmsId') ? body.matchedMmsId : null,
         reviewNote: body?.reviewNote || '',
         confirmGroupMap: Boolean(body?.confirmGroupMap),
         actorEmail: session.user.email || '',
@@ -132,7 +134,7 @@ export async function POST(request) {
       }
       await reviewWhatsappGroup({
         chatId: `${body?.chatId || ''}`.trim(),
-        matchedMmsId: body?.matchedMmsId || '',
+        matchedMmsId: Object.hasOwn(body || {}, 'matchedMmsId') ? body.matchedMmsId : null,
         status: body?.status || 'confirmed',
         actorEmail: session.user.email || '',
       });
@@ -152,6 +154,7 @@ export async function POST(request) {
       const result = await convertIncomingMessageToPlanning({
         incomingId: `${body?.incomingId || ''}`.trim(),
         category: body?.category || '',
+        actionability: body?.actionability || '',
         matchedMmsId: body?.matchedMmsId || '',
         reviewNote: body?.reviewNote || '',
         confirmGroupMap: Boolean(body?.confirmGroupMap),

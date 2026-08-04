@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "dataOrigin": "synthetic_independent_cases",
   "description": "Synthetic, independent incoming-message cases covering every dashboard category, date edge cases, ambiguity and unsafe proposal inputs. No case is a production transcript or reconstructed family history.",
   "messages": [
@@ -352,6 +352,113 @@
       "id": "concern-005",
       "text": "We are confused about the feedback and need some help.",
       "label": "concern"
+    }
+  ],
+  "actionabilityCases": [
+    {
+      "id": "action-noise-summer-social",
+      "text": "Hope you all had a lovely summer holiday.",
+      "expectedActionability": "no_action"
+    },
+    {
+      "id": "action-noise-summer-mention",
+      "text": "The summer concert was brilliant.",
+      "expectedActionability": "no_action"
+    },
+    {
+      "id": "action-noise-holiday-photos",
+      "text": "The holiday photos are lovely.",
+      "expectedActionability": "no_action"
+    },
+    {
+      "id": "action-noise-away-no-impact",
+      "text": "Away for the weekend but lessons are normal.",
+      "expectedActionability": "no_action"
+    },
+    {
+      "id": "action-noise-book-payment",
+      "text": "I paid for the music book yesterday.",
+      "expectedActionability": "no_action"
+    },
+    {
+      "id": "action-noise-payment-resolved",
+      "text": "The payment went through, all sorted.",
+      "expectedActionability": "no_action"
+    },
+    {
+      "id": "action-noise-slot-resolved",
+      "text": "The new lesson slot works fine.",
+      "expectedActionability": "no_action"
+    },
+    {
+      "id": "action-needed-one-off",
+      "text": "Alex cannot make his lesson next Friday.",
+      "expectedActionability": "action_needed"
+    },
+    {
+      "id": "action-needed-summer",
+      "text": "Alex will be away on holiday during July and August.",
+      "expectedActionability": "action_needed"
+    },
+    {
+      "id": "action-needed-pause-request",
+      "text": "Please pause Sam's lessons for two weeks.",
+      "expectedActionability": "action_needed"
+    },
+    {
+      "id": "action-needed-schedule-request",
+      "text": "Could we move the lesson to Thursday?",
+      "expectedActionability": "action_needed"
+    },
+    {
+      "id": "action-needed-leaving",
+      "text": "We need to stop lessons at the end of term.",
+      "expectedActionability": "action_needed"
+    },
+    {
+      "id": "action-reply-showcase-question",
+      "text": "What time is the showcase?",
+      "expectedActionability": "reply_needed"
+    },
+    {
+      "id": "action-reply-payment-question",
+      "text": "Is the Stripe payment still active?",
+      "expectedActionability": "reply_needed"
+    },
+    {
+      "id": "action-reply-double-charge",
+      "text": "It looks like we were charged twice this month.",
+      "expectedActionability": "reply_needed"
+    },
+    {
+      "id": "action-reply-learning-concern",
+      "text": "I am worried Alex is losing confidence in lessons.",
+      "expectedActionability": "reply_needed"
+    },
+    {
+      "id": "action-reply-general-question",
+      "text": "Could you recommend a keyboard for a beginner?",
+      "expectedActionability": "reply_needed"
+    },
+    {
+      "id": "action-uncertain-schedule",
+      "text": "We might need to change lessons next month but are not sure yet.",
+      "expectedActionability": "uncertain"
+    },
+    {
+      "id": "action-uncertain-absence",
+      "text": "Alex may need to be away next month, but we are not sure yet.",
+      "expectedActionability": "uncertain"
+    },
+    {
+      "id": "action-needed-after-seasonal-greeting",
+      "text": "Hope you had a lovely summer. [STUDENT_A] cannot make the lesson on Friday.",
+      "expectedActionability": "action_needed"
+    },
+    {
+      "id": "action-needed-after-resolved-update",
+      "text": "The old payment is all sorted, but can we move the lesson to Thursday?",
+      "expectedActionability": "action_needed"
     }
   ],
   "proposalCases": [

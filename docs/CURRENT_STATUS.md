@@ -26,6 +26,27 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
+- **Evidence-first message intake and Practice Note song links (2026-08-04):**
+  incoming classification now separates topic, intent and actionability, so a
+  social mention of summer, a music-book payment, or an already-settled slot no
+  longer becomes work merely because it contains a trigger word. New rows keep
+  the machine proposal, confidence and evidence beside the human-final decision;
+  Signals counts only explicit accepts/corrections as reviewed topic evidence.
+  Converting to Planning leaves the message open until the idempotent linked plan
+  has actually saved, and linked plan status is visible back on the card. A later
+  school message is weak engagement evidence for only the nearest preceding open
+  row, never proof of reply or blanket closure. Cards lead with Action needed,
+  Reply needed, Check this, or No action; correction controls and their large
+  student list are mounted only when opened. Practice Notes can now carry up to
+  twelve exact current-shelf `song_id` links plus title snapshots; both note
+  routes reject IDs outside that student's live assignments, student history
+  shows the links, and Signals aggregates linked note coverage without guessing
+  ordinary-English titles or sentiment from prose. The separate Firebase PWA
+  selector/send update is built and tested locally: tutors can tap only the
+  current-shelf songs used in the lesson. It still needs its own explicit
+  commit/deploy before live notes submit those IDs. The occasional done/parked `Song_Outcomes`
+  prompt remains supplementary evidence—the high-volume Practice Note stream is
+  intended to become the main song-learning memory.
 - **One inbox-first admin web app (2026-08-04):** the competing Planning and
   Messages manifests have been collapsed into the single **FC Messages** app,
   preserving its `/admin/incoming-messages` identity and launch target. A fresh
@@ -307,20 +328,6 @@ deliberate school-improvement prompt.
   explicitly and never claims the notice was sent.
   The point-in-time repair evidence and repeatable regression check are in the
   [tutor-absence contract](./workflows/tutors/absence-to-pause.md).
-- **Practice Chat transcription accuracy (2026-07-26):** anchored tidy-up rules,
-  a non-substituting safety flag, and instrument/song context on the
-  transcription call; model is school-wide config
-  (`NEXT_PUBLIC_PRACTICE_CHAT_ASR_MODEL`, default `whisper-1`). **Raw transcript
-  capture is built but deliberately not shipped** — verbatim child speech, held
-  pending a retention number and a parent privacy-notice decision (branch
-  `wip/practice-chat-all`); see "Practice Chat transcription security" below.
-  Audit and phased plan:
-  [Practice Chat diarisation audit](./plans/active/practice-chat-diarisation-audit.md).
-- **Incoming reply proposals (built, deliberately off):** deterministic policy
-  checks plus optional model wording are implemented, but
-  `ADMIN_AI_REPLY_DRAFT_ENABLED` remains unset pending a later small pilot and
-  the sign-off in [AI tool contracts](./architecture/ai/tool-contracts.md).
-  Stored decisions remain reviewable while the feature is off.
 ## Current operating contracts
 
 | Area | Current boundary |
@@ -394,6 +401,11 @@ Canonical details live in [state ownership](./architecture/data/ownership.md),
 - **Practice Chat operational check:** use one approved real note to verify the
   recipient, MMS attendance, Gmail ID, Sheets audit, PostgreSQL claim, and
   duplicate response after relevant delivery changes.
+- **Activate Practice Note song links in the Firebase PWA:** the exact-song tap
+  selector and handoff are built/tested in its separate repository; review,
+  commit and deploy that project independently. Do not add fuzzy note matching
+  or auto-select every live shelf item; titles such as *Perfect*, *Yesterday*
+  and *Creep* make that look precise while producing false history.
 - **Monolith splits:** remaining candidates and extraction discipline live in
   [the active split map](./plans/active/monolith-split.md).
 

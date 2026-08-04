@@ -3,14 +3,18 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
+import { ActionButton } from '@/components/admin/ui/ActionButton';
 import {
   assessBridgeHealth,
   extractIncomingMessageDates,
+  INCOMING_MESSAGE_ACTIONABILITY,
   INCOMING_MESSAGE_CATEGORIES,
   isAutoArchivedMessage,
   isIncomingPlaceholderText,
   isOneTapConvertEligible,
   labelIncomingCategory,
+  labelIncomingActionability,
+  labelIncomingIntent,
   labelIncomingResolutionType,
   labelIncomingStatus,
 } from '@/lib/admin/incoming-message-helpers.mjs';
@@ -41,6 +45,13 @@ function confidenceTone(confidence) {
   if (confidence === 'medium') return 'bg-blue-50 text-blue-800';
   if (confidence === 'low') return 'bg-amber-50 text-amber-800';
   return 'bg-slate-100 text-slate-600';
+}
+
+function actionabilityTone(value) {
+  if (value === 'action_needed') return 'border-rose-200 bg-rose-50 text-rose-800';
+  if (value === 'reply_needed') return 'border-violet-200 bg-violet-50 text-violet-800';
+  if (value === 'no_action') return 'border-slate-200 bg-slate-50 text-slate-600';
+  return 'border-amber-200 bg-amber-50 text-amber-800';
 }
 
 const ABSENCE_CATEGORIES = new Set(['one_off_absence', 'extended_absence', 'summer_break', 'absence_pause']);
@@ -255,8 +266,10 @@ function GroupMapPanel({ groups = [], studentOptions = [], onReviewGroup, onAddG
   );
 }
 
-function CorrectionPanel({ entry, studentOptions = [], onCorrect, onConvert, isPending }) {
+function CorrectionPanel({ entry, studentOptions = [], onCorrect, onConvert, onDelete, isPending }) {
+  const [isOpen, setIsOpen] = useState(false);
   const [category, setCategory] = useState(entry.suspectedCategory || 'general');
+  const [actionability, setActionability] = useState(entry.classificationActionability || 'uncertain');
   const [matchedMmsId, setMatchedMmsId] = useState(entry.matchedMmsId || '');
   const [reviewNote, setReviewNote] = useState('');
   const [confirmGroupMap, setConfirmGroupMap] = useState(isWhatsappGroup(entry.chatId));
@@ -265,6 +278,7 @@ function CorrectionPanel({ entry, studentOptions = [], onCorrect, onConvert, isP
   function correctionPayload(status = 'needs_review') {
     return {
       category,
+      actionability,
       matchedMmsId,
       reviewNote,
       confirmGroupMap,
@@ -272,11 +286,26 @@ function CorrectionPanel({ entry, studentOptions = [], onCorrect, onConvert, isP
     };
   }
 
+  if (!isOpen) {
+    return (
+      <ActionButton
+        onClick={() => setIsOpen(true)}
+        variant="subtle"
+        className="mt-4 px-3 py-1.5 text-xs"
+      >
+        Correct interpretation or remove test row
+      </ActionButton>
+    );
+  }
+
   return (
-    <details className="mt-4 rounded-2xl border border-blue-100 bg-blue-50/40 px-3 py-2">
-      <summary className="cursor-pointer text-xs font-semibold text-blue-900">Correct interpretation</summary>
+    <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50/40 px-3 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs font-semibold text-blue-900">Correct interpretation</p>
+        <ActionButton onClick={() => setIsOpen(false)} variant="subtle" className="px-3 py-1.5 text-xs">Close</ActionButton>
+      </div>
       <div className="mt-3 grid gap-3">
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-3">
           <label className="block">
             <span className="text-xs font-semibold text-slate-600">Category</span>
             <select
@@ -290,10 +319,26 @@ function CorrectionPanel({ entry, studentOptions = [], onCorrect, onConvert, isP
             </select>
           </label>
           <label className="block">
+            <span className="text-xs font-semibold text-slate-600">What does it need?</span>
+            <select
+              value={actionability}
+              onChange={(event) => setActionability(event.target.value)}
+              className="mt-1 w-full rounded-full border border-blue-100 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-300"
+            >
+              {INCOMING_MESSAGE_ACTIONABILITY.map((option) => (
+                <option key={option} value={option}>{labelIncomingActionability(option)}</option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
             <span className="text-xs font-semibold text-slate-600">Matched student</span>
             <select
               value={matchedMmsId}
-              onChange={(event) => setMatchedMmsId(event.target.value)}
+              onChange={(event) => {
+                const nextStudentId = event.target.value;
+                setMatchedMmsId(nextStudentId);
+                if (!nextStudentId) setConfirmGroupMap(false);
+              }}
               className="mt-1 w-full rounded-full border border-blue-100 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-300"
             >
               <option value="">No student selected</option>
@@ -354,9 +399,17 @@ function CorrectionPanel({ entry, studentOptions = [], onCorrect, onConvert, isP
           >
             Save + archive
           </button>
+          <ActionButton
+            pending={isPending}
+            onClick={() => onDelete(entry)}
+            variant="red"
+            className="px-3 py-1.5 text-xs"
+          >
+            Delete test/noise row
+          </ActionButton>
         </div>
       </div>
-    </details>
+    </div>
   );
 }
 
@@ -547,8 +600,11 @@ function MessageCard({ entry, studentOptions, onReview, onDelete, onCorrect, onC
   return (
     <article className="rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-[0_12px_36px_rgba(15,23,42,0.05)]">
       <div className="flex flex-wrap items-center gap-2">
+        <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${actionabilityTone(entry.classificationActionability)}`}>
+          {labelIncomingActionability(entry.classificationActionability)}
+        </span>
         <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700">
-          {labelIncomingCategory(entry.suspectedCategory)}
+          {entry.classificationDecision === 'unreviewed' ? 'Suggested topic' : 'Topic'}: {labelIncomingCategory(entry.suspectedCategory)}
         </span>
         <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${statusTone(entry.status)}`}>
           {labelIncomingStatus(entry.status)}
@@ -559,7 +615,7 @@ function MessageCard({ entry, studentOptions, onReview, onDelete, onCorrect, onC
           </span>
         ) : null}
         <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${confidenceTone(entry.matchConfidence)}`}>
-          Match: {entry.matchConfidence || 'none'}
+          Student: {entry.matchConfidence || 'none'}
         </span>
         <span className="text-xs text-slate-400">{formatDateTime(entry.messageAt || entry.capturedAt)}</span>
       </div>
@@ -577,11 +633,10 @@ function MessageCard({ entry, studentOptions, onReview, onDelete, onCorrect, onC
           </p>
           <p className="mt-1 text-xs text-slate-500">
             {entry.senderName || 'Unknown sender'}
-            {entry.senderPhone ? ` · ${entry.senderPhone}` : ''}
+            {!entry.matchedMmsId && entry.senderPhone ? ` · ${entry.senderPhone}` : ''}
             {entry.chatName ? ` · ${entry.chatName}` : ''}
           </p>
         </div>
-        <p className="text-xs text-slate-400">{entry.source || 'manual'}</p>
       </div>
 
       <p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700">{entry.messageText}</p>
@@ -595,9 +650,12 @@ function MessageCard({ entry, studentOptions, onReview, onDelete, onCorrect, onC
       ) : null}
 
       {entry.matchReasons ? (
-        <p className="mt-3 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-600">
-          {entry.matchReasons}
-        </p>
+        <details className="mt-3 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-600">
+          <summary className="cursor-pointer font-semibold text-slate-600">
+            Why these suggestions · {labelIncomingIntent(entry.classificationIntent)} · suggestion {entry.classificationConfidence || 'unknown'}
+          </summary>
+          <p className="mt-1">{entry.matchReasons}</p>
+        </details>
       ) : null}
 
       {entry.reviewNote ? (
@@ -606,7 +664,7 @@ function MessageCard({ entry, studentOptions, onReview, onDelete, onCorrect, onC
 
       {entry.schoolRepliedAt ? (
         <p className="mt-2 text-xs font-semibold text-emerald-700">
-          ✓ Replied in WhatsApp{entry.schoolRepliedBy && entry.schoolRepliedBy !== 'me' ? ` by ${entry.schoolRepliedBy}` : ''} · {formatDateTime(entry.schoolRepliedAt)}
+          School message seen later in this chat{entry.schoolRepliedBy && entry.schoolRepliedBy !== 'me' ? ` from ${entry.schoolRepliedBy}` : ''} · {formatDateTime(entry.schoolRepliedAt)}. This is evidence of engagement, not proof this message was answered.
         </p>
       ) : null}
 
@@ -647,7 +705,7 @@ function MessageCard({ entry, studentOptions, onReview, onDelete, onCorrect, onC
             href={`/admin/planning?focus=${encodeURIComponent(entry.createdPlanningId)}`}
             className="rounded-full border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-800 shadow-sm"
           >
-            Open plan
+            Open plan{entry.linkedPlanningStatus ? ` · ${entry.linkedPlanningStatus}` : ''}
           </Link>
         ) : null}
         {isOneTapConvertEligible(entry) && !conversion ? (
@@ -663,26 +721,18 @@ function MessageCard({ entry, studentOptions, onReview, onDelete, onCorrect, onC
         <button
           type="button"
           disabled={isPending}
-          onClick={() => onReview(entry.incomingId, 'converted')}
+          onClick={() => onReview(entry, 'converted')}
           className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 disabled:opacity-60"
         >
-          Archive handled
+          Mark handled
         </button>
         <button
           type="button"
           disabled={isPending}
-          onClick={() => onReview(entry.incomingId, 'ignored')}
+          onClick={() => onReview(entry, 'ignored')}
           className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600 disabled:opacity-60"
         >
-          Ignore
-        </button>
-        <button
-          type="button"
-          disabled={isPending}
-          onClick={() => onDelete(entry)}
-          className="rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 disabled:opacity-60"
-        >
-          Delete test
+          No action needed
         </button>
       </div>
 
@@ -692,6 +742,7 @@ function MessageCard({ entry, studentOptions, onReview, onDelete, onCorrect, onC
         isPending={isPending}
         onCorrect={onCorrect}
         onConvert={onConvert}
+        onDelete={onDelete}
       />
 
       {conversion ? <ReplyPanel conversion={conversion} /> : null}
@@ -867,14 +918,17 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
     }
   }
 
-  async function handleReview(incomingId, nextStatus) {
+  async function handleReview(entry, nextStatus) {
     setSubmitError('');
-    setPendingId(incomingId);
+    setPendingId(entry.incomingId);
     try {
       await postPayload({
         mode: 'review',
-        incomingId,
+        incomingId: entry.incomingId,
         status: nextStatus,
+        classificationActionability: nextStatus === 'ignored'
+          ? 'no_action'
+          : entry.classificationActionability,
       });
     } catch (caught) {
       setSubmitError(caught.message || 'Review update failed');
@@ -996,7 +1050,7 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
         <div>
           <h2 className="fc-display text-3xl text-slate-900">Message Inbox</h2>
           <p className="mt-1 text-sm text-slate-500">
-            {openCount ? `${openCount} unread${absenceCount ? ` · ${absenceCount} likely absence` : ''}` : '0 unread'}
+            {openCount ? `${openCount} open item${openCount === 1 ? '' : 's'}${absenceCount ? ` · ${absenceCount} absence-related` : ''}` : 'Nothing open'}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -1109,14 +1163,14 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
           />
         </div>
 
-        {archivedCount + autoArchivedCount ? (
+        {archivedCount ? (
           <div className="flex justify-end">
             <button
               type="button"
               onClick={() => setShowArchived((current) => !current)}
               className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm"
             >
-              {showArchived ? 'Hide archived' : `Show archived (${archivedCount + autoArchivedCount})`}
+              {showArchived ? 'Hide archived' : `Show archived (${archivedCount}; ${autoArchivedCount} automatic)`}
             </button>
           </div>
         ) : null}
@@ -1141,6 +1195,11 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
               onDecideReply={handleDecideReply}
             />
           ))}
+          {!visibleInbox.length ? (
+            <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 px-4 py-5 text-sm text-emerald-800">
+              All caught up. New requests and questions will appear here.
+            </div>
+          ) : null}
         </div>
       </section>
     </div>

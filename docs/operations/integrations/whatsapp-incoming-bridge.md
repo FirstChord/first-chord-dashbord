@@ -47,13 +47,18 @@ replay identity is `source + chat_id + external_message_id`, so a repeated post
 is a no-op.
 
 Own-account, configured staff, and the confirmed group's tutor replies do not
-create parent-message rows. They stamp reply evidence on still-open rows; they
-do not mark the work handled.
+create parent-message rows. A later school message stamps weak engagement
+evidence on the nearest preceding open row only; it does not prove that row was
+answered and does not mark the work handled.
 
 Parent messages are deterministically classified and matched as proposals.
-General messages with no detected date or duration arrive pre-archived as
-`ignored`; specific categories or date evidence remain open. Neither result
-authorises a payment, pause, attendance, archive, planning, or messaging action.
+Topic, intent and actionability are separate: a word such as “summer”,
+“holiday”, “away” or “payment” is not by itself an instruction. Action/reply
+items remain open, uncertain items ask for review, and explicit no-action
+messages arrive pre-archived. The stored machine proposal is preserved beside
+the human-final decision so accepted/corrected outcomes can be measured without
+calling untouched guesses knowledge. Neither result authorises a payment,
+pause, attendance, archive, planning, or messaging action.
 
 ## Confirmed-Group Gate
 
@@ -108,9 +113,11 @@ confirmed group server-side.
 
 ## From Evidence To Action
 
-Admins can correct the proposed category/student, archive noise, or convert a
-message into an idempotently linked `Planning_Items` action. The returned reply
-is editable clipboard text only. Copying logs `Communication_Log`; it does not
+Admins can correct the proposed topic, actionability, or student; record handled
+or no-action; or convert a message into an idempotently linked `Planning_Items`
+action. Conversion archives the message only after the plan save succeeds, and
+the inbox then shows the linked plan's current status. The returned reply is
+editable clipboard text only. Copying logs `Communication_Log`; it does not
 prove the reply was sent.
 
 The outbound guard replaces both `sock.sendMessage` and `sock.relayMessage` with

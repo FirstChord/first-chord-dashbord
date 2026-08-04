@@ -35,7 +35,7 @@ Student portal:
 | Live tutor roster, lesson schedule, attendance | MMS |
 | Tutor option/teacher-ID configuration | generated `ADMIN_TUTORS` data |
 | Portal-friendly URL and course/Theta configuration | student registry and generated outputs |
-| First Chord practice-note delivery/read state | `Practice_Notes_Log` and PostgreSQL delivery claim; MMS is historical-note fallback |
+| First Chord practice-note delivery/read state and explicit note-to-song links | `Practice_Notes_Log` and PostgreSQL delivery claim; MMS is historical-note fallback |
 | Catalogue/path teaching content | repository song catalogue and path templates |
 | Student song order/status | `Song_Assignments` |
 
@@ -62,6 +62,14 @@ tutor + date
 student note read
   -> Practice_Notes_Log latest sent/completed note
   -> MMS fallback when no owned note exists
+```
+
+```text
+Practice Chat music context
+  -> current assigned/working/ready Song_Assignments
+  -> exact catalogue {songId, title, status} objects
+  -> optional tutor-selected IDs revalidated on note save
+  -> Practice_Notes_Log song links + read-only school learning signals
 ```
 
 ```text

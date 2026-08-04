@@ -29,7 +29,10 @@ function ThemeList({ title, rows = [], empty = 'Nothing recorded yet.' }) {
         <ul className="mt-3 space-y-2">
           {rows.map((row) => (
             <li key={row.label} className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 px-3 py-2 text-sm">
-              <span className="text-slate-700">{row.label.replaceAll('_', ' ')}</span>
+              <span className="text-slate-700">
+                <span className="block">{row.label.replaceAll('_', ' ')}</span>
+                {row.detail ? <span className="mt-0.5 block text-xs text-slate-500">{row.detail}</span> : null}
+              </span>
               <span className="font-semibold text-slate-900">{row.count}</span>
             </li>
           ))}
@@ -105,9 +108,12 @@ export default async function AdminInsightsPage() {
         </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <InsightCard label="Notes logged" value={practice.total} href="/admin/students" copy={`${practice.withGoals} include practice goals · ${practice.withChallenges} include challenges`} />
+          <InsightCard label="Linked to a song" value={practice.songLinked} href="/admin/students" copy={`${practice.songUnlinked} notes have no explicit song link. Titles in prose are not guessed.`} />
           <InsightCard label="Delivery confirmed" value={practice.sent} href="/admin/students" copy={`${practice.failed} failed · ${practice.attendanceOnly} attendance-only`} />
-          <InsightCard label="Delivery untracked" value={practice.deliveryUntracked} href="/admin/students" copy="Logged notes where this dashboard cannot confirm delivery." />
-          <InsightCard label="Created 1+ day later" value={practice.lateCreated} href="/admin/students" copy="A prompt for handover or workflow review, not a judgement on teaching." />
+          <InsightCard label="Created 1+ day later" value={practice.lateCreated} href="/admin/students" copy={`${practice.deliveryUntracked} logged notes have untracked delivery. Neither number judges teaching.`} />
+        </div>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <ThemeList title="Songs appearing in linked practice notes" rows={practice.songs} empty="No Practice Notes have explicit song links yet. Existing prose is not title-matched by guesswork." />
         </div>
       </section>
 
@@ -135,12 +141,12 @@ export default async function AdminInsightsPage() {
         </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <InsightCard label="Messages captured" value={inbox.total} href="/admin/incoming-messages" copy={`${inbox.open} still open`} />
-          <InsightCard label="Planning tasks created" value={inbox.planned} href="/admin/incoming-messages" copy="Messages that turned into tracked work." />
+          <InsightCard label="Planning tasks created" value={inbox.planned} href="/admin/incoming-messages" copy={`${inbox.linkedPlansDone} done · ${inbox.linkedPlansParked} parked · ${inbox.linkedPlansActive} active or unknown`} />
           <InsightCard label="Handled, no plan" value={inbox.handledNoPlan} href="/admin/incoming-messages" copy="Reviewed and closed without creating work." />
-          <InsightCard label="Average time to review" value={inbox.averageReviewHours === null ? '—' : `${inbox.averageReviewHours}h`} href="/admin/incoming-messages" copy="Based only on messages with both captured and reviewed times." />
+          <InsightCard label="Classifier decisions checked" value={inbox.classificationsReviewed} href="/admin/incoming-messages" copy={`${inbox.classificationsAccepted} accepted · ${inbox.classificationsCorrected} corrected. Legacy and untouched guesses are excluded.`} />
         </div>
         <div className="grid gap-4 lg:grid-cols-2">
-          <ThemeList title="Most common inbox topics" rows={inbox.categories} />
+          <ThemeList title="Human-reviewed inbox topics" rows={inbox.categories} empty="No new classifier decisions have been checked yet." />
           <ThemeList title="Messages copied to send" rows={communication.categories} empty="No copied-message record in this period." />
         </div>
       </section>

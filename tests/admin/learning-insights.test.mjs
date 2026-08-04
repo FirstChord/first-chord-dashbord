@@ -7,7 +7,7 @@ test('buildLearningInsights separates confirmed delivery, unknown delivery, and 
   const insights = buildLearningInsights({
     now: new Date('2026-07-10T12:00:00Z'),
     practiceNotes: [
-      { createdAt: '2026-07-09T12:00:00Z', emailSendStatus: 'sent', practiceGoals: 'Scales', progressChallenges: 'Timing' },
+      { createdAt: '2026-07-09T12:00:00Z', studentMmsId: 'sdt_1', emailSendStatus: 'sent', practiceGoals: 'Scales', progressChallenges: 'Timing', songIds: ['fc_song_a'], songTitles: ['Ho Hey'] },
       { createdAt: '2026-07-09T12:00:00Z', mmsAttendanceSaved: true },
       { createdAt: '2026-07-09T12:00:00Z', emailSendStatus: 'not_sent_absent' },
       { createdAt: '2026-05-01T12:00:00Z', emailSendStatus: 'sent' },
@@ -20,6 +20,17 @@ test('buildLearningInsights separates confirmed delivery, unknown delivery, and 
   assert.equal(insights.practice.attendanceOnly, 1);
   assert.equal(insights.practice.withGoals, 1);
   assert.equal(insights.practice.withChallenges, 1);
+  assert.equal(insights.practice.songLinked, 1);
+  assert.equal(insights.practice.songUnlinked, 2);
+  assert.deepEqual(insights.practice.songs, [{
+    songId: 'fc_song_a',
+    label: 'Ho Hey',
+    count: 1,
+    students: 1,
+    withChallenges: 1,
+    withGoals: 1,
+    detail: '1 student · 1 linked note with challenges · 1 with goals',
+  }]);
 });
 
 test('buildLearningInsights excludes incomplete parent checklists from confirmed theme counts', () => {
@@ -41,8 +52,8 @@ test('buildLearningInsights reports inbox outcomes and review timing without cla
   const insights = buildLearningInsights({
     now: new Date('2026-07-10T12:00:00Z'),
     incomingMessages: [
-      { capturedAt: '2026-07-10T08:00:00Z', reviewedAt: '2026-07-10T10:00:00Z', status: 'converted', resolutionType: 'planning_task', suspectedCategory: 'schedule' },
-      { capturedAt: '2026-07-10T09:00:00Z', reviewedAt: '2026-07-10T10:00:00Z', status: 'converted', resolutionType: 'handled_no_plan', suspectedCategory: 'general' },
+      { capturedAt: '2026-07-10T08:00:00Z', reviewedAt: '2026-07-10T10:00:00Z', status: 'converted', resolutionType: 'planning_task', suspectedCategory: 'schedule', classificationActionability: 'action_needed', classificationDecision: 'accepted', linkedPlanningStatus: 'done' },
+      { capturedAt: '2026-07-10T09:00:00Z', reviewedAt: '2026-07-10T10:00:00Z', status: 'converted', resolutionType: 'handled_no_plan', suspectedCategory: 'general', classificationActionability: 'no_action', classificationDecision: 'corrected' },
       { capturedAt: '2026-07-10T11:00:00Z', status: 'inbox', suspectedCategory: 'payment' },
     ],
   });
@@ -52,4 +63,12 @@ test('buildLearningInsights reports inbox outcomes and review timing without cla
   assert.equal(insights.inbox.handledNoPlan, 1);
   assert.equal(insights.inbox.open, 1);
   assert.equal(insights.inbox.averageReviewHours, 1.5);
+  assert.equal(insights.inbox.classificationsReviewed, 2);
+  assert.equal(insights.inbox.classificationsAccepted, 1);
+  assert.equal(insights.inbox.classificationsCorrected, 1);
+  assert.equal(insights.inbox.linkedPlansDone, 1);
+  assert.deepEqual(insights.inbox.categories, [
+    { label: 'general', count: 1 },
+    { label: 'schedule', count: 1 },
+  ]);
 });

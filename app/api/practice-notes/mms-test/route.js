@@ -17,6 +17,7 @@ import {
   isPracticeNoteDeliveryInProgress,
   normalisePracticeNotePayload,
 } from '@/lib/admin/practice-notes-helpers.mjs';
+import { resolveSelectedPracticeNoteSongs } from '@/lib/admin/practice-chat-music-context.mjs';
 import {
   buildPracticeNoteClaimFailureResponse,
   buildPracticeNoteManualFollowUpPayload,
@@ -28,7 +29,7 @@ import {
   finalisePracticeNoteDeliveryClaim,
   releasePracticeNoteDeliveryClaim,
 } from '@/lib/admin/practice-note-delivery-claims.mjs';
-import { getPracticeNoteLogRows, upsertPracticeNoteLogRow } from '@/lib/admin/sheets';
+import { getPracticeNoteLogRows, getSongAssignmentRows, upsertPracticeNoteLogRow } from '@/lib/admin/sheets';
 import { authenticatePracticeChatRequest, corsHeaders } from '@/lib/admin/practice-chat-auth.mjs';
 import { getAdminStudentByMmsId } from '@/lib/admin/students';
 
@@ -87,6 +88,22 @@ export async function POST(request) {
       return Response.json({ error: 'noteText is required' }, { status: 400, headers });
     }
 
+    const snapshot = body.noteSnapshot || {};
+    const requestedSongIds = Array.isArray(body.songIds)
+      ? body.songIds
+      : Array.isArray(snapshot.songIds)
+        ? snapshot.songIds
+        : [];
+    const songLinks = requestedSongIds.length
+      ? resolveSelectedPracticeNoteSongs({
+          songIds: requestedSongIds,
+          assignments: await getSongAssignmentRows(studentId),
+        })
+      : { songIds: [], songTitles: [], errors: [] };
+    if (songLinks.errors.length) {
+      return Response.json({ error: songLinks.errors.join(', ') }, { status: 400, headers });
+    }
+
     if (mode === 'execute' && body.confirmLevel2Pilot !== true && body.confirmTestStudent !== true) {
       return Response.json({
         error: 'confirmLevel2Pilot must be true to write attendance in MMS and send the First Chord lesson-note email.',
@@ -122,7 +139,6 @@ export async function POST(request) {
         error: 'Confirm the exact parent recipient before sending these practice notes.',
       }, { status: 400, headers });
     }
-    const snapshot = body.noteSnapshot || {};
     const selfAttestedTutor = validateSelfAttestedPracticeNotesTutor({
       tutor: body.tutor || snapshot.tutorName || snapshot.tutor || '',
       student: pilotStudent,
@@ -152,6 +168,8 @@ export async function POST(request) {
       actingTutor: selfAttestedTutor.actingTutor || existingDelivery?.actingTutor || '',
       lessonDate: target.eventStartDate || snapshot.lessonDate || '',
       rawNoteText: effectiveNoteText,
+      songIds: songLinks.songIds.length ? songLinks.songIds : existingDelivery?.songIds || [],
+      songTitles: songLinks.songTitles.length ? songLinks.songTitles : existingDelivery?.songTitles || [],
       copiedToClipboard: false,
       attendanceStepOpened: true,
       mmsEventId: target.eventId || '',

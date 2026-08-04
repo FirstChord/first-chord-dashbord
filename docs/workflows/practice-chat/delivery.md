@@ -87,6 +87,16 @@ in-progress, failed, and absence-only rows are not proof of parent delivery.
 Rows with `manual_follow_up_needed = TRUE` surface as Practice Delivery issues;
 clearing that flag is a narrow cell update, not a full-row rewrite.
 
+Practice Chat may attach optional stable song IDs selected from the student's
+current shelf. The dashboard context endpoint returns exact `{songId, title,
+status}` objects while retaining the legacy title list for transcription. Both
+note POST routes re-read `Song_Assignments` and reject any submitted ID that is
+not currently assigned/working/ready for that student. `song_titles_json` is a
+readable capture-time snapshot; the ID is the join. A blank link remains
+unknown. Do not infer a link or whether a student liked a song from ordinary
+English in note prose; optional `Song_Outcomes` remains separate supplementary
+evidence.
+
 `Practice_Notes_Log.acting_tutor` must remain labelled
 `Self-attested: <name>` until tutor authentication exists.
 

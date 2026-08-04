@@ -1,5 +1,6 @@
-import { appendPracticeNoteLogRow } from '@/lib/admin/sheets';
+import { appendPracticeNoteLogRow, getSongAssignmentRows } from '@/lib/admin/sheets';
 import { normalisePracticeNotePayload } from '@/lib/admin/practice-notes-helpers.mjs';
+import { resolveSelectedPracticeNoteSongs } from '@/lib/admin/practice-chat-music-context.mjs';
 import { authenticatePracticeChatRequest, corsHeaders } from '@/lib/admin/practice-chat-auth.mjs';
 
 export async function OPTIONS(request) {
@@ -20,8 +21,23 @@ export async function POST(request) {
 
   try {
     const body = await request.json();
+    const studentMmsId = `${body?.studentMmsId || body?.studentId || ''}`.trim();
+    const requestedSongIds = Array.isArray(body?.songIds) ? body.songIds : [];
+    if (requestedSongIds.length && !studentMmsId) {
+      return Response.json({ error: 'studentMmsId is required for song links' }, { status: 400, headers });
+    }
+    const songLinks = requestedSongIds.length
+      ? resolveSelectedPracticeNoteSongs({
+          songIds: requestedSongIds,
+          assignments: await getSongAssignmentRows(studentMmsId),
+        })
+      : { songIds: [], songTitles: [], errors: [] };
+    if (songLinks.errors.length) {
+      return Response.json({ error: songLinks.errors.join(', ') }, { status: 400, headers });
+    }
     const note = normalisePracticeNotePayload({
       ...body,
+      ...songLinks,
       userAgent: request.headers.get('user-agent') || body?.userAgent || '',
     });
 

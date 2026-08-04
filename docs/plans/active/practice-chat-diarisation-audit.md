@@ -110,7 +110,7 @@ Two things worth stating plainly:
 | `app/api/practice-notes/mms-test/route.js` | the real Level 2 delivery (preview + execute) |
 | `lib/admin/practice-notes-helpers.mjs` | `parsePracticeNoteSections()`, `normalisePracticeNotePayload()`, `buildPracticeNoteLogSheetRow()`, `buildPortalPracticeNoteText()` |
 | `lib/admin/practice-chat-auth.mjs` | origin allow-list + shared-secret guard |
-| `lib/admin/sheets/core.mjs:448` | `PRACTICE_NOTES_LOG_HEADERS` — 34 columns |
+| `lib/admin/sheets/core.mjs` | `PRACTICE_NOTES_LOG_HEADERS` — 37 columns, including three explicit song-link fields |
 | `lib/config/songs-catalogue.mjs` | 311 curated songs (title, artist, instruments, level, series) |
 | `lib/songs/assignment-helpers.mjs` | `ASSIGNMENT_STATUSES` — live per-student repertoire |
 | `lib/config/students-registry.js` | `instrument`, `fcStudentId` per student |
@@ -292,11 +292,11 @@ them:
 |---|---|---|
 | 1. Raw | Per-question ASR text + `diarized_json` segments verbatim | **New append-only tab** `Practice_Chat_Transcripts`, keyed by `note_id` |
 | 2. Named dialogue | Role-keyed, editable segments + speaker provenance | Same tab, alongside its raw |
-| 3. Cleaned parent-facing note | Today's `what_we_did` / `progress_challenges` / `practice_goals` / `raw_note_text` | `Practice_Notes_Log` — unchanged |
+| 3. Cleaned parent-facing note | Today's `what_we_did` / `progress_challenges` / `practice_goals` / `raw_note_text`, plus optional exact song IDs selected by the tutor | `Practice_Notes_Log` — note body unchanged; song link fields are additive |
 | 4. Structured lesson data | `songs[]`, `concepts[]`, `challenges[]`, `practice_actions[]` | New columns or its own tab; feeds the Lesson Focus box and the song loop |
 
 A separate tab for layers 1–2 rather than more columns on `Practice_Notes_Log`,
-for three reasons: that row is already 34 columns; transcripts are bulky and
+for three reasons: that row is already 37 columns; transcripts are bulky and
 would slow every read of the delivery audit; and verbatim child speech has a
 different sensitivity and a different retention rule from a parent-facing note.
 Keeping it separable means it can be purged on its own schedule

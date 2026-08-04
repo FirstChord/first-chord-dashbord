@@ -5,6 +5,8 @@ import {
   buildPracticeChatMusicContext,
   buildTranscriptionPrompt,
   inferInstrument,
+  resolveSelectedPracticeNoteSongs,
+  selectLiveSongs,
   selectLiveSongTitles,
 } from '../../lib/admin/practice-chat-music-context.mjs';
 
@@ -26,6 +28,41 @@ test('selects only songs currently in front of the student', () => {
 
   assert.deepEqual(titles, ['Ho Hey', 'Sweet Home Chicago']);
   assert.ok(!titles.includes('Stand By Me'), 'finished songs are not this lesson');
+});
+
+test('returns stable live song objects for Practice Note links', () => {
+  assert.deepEqual(selectLiveSongs({ assignments, catalogue }), [
+    { songId: 'fc_song_a', title: 'Ho Hey', status: 'working' },
+    { songId: 'fc_song_b', title: 'Sweet Home Chicago', status: 'assigned' },
+  ]);
+});
+
+test('validates selected note songs against this student current shelf', () => {
+  assert.deepEqual(resolveSelectedPracticeNoteSongs({
+    songIds: ['fc_song_b', 'fc_song_a'],
+    assignments,
+    catalogue,
+  }), {
+    songIds: ['fc_song_b', 'fc_song_a'],
+    songTitles: ['Sweet Home Chicago', 'Ho Hey'],
+    errors: [],
+  });
+
+  const invalid = resolveSelectedPracticeNoteSongs({
+    songIds: ['fc_song_d'],
+    assignments,
+    catalogue,
+  });
+  assert.deepEqual(invalid.songIds, []);
+  assert.match(invalid.errors[0], /not on this student's current shelf/u);
+
+  const tooMany = resolveSelectedPracticeNoteSongs({
+    songIds: Array.from({ length: 13 }, (_, index) => `song_${index}`),
+    assignments,
+    catalogue,
+  });
+  assert.deepEqual(tooMany.songIds, []);
+  assert.match(tooMany.errors[0], /no more than 12/u);
 });
 
 test('excludes parked songs', () => {
@@ -113,6 +150,10 @@ test('full context bundles instrument, titles, and prompt', () => {
   const context = buildPracticeChatMusicContext({ assignments, catalogue });
 
   assert.equal(context.instrument, 'Guitar');
+  assert.deepEqual(context.songs, [
+    { songId: 'fc_song_a', title: 'Ho Hey', status: 'working' },
+    { songId: 'fc_song_b', title: 'Sweet Home Chicago', status: 'assigned' },
+  ]);
   assert.deepEqual(context.songTitles, ['Ho Hey', 'Sweet Home Chicago']);
   assert.match(context.prompt, /Sweet Home Chicago/);
 });

@@ -7,6 +7,7 @@ import path from 'node:path';
 import { extractDatesFromMessage } from '../../lib/admin/incoming-date-helpers.mjs';
 import { classifyIncomingMessage } from '../../lib/admin/incoming-message-helpers.mjs';
 import {
+  scoreIncomingActionability,
   scoreIncomingClassifier,
   scoreIncomingDateExtraction,
   scoreIncomingProposalAbstention,
@@ -20,12 +21,12 @@ import {
 
 const fixturePath = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures/incoming-eval-set.json');
 const fixture = JSON.parse(readFileSync(fixturePath, 'utf8'));
-const { messages, proposalCases } = fixture;
+const { messages, actionabilityCases, proposalCases } = fixture;
 
 test('incoming classifier holds its accuracy floors on the synthetic eval set', () => {
   const report = scoreIncomingClassifier(messages, classifyIncomingMessage);
 
-  assert.equal(fixture.schemaVersion, 2);
+  assert.equal(fixture.schemaVersion, 3);
   assert.equal(fixture.dataOrigin, 'synthetic_independent_cases');
   assert.ok(report.total >= 45, `eval fixture shrank to ${report.total} messages`);
   assert.ok(
@@ -41,6 +42,17 @@ test('incoming classifier holds its accuracy floors on the synthetic eval set', 
     `actionable-vs-noise accuracy ${(report.actionableAccuracy * 100).toFixed(1)}% fell below 98%`,
   );
   assert.equal(report.harmfulAutoArchives, 0, 'an actionable synthetic message would be auto-archived as noise');
+});
+
+test('incoming actionability stays calibrated independently from topic words', () => {
+  const report = scoreIncomingActionability(actionabilityCases, classifyIncomingMessage);
+
+  assert.ok(report.total >= 18, `actionability fixture shrank to ${report.total} messages`);
+  assert.ok(
+    report.exactAccuracy >= 0.95,
+    `actionability accuracy ${(report.exactAccuracy * 100).toFixed(1)}% fell below 95% — misses: ${report.misses.map((entry) => `#${entry.id}`).join(', ')}`,
+  );
+  assert.equal(report.harmfulAutoArchives, 0, 'a message needing attention would be auto-archived');
 });
 
 test('incoming date extraction stays exact on the synthetic dated cases', () => {
