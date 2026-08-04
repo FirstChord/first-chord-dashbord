@@ -60,15 +60,23 @@ the human-final decision so accepted/corrected outcomes can be measured without
 calling untouched guesses knowledge. Neither result authorises a payment,
 pause, attendance, archive, planning, or messaging action.
 
-The daily card leads with student/sender, time and the original message. Strong
-student, topic and actionability evidence turns the primary action into **Make
-plan**; uncertain or incomplete evidence shows **Review**, which opens the
-prefilled correction panel before the existing Planning write is allowed. A
-reply-needed row can lead with **Draft reply**, while the Planning review remains
-under the same card's details. Classifier labels, extracted dates, evidence,
-correction and test-row deletion stay behind the single More disclosure. A later
-school message is shown as a compact reply receipt; its non-resolution caveat
-remains in Details.
+The daily card leads with student/sender, time and the original message. **Plan**
+always opens the same pre-write preview: plan type and student are prefilled, and
+any extracted first/return dates are visible and editable. Clicking **Make plan**
+uses those reviewed values; clearing a false date clears it from the draft. The
+inbox row remains open until the existing idempotent Planning write succeeds.
+
+**Reply** opens an editable deterministic school template without sending parent
+text to a model. **Copy & open WhatsApp** copies the final text, records the copy
+in `Communication_Log`, and opens WhatsApp's chat chooser with the same text
+prefilled. WhatsApp does not expose a supported deep link to a private lesson
+group, so the admin still chooses the chat and taps Send. Copied remains intent
+to send, not delivery evidence. The separately feature-gated AI proposal
+experiment remains parked and unchanged.
+
+Classifier labels, evidence, correction, no-action and test-row deletion stay
+behind the single More disclosure. A later school message is shown as a compact
+reply receipt; its non-resolution caveat remains in Details.
 
 **Later** stores `snoozed_until` on the open message rather than pretending it is
 finished. It leaves the status and classification untouched, removes the row

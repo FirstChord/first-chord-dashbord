@@ -6,6 +6,7 @@ import {
   applyIncomingClassificationReview,
   applyIncomingMessageSnooze,
   applyIncomingMessageTextUpdate,
+  applyIncomingPlanningDateOverrides,
   assessBridgeHealth,
   buildGroupSyncPlan,
   extractIncomingMessageDates,
@@ -13,6 +14,7 @@ import {
   buildIncomingMessageRecord,
   buildIncomingPlanningDraft,
   buildIncomingReplyTemplate,
+  buildWhatsappShareUrl,
   buildTutorPhoneLookup,
   buildWhatsappGroupMapRecord,
   classifyIncomingMessage,
@@ -496,6 +498,61 @@ test('buildIncomingReplyTemplate keeps pause replies short and general', () => {
   assert.equal(
     buildIncomingReplyTemplate({ category: 'summer_break', senderName: 'Mina', studentName: 'Alex' }),
     'Noted, I’ll get those dates paused 🙂',
+  );
+});
+
+test('buildWhatsappShareUrl safely prefills the reviewed reply without choosing a recipient', () => {
+  assert.equal(
+    buildWhatsappShareUrl('Hi Jo!\nAll sorted & noted 🙂'),
+    'https://wa.me/?text=Hi%20Jo!%0AAll%20sorted%20%26%20noted%20%F0%9F%99%82',
+  );
+  assert.equal(buildWhatsappShareUrl(''), 'https://wa.me/');
+});
+
+test('reviewed plan dates replace parser guesses and are labelled as human-confirmed', () => {
+  const record = {
+    suspectedCategory: 'extended_absence',
+    matchedMmsId: 'sdt_alex',
+    matchedStudentName: 'Alex Chang',
+    senderName: 'Mina Chang',
+    messageText: 'We are away from the 24th of June till the 21st of July',
+    messageAt: '2026-06-19T10:00:00.000Z',
+  };
+  const extraction = applyIncomingPlanningDateOverrides(extractIncomingMessageDates(record), {
+    startDate: '2026-06-25',
+    returnDate: '2026-07-22',
+  });
+  const draft = buildIncomingPlanningDraft({ record, extraction, now: new Date('2026-06-20T10:00:00.000Z') });
+
+  assert.equal(extraction.reviewedOverride, true);
+  assert.deepEqual(extraction.dates, ['2026-06-25', '2026-07-22']);
+  assert.match(draft.notes, /Dates confirmed in the inbox plan preview: 2026-06-25, 2026-07-22\./u);
+  assert.doesNotMatch(draft.notes, /check them against the parent's wording/u);
+
+  const { windows } = parsePauseWindowsFromPlanning([{
+    ...draft,
+    planningId: 'planning_override',
+    linkedStudentId: draft.linkedStudentIds.join(','),
+  }]);
+  assert.equal(windows[0].start.toISOString().slice(0, 10), '2026-06-25');
+  assert.equal(windows[0].end.toISOString().slice(0, 10), '2026-07-22');
+});
+
+test('reviewed plan dates can clear a false parser guess and reject invalid API dates', () => {
+  const extraction = applyIncomingPlanningDateOverrides({
+    startDate: '2026-08-12',
+    returnDate: '2026-08-19',
+    dates: ['2026-08-12', '2026-08-19'],
+  }, {
+    startDate: '',
+    returnDate: '',
+  });
+  assert.deepEqual(extraction.dates, []);
+  assert.equal(extraction.startDate, '');
+  assert.equal(extraction.returnDate, '');
+  assert.throws(
+    () => applyIncomingPlanningDateOverrides({}, { startDate: '2026-02-30' }),
+    /not a valid date/u,
   );
 });
 

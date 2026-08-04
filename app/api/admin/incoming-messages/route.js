@@ -168,6 +168,8 @@ export async function POST(request) {
         matchedMmsId: body?.matchedMmsId || '',
         reviewNote: body?.reviewNote || '',
         confirmGroupMap: Boolean(body?.confirmGroupMap),
+        startDate: Object.hasOwn(body || {}, 'startDate') ? body.startDate : null,
+        returnDate: Object.hasOwn(body || {}, 'returnDate') ? body.returnDate : null,
         actorEmail: session.user.email || '',
       });
       extra = { planningId: result.planningId, replyTemplate: result.replyTemplate };

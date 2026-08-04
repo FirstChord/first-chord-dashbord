@@ -6,6 +6,8 @@ import { Check, Clock3, Ellipsis, RefreshCw, Reply, RotateCcw } from 'lucide-rea
 import { ActionButton } from '@/components/admin/ui/ActionButton';
 import {
   assessBridgeHealth,
+  buildIncomingReplyTemplate,
+  buildWhatsappShareUrl,
   extractIncomingMessageDates,
   INCOMING_MESSAGE_ACTIONABILITY,
   INCOMING_MESSAGE_CATEGORIES,
@@ -19,6 +21,7 @@ import {
   resolveIncomingPlanningAction,
 } from '@/lib/admin/incoming-message-helpers.mjs';
 import { formatFriendlyDate } from '@/lib/admin/incoming-date-helpers.mjs';
+import { logCommunicationCopy } from '@/lib/admin/log-communication-copy.js';
 
 function formatDateTime(value) {
   if (!value) return '—';
@@ -252,13 +255,18 @@ function GroupMapPanel({ groups = [], studentOptions = [], onReviewGroup, onAddG
   );
 }
 
-function CorrectionPanel({ entry, studentOptions = [], onCorrect, onConvert, isPending, isOpen, onOpenChange }) {
+function PlanPanel({ entry, studentOptions = [], onCorrect, onConvert, isPending, isOpen, onOpenChange }) {
+  const extractedDates = extractIncomingMessageDates(entry);
   const [category, setCategory] = useState(entry.suspectedCategory || 'general');
   const [actionability, setActionability] = useState(entry.classificationActionability || 'uncertain');
   const [matchedMmsId, setMatchedMmsId] = useState(entry.matchedMmsId || '');
+  const [startDate, setStartDate] = useState(extractedDates.startDate || '');
+  const [returnDate, setReturnDate] = useState(extractedDates.returnDate || '');
   const [reviewNote, setReviewNote] = useState('');
   const [confirmGroupMap, setConfirmGroupMap] = useState(isWhatsappGroup(entry.chatId));
   const canConfirmGroup = isWhatsappGroup(entry.chatId) && matchedMmsId;
+  const isRangePause = ['extended_absence', 'summer_break', 'absence_pause'].includes(category);
+  const showDates = ABSENCE_CATEGORIES.has(category) || startDate || returnDate;
 
   function correctionPayload(status = 'needs_review') {
     return {
@@ -267,6 +275,8 @@ function CorrectionPanel({ entry, studentOptions = [], onCorrect, onConvert, isP
       matchedMmsId,
       reviewNote,
       confirmGroupMap,
+      startDate,
+      returnDate,
       status,
     };
   }
@@ -276,13 +286,13 @@ function CorrectionPanel({ entry, studentOptions = [], onCorrect, onConvert, isP
   return (
     <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50/40 px-3 py-3">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-semibold text-blue-900">Correct interpretation</p>
+        <p className="text-sm font-semibold text-blue-950">Plan</p>
         <ActionButton onClick={() => onOpenChange(false)} variant="subtle" className="px-3 py-1.5 text-xs">Close</ActionButton>
       </div>
       <div className="mt-3 grid gap-3">
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <label className="block">
-            <span className="text-xs font-semibold text-slate-600">Category</span>
+            <span className="text-xs font-semibold text-slate-600">Plan type</span>
             <select
               value={category}
               onChange={(event) => setCategory(event.target.value)}
@@ -294,19 +304,7 @@ function CorrectionPanel({ entry, studentOptions = [], onCorrect, onConvert, isP
             </select>
           </label>
           <label className="block">
-            <span className="text-xs font-semibold text-slate-600">What does it need?</span>
-            <select
-              value={actionability}
-              onChange={(event) => setActionability(event.target.value)}
-              className="mt-1 w-full rounded-full border border-blue-100 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-300"
-            >
-              {INCOMING_MESSAGE_ACTIONABILITY.map((option) => (
-                <option key={option} value={option}>{labelIncomingActionability(option)}</option>
-              ))}
-            </select>
-          </label>
-          <label className="block">
-            <span className="text-xs font-semibold text-slate-600">Matched student</span>
+            <span className="text-xs font-semibold text-slate-600">Student</span>
             <select
               value={matchedMmsId}
               onChange={(event) => {
@@ -325,112 +323,166 @@ function CorrectionPanel({ entry, studentOptions = [], onCorrect, onConvert, isP
             </select>
           </label>
         </div>
-        <label className="block">
-          <span className="text-xs font-semibold text-slate-600">Reviewer note</span>
-          <input
-            value={reviewNote}
-            onChange={(event) => setReviewNote(event.target.value)}
-            className="mt-1 w-full rounded-full border border-blue-100 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-300"
-            placeholder="e.g. Clarified: summer break, returning second week after schools restart."
-          />
-        </label>
-        {isWhatsappGroup(entry.chatId) ? (
-          <label className="flex items-start gap-2 rounded-xl border border-blue-100 bg-white/75 px-3 py-2 text-xs leading-5 text-slate-600">
-            <input
-              type="checkbox"
-              checked={confirmGroupMap}
-              disabled={!matchedMmsId}
-              onChange={(event) => setConfirmGroupMap(event.target.checked)}
-              className="mt-1"
-            />
-            <span>
-              Confirm this WhatsApp group belongs to the selected student.
-              {!matchedMmsId ? ' Select a student first.' : ' Future messages from this group will use that as high-confidence evidence.'}
-            </span>
-          </label>
+        {showDates ? (
+          <div className={`grid gap-3 ${isRangePause || returnDate ? 'sm:grid-cols-2' : ''}`}>
+            <label className="block">
+              <span className="text-xs font-semibold text-slate-600">
+                {category === 'one_off_absence' ? 'Lesson date' : 'First date'}
+              </span>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(event) => setStartDate(event.target.value)}
+                className="mt-1 w-full rounded-full border border-blue-100 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-300"
+              />
+            </label>
+            {isRangePause || returnDate ? (
+              <label className="block">
+                <span className="text-xs font-semibold text-slate-600">Back from</span>
+                <input
+                  type="date"
+                  value={returnDate}
+                  onChange={(event) => setReturnDate(event.target.value)}
+                  className="mt-1 w-full rounded-full border border-blue-100 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-300"
+                />
+              </label>
+            ) : null}
+          </div>
         ) : null}
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            disabled={isPending || (confirmGroupMap && !canConfirmGroup)}
-            onClick={() => onConvert(entry, correctionPayload('converted'))}
-            className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition active:scale-[0.97] disabled:opacity-60"
-          >
-            {isPending ? 'Making plan…' : 'Make plan'}
-          </button>
-          <button
-            type="button"
-            disabled={isPending || (confirmGroupMap && !canConfirmGroup)}
-            onClick={() => onCorrect(entry, correctionPayload('needs_review'))}
-            className="rounded-full border border-blue-200 bg-white px-3 py-1.5 text-xs font-semibold text-blue-800 shadow-sm disabled:opacity-60"
-          >
-            Save details
-          </button>
-          <button
-            type="button"
-            disabled={isPending || (confirmGroupMap && !canConfirmGroup)}
-            onClick={() => onCorrect(entry, correctionPayload('converted'))}
-            className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 shadow-sm disabled:opacity-60"
-          >
-            Save and mark done
-          </button>
-        </div>
+        <button
+          type="button"
+          disabled={isPending || (confirmGroupMap && !canConfirmGroup)}
+          onClick={() => onConvert(entry, correctionPayload('converted'))}
+          className="min-h-11 rounded-full bg-slate-900 px-4 text-sm font-semibold text-white shadow-sm transition active:scale-[0.98] disabled:opacity-60"
+        >
+          {isPending ? 'Making plan…' : 'Make plan'}
+        </button>
+        <details className="rounded-xl border border-blue-100 bg-white/70 px-3 py-2">
+          <summary className="cursor-pointer text-xs font-semibold text-slate-600">More plan details</summary>
+          <div className="mt-3 grid gap-3">
+            <label className="block">
+              <span className="text-xs font-semibold text-slate-600">What does it need?</span>
+              <select
+                value={actionability}
+                onChange={(event) => setActionability(event.target.value)}
+                className="mt-1 w-full rounded-full border border-blue-100 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-300"
+              >
+                {INCOMING_MESSAGE_ACTIONABILITY.map((option) => (
+                  <option key={option} value={option}>{labelIncomingActionability(option)}</option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-xs font-semibold text-slate-600">Note</span>
+              <input
+                value={reviewNote}
+                onChange={(event) => setReviewNote(event.target.value)}
+                className="mt-1 w-full rounded-full border border-blue-100 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-300"
+                placeholder="Anything the plan should remember"
+              />
+            </label>
+            {isWhatsappGroup(entry.chatId) ? (
+              <label className="flex items-start gap-2 rounded-xl border border-blue-100 bg-white px-3 py-2 text-xs leading-5 text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={confirmGroupMap}
+                  disabled={!matchedMmsId}
+                  onChange={(event) => setConfirmGroupMap(event.target.checked)}
+                  className="mt-1"
+                />
+                <span>Remember this group for the selected student.</span>
+              </label>
+            ) : null}
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={isPending || (confirmGroupMap && !canConfirmGroup)}
+                onClick={() => onCorrect(entry, correctionPayload('needs_review'))}
+                className="rounded-full border border-blue-200 bg-white px-3 py-1.5 text-xs font-semibold text-blue-800 shadow-sm disabled:opacity-60"
+              >
+                Save details
+              </button>
+              <button
+                type="button"
+                disabled={isPending || (confirmGroupMap && !canConfirmGroup)}
+                onClick={() => onCorrect(entry, correctionPayload('converted'))}
+                className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 shadow-sm disabled:opacity-60"
+              >
+                Save and mark done
+              </button>
+            </div>
+          </div>
+        </details>
       </div>
     </div>
   );
 }
 
-function ReplyPanel({ conversion }) {
-  const [reply, setReply] = useState(conversion.replyTemplate || '');
-  const [copied, setCopied] = useState(false);
+function ReplyPanel({ entry, initialReply = '', planningId = '', title = 'Reply', onClose = null, source = 'incoming_message_reply' }) {
+  const [reply, setReply] = useState(initialReply);
 
-  async function handleCopy() {
+  async function handleWhatsApp() {
+    let copied = false;
     try {
       await navigator.clipboard.writeText(reply);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      copied = true;
     } catch {
-      setCopied(false);
+      window.alert('WhatsApp will still open with the reply filled in, but the browser could not also copy a backup to the clipboard.');
     }
+
+    if (copied) {
+      logCommunicationCopy({
+        category: 'parent',
+        channel: 'whatsapp',
+        mmsId: entry.matchedMmsId || '',
+        studentName: entry.matchedStudentName || '',
+        body: reply,
+        source,
+      });
+    }
+    window.location.assign(buildWhatsappShareUrl(reply));
   }
 
   return (
-    <div className="fc-slide-in mt-4 rounded-2xl border border-emerald-100 bg-emerald-50/50 px-3 py-3">
+    <div className="fc-slide-in mt-4 rounded-2xl border border-violet-100 bg-violet-50/40 px-3 py-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs font-semibold text-emerald-900">Planning item created — draft reply ready</p>
-        {conversion.planningId ? (
-          <Link
-            href={`/admin/planning?focus=${encodeURIComponent(conversion.planningId)}`}
-            className="rounded-full border border-emerald-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-emerald-800 shadow-sm"
-          >
-            Open plan
-          </Link>
-        ) : null}
+        <p className="text-sm font-semibold text-violet-950">{title}</p>
+        <div className="flex items-center gap-2">
+          {planningId ? (
+            <Link
+              href={`/admin/planning?focus=${encodeURIComponent(planningId)}`}
+              className="rounded-full border border-violet-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-violet-800 shadow-sm"
+            >
+              Open plan
+            </Link>
+          ) : null}
+          {onClose ? <ActionButton onClick={onClose} variant="subtle" className="px-2.5 py-1 text-[11px]">Close</ActionButton> : null}
+        </div>
       </div>
-      <p className="mt-1 text-[11px] leading-5 text-emerald-800/80">
-        Edit if needed, then copy and send it yourself in WhatsApp. Nothing is sent automatically.
+      <p className="mt-1 text-[11px] leading-5 text-violet-800/80">
+        {entry.chatName ? `Choose “${entry.chatName}” in WhatsApp. ` : ''}Nothing sends until you tap Send.
       </p>
       <textarea
         value={reply}
         onChange={(event) => setReply(event.target.value)}
         rows={5}
-        className="mt-2 w-full rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm leading-6 text-slate-800 outline-none focus:border-emerald-300"
+        className="mt-2 w-full rounded-xl border border-violet-200 bg-white px-3 py-2 text-sm leading-6 text-slate-800 outline-none focus:border-violet-300"
       />
       <button
         type="button"
-        onClick={handleCopy}
-        className="mt-2 rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700"
+        disabled={!reply.trim()}
+        onClick={handleWhatsApp}
+        className="mt-2 min-h-11 rounded-full bg-violet-700 px-4 text-sm font-semibold text-white shadow-sm transition active:scale-[0.98] disabled:opacity-60"
       >
-        {copied ? 'Copied' : 'Copy reply'}
+        Copy &amp; open WhatsApp
       </button>
     </div>
   );
 }
 
-// The quiet suggested-reply block for an open inbox row: one editable draft,
-// one approve button (label flips to "Approve edited" when the text diverges —
-// the diff is the telemetry), one discard. Nothing sends; approving copies to
-// the clipboard and the server logs it to Communication_Log.
+// The feature-gated suggested-reply block: one editable draft and one explicit
+// WhatsApp handoff. The server records whether the proposal was used or edited;
+// nothing sends until the admin chooses a chat and taps Send in WhatsApp.
 function SuggestedReplyBlock({ entry, proposal, onDecideReply, isPending }) {
   const [text, setText] = useState(proposal.proposalBody || '');
   const edited = text.trim() !== (proposal.proposalBody || '').trim();
@@ -442,7 +494,8 @@ function SuggestedReplyBlock({ entry, proposal, onDecideReply, isPending }) {
       window.alert('The reply was not approved because the browser could not copy it. Try again or copy the text manually.');
       return;
     }
-    onDecideReply(entry, proposal, edited ? { decision: 'edit', finalBody: text } : { decision: 'use' });
+    const decided = await onDecideReply(entry, proposal, edited ? { decision: 'edit', finalBody: text } : { decision: 'use' });
+    if (decided) window.location.assign(buildWhatsappShareUrl(text));
   }
 
   function handleDiscard() {
@@ -466,7 +519,7 @@ function SuggestedReplyBlock({ entry, proposal, onDecideReply, isPending }) {
           onClick={handleApprove}
           className="rounded-full bg-violet-700 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition active:scale-[0.97] disabled:opacity-60"
         >
-          {isPending ? 'Saving…' : edited ? 'Approve edited' : 'Use this'}
+          {isPending ? 'Saving…' : 'Copy & open WhatsApp'}
         </button>
         <button
           type="button"
@@ -657,7 +710,8 @@ function LaterChoices({ entry, onSnooze, isPending, onClose }) {
 
 function MessageCard({ entry, studentOptions, onReview, onSnooze, onDelete, onCorrect, onConvert, onUpdateText, conversion, pendingId, replyProposal, decidedReply, replyDraftingAvailable, onDraftReply, onDecideReply }) {
   const isPending = pendingId === entry.incomingId;
-  const [isCorrectionOpen, setIsCorrectionOpen] = useState(false);
+  const [isPlanOpen, setIsPlanOpen] = useState(false);
+  const [isReplyOpen, setIsReplyOpen] = useState(false);
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [isLaterOpen, setIsLaterOpen] = useState(false);
   const spottedDates = describeSpottedDates(entry);
@@ -676,15 +730,26 @@ function MessageCard({ entry, studentOptions, onReview, onSnooze, onDelete, onCo
     && !replyProposal
     && !decidedReply
     && !isIncomingPlaceholderText(entry.messageText);
-  const draftReplyIsPrimary = canDraftReply && entry.classificationActionability === 'reply_needed';
+  const canQuickReply = isOpen
+    && !entry.isSnoozed
+    && !replyProposal
+    && !isIncomingPlaceholderText(entry.messageText);
   const outcomeLabel = labelIncomingResolutionType(entry.resolutionType) || labelIncomingStatus(entry.status);
   const detailsId = `incoming-details-${entry.incomingId}`;
   const laterId = `incoming-later-${entry.incomingId}`;
 
-  function openCorrection() {
+  function openPlan() {
     setIsMoreOpen(false);
     setIsLaterOpen(false);
-    setIsCorrectionOpen(true);
+    setIsReplyOpen(false);
+    setIsPlanOpen(true);
+  }
+
+  function openReply() {
+    setIsMoreOpen(false);
+    setIsLaterOpen(false);
+    setIsPlanOpen(false);
+    setIsReplyOpen(true);
   }
 
   return (
@@ -751,7 +816,7 @@ function MessageCard({ entry, studentOptions, onReview, onSnooze, onDelete, onCo
 
       {decidedReply?.status === 'approved' ? (
         <p className="mt-3 text-xs font-semibold text-violet-800">
-          ✓ Reply copied — send it in WhatsApp. It's in the communication log.
+          ✓ Reply copied and added to the communication log.
         </p>
       ) : null}
 
@@ -775,40 +840,24 @@ function MessageCard({ entry, studentOptions, onReview, onSnooze, onDelete, onCo
             Open plan
           </Link>
         ) : null}
-        {!entry.isSnoozed && draftReplyIsPrimary ? (
+        {!entry.isSnoozed && planningAction !== 'none' && !entry.createdPlanningId && !conversion ? (
           <button
             type="button"
             disabled={isPending}
-            onClick={() => onDraftReply(entry)}
+            onClick={openPlan}
             className="min-h-11 flex-1 rounded-full bg-slate-900 px-3 text-xs font-semibold text-white shadow-sm transition active:scale-[0.98] disabled:opacity-60"
           >
-            {isPending ? 'Drafting…' : 'Draft reply'}
+            Plan
           </button>
         ) : null}
-        {!entry.isSnoozed && !draftReplyIsPrimary && planningAction === 'convert' && !conversion ? (
+        {canQuickReply ? (
           <button
             type="button"
             disabled={isPending}
-            onClick={() => onConvert(entry, {
-              category: entry.suspectedCategory,
-              actionability: entry.classificationActionability,
-              matchedMmsId: entry.matchedMmsId,
-              reviewNote: '',
-              confirmGroupMap: false,
-            })}
-            className="min-h-11 flex-1 rounded-full bg-slate-900 px-3 text-xs font-semibold text-white shadow-sm transition active:scale-[0.98] disabled:opacity-60"
+            onClick={openReply}
+            className="min-h-11 flex-1 rounded-full border border-violet-200 bg-violet-50 px-3 text-xs font-semibold text-violet-800 transition active:scale-[0.98] disabled:opacity-60"
           >
-            {isPending ? 'Making plan…' : 'Make plan'}
-          </button>
-        ) : null}
-        {!entry.isSnoozed && !draftReplyIsPrimary && planningAction === 'review' && !conversion ? (
-          <button
-            type="button"
-            disabled={isPending}
-            onClick={openCorrection}
-            className="min-h-11 flex-1 rounded-full bg-slate-900 px-3 text-xs font-semibold text-white shadow-sm transition active:scale-[0.98] disabled:opacity-60"
-          >
-            Review
+            Reply
           </button>
         ) : null}
         {isOpen && !entry.isSnoozed ? (
@@ -821,10 +870,11 @@ function MessageCard({ entry, studentOptions, onReview, onSnooze, onDelete, onCo
             }}
             aria-expanded={isLaterOpen}
             aria-controls={laterId}
-            className="flex min-h-11 items-center justify-center gap-1 rounded-full border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 disabled:opacity-60"
+            aria-label="Move to later"
+            title="Later"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 disabled:opacity-60"
           >
             <Clock3 aria-hidden="true" className="h-3.5 w-3.5" />
-            Later
           </button>
         ) : null}
         {isOpen ? (
@@ -834,10 +884,9 @@ function MessageCard({ entry, studentOptions, onReview, onSnooze, onDelete, onCo
             onClick={() => onReview(entry, 'converted')}
             aria-label="Mark handled"
             title="Mark handled"
-            className="flex min-h-11 items-center justify-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 text-xs font-semibold text-emerald-800 disabled:opacity-60"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 text-emerald-800 disabled:opacity-60"
           >
             <Check aria-hidden="true" className="h-4 w-4" />
-            Done
           </button>
         ) : null}
         <button
@@ -887,16 +936,6 @@ function MessageCard({ entry, studentOptions, onReview, onSnooze, onDelete, onCo
                 Draft reply
               </button>
             ) : null}
-            {draftReplyIsPrimary && planningAction !== 'none' ? (
-              <button
-                type="button"
-                disabled={isPending}
-                onClick={openCorrection}
-                className="min-h-10 rounded-full border border-blue-200 bg-white px-3 text-xs font-semibold text-blue-800 disabled:opacity-60"
-              >
-                Review or make plan
-              </button>
-            ) : null}
             {isOpen ? (
               <button
                 type="button"
@@ -911,7 +950,7 @@ function MessageCard({ entry, studentOptions, onReview, onSnooze, onDelete, onCo
               <button
                 type="button"
                 disabled={isPending}
-                onClick={openCorrection}
+                onClick={openPlan}
                 className="min-h-10 rounded-full border border-blue-200 bg-white px-3 text-xs font-semibold text-blue-800 disabled:opacity-60"
               >
                 Correct details
@@ -929,17 +968,38 @@ function MessageCard({ entry, studentOptions, onReview, onSnooze, onDelete, onCo
         </div>
       ) : null}
 
-      <CorrectionPanel
+      <PlanPanel
         entry={entry}
         studentOptions={studentOptions}
         isPending={isPending}
         onCorrect={onCorrect}
         onConvert={onConvert}
-        isOpen={isCorrectionOpen}
-        onOpenChange={setIsCorrectionOpen}
+        isOpen={isPlanOpen}
+        onOpenChange={setIsPlanOpen}
       />
 
-      {conversion ? <ReplyPanel conversion={conversion} /> : null}
+      {isReplyOpen && !conversion ? (
+        <ReplyPanel
+          entry={entry}
+          initialReply={buildIncomingReplyTemplate({
+            category: entry.suspectedCategory,
+            senderName: entry.senderName,
+            parentName: studentOptions.find((student) => student.mmsId === entry.matchedMmsId)?.parentName || '',
+            studentName: entry.matchedStudentName || studentOptions.find((student) => student.mmsId === entry.matchedMmsId)?.fullName || '',
+          })}
+          onClose={() => setIsReplyOpen(false)}
+        />
+      ) : null}
+
+      {conversion ? (
+        <ReplyPanel
+          entry={entry}
+          initialReply={conversion.replyTemplate || ''}
+          planningId={conversion.planningId || ''}
+          title="Plan made · reply ready"
+          source="incoming_planning_reply"
+        />
+      ) : null}
     </article>
   );
 }
@@ -1029,8 +1089,10 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
       if (data.proposal?.status === 'approved') {
         setDecidedReplies((current) => ({ ...current, [entry.incomingId]: { status: 'approved' } }));
       }
+      return true;
     } catch (caught) {
       setSubmitError(caught.message || 'Proposal decision failed');
+      return false;
     } finally {
       setPendingId('');
     }

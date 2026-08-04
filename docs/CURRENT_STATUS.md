@@ -36,14 +36,20 @@ deliberate school-improvement prompt.
   has actually saved, and linked plan status is visible back on the card. A later
   school message is weak engagement evidence for only the nearest preceding open
   row, never proof of reply or blanket closure. Every readable open card keeps a
-  visible Planning path: high-confidence rows can convert directly, while lower-
-  confidence rows use **Review** before anything is written. Bare
+  visible Planning path. **Plan** always opens a compact preview before anything
+  is written, with the proposed student and type plus editable extracted dates;
+  the confirmed dates—not a hidden parser guess—feed the structured pause card.
+  Bare
   role-marked ordinals such as “on the 12th … back on the 19th” resolve against
   the message date, and an explicit singular missed lesson stays one-off rather
   than becoming an extended absence merely because a return date was mentioned.
   Mobile cards now lead with student, sender and original message rather than
-  classifier badges. One contextual action becomes Make plan, Draft reply, Open
-  plan or Review; Later and Done stay compact, while no-action, evidence,
+  classifier badges. The action row now says what happens: **Plan** and
+  **Reply**, followed by compact Later, Done and More controls. Reply opens an
+  editable deterministic school template; **Copy & open WhatsApp** puts the text
+  on the clipboard and opens WhatsApp's chat chooser with it prefilled. The
+  human still chooses the conversation and taps Send, and the copy remains a
+  Communication Log record rather than proof of sending. No-action, evidence,
   classifier detail, correction and test deletion sit behind one More
   disclosure. Later is a wake-up time on the still-open message, with separate
   Open/Later/Done views, and never masquerades as resolution. Correction
