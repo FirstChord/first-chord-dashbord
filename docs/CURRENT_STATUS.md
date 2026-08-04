@@ -35,7 +35,13 @@ deliberate school-improvement prompt.
   Converting to Planning leaves the message open until the idempotent linked plan
   has actually saved, and linked plan status is visible back on the card. A later
   school message is weak engagement evidence for only the nearest preceding open
-  row, never proof of reply or blanket closure. Cards lead with Action needed,
+  row, never proof of reply or blanket closure. Every readable open card keeps a
+  visible Planning path: high-confidence rows can convert directly, while lower-
+  confidence rows use **Review & make plan** before anything is written. Bare
+  role-marked ordinals such as “on the 12th … back on the 19th” resolve against
+  the message date, and an explicit singular missed lesson stays one-off rather
+  than becoming an extended absence merely because a return date was mentioned.
+  Cards lead with Action needed,
   Reply needed, Check this, or No action; correction controls and their large
   student list are mounted only when opened. Practice Notes can now carry up to
   twelve tutor-confirmed catalogue `song_id` links plus title snapshots and six

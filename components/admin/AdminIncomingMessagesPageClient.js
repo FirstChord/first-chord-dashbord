@@ -11,12 +11,12 @@ import {
   INCOMING_MESSAGE_CATEGORIES,
   isAutoArchivedMessage,
   isIncomingPlaceholderText,
-  isOneTapConvertEligible,
   labelIncomingCategory,
   labelIncomingActionability,
   labelIncomingIntent,
   labelIncomingResolutionType,
   labelIncomingStatus,
+  resolveIncomingPlanningAction,
 } from '@/lib/admin/incoming-message-helpers.mjs';
 import { formatFriendlyDate } from '@/lib/admin/incoming-date-helpers.mjs';
 
@@ -266,8 +266,7 @@ function GroupMapPanel({ groups = [], studentOptions = [], onReviewGroup, onAddG
   );
 }
 
-function CorrectionPanel({ entry, studentOptions = [], onCorrect, onConvert, onDelete, isPending }) {
-  const [isOpen, setIsOpen] = useState(false);
+function CorrectionPanel({ entry, studentOptions = [], onCorrect, onConvert, onDelete, isPending, isOpen, onOpenChange }) {
   const [category, setCategory] = useState(entry.suspectedCategory || 'general');
   const [actionability, setActionability] = useState(entry.classificationActionability || 'uncertain');
   const [matchedMmsId, setMatchedMmsId] = useState(entry.matchedMmsId || '');
@@ -289,7 +288,7 @@ function CorrectionPanel({ entry, studentOptions = [], onCorrect, onConvert, onD
   if (!isOpen) {
     return (
       <ActionButton
-        onClick={() => setIsOpen(true)}
+        onClick={() => onOpenChange(true)}
         variant="subtle"
         className="mt-4 px-3 py-1.5 text-xs"
       >
@@ -302,7 +301,7 @@ function CorrectionPanel({ entry, studentOptions = [], onCorrect, onConvert, onD
     <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50/40 px-3 py-3">
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs font-semibold text-blue-900">Correct interpretation</p>
-        <ActionButton onClick={() => setIsOpen(false)} variant="subtle" className="px-3 py-1.5 text-xs">Close</ActionButton>
+        <ActionButton onClick={() => onOpenChange(false)} variant="subtle" className="px-3 py-1.5 text-xs">Close</ActionButton>
       </div>
       <div className="mt-3 grid gap-3">
         <div className="grid gap-3 sm:grid-cols-3">
@@ -590,8 +589,10 @@ function BridgeStatusStrip({ bridgeStatus, inbox = [] }) {
 
 function MessageCard({ entry, studentOptions, onReview, onDelete, onCorrect, onConvert, onUpdateText, conversion, pendingId, replyProposal, decidedReply, replyDraftingAvailable, onDraftReply, onDecideReply }) {
   const isPending = pendingId === entry.incomingId;
+  const [isCorrectionOpen, setIsCorrectionOpen] = useState(false);
   const spottedDates = describeSpottedDates(entry);
   const isOpen = ['inbox', 'needs_review'].includes(entry.status);
+  const planningAction = resolveIncomingPlanningAction(entry);
   const canDraftReply = replyDraftingAvailable
     && isOpen
     && !replyProposal
@@ -708,7 +709,7 @@ function MessageCard({ entry, studentOptions, onReview, onDelete, onCorrect, onC
             Open plan{entry.linkedPlanningStatus ? ` · ${entry.linkedPlanningStatus}` : ''}
           </Link>
         ) : null}
-        {isOneTapConvertEligible(entry) && !conversion ? (
+        {planningAction === 'convert' && !conversion ? (
           <button
             type="button"
             disabled={isPending}
@@ -716,6 +717,16 @@ function MessageCard({ entry, studentOptions, onReview, onDelete, onCorrect, onC
             className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition active:scale-[0.97] disabled:opacity-60"
           >
             {isPending ? 'Converting…' : 'Convert to plan + draft reply'}
+          </button>
+        ) : null}
+        {planningAction === 'review' && !conversion ? (
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={() => setIsCorrectionOpen(true)}
+            className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition active:scale-[0.97] disabled:opacity-60"
+          >
+            Review & make plan
           </button>
         ) : null}
         <button
@@ -743,6 +754,8 @@ function MessageCard({ entry, studentOptions, onReview, onDelete, onCorrect, onC
         onCorrect={onCorrect}
         onConvert={onConvert}
         onDelete={onDelete}
+        isOpen={isCorrectionOpen}
+        onOpenChange={setIsCorrectionOpen}
       />
 
       {conversion ? <ReplyPanel conversion={conversion} /> : null}

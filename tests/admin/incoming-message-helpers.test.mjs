@@ -33,6 +33,7 @@ import {
   labelIncomingResolutionType,
   normaliseIncomingMessagePayload,
   normalisePhone,
+  resolveIncomingPlanningAction,
   selectReplyEvidenceTarget,
 } from '../../lib/admin/incoming-message-helpers.mjs';
 import { isPausePlanningItem } from '../../lib/admin/planning-client-helpers.mjs';
@@ -97,6 +98,13 @@ test('classifyIncomingMessage detects absence/pause before general', () => {
   assert.equal(classifyIncomingMessage('Can we pause Sam for two weeks?').category, 'extended_absence');
   assert.equal(classifyIncomingMessage('We need to stop lessons after July').category, 'leaving');
   assert.equal(classifyIncomingMessage('The Stripe payment failed').category, 'payment');
+});
+
+test('a singular missed lesson stays one-off even when a return date is included', () => {
+  const result = classifyIncomingMessage('[STUDENT_A] will miss his lesson on the 12th and will be back on the 19th.');
+  assert.equal(result.category, 'one_off_absence');
+  assert.equal(result.actionability, 'action_needed');
+  assert.equal(result.confidence, 'high');
 });
 
 test('classifyIncomingMessage treats summer last-lesson wording as a break, not leaving', () => {
@@ -856,6 +864,29 @@ test('one-tap convert needs a high-confidence match and a specific category', ()
     messageText: '[Message content unavailable - star update arrived before cache]',
   }), false);
   assert.equal(isOneTapConvertEligible({ ...eligible, status: 'converted' }), false);
+});
+
+test('planning remains visible when a message needs review before conversion', () => {
+  const eligible = {
+    matchedMmsId: 'sdt_alex',
+    matchConfidence: 'high',
+    suspectedCategory: 'extended_absence',
+    classificationActionability: 'action_needed',
+    classificationConfidence: 'high',
+    messageText: 'Alex is away for two weeks',
+    status: 'inbox',
+  };
+
+  assert.equal(resolveIncomingPlanningAction(eligible), 'convert');
+  assert.equal(resolveIncomingPlanningAction({ ...eligible, classificationConfidence: 'low' }), 'review');
+  assert.equal(resolveIncomingPlanningAction({ ...eligible, classificationActionability: 'uncertain' }), 'review');
+  assert.equal(resolveIncomingPlanningAction({ ...eligible, matchedMmsId: '' }), 'review');
+  assert.equal(resolveIncomingPlanningAction({ ...eligible, createdPlanningId: 'planning_123', status: 'converted' }), 'open_plan');
+  assert.equal(resolveIncomingPlanningAction({ ...eligible, status: 'ignored' }), 'none');
+  assert.equal(resolveIncomingPlanningAction({
+    ...eligible,
+    messageText: '[Message content unavailable - star update arrived before cache]',
+  }), 'none');
 });
 
 test('groupIncomingMessages sorts newest first and normalises status/category', () => {

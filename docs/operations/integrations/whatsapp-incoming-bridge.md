@@ -60,6 +60,12 @@ the human-final decision so accepted/corrected outcomes can be measured without
 calling untouched guesses knowledge. Neither result authorises a payment,
 pause, attendance, archive, planning, or messaging action.
 
+Planning remains an explicit option on every readable open card. Strong student,
+topic and actionability evidence permits the direct conversion button; uncertain
+or incomplete evidence shows **Review & make plan**, which opens the prefilled
+correction panel before the existing Planning write is allowed. Uncertainty adds
+review rather than removing the route that closes the loop.
+
 ## Confirmed-Group Gate
 
 On connection, and every six hours by default, the bridge requests

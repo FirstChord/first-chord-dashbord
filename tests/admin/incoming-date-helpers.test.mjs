@@ -25,6 +25,25 @@ test('extracts numeric UK dates and fuzzy month returns ("back mid august")', ()
   assert.equal(result.returnDate, '2026-08-15');
 });
 
+test('uses the message month for role-marked bare ordinals', () => {
+  const result = extractDatesFromMessage(
+    '[STUDENT_A] will miss his lesson on the 12th and will be back on the 19th.',
+    { referenceDate: new Date('2030-08-03T10:00:00Z') },
+  );
+  assert.equal(result.startDate, '2030-08-12');
+  assert.equal(result.returnDate, '2030-08-19');
+  assert.deepEqual(result.matches, ['on the 12th', 'on the 19th']);
+});
+
+test('rolls a bare ordinal into the next month when needed', () => {
+  const result = extractDatesFromMessage(
+    'Away from the 30th and back on the 5th.',
+    { referenceDate: new Date('2030-08-28T10:00:00Z') },
+  );
+  assert.equal(result.startDate, '2030-08-30');
+  assert.equal(result.returnDate, '2030-09-05');
+});
+
 test('resolves "starting in two weeks" against the message date', () => {
   const result = extractDatesFromMessage(
     'he will be away during the summer, starting in two weeks and will be back mid august',

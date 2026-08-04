@@ -99,6 +99,16 @@
       }
     },
     {
+      "id": "one-off-007",
+      "text": "[STUDENT_A] will miss his lesson on the 12th and will be back on the 19th.",
+      "label": "one_off_absence",
+      "referenceDate": "2030-08-01",
+      "expectedDates": {
+        "startDate": "2030-08-12",
+        "returnDate": "2030-08-19"
+      }
+    },
+    {
       "id": "extended-001",
       "text": "[STUDENT_A] will be away for two weeks from Monday.",
       "label": "extended_absence",
