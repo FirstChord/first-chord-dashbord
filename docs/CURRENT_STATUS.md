@@ -42,12 +42,12 @@ deliberate school-improvement prompt.
   explicitly unlisted raw titles. Both note routes reject unknown catalogue
   IDs; student history shows catalogue and unlisted evidence separately, and
   Signals aggregates linked notes plus an unlisted-repertoire review list
-  without inferring sentiment. The separate Firebase PWA selector/send update
-  is built and tested locally: exact note-title suggestions prioritise the
+  without inferring sentiment. The separate Firebase PWA selector is live:
+  exact note-title suggestions prioritise the
   current shelf but remain unchecked until the tutor selects them; catalogue
-  search and an unlisted-title escape hatch cover everything else. It still
-  needs its own explicit
-  commit/deploy before live notes submit those IDs. The occasional done/parked `Song_Outcomes`
+  search and an unlisted-title escape hatch cover everything else. The selector
+  remains optional, so ignoring it preserves the previous Practice Chat flow.
+  The occasional done/parked `Song_Outcomes`
   prompt remains supplementary evidence—the high-volume Practice Note stream is
   intended to become the main song-learning memory.
 - **One inbox-first admin web app (2026-08-04):** the competing Planning and
