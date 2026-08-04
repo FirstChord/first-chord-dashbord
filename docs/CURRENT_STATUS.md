@@ -1,7 +1,7 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: 2026-08-03
+last_verified: 2026-08-04
 ---
 # Admin current status
 
@@ -46,6 +46,14 @@ deliberate school-improvement prompt.
   it is decision-useful rather than merely plausible. The Overview server path
   now reads only the forecast and collection lanes; it no longer fetches the
   roster, schedules, planning, expenses and snapshot model merely to hide them.
+  The next forecast method is date-aware: a student paused when the month is
+  locked stays at zero only until the end of their structured pause window, then
+  their later scheduled lessons count as billable again. Missing return dates
+  remain conservatively zero and stopped students never revive. The original
+  August V1 row remains immutable evidence rather than being rewritten after
+  this correction. Stripe collection breakdowns now retain compact paid
+  day-of-month evidence so school-holiday effects can be measured later;
+  council holidays are context, not an automatic revenue deduction.
 - **Executable finance cron contracts (2026-08-03):** the finance snapshot and
   Stripe cache HTTP boundaries now live in framework-free handler factories
   exercised with fake providers. Tests prove missing/bad secrets cause no work,

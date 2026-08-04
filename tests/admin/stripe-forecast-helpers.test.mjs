@@ -87,11 +87,95 @@ test('monthly forecast removes dated structured pauses and exposes weak inputs',
   assert.equal(forecast.coveragePct, 66.67);
 });
 
+test('monthly forecast resumes billing after a current structured pause ends', () => {
+  const forecast = buildStripeMonthlyForecast({
+    students: [student({
+      lifecycleStatus: 'paused',
+      paymentExpectation: 'stripe_paused_expected',
+    })],
+    planningRows: [{
+      planningId: 'pause_current',
+      linkedStudentId: 'sdt_1',
+      title: 'Pause Ada Student',
+      notes: 'Pause type: away period.\nFirst lesson to pause date: 2026-07-20.\nReturning from date: 2026-08-17.',
+    }],
+    month: '2026-08',
+    forecastedAt: AT,
+  });
+
+  // The student is paused when the forecast is locked, but Mondays on and
+  // after the 17 August return date are billable again.
+  assert.equal(forecast.forecastTotal, 75);
+  assert.equal(forecast.billedStudentCount, 1);
+  assert.equal(forecast.zeroExpectedCount, 0);
+  assert.equal(forecast.items[0].expected_occurrences, 3);
+  assert.equal(forecast.items[0].billing_basis, 'calendar_less_structured_pauses');
+});
+
+test('monthly forecast keeps a current pause at zero without a dated return window', () => {
+  const forecast = buildStripeMonthlyForecast({
+    students: [student({
+      lifecycleStatus: 'paused',
+      paymentExpectation: 'stripe_paused_expected',
+    })],
+    month: '2026-08',
+    forecastedAt: AT,
+  });
+
+  assert.equal(forecast.forecastTotal, 0);
+  assert.equal(forecast.items[0].billing_basis, 'paused_expected');
+  assert.equal(forecast.items[0].expected_occurrences, 0);
+});
+
+test('monthly forecast prorates a dated return when the usual weekday is unknown', () => {
+  const forecast = buildStripeMonthlyForecast({
+    students: [student({
+      lifecycleStatus: 'paused',
+      paymentExpectation: 'stripe_paused_expected',
+      scheduleContext: { status: 'not_found', durationMinutes: '30', usualWeekday: '' },
+    })],
+    planningRows: [{
+      planningId: 'pause_no_weekday',
+      linkedStudentId: 'sdt_1',
+      title: 'Pause Ada Student',
+      notes: 'Pause type: away period.\nFirst lesson to pause date: 2026-07-20.\nReturning from date: 2026-08-17.',
+    }],
+    month: '2026-08',
+    forecastedAt: AT,
+  });
+
+  assert.equal(forecast.items[0].billing_basis, 'average_month_less_structured_pauses_no_weekday');
+  assert.equal(forecast.items[0].confidence, 'low');
+  assert.equal(forecast.items[0].expected_occurrences, 2.1);
+  assert.equal(forecast.items[0].expected_amount, 52.5);
+});
+
+test('monthly forecast does not revive a stopped student from an old pause window', () => {
+  const forecast = buildStripeMonthlyForecast({
+    students: [student({
+      lifecycleStatus: 'stopped',
+      paymentExpectation: 'inactive_or_stopped',
+    })],
+    planningRows: [{
+      planningId: 'pause_old',
+      linkedStudentId: 'sdt_1',
+      title: 'Pause Ada Student',
+      notes: 'Pause type: away period.\nFirst lesson to pause date: 2026-07-20.\nReturning from date: 2026-08-17.',
+    }],
+    month: '2026-08',
+    forecastedAt: AT,
+  });
+
+  assert.equal(forecast.forecastTotal, 0);
+  assert.equal(forecast.items[0].billing_basis, 'not_expected_to_bill');
+});
+
 test('forecast rows are compact, first-write-wins monthly records', async () => {
   const forecast = buildStripeMonthlyForecast({ students: [student()], month: '2026-08', forecastedAt: AT });
   const row = buildStripeForecastRow(forecast);
   assert.equal(row.month, '2026-08');
   assert.equal(row.forecast_total, 125);
+  assert.equal(row.method, 'dashboard_price_x_calendar_v2');
   assert.equal(JSON.parse(row.items_json)[0].mms_id, 'sdt_1');
   assert.equal(JSON.parse(row.items_json)[0].amount, 125);
   assert.equal(currentMonthKey(AT), '2026-08');

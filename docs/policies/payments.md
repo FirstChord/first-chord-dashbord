@@ -1,7 +1,7 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: 2026-08-03
+last_verified: 2026-08-04
 ---
 # Payments Rules
 
@@ -29,12 +29,22 @@ evidence. The Stripe refresh endpoint must persist that row before it makes any
 Stripe request; failure to lock the forecast means no provider read or cache
 write occurs.
 
+A current pause state describes the forecast date, not necessarily the whole
+month. When a structured pause window overlaps the target month, weekly lessons
+on and after its return date are billable again; lessons inside the half-open
+pause window remain excluded. If a paused student has no reliable dated window,
+the forecast stays conservatively at zero rather than inventing a return. An
+`inactive_or_stopped` student is never revived by a historical pause card.
+
 After the month closes, `Stripe_Collected_Monthly` reveals paid invoices created
 in that month. Subscription ID is the preferred student match. A customer-only
 invoice is matched only when that customer identifies one student; ambiguity
 stays visible as unmatched money. The finance page reports both the net total
 gap and the sum of student-level errors. The latter is the integrity measure:
 two wrong student amounts must not cancel into an apparently correct headline.
+The compact student breakdown also retains the unique UTC days on which paid
+invoices were created. Those dates are calibration evidence for seasonal
+patterns; they are not attendance or proof that a lesson happened.
 
 Neither record authorises a Stripe mutation, changes payment expectation, or
 proves an accounting/bank balance. Forecast discrepancies are investigation
@@ -49,6 +59,13 @@ decision, including at least one normal month and one seasonal pause month. The
 Overview read boundary must mirror that presentation boundary: fetch only the
 forecast and revealed-collection lanes, leaving the wider planning model to
 Evidence and explicit tools.
+
+Glasgow school holidays may be joined to forecast errors as versioned external
+context. They must not directly reduce a Stripe forecast: lower attendance does
+not imply lower collection unless First Chord's observed paid-invoice evidence
+shows a stable relationship. A holiday adjustment must be evaluated against at
+least one full seasonal cycle, separately from explicit student pause dates,
+before it can influence the headline prediction.
 
 Allowed payment modes are `stripe`, `manual`, and `unknown`. Approved manual
 payment students are not evaluated as broken Stripe students.

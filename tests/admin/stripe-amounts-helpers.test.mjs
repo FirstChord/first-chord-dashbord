@@ -125,9 +125,29 @@ test('summariseCollectedInvoices sums paid invoices and preserves a student brea
   assert.equal(summary.unmatchedTotal, 10);
   assert.equal(summary.unmatchedInvoiceCount, 1);
   assert.deepEqual(summary.studentBreakdown, [
-    { mms_id: 'a', student_name: 'A', invoice_count: 1, amount: 25 },
-    { mms_id: 'b', student_name: 'B', invoice_count: 1, amount: 33 },
+    { mms_id: 'a', student_name: 'A', invoice_count: 1, paid_days: [15], amount: 25 },
+    { mms_id: 'b', student_name: 'B', invoice_count: 1, paid_days: [15], amount: 33 },
   ]);
+});
+
+test('summariseCollectedInvoices retains compact paid days for seasonal analysis', () => {
+  const day = (iso) => Math.floor(new Date(`${iso}T12:00:00Z`).getTime() / 1000);
+  const summary = summariseCollectedInvoices([
+    { status: 'paid', amount_paid: 2500, created: day('2026-08-17'), subscription: 'sub_a' },
+    { status: 'paid', amount_paid: 2500, created: day('2026-08-24'), subscription: 'sub_a' },
+    { status: 'paid', amount_paid: 500, created: day('2026-08-24'), subscription: 'sub_a' },
+  ], {
+    month: '2026-08',
+    students: [{ mmsId: 'a', fullName: 'A', stripeSubscriptionId: 'sub_a' }],
+  });
+
+  assert.deepEqual(summary.studentBreakdown, [{
+    mms_id: 'a',
+    student_name: 'A',
+    invoice_count: 3,
+    paid_days: [17, 24],
+    amount: 55,
+  }]);
 });
 
 test('summariseCollectedInvoices refuses an ambiguous customer-only match', () => {
