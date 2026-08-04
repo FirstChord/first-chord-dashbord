@@ -294,7 +294,9 @@ export default async function AdminHomePage() {
   const discussionNotes = [...openSchoolNotes]
     .sort((a, b) => `${b.updatedAt || b.createdAt || ''}`.localeCompare(`${a.updatedAt || a.createdAt || ''}`))
     .slice(0, 3);
-  const openIncomingMessages = incomingInbox.filter((entry) => ['inbox', 'needs_review'].includes(entry.status)).length;
+  const openIncomingMessages = incomingInbox.filter((entry) => (
+    ['inbox', 'needs_review'].includes(entry.status) && !entry.isSnoozed
+  )).length;
   // Auto-ingest makes a dead bridge look like a calm inbox — the heartbeat
   // tells "down" and "connected but capturing nothing" apart from quiet.
   const lastAutoCaptureAt = incomingInbox

@@ -60,11 +60,22 @@ the human-final decision so accepted/corrected outcomes can be measured without
 calling untouched guesses knowledge. Neither result authorises a payment,
 pause, attendance, archive, planning, or messaging action.
 
-Planning remains an explicit option on every readable open card. Strong student,
-topic and actionability evidence permits the direct conversion button; uncertain
-or incomplete evidence shows **Review & make plan**, which opens the prefilled
-correction panel before the existing Planning write is allowed. Uncertainty adds
-review rather than removing the route that closes the loop.
+The daily card leads with student/sender, time and the original message. Strong
+student, topic and actionability evidence turns the primary action into **Make
+plan**; uncertain or incomplete evidence shows **Review**, which opens the
+prefilled correction panel before the existing Planning write is allowed. A
+reply-needed row can lead with **Draft reply**, while the Planning review remains
+under the same card's details. Classifier labels, extracted dates, evidence,
+correction and test-row deletion stay behind the single More disclosure. A later
+school message is shown as a compact reply receipt; its non-resolution caveat
+remains in Details.
+
+**Later** stores `snoozed_until` on the open message rather than pretending it is
+finished. It leaves the status and classification untouched, removes the row
+from today's Inbox and Overview count, and resurfaces it after the chosen time.
+The Open, Later and Done filters keep those meanings distinct. **Done** records
+handled-without-a-plan; **No action needed** remains a separate outcome under
+More. Neither performs a provider action or sends a reply.
 
 ## Confirmed-Group Gate
 
@@ -119,9 +130,10 @@ confirmed group server-side.
 
 ## From Evidence To Action
 
-Admins can correct the proposed topic, actionability, or student; record handled
-or no-action; or convert a message into an idempotently linked `Planning_Items`
-action. Conversion archives the message only after the plan save succeeds, and
+Admins can correct the proposed topic, actionability, or student; move an open
+message to Later; record handled or no-action; or convert a message into an
+idempotently linked `Planning_Items` action. Conversion archives the message
+only after the plan save succeeds, and
 the inbox then shows the linked plan's current status. The returned reply is
 editable clipboard text only. Copying logs `Communication_Log`; it does not
 prove the reply was sent.

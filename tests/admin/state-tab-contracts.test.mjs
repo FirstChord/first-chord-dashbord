@@ -130,3 +130,17 @@ test('Practice Notes keep reviewed catalogue links separate from unlisted observ
   ]);
   assert.equal(PRACTICE_NOTES_LOG_HEADERS.length, 38);
 });
+
+test('Incoming messages store Later as wake-up state, not a resolution status', () => {
+  const resolutionIndex = INCOMING_MESSAGE_INBOX_HEADERS.indexOf('resolution_type');
+  assert.deepEqual(INCOMING_MESSAGE_INBOX_HEADERS.slice(resolutionIndex, resolutionIndex + 4), [
+    'resolution_type',
+    'snoozed_until',
+    'school_replied_at',
+    'school_replied_by',
+  ]);
+  assert.equal(
+    buildIncomingMessageSheetRow({ snoozedUntil: '2026-08-05T08:00:00.000Z' }).snoozed_until,
+    '2026-08-05T08:00:00.000Z',
+  );
+});

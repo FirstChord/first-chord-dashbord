@@ -37,13 +37,18 @@ deliberate school-improvement prompt.
   school message is weak engagement evidence for only the nearest preceding open
   row, never proof of reply or blanket closure. Every readable open card keeps a
   visible Planning path: high-confidence rows can convert directly, while lower-
-  confidence rows use **Review & make plan** before anything is written. Bare
+  confidence rows use **Review** before anything is written. Bare
   role-marked ordinals such as “on the 12th … back on the 19th” resolve against
   the message date, and an explicit singular missed lesson stays one-off rather
   than becoming an extended absence merely because a return date was mentioned.
-  Cards lead with Action needed,
-  Reply needed, Check this, or No action; correction controls and their large
-  student list are mounted only when opened. Practice Notes can now carry up to
+  Mobile cards now lead with student, sender and original message rather than
+  classifier badges. One contextual action becomes Make plan, Draft reply, Open
+  plan or Review; Later and Done stay compact, while no-action, evidence,
+  classifier detail, correction and test deletion sit behind one More
+  disclosure. Later is a wake-up time on the still-open message, with separate
+  Open/Later/Done views, and never masquerades as resolution. Correction
+  controls and their large student list are mounted only when opened. Practice
+  Notes can now carry up to
   twelve tutor-confirmed catalogue `song_id` links plus title snapshots and six
   explicitly unlisted raw titles. Both note routes reject unknown catalogue
   IDs; student history shows catalogue and unlisted evidence separately, and

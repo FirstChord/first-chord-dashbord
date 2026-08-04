@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { parsePauseWindowsFromPlanning } from '../../lib/admin/pause-forecast.mjs';
 import {
   applyIncomingClassificationReview,
+  applyIncomingMessageSnooze,
   applyIncomingMessageTextUpdate,
   assessBridgeHealth,
   buildGroupSyncPlan,
@@ -21,6 +22,7 @@ import {
   detectInstrumentInName,
   groupIncomingMessages,
   isAutoArchivedMessage,
+  isIncomingMessageSnoozed,
   isIncomingPlaceholderText,
   isOneTapConvertEligible,
   isSchoolStaffMessage,
@@ -91,6 +93,39 @@ test('incoming resolution types make handled, ignored, and planned messages dist
   assert.equal(deriveIncomingMessageResolutionType({ status: 'ignored' }), 'ignored_no_action');
   assert.equal(deriveIncomingMessageResolutionType({ resolutionType: 'planning_task', status: 'ignored' }), 'planning_task');
   assert.equal(labelIncomingResolutionType('handled_no_plan'), 'Handled — no plan needed');
+});
+
+test('Later parks only open messages until a real future time', () => {
+  const now = new Date('2026-08-04T16:00:00.000Z');
+  const row = { incomingId: 'incoming_later', status: 'needs_review', reviewedBy: '' };
+  const parked = applyIncomingMessageSnooze(row, {
+    snoozedUntil: '2026-08-05T08:00:00.000Z',
+    actorEmail: 'finn@example.com',
+    now,
+  });
+
+  assert.equal(parked.status, 'needs_review');
+  assert.equal(parked.snoozedUntil, '2026-08-05T08:00:00.000Z');
+  assert.equal(parked.reviewedBy, 'finn@example.com');
+  assert.equal(isIncomingMessageSnoozed(parked, { now }), true);
+  assert.equal(isIncomingMessageSnoozed(parked, { now: new Date('2026-08-05T08:00:00.000Z') }), false);
+
+  const returned = applyIncomingMessageSnooze(parked, {
+    snoozedUntil: '',
+    actorEmail: 'tom@example.com',
+    now,
+  });
+  assert.equal(returned.snoozedUntil, '');
+  assert.equal(returned.reviewedBy, 'tom@example.com');
+
+  assert.throws(() => applyIncomingMessageSnooze(row, {
+    snoozedUntil: '2026-08-04T15:59:00.000Z',
+    now,
+  }), /future/u);
+  assert.throws(() => applyIncomingMessageSnooze({ ...row, status: 'converted' }, {
+    snoozedUntil: '2026-08-05T08:00:00.000Z',
+    now,
+  }), /Only open/u);
 });
 
 test('classifyIncomingMessage detects absence/pause before general', () => {

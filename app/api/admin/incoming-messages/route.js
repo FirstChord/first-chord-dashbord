@@ -12,6 +12,7 @@ import {
   getWhatsappGroupMap,
   recordBridgeStatus,
   reviewWhatsappGroup,
+  snoozeIncomingMessage,
   syncWhatsappGroups,
   updateIncomingMessageReview,
   updateIncomingMessageText,
@@ -96,6 +97,15 @@ export async function POST(request) {
         createdPlanningId: body?.createdPlanningId || '',
         resolutionType: body?.resolutionType || '',
         classificationActionability: body?.classificationActionability || '',
+        actorEmail: session.user.email || '',
+      });
+    } else if (mode === 'snooze') {
+      if (!isAdmin) {
+        return Response.json({ error: 'Admin session required to move messages to Later' }, { status: 401 });
+      }
+      await snoozeIncomingMessage({
+        incomingId: `${body?.incomingId || ''}`.trim(),
+        snoozedUntil: `${body?.snoozedUntil || ''}`.trim(),
         actorEmail: session.user.email || '',
       });
     } else if (mode === 'correct') {
