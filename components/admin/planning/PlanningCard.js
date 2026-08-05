@@ -40,7 +40,7 @@ import PauseDatesEditor from './PauseDatesEditor';
 // pause items — the full pause toolkit (open the pause tool, copy the parent message,
 // the "Edit dates" repair builder, and the two-checkbox "Mark pause completed" gate).
 // Pure props in (item + studentOptions + handlers); also used inside DueTodayCard.
-export default function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides = {}, onStatus, onArchive, onEdit, onProgress, onPauseCompleted, onRepairPauseDetails, onOpenPauseTool, onOpenWorkflowPanel, onCreateLinkedAction, onTutorAbsenceDecision, onTutorAbsenceNoticeSent, onTutorAbsenceFinalConfirmationSent, onTutorAbsenceManualResolved, pendingId, compact = false, nearbyPause = null }) {
+export default function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides = {}, onStatus, onArchive, onEdit, onProgress, onPauseCompleted, onRepairPauseDetails, onOpenPauseTool, onOpenWorkflowPanel, onCreateLinkedAction, onTutorAbsenceDecision, onTutorAbsenceNoticeSent, onTutorAbsenceFinalConfirmationSent, pendingId, compact = false, nearbyPause = null }) {
   const [progressNote, setProgressNote] = useState('');
   const [nextAction, setNextAction] = useState(item.nextAction || '');
   const [nextSessionDate, setNextSessionDate] = useState('');
@@ -63,7 +63,6 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
   const isTutorAbsenceFinalConfirmation = isTutorAbsenceFinalConfirmationPlanningItem(item);
   const tutorAbsenceFinalMessage = isTutorAbsenceFinalConfirmation ? extractTutorAbsenceFinalConfirmationMessage(item) : '';
   const tutorAbsenceDecision = `${item.notes || ''}`.match(/^Tutor absence decision:\s*(cancel_day|cover)$/mu)?.[1] || '';
-  const hasTutorAbsenceManualException = isTutorAbsenceCapture && `${item.notes || ''}`.includes('Tutor absence exception: multi-student MMS event');
   const linkedWorkflowHref = isTutorAbsenceCard
     ? buildTutorAbsenceWorkflowHref(item)
     : workflowHref(item.linkedWorkflowId);
@@ -257,22 +256,7 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
         )
       ) : null}
 
-      {hasTutorAbsenceManualException ? (
-        <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3">
-          <p className="text-sm font-semibold text-red-950">Manual household check required</p>
-          <p className="mt-1 text-xs leading-5 text-red-900">
-            MMS reports more than one student on this event. Automatic cover/cancel is blocked so no household is missed.
-          </p>
-          <button
-            type="button"
-            disabled={isPending}
-            onClick={() => onTutorAbsenceManualResolved?.(item)}
-            className="mt-3 rounded-lg bg-red-950 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Mark manual household handling complete
-          </button>
-        </div>
-      ) : isTutorAbsenceCapture && !tutorAbsenceDecision ? (
+      {isTutorAbsenceCapture && !tutorAbsenceDecision ? (
         <div className="mt-4 rounded-xl border border-indigo-100 bg-indigo-50/60 p-3">
           <p className="text-sm font-semibold text-slate-900">How is this teaching day handled?</p>
           <p className="mt-1 text-xs leading-5 text-slate-700">

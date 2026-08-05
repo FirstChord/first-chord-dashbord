@@ -50,6 +50,27 @@ cancel
 The dashboard never sends the parent message or changes Stripe automatically.
 Copy/send, payment execution, and final confirmation are explicit human actions.
 
+### Group bookings and who gets a pause card
+
+One MMS event can carry several students — a sibling pair, or a class such as
+the ukulele group. Events are expanded to **one lesson per student** before any
+decision is made, so every household is reached on its own record. This replaced
+an earlier day-wide block that existed only because the event was collapsed to
+its first student.
+
+A structured pause card exists to drive the Stripe payment pause, so it is
+raised per student by payment mode:
+
+| Student | Reached for the parent message | Pause card |
+| --- | --- | --- |
+| `paymentMode = stripe` | yes | yes — one per student, keyed by student and event |
+| `paymentMode = manual` | yes | no — there is no subscription to pause |
+| payment mode unknown | yes | yes — missing data must not silently drop a household |
+
+So a sibling pair on Stripe produces two individual cards from one event, while
+a class of manual payers produces none — but nobody drops out of the parent
+communication list either way.
+
 ## Timing
 
 | Window | Expected work |
@@ -81,7 +102,7 @@ admin action occurred, not that the future pause ended. It ignores parked cards.
 | --- | --- |
 | MMS cannot load | block capture/decision; never convert failure into “no lessons” |
 | MMS changed after capture | block notice/payment/final confirmation until the real date is reviewed |
-| multi-student MMS event | block automatic cover/cancel; verify every household and record manual completion |
+| multi-student MMS event | expand to one lesson per student so every household is reached; no manual block |
 | payment explicitly marked not needed | create a non-pause final-confirmation card with no finance effect |
 | student is only marked `stripe_paused_expected` | still create the dated structured pause card; the undated expectation is context, not proof that this absence window is covered |
 | dates expand after notice | park the earlier open notice; label a replacement `Update:` if the old notice was completed |
@@ -240,7 +261,8 @@ parent message just to prove the regression is fixed.
   `tests/admin/pause-*.test.mjs`, and planning helper tests
 
 Coverage must include two-week/overdue targeting, schedule mismatch,
-multi-student blocks, single versus grouped dates, parked superseded cards,
+multi-student expansion and the manual-payer card rule, single versus grouped
+dates, parked superseded cards,
 no-payment cards outside finance semantics, expanded-date update notices, and
 reverse-order overlap.
 

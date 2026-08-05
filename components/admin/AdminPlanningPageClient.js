@@ -426,22 +426,6 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
     }
   }
 
-  async function handleTutorAbsenceManualResolved(item) {
-    const confirmed = window.confirm('Only continue if every affected household, any cover arrangement, calendar change and parent communication have been handled manually.');
-    if (!confirmed) return;
-    try {
-      await postPlanning({
-        mode: 'status',
-        planningId: item.planningId,
-        status: 'done',
-        progressNote: 'Manual exception completed: multi-student MMS event checked; household communication and operational handling recorded outside automatic tutor-absence flow.',
-      }, item.planningId);
-    } catch (error) {
-      setSaveState({ pending: false, error: error.message || 'Could not complete the manual exception', savedAt: '' });
-      setPendingId('');
-    }
-  }
-
   async function handleTutorAbsenceFinalConfirmationSent(item) {
     try {
       await verifyTutorAbsenceSchedule(item);
@@ -945,7 +929,6 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
                       onTutorAbsenceDecision={handleTutorAbsenceDecision}
                       onTutorAbsenceNoticeSent={handleTutorAbsenceNoticeSent}
                       onTutorAbsenceFinalConfirmationSent={handleTutorAbsenceFinalConfirmationSent}
-                      onTutorAbsenceManualResolved={handleTutorAbsenceManualResolved}
                       onDefer={handleDefer}
                       pendingId={pendingId}
                       nearbyPause={nearbyPauseFlags.get(item.planningId)}
@@ -988,7 +971,6 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
                         onTutorAbsenceDecision={handleTutorAbsenceDecision}
                         onTutorAbsenceNoticeSent={handleTutorAbsenceNoticeSent}
                         onTutorAbsenceFinalConfirmationSent={handleTutorAbsenceFinalConfirmationSent}
-                        onTutorAbsenceManualResolved={handleTutorAbsenceManualResolved}
                         pendingId={pendingId}
                         nearbyPause={nearbyPauseFlags.get(item.planningId)}
                       />

@@ -91,10 +91,6 @@ export async function POST(request) {
       if (workflow.loadError) {
         return Response.json({ error: `MMS could not load this date: ${workflow.loadError}` }, { status: 503 });
       }
-      if (workflow.lessons.some((lesson) => Number(lesson.studentCount || 1) > 1)) {
-        return Response.json({ error: 'This date contains a multi-student MMS event. Handle every household manually; automatic cover/cancel is blocked.' }, { status: 409 });
-      }
-
       const noAffectedLessons = workflow.lessons.length === 0;
       await saveTutorAbsenceWorkflow({
         absenceId: workflow.absenceId,

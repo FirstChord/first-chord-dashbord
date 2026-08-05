@@ -25,7 +25,6 @@ export default function DueTodayCard({
   onTutorAbsenceDecision,
   onTutorAbsenceNoticeSent,
   onTutorAbsenceFinalConfirmationSent,
-  onTutorAbsenceManualResolved,
   onDefer,
   pendingId,
   nearbyPause = null,
@@ -127,7 +126,6 @@ export default function DueTodayCard({
             onTutorAbsenceDecision={onTutorAbsenceDecision}
             onTutorAbsenceNoticeSent={onTutorAbsenceNoticeSent}
             onTutorAbsenceFinalConfirmationSent={onTutorAbsenceFinalConfirmationSent}
-            onTutorAbsenceManualResolved={onTutorAbsenceManualResolved}
             pendingId={pendingId}
             nearbyPause={nearbyPause}
             compact

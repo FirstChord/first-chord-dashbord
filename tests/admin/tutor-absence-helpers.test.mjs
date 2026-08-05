@@ -12,6 +12,7 @@ import {
   buildTutorAbsencePausePlanningItems,
   formatTutorAbsenceDate,
   isTutorAbsencePaymentHandled,
+  expandTutorAbsenceEvent,
   normaliseTutorAbsenceEvent,
   scopeTutorAbsenceLessonSnapshots,
   selectObsoleteTutorAbsenceFinalConfirmationPlanningIds,
@@ -366,14 +367,25 @@ test('buildTutorAbsenceEarlyNoticePlanningBundle creates an additive notice plan
   assert.doesNotMatch(plan.item.notes, /payment pause already handled/u);
 });
 
-test('schedule snapshot comparison fails loud for changed lessons and multi-student events', () => {
+test('schedule snapshot comparison fails loud for changed lessons', () => {
   const expected = [{ eventId: 'evt_1', studentMmsId: 'sdt_1', lessonDate: '2026-08-04', lessonTime: '16:00' }];
   assert.equal(compareTutorAbsenceLessonSnapshots({ expectedLessons: expected, liveLessons: expected }).ready, true);
   assert.equal(compareTutorAbsenceLessonSnapshots({ expectedLessons: expected, liveLessons: [] }).reason, 'schedule_changed');
+});
+
+// A group booking used to stop the whole day here. Lessons are now expanded to
+// one entry per student before comparison, so both households are compared on
+// their own signature and a sibling pair is ordinary work, not an exception.
+test('a multi-student event no longer blocks the schedule comparison', () => {
+  const siblings = [
+    { eventId: 'evt_1', studentMmsId: 'sdt_a', lessonDate: '2026-08-04', lessonTime: '16:00', studentCount: 2 },
+    { eventId: 'evt_1', studentMmsId: 'sdt_b', lessonDate: '2026-08-04', lessonTime: '16:00', studentCount: 2 },
+  ];
+  assert.equal(compareTutorAbsenceLessonSnapshots({ expectedLessons: siblings, liveLessons: siblings }).ready, true);
   assert.equal(compareTutorAbsenceLessonSnapshots({
-    expectedLessons: [{ ...expected[0], studentCount: 2 }],
-    liveLessons: expected,
-  }).reason, 'group_lesson');
+    expectedLessons: siblings,
+    liveLessons: [siblings[0]],
+  }).reason, 'schedule_changed', 'losing one sibling is still a real change');
 });
 
 test('student-scoped schedule review ignores another household changing on the same tutor absence date', () => {
@@ -681,4 +693,87 @@ test('selectRedundantTutorAbsencePauseCards parks only open absence-pause cards 
   assert.deepEqual(result, [
     { studentMmsId: 'sdt_alice', planningIds: ['planning_tutor_absence_pause_period_Stef_sdt_alice_2026-07-06_2026-07-20'] },
   ]);
+});
+
+// --- group bookings ------------------------------------------------------
+// One MMS event can hold a sibling pair or a whole class (the ukulele group).
+// Collapsing that to the first student silently dropped every other household,
+// which is why a day-wide "manual household check" block used to exist. These
+// pin the two rules that replaced it: reach every student, and only raise a
+// payment card where there is a subscription to pause.
+
+const GROUP_EVENT = {
+  ID: 'evt_group',
+  StartDate: '2026-08-07T15:00:00',
+  Duration: 30,
+  Students: [{ ID: 'sdt_a', FullName: 'Ada Sibling' }, { ID: 'sdt_b', FullName: 'Bea Sibling' }],
+};
+
+test('a multi-student event expands to one lesson per student', () => {
+  const students = new Map([
+    ['sdt_a', { mmsId: 'sdt_a', fullName: 'Ada Sibling', paymentMode: 'stripe' }],
+    ['sdt_b', { mmsId: 'sdt_b', fullName: 'Bea Sibling', paymentMode: 'stripe' }],
+  ]);
+  const lessons = expandTutorAbsenceEvent(GROUP_EVENT, students);
+
+  assert.equal(lessons.length, 2, 'both households must be reachable');
+  assert.deepEqual(lessons.map((lesson) => lesson.studentMmsId), ['sdt_a', 'sdt_b']);
+  assert.deepEqual(lessons.map((lesson) => lesson.studentName), ['Ada Sibling', 'Bea Sibling']);
+  assert.ok(lessons.every((lesson) => lesson.eventId === 'evt_group'));
+  assert.ok(lessons.every((lesson) => lesson.studentCount === 2), 'the group is still visible as a group');
+});
+
+test('normaliseTutorAbsenceEvent still returns the first student for event-level callers', () => {
+  const students = new Map([['sdt_a', { mmsId: 'sdt_a', fullName: 'Ada Sibling' }]]);
+  assert.equal(normaliseTutorAbsenceEvent(GROUP_EVENT, students).studentMmsId, 'sdt_a');
+});
+
+test('each sibling on Stripe gets their own pause card from one group event', () => {
+  const plans = buildTutorAbsencePausePlanningItems({
+    absenceId: 'tutor_absence:finn:2026-08-07',
+    tutorShortName: 'Finn',
+    absenceDate: '2026-08-07',
+    lessons: [
+      { eventId: 'evt_group', studentMmsId: 'sdt_a', studentName: 'Ada Sibling', lessonDate: '2026-08-07', studentCount: 2, paymentMode: 'stripe' },
+      { eventId: 'evt_group', studentMmsId: 'sdt_b', studentName: 'Bea Sibling', lessonDate: '2026-08-07', studentCount: 2, paymentMode: 'stripe' },
+    ],
+    now: new Date('2026-08-01T09:00:00Z'),
+  });
+
+  assert.equal(plans.length, 2, 'one card per sibling, not one per event');
+  assert.equal(new Set(plans.map((plan) => plan.planningId)).size, 2, 'cards must not collide');
+});
+
+test('manual payers are reached but never get a payment pause card', () => {
+  const plans = buildTutorAbsencePausePlanningItems({
+    absenceId: 'tutor_absence:finn:2026-08-07',
+    tutorShortName: 'Finn',
+    absenceDate: '2026-08-07',
+    lessons: [
+      { eventId: 'evt_uke', studentMmsId: 'sdt_u1', studentName: 'Uke One', lessonDate: '2026-08-07', studentCount: 3, paymentMode: 'manual' },
+      { eventId: 'evt_uke', studentMmsId: 'sdt_u2', studentName: 'Uke Two', lessonDate: '2026-08-07', studentCount: 3, paymentMode: 'manual' },
+      { eventId: 'evt_solo', studentMmsId: 'sdt_s', studentName: 'Solo Stripe', lessonDate: '2026-08-07', paymentMode: 'stripe' },
+    ],
+    now: new Date('2026-08-01T09:00:00Z'),
+  });
+
+  assert.deepEqual(
+    plans.map((plan) => plan.item.linkedStudentId),
+    ['sdt_s'],
+    'a manual payer has no subscription to pause, so no card is raised',
+  );
+});
+
+test('an unknown payment mode still raises a card rather than being assumed manual', () => {
+  const plans = buildTutorAbsencePausePlanningItems({
+    absenceId: 'tutor_absence:finn:2026-08-07',
+    tutorShortName: 'Finn',
+    absenceDate: '2026-08-07',
+    lessons: [
+      { eventId: 'evt_x', studentMmsId: 'sdt_x', studentName: 'Unknown Mode', lessonDate: '2026-08-07' },
+    ],
+    now: new Date('2026-08-01T09:00:00Z'),
+  });
+
+  assert.equal(plans.length, 1, 'missing data must not silently drop a household');
 });
