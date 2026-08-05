@@ -41,13 +41,35 @@ export function MessageToSend({ label, guidance = '', message = '', actions = nu
 
   return (
     <section className="mt-4 rounded-xl border border-slate-200 bg-slate-50/60 p-3">
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{label}</p>
+      {/* A div, not a p: callers pass a StepLabel here, and a p inside a p is
+          invalid markup that React will complain about at hydration. */}
+      <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{label}</div>
       {guidance ? <p className="mt-1 text-xs leading-5 text-slate-600">{guidance}</p> : null}
       <p className="mt-3 whitespace-pre-wrap rounded-lg border border-slate-200 bg-white p-3 text-sm leading-6 text-slate-800">
         {message}
       </p>
       {actions ? <div className="mt-3 flex flex-wrap items-center gap-2">{actions}</div> : null}
     </section>
+  );
+}
+
+// A numbered step that shows when it is done.
+//
+// The two steps of a pause were already tracked by checkboxes further down, but
+// nothing said how far through you were. Motivation and attention rise as a goal
+// gets visibly closer (the goal-gradient effect), and that only works if the
+// progress is actually shown — so the step you have finished says so, and the
+// one you have not is plainly the one left.
+//
+// The tick reuses the "sorted ✓" vocabulary from the issues queue rather than
+// inventing a second success symbol.
+export function StepLabel({ done = false, children }) {
+  return (
+    <p className={`flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.14em] ${done ? 'text-emerald-700' : 'text-amber-700'}`}>
+      {done ? <span aria-hidden>✓</span> : null}
+      {children}
+      {done ? <span className="sr-only">— done</span> : null}
+    </p>
   );
 }
 

@@ -34,14 +34,15 @@ import {
 import { buildWhatsappShareUrl } from '@/lib/admin/incoming-message-helpers.mjs';
 import { logCommunicationCopy } from '@/lib/admin/log-communication-copy.js';
 import { ExpandableText, LinkPill } from './fields';
-import { CardButton, CardNotice, MessageToSend } from './CardBlocks';
+import { CardButton, CardNotice, MessageToSend, StepLabel } from './CardBlocks';
+import ScopeBadge from '@/components/admin/ui/ScopeBadge';
 import PauseDatesEditor from './PauseDatesEditor';
 
 // The per-planning-item card: status actions, progress logging, link facts, and — for
 // pause items — the full pause toolkit (open the pause tool, copy the parent message,
 // the "Edit dates" repair builder, and the two-checkbox "Mark pause completed" gate).
 // Pure props in (item + studentOptions + handlers); also used inside DueTodayCard.
-export default function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides = {}, onStatus, onArchive, onEdit, onProgress, onPauseCompleted, onRepairPauseDetails, onOpenPauseTool, onCreateLinkedAction, onTutorAbsenceDecision, onTutorAbsenceNoticeSent, onTutorAbsenceFinalConfirmationSent, pendingId, compact = false, nearbyPause = null }) {
+export default function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides = {}, onStatus, onArchive, onEdit, onProgress, onPauseCompleted, onRepairPauseDetails, onOpenPauseTool, onCreateLinkedAction, onTutorAbsenceDecision, onTutorAbsenceNoticeSent, onTutorAbsenceFinalConfirmationSent, pendingId, compact = false, nearbyPause = null, sortedEntry = null }) {
   const [progressNote, setProgressNote] = useState('');
   // Starts empty on purpose. The card already states the current next action
   // above; pre-filling the input printed the same sentence twice and made an
@@ -117,6 +118,28 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
     } catch {
       setCopyState('Copy failed');
     }
+  }
+
+  // The completion beat: the same "sorted ✓" language, colour and timing the
+  // issues queue uses. Only shown once every write has landed, so the tick means
+  // "this is done", never "this was sent".
+  if (sortedEntry) {
+    return (
+      <article
+        className={`rounded-2xl border border-emerald-200 bg-emerald-50 transition-opacity duration-700 ${compact ? 'p-4' : 'p-4 shadow-[0_8px_22px_rgba(15,23,42,0.04)]'}`}
+        style={sortedEntry.fading ? { opacity: 0 } : undefined}
+      >
+        <div className="flex items-start gap-3">
+          <span className="mt-0.5 text-lg text-emerald-600" aria-hidden>✓</span>
+          <div>
+            <p className="text-base font-semibold text-emerald-900">
+              {linkedStudent?.fullName || item.title} — sorted
+            </p>
+            <p className="mt-1 text-sm text-emerald-800">{sortedEntry.message}</p>
+          </div>
+        </div>
+      </article>
+    );
   }
 
   return (
@@ -333,13 +356,15 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
         <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2">
           {(
             <div className="space-y-3">
-              <div>
+              {/* The numbered steps already say "this one, then that one", so the
+                  sentence that used to repeat it here was teaching what the
+                  structure shows. What cannot be inferred is the safety
+                  boundary, and that is a contract — a badge, not a paragraph. */}
+              <div className="flex flex-wrap items-center gap-2">
                 <p className="text-sm font-semibold text-amber-950">Complete this pause</p>
-                <p className="mt-1 text-xs leading-5 text-amber-800">
-                  First run the payment tool for these dates. Then send the confirmation and mark the card complete.
-                </p>
+                <ScopeBadge>Never writes to Stripe</ScopeBadge>
               </div>
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-700">1. Payment action</p>
+              <StepLabel done={pauseToolStepComplete}>1. Payment action</StepLabel>
               {paymentPausePrefillUrl ? (
                 onOpenPauseTool ? (
                   <button
@@ -375,7 +400,7 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
               ) : null}
               {pauseConfirmationMessage && pauseToolStepComplete ? (
                 <MessageToSend
-                  label="2. Parent confirmation"
+                  label={<StepLabel done={pauseMessageConfirmed || pausePaymentConfirmed}>2. Parent confirmation</StepLabel>}
                   message={pauseConfirmationMessage}
                   actions={(
                     <>
@@ -436,9 +461,6 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
               >
                 {isPending ? 'Completing…' : 'Mark pause completed'}
               </button>
-              <p className="text-xs leading-5 text-amber-800">
-                Logs the confirmation and sets paused-expected if needed — doesn&apos;t run Stripe directly.
-              </p>
               {!item.linkedStudentId ? (
                 <p className="rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs font-semibold text-amber-900">
                   Save structured dates with a linked student before completing this pause.

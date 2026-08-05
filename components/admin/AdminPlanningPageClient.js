@@ -113,6 +113,28 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
   const [filter, setFilter] = useState(initialFilter);
   const [showDone, setShowDone] = useState(false);
   // { url, name } when the pause-tool side window is open; null when closed.
+  // planningId -> { message, fading } for the brief "sorted ✓" beat when a pause
+  // is completed. Deliberately the same vocabulary and timings as the issues
+  // queue: one success language across the dashboard, not two.
+  const [sortedPauses, setSortedPauses] = useState({});
+
+  function startPauseSortedBeat(planningId, message, apply) {
+    setSortedPauses((current) => ({ ...current, [planningId]: { message, fading: false } }));
+    window.setTimeout(() => {
+      setSortedPauses((current) => (
+        current[planningId] ? { ...current, [planningId]: { ...current[planningId], fading: true } } : current
+      ));
+    }, 800);
+    window.setTimeout(() => {
+      apply();
+      setSortedPauses((current) => {
+        const next = { ...current };
+        delete next[planningId];
+        return next;
+      });
+    }, 1600);
+  }
+
   const [pauseToolPanel, setPauseToolPanel] = useState(null);
 
   useEffect(() => {
@@ -164,7 +186,10 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
   // `silent` skips the pending/savedAt/pendingId bookkeeping so a multi-step
   // action (e.g. completing a pause) can own that state across several calls
   // without the button flickering enabled between steps.
-  async function postPlanning(payload, targetId = '', { silent = false } = {}) {
+  // `deferApply` hands the caller the new planning list instead of applying it
+  // straight away, so a card can hold still for its completion beat before the
+  // list moves underneath it.
+  async function postPlanning(payload, targetId = '', { silent = false, deferApply = false } = {}) {
     if (!silent) {
       setSaveState({ pending: true, error: '', savedAt: '' });
       setPendingId(targetId);
@@ -180,7 +205,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
       throw new Error(data.error || 'Planning save failed');
     }
 
-    setPlanning(data.planning);
+    if (!deferApply) setPlanning(data.planning);
     if (!silent) {
       setSaveState({
         pending: false,
@@ -656,14 +681,14 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
         }));
       }
 
-      await postPlanning({
+      const nextPlanning = await postPlanning({
         mode: 'status',
         planningId: item.planningId,
         status: 'done',
         progressNote: PAUSE_COMPLETED_NOTE,
         progressType: 'action_completed',
         nextAction: item.nextAction,
-      }, item.planningId, { silent: true });
+      }, item.planningId, { silent: true, deferApply: true });
 
       // Clear the shared pending/pendingId once, after all steps — the button stays
       // in "Completing…" the whole time instead of flickering between calls.
@@ -673,6 +698,14 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
         savedAt: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
       });
       setPendingId('');
+
+      // Only now — every write landed. The beat says what happened, then the
+      // list catches up.
+      startPauseSortedBeat(
+        item.planningId,
+        'Payment paused and confirmation logged.',
+        () => setPlanning(nextPlanning),
+      );
     } catch (error) {
       setSaveState({ pending: false, error: error.message || 'Pause completion failed', savedAt: '' });
       setPendingId('');
@@ -920,6 +953,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
                       onEdit={startEdit}
                       onProgress={handleProgress}
                       onPauseCompleted={handlePauseCompleted}
+                      sortedEntry={sortedPauses[item.planningId] || null}
                       onRepairPauseDetails={handleRepairPauseDetails}
                       onOpenPauseTool={(url, name) => setPauseToolPanel({ url, name })}
                       onCreateLinkedAction={handleCreateLinkedAction}
@@ -961,6 +995,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
                         onEdit={startEdit}
                         onProgress={handleProgress}
                         onPauseCompleted={handlePauseCompleted}
+                        sortedEntry={sortedPauses[item.planningId] || null}
                         onRepairPauseDetails={handleRepairPauseDetails}
                         onOpenPauseTool={(url, name) => setPauseToolPanel({ url, name })}
                         onCreateLinkedAction={handleCreateLinkedAction}

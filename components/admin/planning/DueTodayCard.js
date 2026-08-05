@@ -18,6 +18,7 @@ export default function DueTodayCard({
   onEdit,
   onProgress,
   onPauseCompleted,
+  sortedEntry = null,
   onRepairPauseDetails,
   onOpenPauseTool,
   onCreateLinkedAction,
@@ -118,6 +119,7 @@ export default function DueTodayCard({
             onEdit={onEdit}
             onProgress={onProgress}
             onPauseCompleted={onPauseCompleted}
+            sortedEntry={sortedEntry}
             onRepairPauseDetails={onRepairPauseDetails}
             onOpenPauseTool={onOpenPauseTool}
             onCreateLinkedAction={onCreateLinkedAction}
