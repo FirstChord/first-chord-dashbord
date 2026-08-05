@@ -35,7 +35,6 @@ import { buildWhatsappShareUrl } from '@/lib/admin/incoming-message-helpers.mjs'
 import { logCommunicationCopy } from '@/lib/admin/log-communication-copy.js';
 import { ExpandableText, LinkPill } from './fields';
 import { CardButton, CardNotice, MessageToSend, StepLabel } from './CardBlocks';
-import ScopeBadge from '@/components/admin/ui/ScopeBadge';
 import PauseDatesEditor from './PauseDatesEditor';
 
 // The per-planning-item card: status actions, progress logging, link facts, and — for
@@ -358,12 +357,10 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
             <div className="space-y-3">
               {/* The numbered steps already say "this one, then that one", so the
                   sentence that used to repeat it here was teaching what the
-                  structure shows. What cannot be inferred is the safety
-                  boundary, and that is a contract — a badge, not a paragraph. */}
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="text-sm font-semibold text-amber-950">Complete this pause</p>
-                <ScopeBadge>Never writes to Stripe</ScopeBadge>
-              </div>
+                  structure shows. The Stripe boundary is NOT stated here: it
+                  belongs to the completion button, because step 1's payment tool
+                  is precisely the thing that does write to Stripe. */}
+              <p className="text-sm font-semibold text-amber-950">Complete this pause</p>
               <StepLabel done={pauseToolStepComplete}>1. Payment action</StepLabel>
               {paymentPausePrefillUrl ? (
                 onOpenPauseTool ? (
@@ -461,6 +458,9 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
               >
                 {isPending ? 'Completing…' : 'Mark pause completed'}
               </button>
+              <p className="text-xs leading-5 text-amber-800">
+                This button only logs the confirmation and sets paused-expected — the Stripe change itself happens in the step 1 payment tool.
+              </p>
               {!item.linkedStudentId ? (
                 <p className="rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs font-semibold text-amber-900">
                   Save structured dates with a linked student before completing this pause.
