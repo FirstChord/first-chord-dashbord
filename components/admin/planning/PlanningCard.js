@@ -40,7 +40,7 @@ import PauseDatesEditor from './PauseDatesEditor';
 // pause items — the full pause toolkit (open the pause tool, copy the parent message,
 // the "Edit dates" repair builder, and the two-checkbox "Mark pause completed" gate).
 // Pure props in (item + studentOptions + handlers); also used inside DueTodayCard.
-export default function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides = {}, onStatus, onArchive, onEdit, onProgress, onPauseCompleted, onRepairPauseDetails, onOpenPauseTool, onOpenWorkflowPanel, onCreateLinkedAction, onTutorAbsenceDecision, onTutorAbsenceNoticeSent, onTutorAbsenceFinalConfirmationSent, pendingId, compact = false, nearbyPause = null }) {
+export default function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides = {}, onStatus, onArchive, onEdit, onProgress, onPauseCompleted, onRepairPauseDetails, onOpenPauseTool, onCreateLinkedAction, onTutorAbsenceDecision, onTutorAbsenceNoticeSent, onTutorAbsenceFinalConfirmationSent, pendingId, compact = false, nearbyPause = null }) {
   const [progressNote, setProgressNote] = useState('');
   const [nextAction, setNextAction] = useState(item.nextAction || '');
   const [nextSessionDate, setNextSessionDate] = useState('');
@@ -116,6 +116,16 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
 
   return (
     <article className={compact ? '' : 'rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_22px_rgba(15,23,42,0.04)]'}>
+      {/* An already-paused student still gets a card on purpose: the payment
+          expectation flag carries no dates, so it cannot prove *this* window is
+          covered. That is easy to misread as a duplicate, so say it up front
+          rather than only next to the payment tool further down. */}
+      {isPauseReminder && pauseExpectationAlreadySet ? (
+        <p className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">
+          <span className="font-semibold">Already marked paused expected.</span>
+          {' '}That flag has no dates on it, so it does not prove these lesson dates are covered — check the payment tool before running it again.
+        </p>
+      ) : null}
       {nearbyPause ? (
         <p className="mb-3 rounded-xl bg-blue-50/70 px-3 py-2 text-xs leading-5 text-slate-600">
           This student also has a pause around {formatTargetDate(nearbyPause.otherStart)}
@@ -233,27 +243,16 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
         </div>
       ) : null}
 
-      {linkedWorkflowHref && !isPauseReminder ? (
-        isTutorAbsenceCard ? (
-          <button
-            type="button"
-            onClick={() => onOpenWorkflowPanel?.({
-              url: linkedWorkflowHref,
-              title: item.title || 'Tutor absence',
-              eyebrow: 'Tutor absence workflow',
-            })}
-            className="mt-3 inline-flex rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-white"
-          >
-            Open tutor absence workflow →
-          </button>
-        ) : (
-          <Link
-            href={linkedWorkflowHref}
-            className="mt-3 inline-flex rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-white"
-          >
-            Open linked workflow
-          </Link>
-        )
+      {/* Tutor-absence cards deliberately have no workflow link: the decision and
+          its follow-through both live on this card, so a second door to a
+          separate workflow screen only asked "which one is the real one?" */}
+      {linkedWorkflowHref && !isPauseReminder && !isTutorAbsenceCard ? (
+        <Link
+          href={linkedWorkflowHref}
+          className="mt-3 inline-flex rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-white"
+        >
+          Open linked workflow
+        </Link>
       ) : null}
 
       {isTutorAbsenceCapture && !tutorAbsenceDecision ? (
@@ -359,11 +358,6 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
                   Add structured pause dates to prefill the pause tool
                 </span>
               )}
-              {requiresExplicitTutorAbsenceTool && pauseExpectationAlreadySet ? (
-                <p className="rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs leading-5 text-amber-900">
-                  This student is marked paused expected, but that undated flag does not prove this tutor-absence window is covered. Check the payment tool for these dates.
-                </p>
-              ) : null}
               {isPauseReminder ? (
                 <PauseDatesEditor
                   item={item}

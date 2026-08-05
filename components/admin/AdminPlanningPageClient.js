@@ -114,21 +114,19 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
   const [showDone, setShowDone] = useState(false);
   // { url, name } when the pause-tool side window is open; null when closed.
   const [pauseToolPanel, setPauseToolPanel] = useState(null);
-  const [workflowPanel, setWorkflowPanel] = useState(null);
 
   useEffect(() => {
-    if (!pauseToolPanel && !workflowPanel && !editingItem) return undefined;
+    if (!pauseToolPanel && !editingItem) return undefined;
     function onKey(event) {
       if (event.key === 'Escape') {
         setPauseToolPanel(null);
-        setWorkflowPanel(null);
         setEditingItem(null);
         setEditForm(EMPTY_FORM);
       }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [pauseToolPanel, workflowPanel, editingItem]);
+  }, [pauseToolPanel, editingItem]);
 
   // Deep link (?focus=<planningId>, e.g. "Open plan" from the incoming inbox):
   // open that plan in the side panel. startEdit picks the structured pause editor
@@ -924,7 +922,6 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
                       onPauseCompleted={handlePauseCompleted}
                       onRepairPauseDetails={handleRepairPauseDetails}
                       onOpenPauseTool={(url, name) => setPauseToolPanel({ url, name })}
-                      onOpenWorkflowPanel={setWorkflowPanel}
                       onCreateLinkedAction={handleCreateLinkedAction}
                       onTutorAbsenceDecision={handleTutorAbsenceDecision}
                       onTutorAbsenceNoticeSent={handleTutorAbsenceNoticeSent}
@@ -966,7 +963,6 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
                         onPauseCompleted={handlePauseCompleted}
                         onRepairPauseDetails={handleRepairPauseDetails}
                         onOpenPauseTool={(url, name) => setPauseToolPanel({ url, name })}
-                        onOpenWorkflowPanel={setWorkflowPanel}
                         onCreateLinkedAction={handleCreateLinkedAction}
                         onTutorAbsenceDecision={handleTutorAbsenceDecision}
                         onTutorAbsenceNoticeSent={handleTutorAbsenceNoticeSent}
@@ -1071,26 +1067,6 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
         </SlideOverPanel>
       ) : null}
 
-      {workflowPanel ? (
-        <SlideOverPanel
-          eyebrow={workflowPanel.eyebrow || 'Workflow'}
-          title={workflowPanel.title || 'Workflow'}
-          maxWidth="max-w-5xl"
-          onClose={() => setWorkflowPanel(null)}
-          actions={(
-            <Link href={workflowPanel.url} className={panelActionClass}>
-              Open full page
-            </Link>
-          )}
-        >
-          <iframe
-            key={workflowPanel.url}
-            src={workflowPanel.url}
-            title={`${workflowPanel.eyebrow || 'Workflow'}: ${workflowPanel.title || 'Workflow'}`}
-            className="h-full w-full flex-1 border-0"
-          />
-        </SlideOverPanel>
-      ) : null}
 
       <section className={cardClasses('border-violet-100 bg-violet-50/50')}>
         <button

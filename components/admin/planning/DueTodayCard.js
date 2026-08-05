@@ -20,7 +20,6 @@ export default function DueTodayCard({
   onPauseCompleted,
   onRepairPauseDetails,
   onOpenPauseTool,
-  onOpenWorkflowPanel,
   onCreateLinkedAction,
   onTutorAbsenceDecision,
   onTutorAbsenceNoticeSent,
@@ -121,7 +120,6 @@ export default function DueTodayCard({
             onPauseCompleted={onPauseCompleted}
             onRepairPauseDetails={onRepairPauseDetails}
             onOpenPauseTool={onOpenPauseTool}
-            onOpenWorkflowPanel={onOpenWorkflowPanel}
             onCreateLinkedAction={onCreateLinkedAction}
             onTutorAbsenceDecision={onTutorAbsenceDecision}
             onTutorAbsenceNoticeSent={onTutorAbsenceNoticeSent}
