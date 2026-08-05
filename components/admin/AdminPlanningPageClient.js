@@ -20,7 +20,6 @@ import {
   parseLinkedStudentIds,
 } from '@/lib/admin/planning-helpers.mjs';
 import {
-  cardClasses,
   formatDateTime,
   extractPauseDatesFromPlanningItem,
   isPausePlanningItem,
@@ -42,6 +41,7 @@ import QuickBrainCapture from './planning/QuickBrainCapture';
 import PlanningCard from './planning/PlanningCard';
 import PauseDatesEditor from './planning/PauseDatesEditor';
 import DueTodayCard from './planning/DueTodayCard';
+import { cardClasses } from '@/components/admin/ui/Card';
 
 const STATUS_GROUPS = [
   { key: 'inbox', title: 'Inbox', hint: 'Fresh thoughts to review later.' },

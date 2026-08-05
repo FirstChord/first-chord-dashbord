@@ -1,3 +1,4 @@
+import { CARD_CLASSES } from '@/components/admin/ui/Card';
 import Link from 'next/link';
 import AdminTutorAbsencePageClient from '@/components/admin/AdminTutorAbsencePageClient';
 import { getOpenTutorAbsences, getTutorAbsenceWorkflow } from '@/lib/admin/tutor-absence';
@@ -19,7 +20,7 @@ function LoggedAbsences({ absences = [], selectedTutor = '', selectedDate = '' }
   }
 
   return (
-    <section className="rounded-[1.2rem] border border-blue-100 bg-white/90 p-5 shadow-[0_12px_36px_rgba(15,23,42,0.06)]">
+    <section className={CARD_CLASSES}>
       <h3 className="text-lg font-semibold text-slate-900">Absences needing direct attention</h3>
       <p className="mt-1 text-sm text-slate-600">
         Cover decisions stay here. Cancelled dates are handled through their grouped pause cards in Planning and close automatically when those cards are complete.

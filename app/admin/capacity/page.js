@@ -1,4 +1,5 @@
 import ScopeBadge from '@/components/admin/ui/ScopeBadge';
+import { CARD_CLASSES_ROOMY } from '@/components/admin/ui/Card';
 import { getMmsFreeCalendarSlotContext } from '@/lib/admin/mms';
 import { getScheduleContextRows } from '@/lib/admin/sheets';
 import { buildFreeSlotSummary, buildScheduleCacheSummary, buildScheduleHealthList } from '@/lib/admin/capacity-helpers.mjs';
@@ -83,7 +84,7 @@ export default async function AdminCapacityPage() {
         </div>
 
         <div className="grid gap-4 xl:grid-cols-[0.8fr_1.2fr]">
-          <div className="rounded-[1.6rem] border border-blue-100 bg-white/90 p-6 shadow-[0_12px_36px_rgba(15,23,42,0.06)] backdrop-blur-sm">
+          <div className={CARD_CLASSES_ROOMY}>
             <h4 className="text-base font-semibold text-slate-900">Weekly slots by tutor</h4>
             <div className="mt-4 space-y-3">
               {freeSlotSummary.byTeacher.length ? freeSlotSummary.byTeacher.map((entry) => (

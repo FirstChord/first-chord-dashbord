@@ -10,7 +10,6 @@ import {
   PARENT_UNDERSTANDING_STATUS_OPTIONS,
 } from '@/lib/admin/parent-understanding-helpers.mjs';
 import {
-  cardClasses,
   firstName,
   labelFor,
   statusAfterEdit,
@@ -24,6 +23,7 @@ import {
   deriveNextActions,
 } from '@/lib/admin/parent-understanding-client-helpers.mjs';
 import { logCommunicationCopy } from '@/lib/admin/log-communication-copy.js';
+import { cardClasses } from '@/components/admin/ui/Card';
 
 const UNDERSTANDING_AREAS = [
   {

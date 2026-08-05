@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { CARD_CLASSES } from '@/components/admin/ui/Card';
 
 const workflowSections = [
   {
@@ -67,7 +68,7 @@ function WorkflowCard({ section }) {
   return (
     <Link
       href={section.href}
-      className="block rounded-[1.2rem] border border-blue-100 bg-white/90 p-5 shadow-[0_12px_36px_rgba(15,23,42,0.06)] transition hover:border-blue-200 hover:bg-white hover:shadow-[0_16px_44px_rgba(15,23,42,0.08)]"
+      className={`block ${CARD_CLASSES} transition hover:border-blue-200 hover:bg-white hover:shadow-[0_16px_44px_rgba(15,23,42,0.08)]`}
     >
       <div className="flex items-start justify-between gap-4">
         <h3 className="text-lg font-semibold text-slate-900">{section.title}</h3>

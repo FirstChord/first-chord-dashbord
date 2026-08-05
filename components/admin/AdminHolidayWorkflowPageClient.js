@@ -3,10 +3,7 @@
 import Link from 'next/link';
 import { Check, ChevronDown, Copy, Loader2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-
-function cardClasses() {
-  return 'rounded-[1.6rem] border border-blue-100 bg-white/90 p-6 shadow-[0_12px_36px_rgba(15,23,42,0.06)] backdrop-blur-sm';
-}
+import { roomyCardClasses as cardClasses } from '@/components/admin/ui/Card';
 
 function seasonHref(season) {
   return `/admin/holidays?season=${season}&year=2026`;

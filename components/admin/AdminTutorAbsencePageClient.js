@@ -13,12 +13,9 @@ import {
 import { logCommunicationCopy } from '@/lib/admin/log-communication-copy.js';
 import { ActionButton } from '@/components/admin/ui/ActionButton';
 import { ConfirmButton } from '@/components/admin/ui/ConfirmButton';
+import { cardClasses } from '@/components/admin/ui/Card';
 
 const PAYMENT_PAUSE_PWA_URL = process.env.NEXT_PUBLIC_PAYMENT_PAUSE_PWA_URL || 'https://payment-pause-pwa.web.app/';
-
-function cardClasses(extra = '') {
-  return `rounded-[1.2rem] border border-blue-100 bg-white/90 p-5 shadow-[0_12px_36px_rgba(15,23,42,0.06)] ${extra}`;
-}
 
 function decisionLabel(decision = '') {
   if (decision === 'cancel_day') return 'Cancel day';
