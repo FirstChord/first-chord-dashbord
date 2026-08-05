@@ -43,7 +43,11 @@ import PauseDatesEditor from './PauseDatesEditor';
 // Pure props in (item + studentOptions + handlers); also used inside DueTodayCard.
 export default function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides = {}, onStatus, onArchive, onEdit, onProgress, onPauseCompleted, onRepairPauseDetails, onOpenPauseTool, onCreateLinkedAction, onTutorAbsenceDecision, onTutorAbsenceNoticeSent, onTutorAbsenceFinalConfirmationSent, pendingId, compact = false, nearbyPause = null }) {
   const [progressNote, setProgressNote] = useState('');
-  const [nextAction, setNextAction] = useState(item.nextAction || '');
+  // Starts empty on purpose. The card already states the current next action
+  // above; pre-filling the input printed the same sentence twice and made an
+  // edit box look like a read-out. Blank means "leave it as it is" — see the
+  // submit handler.
+  const [nextAction, setNextAction] = useState('');
   const [nextSessionDate, setNextSessionDate] = useState('');
   const [pauseToolRan, setPauseToolRan] = useState(false);
   const [pauseMessageConfirmed, setPauseMessageConfirmed] = useState(false);
@@ -202,7 +206,7 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
         </div>
       )}
 
-      {item.nextAction && !isPauseReminder && (
+      {item.nextAction && (
         <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-slate-800">
           <span className="font-semibold">Next action: </span>
           {item.nextAction}
@@ -505,12 +509,6 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
           action outright, so the pause card was also the odd one out. Disclosure
           now covers only genuine reference: who owns it, its area, when it was
           touched, the notes preview and the links. */}
-      {isPauseReminder && item.nextAction ? (
-        <p className="mt-4 text-sm leading-6 text-slate-700">
-          <span className="font-semibold">Next action: </span>{item.nextAction}
-        </p>
-      ) : null}
-
       {isPauseReminder && item.latestProgress ? (
         <div className="mt-3 border-l-2 border-slate-200 pl-3 text-sm text-slate-600">
           <p className="font-semibold text-slate-800">Latest progress</p>
@@ -556,8 +554,9 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
             setProgressNote('');
             setNextSessionDate('');
           } else {
-            onProgress(item, { progressNote, nextAction });
+            onProgress(item, { progressNote, nextAction: nextAction.trim() ? nextAction : undefined });
             setProgressNote('');
+            setNextAction('');
           }
         }}
       >
