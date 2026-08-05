@@ -34,6 +34,7 @@ import {
 import { buildWhatsappShareUrl } from '@/lib/admin/incoming-message-helpers.mjs';
 import { logCommunicationCopy } from '@/lib/admin/log-communication-copy.js';
 import { ExpandableText, LinkPill } from './fields';
+import { CardButton, CardNotice, MessageToSend } from './CardBlocks';
 import PauseDatesEditor from './PauseDatesEditor';
 
 // The per-planning-item card: status actions, progress logging, link facts, and — for
@@ -121,17 +122,17 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
           covered. That is easy to misread as a duplicate, so say it up front
           rather than only next to the payment tool further down. */}
       {isPauseReminder && pauseExpectationAlreadySet ? (
-        <p className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">
+        <CardNotice tone="warning">
           <span className="font-semibold">Already marked paused expected.</span>
           {' '}That flag has no dates on it, so it does not prove these lesson dates are covered — check the payment tool before running it again.
-        </p>
+        </CardNotice>
       ) : null}
       {nearbyPause ? (
-        <p className="mb-3 rounded-xl bg-blue-50/70 px-3 py-2 text-xs leading-5 text-slate-600">
+        <CardNotice tone="info">
           This student also has a pause around {formatTargetDate(nearbyPause.otherStart)}
           {nearbyPause.otherEnd && nearbyPause.otherEnd !== nearbyPause.otherStart ? `–${formatTargetDate(nearbyPause.otherEnd)}` : ''}.
           {' '}If they join up, you might be doing one longer break — worth a glance before you pause.
-        </p>
+        </CardNotice>
       ) : null}
       {!compact && (
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -226,21 +227,22 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
       )}
 
       {incomingPlanningReply && !isPauseReminder ? (
-        <div className="mt-4 rounded-xl border border-violet-100 bg-violet-50/50 p-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-violet-700">Parent reply</p>
-          <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-800">{incomingPlanningReply}</p>
-          <button
-            type="button"
-            onClick={() => copyParentReply(incomingPlanningReply, {
-              source: 'incoming_planning_reply',
-              openWhatsApp: true,
-            })}
-            className="mt-3 rounded-lg border border-violet-200 bg-white px-3 py-1.5 text-xs font-semibold text-violet-900 hover:bg-violet-50"
-          >
-            Copy &amp; open WhatsApp
-          </button>
-          {copyState ? <span className="ml-2 text-xs font-semibold text-violet-800">{copyState}</span> : null}
-        </div>
+        <MessageToSend
+          label="Parent reply"
+          message={incomingPlanningReply}
+          actions={(
+            <>
+              <CardButton onClick={() => copyParentReply(incomingPlanningReply, {
+                source: 'incoming_planning_reply',
+                openWhatsApp: true,
+              })}
+              >
+                Copy &amp; open WhatsApp
+              </CardButton>
+              {copyState ? <span className="text-xs font-semibold text-slate-600">{copyState}</span> : null}
+            </>
+          )}
+        />
       ) : null}
 
       {/* Tutor-absence cards deliberately have no workflow link: the decision and
@@ -368,22 +370,23 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
                 />
               ) : null}
               {pauseConfirmationMessage && pauseToolStepComplete ? (
-                <div className="rounded-lg border border-amber-100 bg-white p-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-700">2. Parent confirmation</p>
-                  <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-800">{pauseConfirmationMessage}</p>
-                  <button
-                    type="button"
-                    onClick={() => copyParentReply(pauseConfirmationMessage, {
-                      category: 'pause',
-                      source: incomingPlanningReply ? 'incoming_planning_reply' : 'pause_card',
-                      openWhatsApp: Boolean(incomingPlanningReply),
-                    })}
-                    className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                  >
-                    {incomingPlanningReply ? 'Copy & open WhatsApp' : 'Copy message'}
-                  </button>
-                  {copyState ? <span className="ml-2 text-xs font-semibold text-amber-800">{copyState}</span> : null}
-                </div>
+                <MessageToSend
+                  label="2. Parent confirmation"
+                  message={pauseConfirmationMessage}
+                  actions={(
+                    <>
+                      <CardButton onClick={() => copyParentReply(pauseConfirmationMessage, {
+                        category: 'pause',
+                        source: incomingPlanningReply ? 'incoming_planning_reply' : 'pause_card',
+                        openWhatsApp: Boolean(incomingPlanningReply),
+                      })}
+                      >
+                        {incomingPlanningReply ? 'Copy & open WhatsApp' : 'Copy message'}
+                      </CardButton>
+                      {copyState ? <span className="text-xs font-semibold text-slate-600">{copyState}</span> : null}
+                    </>
+                  )}
+                />
               ) : pauseConfirmationMessage ? (
                 <p className="rounded-lg border border-amber-200 bg-amber-100/60 px-3 py-2 text-xs font-medium leading-5 text-amber-900">
                   The final parent message unlocks after you confirm the payment tool has been run.
@@ -443,100 +446,82 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
       ) : null}
 
       {isTutorAbsenceNotice ? (
-        <div className="mt-4 rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-3">
-          <p className="text-sm font-semibold text-indigo-950">Initial absence notice</p>
-          <p className="mt-1 text-xs leading-5 text-indigo-900">
-            Send this early notice now. The final payment confirmation remains on the linked pause card closer to the missed lesson.
-          </p>
-          {tutorAbsenceNoticeMessage ? (
+        <MessageToSend
+          label="Initial absence notice"
+          guidance="Send this early notice now. The final payment confirmation remains on the linked pause card closer to the missed lesson."
+          message={tutorAbsenceNoticeMessage}
+          actions={(
             <>
-              <pre className="mt-3 whitespace-pre-wrap rounded-lg border border-indigo-100 bg-white p-3 text-sm leading-6 text-slate-800">{tutorAbsenceNoticeMessage}</pre>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(tutorAbsenceNoticeMessage);
-                      setCopyState('Copied');
-                      logCommunicationCopy({
-                        category: 'tutor_absence_notice',
-                        mmsId: item.linkedStudentId,
-                        studentName: linkedStudent?.fullName || '',
-                        body: tutorAbsenceNoticeMessage,
-                        source: 'tutor_absence_early_notice',
-                      });
-                    } catch {
-                      setCopyState('Copy failed');
-                    }
-                  }}
-                  className="rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-950 hover:bg-indigo-100"
-                >
-                  Copy early notice
-                </button>
-                <button
-                  type="button"
-                  disabled={isPending}
-                  onClick={() => onTutorAbsenceNoticeSent?.(item)}
-                  className="rounded-lg bg-indigo-950 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-800 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Mark sent &amp; complete
-                </button>
-                {copyState ? <span className="text-xs font-semibold text-indigo-800">{copyState}</span> : null}
-              </div>
+              <CardButton onClick={() => copyParentReply(tutorAbsenceNoticeMessage, {
+                category: 'tutor_absence_notice',
+                source: 'tutor_absence_early_notice',
+              })}
+              >
+                Copy early notice
+              </CardButton>
+              <CardButton
+                variant="primary"
+                disabled={isPending}
+                onClick={() => onTutorAbsenceNoticeSent?.(item)}
+              >
+                Mark sent &amp; complete
+              </CardButton>
+              {copyState ? <span className="text-xs font-semibold text-slate-600">{copyState}</span> : null}
             </>
-          ) : null}
-        </div>
+          )}
+        />
       ) : null}
 
       {isTutorAbsenceFinalConfirmation ? (
-        <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-3">
-          <p className="text-sm font-semibold text-emerald-950">Final payment outcome confirmation</p>
-          <p className="mt-1 text-xs leading-5 text-emerald-900">
-            No payment-tool action is needed here. Send this only after checking the recorded outcome is still correct.
-          </p>
-          {tutorAbsenceFinalMessage ? (
+        <MessageToSend
+          label="Final payment outcome confirmation"
+          guidance="No payment-tool action is needed here. Send this only after checking the recorded outcome is still correct."
+          message={tutorAbsenceFinalMessage}
+          actions={(
             <>
-              <pre className="mt-3 whitespace-pre-wrap rounded-lg border border-emerald-100 bg-white p-3 text-sm leading-6 text-slate-800">{tutorAbsenceFinalMessage}</pre>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(tutorAbsenceFinalMessage);
-                      setCopyState('Copied');
-                      logCommunicationCopy({
-                        category: 'tutor_absence_final_confirmation',
-                        mmsId: item.linkedStudentId,
-                        studentName: linkedStudent?.fullName || '',
-                        body: tutorAbsenceFinalMessage,
-                        source: 'tutor_absence_final_confirmation',
-                      });
-                    } catch {
-                      setCopyState('Copy failed');
-                    }
-                  }}
-                  className="rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-950 hover:bg-emerald-100"
-                >
-                  Copy final confirmation
-                </button>
-                <button
-                  type="button"
-                  disabled={isPending}
-                  onClick={() => onTutorAbsenceFinalConfirmationSent?.(item)}
-                  className="rounded-lg bg-emerald-950 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Mark final confirmation sent
-                </button>
-                {copyState ? <span className="text-xs font-semibold text-emerald-800">{copyState}</span> : null}
-              </div>
+              <CardButton onClick={() => copyParentReply(tutorAbsenceFinalMessage, {
+                category: 'tutor_absence_final_confirmation',
+                source: 'tutor_absence_final_confirmation',
+              })}
+              >
+                Copy final confirmation
+              </CardButton>
+              <CardButton
+                variant="primary"
+                disabled={isPending}
+                onClick={() => onTutorAbsenceFinalConfirmationSent?.(item)}
+              >
+                Mark final confirmation sent
+              </CardButton>
+              {copyState ? <span className="text-xs font-semibold text-slate-600">{copyState}</span> : null}
             </>
-          ) : null}
+          )}
+        />
+      ) : null}
+
+      {/* Pause cards used to hide all of this behind a "Details" disclosure,
+          including the next action and the latest progress — the two things you
+          need in order to decide anything. Every other card type shows its next
+          action outright, so the pause card was also the odd one out. Disclosure
+          now covers only genuine reference: who owns it, its area, when it was
+          touched, the notes preview and the links. */}
+      {isPauseReminder && item.nextAction ? (
+        <p className="mt-4 text-sm leading-6 text-slate-700">
+          <span className="font-semibold">Next action: </span>{item.nextAction}
+        </p>
+      ) : null}
+
+      {isPauseReminder && item.latestProgress ? (
+        <div className="mt-3 border-l-2 border-slate-200 pl-3 text-sm text-slate-600">
+          <p className="font-semibold text-slate-800">Latest progress</p>
+          <ExpandableText text={item.latestProgress.progressNote} className="mt-1" />
+          <p className="mt-1 text-xs text-slate-500">{formatDateTime(item.latestProgress.createdAt)}</p>
         </div>
       ) : null}
 
       {isPauseReminder ? (
         <details className="mt-4 rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2">
-          <summary className="cursor-pointer list-none text-xs font-semibold text-slate-700">Details</summary>
+          <summary className="cursor-pointer list-none text-xs font-semibold text-slate-700">Reference</summary>
           <div className="mt-3 space-y-3 text-sm text-slate-600">
             <div className="flex flex-wrap gap-2 text-xs text-slate-500">
               <span>{item.owner}</span>
@@ -545,22 +530,12 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
               <span>·</span>
               <span>Updated {formatDateTime(item.updatedAt || item.createdAt)}</span>
             </div>
-            {item.nextAction ? (
-              <p><span className="font-semibold text-slate-700">Next action: </span>{item.nextAction}</p>
-            ) : null}
             {item.notes ? <p className="leading-6">{shortPreview(item.notes)}</p> : null}
             {linkFacts.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {linkFacts.map((fact) => (
                   <LinkPill key={fact.label} label={fact.label} href={fact.href} />
                 ))}
-              </div>
-            ) : null}
-            {item.latestProgress ? (
-              <div className="border-l-2 border-slate-200 pl-3">
-                <p className="font-semibold text-slate-800">Latest progress</p>
-                <ExpandableText text={item.latestProgress.progressNote} className="mt-1" />
-                <p className="mt-1 text-xs text-slate-500">{formatDateTime(item.latestProgress.createdAt)}</p>
               </div>
             ) : null}
           </div>
