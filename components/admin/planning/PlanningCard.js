@@ -24,12 +24,14 @@ import {
   findStudentById,
   buildPaymentPausePrefillUrl,
   buildPauseConfirmationMessage,
+  extractIncomingPlanningReply,
   momentumClasses,
   formatTargetDate,
   formatDateTime,
   shortPreview,
   studentHref,
 } from '@/lib/admin/planning-client-helpers.mjs';
+import { buildWhatsappShareUrl } from '@/lib/admin/incoming-message-helpers.mjs';
 import { logCommunicationCopy } from '@/lib/admin/log-communication-copy.js';
 import { ExpandableText, LinkPill } from './fields';
 import PauseDatesEditor from './PauseDatesEditor';
@@ -76,8 +78,9 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
   const paymentPausePrefillUrl = isPauseReminder
     ? buildPaymentPausePrefillUrl({ item, student: linkedStudent })
     : '';
+  const incomingPlanningReply = extractIncomingPlanningReply(item);
   const pauseConfirmationMessage = isPauseReminder
-    ? buildPauseConfirmationMessage({ item, student: linkedStudent })
+    ? (incomingPlanningReply || buildPauseConfirmationMessage({ item, student: linkedStudent }))
     : '';
   const canCompletePause = Boolean(
     item.linkedStudentId
@@ -94,6 +97,23 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
     })),
     item.linkedTutorId ? { label: `Tutor: ${item.linkedTutorId}`, href: '' } : null,
   ].filter(Boolean);
+
+  async function copyParentReply(body, { category = 'parent', source = 'planning_card', openWhatsApp = false } = {}) {
+    try {
+      await navigator.clipboard.writeText(body);
+      setCopyState('Copied');
+      logCommunicationCopy({
+        category,
+        mmsId: item.linkedStudentId,
+        studentName: linkedStudent?.fullName || '',
+        body,
+        source,
+      });
+      if (openWhatsApp) window.location.assign(buildWhatsappShareUrl(body));
+    } catch {
+      setCopyState('Copy failed');
+    }
+  }
 
   return (
     <article className={compact ? '' : 'rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_22px_rgba(15,23,42,0.04)]'}>
@@ -195,6 +215,24 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
           ))}
         </div>
       )}
+
+      {incomingPlanningReply && !isPauseReminder ? (
+        <div className="mt-4 rounded-xl border border-violet-100 bg-violet-50/50 p-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-violet-700">Parent reply</p>
+          <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-800">{incomingPlanningReply}</p>
+          <button
+            type="button"
+            onClick={() => copyParentReply(incomingPlanningReply, {
+              source: 'incoming_planning_reply',
+              openWhatsApp: true,
+            })}
+            className="mt-3 rounded-lg border border-violet-200 bg-white px-3 py-1.5 text-xs font-semibold text-violet-900 hover:bg-violet-50"
+          >
+            Copy &amp; open WhatsApp
+          </button>
+          {copyState ? <span className="ml-2 text-xs font-semibold text-violet-800">{copyState}</span> : null}
+        </div>
+      ) : null}
 
       {linkedWorkflowHref && !isPauseReminder ? (
         isTutorAbsenceCard ? (
@@ -357,24 +395,14 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
                   <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-800">{pauseConfirmationMessage}</p>
                   <button
                     type="button"
-                    onClick={async () => {
-                      try {
-                        await navigator.clipboard.writeText(pauseConfirmationMessage);
-                        setCopyState('Copied');
-                        logCommunicationCopy({
-                          category: 'pause',
-                          mmsId: item.linkedStudentId,
-                          studentName: linkedStudent?.fullName || '',
-                          body: pauseConfirmationMessage,
-                          source: 'pause_card',
-                        });
-                      } catch {
-                        setCopyState('Copy failed');
-                      }
-                    }}
+                    onClick={() => copyParentReply(pauseConfirmationMessage, {
+                      category: 'pause',
+                      source: incomingPlanningReply ? 'incoming_planning_reply' : 'pause_card',
+                      openWhatsApp: Boolean(incomingPlanningReply),
+                    })}
                     className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                   >
-                    Copy message
+                    {incomingPlanningReply ? 'Copy & open WhatsApp' : 'Copy message'}
                   </button>
                   {copyState ? <span className="ml-2 text-xs font-semibold text-amber-800">{copyState}</span> : null}
                 </div>

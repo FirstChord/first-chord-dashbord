@@ -262,11 +262,27 @@ function PlanPanel({ entry, studentOptions = [], onCorrect, onConvert, isPending
   const [matchedMmsId, setMatchedMmsId] = useState(entry.matchedMmsId || '');
   const [startDate, setStartDate] = useState(extractedDates.startDate || '');
   const [returnDate, setReturnDate] = useState(extractedDates.returnDate || '');
+  const selectedStudent = studentOptions.find((student) => student.mmsId === matchedMmsId) || null;
+  const suggestedReply = buildIncomingReplyTemplate({
+    category,
+    senderName: entry.senderName,
+    parentName: selectedStudent?.parentName || '',
+    studentName: entry.matchedStudentName || selectedStudent?.fullName || '',
+    startDate,
+    returnDate,
+  });
+  const [replyDraft, setReplyDraft] = useState(suggestedReply);
+  const [replyWasEdited, setReplyWasEdited] = useState(false);
+  const [copyError, setCopyError] = useState('');
   const [reviewNote, setReviewNote] = useState('');
   const [confirmGroupMap, setConfirmGroupMap] = useState(isWhatsappGroup(entry.chatId));
   const canConfirmGroup = isWhatsappGroup(entry.chatId) && matchedMmsId;
   const isRangePause = ['extended_absence', 'summer_break', 'absence_pause'].includes(category);
   const showDates = ABSENCE_CATEGORIES.has(category) || startDate || returnDate;
+
+  useEffect(() => {
+    if (!replyWasEdited) setReplyDraft(suggestedReply);
+  }, [replyWasEdited, suggestedReply]);
 
   function correctionPayload(status = 'needs_review') {
     return {
@@ -277,8 +293,34 @@ function PlanPanel({ entry, studentOptions = [], onCorrect, onConvert, isPending
       confirmGroupMap,
       startDate,
       returnDate,
+      replyTemplate: replyDraft.trim(),
       status,
     };
+  }
+
+  async function createPlanWithReply() {
+    const reply = replyDraft.trim();
+    if (!reply) return;
+    setCopyError('');
+    try {
+      await navigator.clipboard.writeText(reply);
+    } catch {
+      setCopyError('Could not copy the reply. Copy it manually, then try again.');
+      return;
+    }
+
+    logCommunicationCopy({
+      category: ABSENCE_CATEGORIES.has(category) ? 'pause' : 'parent',
+      channel: 'whatsapp',
+      mmsId: matchedMmsId,
+      studentName: selectedStudent?.fullName || entry.matchedStudentName || '',
+      body: reply,
+      source: 'incoming_planning_reply',
+    });
+    const result = await onConvert(entry, correctionPayload('converted'));
+    if (result?.planningId) {
+      window.location.assign(`/admin/planning?focus=${encodeURIComponent(result.planningId)}`);
+    }
   }
 
   if (!isOpen) return null;
@@ -286,7 +328,7 @@ function PlanPanel({ entry, studentOptions = [], onCorrect, onConvert, isPending
   return (
     <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50/40 px-3 py-3">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm font-semibold text-blue-950">Plan</p>
+        <p className="text-sm font-semibold text-blue-950">Reply + Plan</p>
         <ActionButton onClick={() => onOpenChange(false)} variant="subtle" className="px-3 py-1.5 text-xs">Close</ActionButton>
       </div>
       <div className="mt-3 grid gap-3">
@@ -349,13 +391,30 @@ function PlanPanel({ entry, studentOptions = [], onCorrect, onConvert, isPending
             ) : null}
           </div>
         ) : null}
+        <label className="block">
+          <span className="text-xs font-semibold text-slate-600">Reply to parent</span>
+          <textarea
+            value={replyDraft}
+            onChange={(event) => {
+              setReplyDraft(event.target.value);
+              setReplyWasEdited(true);
+            }}
+            rows={4}
+            maxLength={1200}
+            className="mt-1 w-full rounded-xl border border-blue-100 bg-white px-3 py-2 text-sm leading-6 text-slate-800 outline-none focus:border-blue-300"
+          />
+          <span className="mt-1 block text-[11px] leading-5 text-slate-500">
+            Copied now and saved with the plan, so it is still there after the payment or pause work.
+          </span>
+        </label>
+        {copyError ? <p className="text-xs font-semibold text-red-700">{copyError}</p> : null}
         <button
           type="button"
-          disabled={isPending || (confirmGroupMap && !canConfirmGroup)}
-          onClick={() => onConvert(entry, correctionPayload('converted'))}
+          disabled={isPending || !replyDraft.trim() || (confirmGroupMap && !canConfirmGroup)}
+          onClick={createPlanWithReply}
           className="min-h-11 rounded-full bg-slate-900 px-4 text-sm font-semibold text-white shadow-sm transition active:scale-[0.98] disabled:opacity-60"
         >
-          {isPending ? 'Making plan…' : 'Make plan'}
+          {isPending ? 'Opening plan…' : 'Copy reply & open plan'}
         </button>
         <details className="rounded-xl border border-blue-100 bg-white/70 px-3 py-2">
           <summary className="cursor-pointer text-xs font-semibold text-slate-600">More plan details</summary>
@@ -856,7 +915,7 @@ function MessageCard({ entry, studentOptions, onReview, onSnooze, onDelete, onCo
             onClick={openPlan}
             className="min-h-11 flex-1 rounded-full bg-slate-900 px-3 text-xs font-semibold text-white shadow-sm transition active:scale-[0.98] disabled:opacity-60"
           >
-            Plan
+            Reply + Plan
           </button>
         ) : null}
         {canQuickReply ? (
@@ -1304,8 +1363,10 @@ export default function AdminIncomingMessagesPageClient({ initialInbox = [], ini
           replyTemplate: data.replyTemplate || '',
         },
       }));
+      return data;
     } catch (caught) {
       setSubmitError(caught.message || 'Conversion failed');
+      return null;
     } finally {
       setPendingId('');
     }

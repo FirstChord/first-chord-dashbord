@@ -38,6 +38,7 @@ import {
   normaliseIncomingMessagePayload,
   normalisePhone,
   resolveIncomingPlanningAction,
+  resolveReviewedIncomingReply,
   selectReplyEvidenceTarget,
 } from '../../lib/admin/incoming-message-helpers.mjs';
 import { isPausePlanningItem } from '../../lib/admin/planning-client-helpers.mjs';
@@ -321,7 +322,7 @@ test('buildIncomingReplyTemplate produces a per-category parent draft', () => {
     studentName: 'Alex Chang',
     startDate: '2026-07-10',
   });
-  assert.equal(absence, 'Noted, I’ll get that date paused 🙂');
+  assert.equal(absence, 'No worries at all, that’s noted. We’ll get that date paused 🙂');
   // House style: parent drafts never use em-dashes.
   assert.doesNotMatch(absence, /—/u);
 
@@ -479,7 +480,7 @@ test('buildIncomingReplyTemplate keeps pause replies short and general', () => {
     startDate: '2026-06-24',
     returnDate: '2026-07-21',
   });
-  assert.equal(dated, 'Noted, I’ll get those dates paused 🙂');
+  assert.equal(dated, 'No worries at all, that’s noted. We’ll get those dates paused 🙂');
   assert.doesNotMatch(dated, /Mina|Alex|June|July/u);
 
   const oneOff = buildIncomingReplyTemplate({
@@ -488,17 +489,30 @@ test('buildIncomingReplyTemplate keeps pause replies short and general', () => {
     studentName: 'Alex',
     startDate: '2026-07-03',
   });
-  assert.equal(oneOff, 'Noted, I’ll get that date paused 🙂');
+  assert.equal(oneOff, 'No worries at all, that’s noted. We’ll get that date paused 🙂');
   assert.doesNotMatch(oneOff, /Mina|Alex|July/u);
 
   // The parent's own message carries the detail even when extraction is incomplete.
   const undated = buildIncomingReplyTemplate({ category: 'extended_absence', senderName: 'Mina', studentName: 'Alex' });
-  assert.equal(undated, 'Noted, I’ll get those dates paused 🙂');
+  assert.equal(undated, 'No worries at all, that’s noted. We’ll get those dates paused 🙂');
 
   assert.equal(
     buildIncomingReplyTemplate({ category: 'summer_break', senderName: 'Mina', studentName: 'Alex' }),
-    'Noted, I’ll get those dates paused 🙂',
+    'No worries at all, that’s noted. We’ll get those dates paused 🙂',
   );
+});
+
+test('reviewed planning replies preserve an admin edit and reject empty or oversized text', () => {
+  assert.equal(
+    resolveReviewedIncomingReply(null, '  Deterministic fallback  '),
+    'Deterministic fallback',
+  );
+  assert.equal(
+    resolveReviewedIncomingReply('  My edited reply  ', 'Fallback'),
+    'My edited reply',
+  );
+  assert.throws(() => resolveReviewedIncomingReply('', 'Fallback'), /required/u);
+  assert.throws(() => resolveReviewedIncomingReply('x'.repeat(1_201), 'Fallback'), /1200/u);
 });
 
 test('buildWhatsappShareUrl safely prefills the reviewed reply without choosing a recipient', () => {

@@ -60,11 +60,17 @@ the human-final decision so accepted/corrected outcomes can be measured without
 calling untouched guesses knowledge. Neither result authorises a payment,
 pause, attendance, archive, planning, or messaging action.
 
-The daily card leads with student/sender, time and the original message. **Plan**
-always opens the same pre-write preview: plan type and student are prefilled, and
-any extracted first/return dates are visible and editable. Clicking **Make plan**
-uses those reviewed values; clearing a false date clears it from the draft. The
-inbox row remains open until the existing idempotent Planning write succeeds.
+The daily card leads with student/sender, time and the original message.
+**Reply + Plan** opens one pre-write preview: plan type and student are
+prefilled, extracted first/return dates are visible and editable, and a short
+deterministic parent reply is editable beside them. **Copy reply & open plan**
+copies that exact wording, stores it in the linked Planning item, and navigates
+to the idempotent plan only after the write succeeds. Clearing a false date
+clears it from the draft. A failed Planning write cannot create false closure.
+For a structured pause, the saved reply is the card's final **Copy & open
+WhatsApp** handoff after the payment tool. The admin must still confirm it was
+sent before marking the pause complete; clipboard/log evidence alone is not
+delivery evidence.
 
 **Reply** is the deliberate per-message boundary. When the bounded pilot is
 enabled, that press sends only this message's redacted, length-bounded text and

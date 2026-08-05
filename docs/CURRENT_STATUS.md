@@ -49,15 +49,20 @@ deliberate school-improvement prompt.
   has actually saved, and linked plan status is visible back on the card. A later
   school message is weak engagement evidence for only the nearest preceding open
   row, never proof of reply or blanket closure. Every readable open card keeps a
-  visible Planning path. **Plan** always opens a compact preview before anything
-  is written, with the proposed student and type plus editable extracted dates;
-  the confirmed dates—not a hidden parser guess—feed the structured pause card.
+  visible Planning path. **Reply + Plan** always opens a compact preview before
+  anything is written, with the proposed student and type, editable extracted
+  dates, and an editable deterministic parent reply. **Copy reply & open plan**
+  puts that reviewed wording on the clipboard, stores the same draft with the
+  idempotent linked plan, and opens that plan. For pause cards the reviewed
+  reply becomes the final WhatsApp handoff after the payment tool; the card
+  still cannot close until a human confirms the message was sent. The confirmed
+  dates—not a hidden parser guess—feed the structured pause card.
   Bare
   role-marked ordinals such as “on the 12th … back on the 19th” resolve against
   the message date, and an explicit singular missed lesson stays one-off rather
   than becoming an extended absence merely because a return date was mentioned.
   Mobile cards now lead with student, sender and original message rather than
-  classifier badges. The action row now says what happens: **Plan** and
+  classifier badges. The action row now says what happens: **Reply + Plan** and
   **Reply**, followed by compact Later, Done and More controls. Reply is now the
   one-message-at-a-time consent boundary for the bounded AI drafting pilot; it
   falls back to the editable standard template whenever drafting is disabled,

@@ -170,6 +170,7 @@ export async function POST(request) {
         confirmGroupMap: Boolean(body?.confirmGroupMap),
         startDate: Object.hasOwn(body || {}, 'startDate') ? body.startDate : null,
         returnDate: Object.hasOwn(body || {}, 'returnDate') ? body.returnDate : null,
+        reviewedReply: Object.hasOwn(body || {}, 'replyTemplate') ? body.replyTemplate : null,
         actorEmail: session.user.email || '',
       });
       extra = { planningId: result.planningId, replyTemplate: result.replyTemplate };

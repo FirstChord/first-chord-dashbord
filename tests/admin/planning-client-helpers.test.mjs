@@ -10,6 +10,7 @@ import {
   addDaysToDateInput,
   parseReadablePlanningDate,
   extractPauseDatesFromPlanningItem,
+  extractIncomingPlanningReply,
   buildPaymentPausePrefillUrl,
   buildPauseConfirmationMessage,
   isPausePlanningItem,
@@ -43,6 +44,20 @@ import {
   filterPlanningItems,
   EMPTY_FORM,
 } from '../../lib/admin/planning-client-helpers.mjs';
+
+test('incoming planning reply extraction keeps the reviewed multiline draft attached to the plan', () => {
+  const reply = extractIncomingPlanningReply({
+    notes: [
+      'From WhatsApp incoming inbox (manual).',
+      'Message: We are away in August.',
+      'Suggested reply (send manually in WhatsApp):',
+      'No worries at all, that’s noted.',
+      'We’ll get those dates paused 🙂',
+    ].join('\n'),
+  });
+  assert.equal(reply, 'No worries at all, that’s noted.\nWe’ll get those dates paused 🙂');
+  assert.equal(extractIncomingPlanningReply({ notes: 'Ordinary planning notes' }), '');
+});
 
 test('tutor-absence early notice helpers recognise only versioned notice cards and extract their copy', () => {
   const item = {
