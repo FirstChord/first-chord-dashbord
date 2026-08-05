@@ -78,7 +78,7 @@ export default function PauseDatesEditor({
   }
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-3">
+    <div>
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}

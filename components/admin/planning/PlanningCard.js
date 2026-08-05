@@ -185,7 +185,7 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
                 </span>
               </div>
             )}
-            <h3 className="mt-3 text-base font-semibold text-slate-900">{item.title}</h3>
+            <h3 className="mt-3 text-lg font-semibold leading-snug text-slate-900">{item.title}</h3>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {!isSystemPlanningItem && item.status !== 'parked' ? (
@@ -228,19 +228,14 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
         </div>
       )}
 
-      {item.nextAction && (
+      {/* Not on a pause card: the "Complete this pause" panel below is literally
+          these steps, so restating them here was the same instruction twice. */}
+      {item.nextAction && !isPauseReminder && (
         <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-slate-800">
           <span className="font-semibold">Next action: </span>
           {item.nextAction}
         </div>
       )}
-
-      {item.targetDate && !isPauseReminder ? (
-        <div className="mt-3 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-sm text-amber-950">
-          <span className="font-semibold">Do by: </span>
-          {formatTargetDate(item.targetDate)}
-        </div>
-      ) : null}
 
       {item.notes && !isPauseReminder && <p className="mt-3 text-sm leading-6 text-slate-600">{shortPreview(item.notes)}</p>}
 
@@ -312,7 +307,7 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
 
       {item.latestProgress && !isPauseReminder && (
         <div className="mt-4 border-l-2 border-slate-200 pl-3 text-sm text-slate-600">
-          <p className="font-semibold text-slate-800">{isSchoolForwardReview ? 'Latest reflection' : 'Latest progress'}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{isSchoolForwardReview ? 'Latest reflection' : 'Latest progress'}</p>
           <ExpandableText text={item.latestProgress.progressNote} className="mt-1" />
           <p className="mt-1 text-xs text-slate-500">{formatDateTime(item.latestProgress.createdAt)}</p>
         </div>
@@ -352,7 +347,7 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
       )}
 
       {isPauseReminder ? (
-        <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2">
+        <div className="mt-4 rounded-xl border border-slate-200 bg-white px-4 py-3">
           {(
             <div className="space-y-3">
               {/* The numbered steps already say "this one, then that one", so the
@@ -360,7 +355,7 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
                   structure shows. The Stripe boundary is NOT stated here: it
                   belongs to the completion button, because step 1's payment tool
                   is precisely the thing that does write to Stripe. */}
-              <p className="text-sm font-semibold text-amber-950">Complete this pause</p>
+              <p className="text-sm font-semibold text-slate-900">Complete this pause</p>
               <StepLabel done={pauseToolStepComplete}>1. Payment action</StepLabel>
               {paymentPausePrefillUrl ? (
                 onOpenPauseTool ? (
@@ -414,38 +409,47 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
                   )}
                 />
               ) : pauseConfirmationMessage ? (
-                <p className="rounded-lg border border-amber-200 bg-amber-100/60 px-3 py-2 text-xs font-medium leading-5 text-amber-900">
-                  The final parent message unlocks after you confirm the payment tool has been run.
+                <p className="text-xs leading-5 text-slate-500">
+                  The parent message appears once step 1 is ticked.
                 </p>
-              ) : null}
+              ) : (
+                // Silence here read as "this student has no template". The
+                // message needs a linked student and both pause dates; say which
+                // is missing instead of showing nothing at all.
+                <p className="text-xs leading-5 text-amber-800">
+                  No parent message yet — {!item.linkedStudentId
+                    ? 'this card has no linked student.'
+                    : 'add the pause dates with “Edit dates” and it will write itself.'}
+                </p>
+              )}
               <div className="space-y-2">
-                <label className="flex items-start gap-2 text-sm font-medium text-amber-950">
+                <label className="flex items-start gap-2 text-sm font-medium text-slate-800">
                   <input
                     type="checkbox"
                     checked={pauseToolStepComplete}
                     disabled={isPending || (pauseExpectationAlreadySet && !requiresExplicitTutorAbsenceTool)}
                     onChange={(event) => setPauseToolRan(event.target.checked)}
-                    className="mt-1 h-4 w-4 rounded border-amber-300 text-slate-900"
+                    className="mt-1 h-4 w-4 rounded border-slate-300 text-slate-900"
                   />
                   <span>
                     Payment pause tool has been run
                     {pauseExpectationAlreadySet && !requiresExplicitTutorAbsenceTool ? (
-                      <span className="block text-xs font-normal text-amber-800">Payment expectation is already paused expected.</span>
+                      <span className="block text-xs font-normal text-slate-500">Payment expectation is already paused expected.</span>
                     ) : null}
                   </span>
                 </label>
-                <label className="flex items-start gap-2 text-sm font-medium text-amber-950">
+                <label className="flex items-start gap-2 text-sm font-medium text-slate-800">
                   <input
                     type="checkbox"
                     checked={pauseMessageConfirmed || pausePaymentConfirmed}
                     disabled={isPending || pausePaymentConfirmed || !pauseToolStepComplete}
                     onChange={(event) => setPauseMessageConfirmed(event.target.checked)}
-                    className="mt-1 h-4 w-4 rounded border-amber-300 text-slate-900"
+                    className="mt-1 h-4 w-4 rounded border-slate-300 text-slate-900"
                   />
                   <span>
                     Parent confirmation message sent
                     {pausePaymentConfirmed ? (
-                      <span className="block text-xs font-normal text-amber-800">Already logged on this planning item.</span>
+                      <span className="block text-xs font-normal text-slate-500">Already logged on this planning item.</span>
                     ) : null}
                   </span>
                 </label>
@@ -454,15 +458,15 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
                 type="button"
                 disabled={isPending || !canCompletePause}
                 onClick={() => onPauseCompleted(item)}
-                className="inline-flex min-h-10 items-center justify-center rounded-lg bg-amber-950 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-900 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex min-h-10 items-center justify-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isPending ? 'Completing…' : 'Mark pause completed'}
               </button>
-              <p className="text-xs leading-5 text-amber-800">
+              <p className="text-xs leading-5 text-slate-500">
                 This button only logs the confirmation and sets paused-expected — the Stripe change itself happens in the step 1 payment tool.
               </p>
               {!item.linkedStudentId ? (
-                <p className="rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs font-semibold text-amber-900">
+                <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900">
                   Save structured dates with a linked student before completing this pause.
                 </p>
               ) : null}
@@ -531,14 +535,6 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
           action outright, so the pause card was also the odd one out. Disclosure
           now covers only genuine reference: who owns it, its area, when it was
           touched, the notes preview and the links. */}
-      {isPauseReminder && item.latestProgress ? (
-        <div className="mt-3 border-l-2 border-slate-200 pl-3 text-sm text-slate-600">
-          <p className="font-semibold text-slate-800">Latest progress</p>
-          <ExpandableText text={item.latestProgress.progressNote} className="mt-1" />
-          <p className="mt-1 text-xs text-slate-500">{formatDateTime(item.latestProgress.createdAt)}</p>
-        </div>
-      ) : null}
-
       {isPauseReminder ? (
         <details className="mt-4 rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2">
           <summary className="cursor-pointer list-none text-xs font-semibold text-slate-700">Reference</summary>
@@ -558,10 +554,23 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
                 ))}
               </div>
             ) : null}
+            {/* A pause card's progress note is provenance — "auto-created from
+                tutor absence cancellation" — not something you decide from, so
+                it belongs with the reference rather than in the card body. */}
+            {item.latestProgress ? (
+              <div className="border-l-2 border-slate-200 pl-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Latest progress</p>
+                <ExpandableText text={item.latestProgress.progressNote} className="mt-1" />
+                <p className="mt-1 text-xs text-slate-500">{formatDateTime(item.latestProgress.createdAt)}</p>
+              </div>
+            ) : null}
           </div>
         </details>
       ) : null}
 
+      {/* Pause cards finish through the panel above and log their own progress,
+          so the generic note form only ended the card on two empty inputs. */}
+      {!isPauseReminder ? (
       <form
         className={`mt-4 grid gap-2 ${isSchoolForwardReview ? 'md:grid-cols-[1fr_auto]' : isOngoing ? 'md:grid-cols-[1fr_auto_auto]' : 'md:grid-cols-[1fr_1fr_auto]'}`}
         onSubmit={(event) => {
@@ -642,6 +651,7 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
           {isSchoolForwardReview ? 'Add Friday reflection' : isOngoing ? 'Log session & set next date' : 'Add note'}
         </button>
       </form>
+      ) : null}
     </article>
   );
 }
