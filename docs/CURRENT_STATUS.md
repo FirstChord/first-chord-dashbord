@@ -1,7 +1,7 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: 2026-08-04
+last_verified: 2026-08-06
 ---
 # Admin current status
 
@@ -26,6 +26,26 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
+- **Every household on a group lesson, and one shape for planning cards
+  (2026-08-06):** an MMS event carrying several students was collapsed to its
+  first student, so siblings and class members silently vanished from the
+  workflow. The **Mark manual household check complete** control existed only to
+  ask a human to compensate for that loss; events now expand to one lesson per
+  student before any decision, and the block is gone. Pause cards are raised by
+  payment mode — `stripe` gets one card per student, `manual` gets none because
+  there is no subscription to pause, and unknown still gets one so missing data
+  cannot drop a household from finance. All three are still reached for the
+  parent message. A card for an already-paused student now says so, and the
+  duplicate **Open tutor absence workflow** entry point was removed. The contract
+  is [Tutor absence and pause](./workflows/tutors/absence-to-pause.md).
+  Separately, the planning card's four differently-coloured "here is a message to
+  send" blocks became one shape: colour now encodes severity only, never card
+  type, since the heading already states the type. Pause completion reuses the
+  issues queue's sorted-tick vocabulary rather than inventing a second success
+  signal. **Safety copy stays beside the control it governs** — a
+  correctly-scoped statement about the *Mark pause completed* button became false
+  when compressed into a panel-level badge, because step one of that panel opens
+  the Payment Pause PWA, which does write to Stripe.
 - **Sheets read budget and graceful quota failure (2026-08-04):** intermittent
   "Application error" pages across `/admin` were a Google Sheets 429 — 60 reads
   per minute per *user*, shared by the whole app through one service account.
@@ -260,60 +280,7 @@ deliberate school-improvement prompt.
   (`PAYROLL_ATTENDANCE_PAGE_SIZE`, one home — it is part of the cache key).
   Measured: the window is 951 rows in one request; a 3,229-row window pages
   correctly in two with nothing duplicated or lost.
-- **Student lifecycle and retention (2026-07-28):** the school can now answer how
-  long a student has been with it, and how long the ones who left actually
-  stayed. `npm run lifecycle:refresh` reads MMS attendance — which reaches back
-  to 2019 and had never been read — and writes `Student_Lifecycle` (per student,
-  full replace) plus one appended `Lifecycle_Snapshot` row. Dry run by default.
-  It is a termly ritual that prints a report, not a dashboard surface: nothing
-  reads these tabs on page load and nothing acts on them automatically.
-  Two definitions carry the weight and are pinned by tests. **Departed** requires
-  inactive *and* nothing booked, because inactive-with-future-lessons is a pause.
-  **Cohort survival is measured at a fixed horizon**, excluding students whose
-  cohort has not yet had that long — the obvious alternative, average lifetime by
-  cohort, falls every year regardless of retention because recent starters cannot
-  have lasted a year, and it reads as a collapse that is not happening.
-  First findings: median tenure 1.52y with 62 students past three years, and
-  median lifetime of leavers 0.48y.
-  **Do not compare cohorts across the record-keeping change.** Calendar marking
-  completeness (below) went 22% (2021) → 31% (2023) → 50% (2024) → 87% (2025):
-  a step change, not a drift. Where lessons stayed on the calendar after a
-  student stopped, their
-  last lesson is too late and their **lifetime is overstated**, so older cohorts
-  look like they survived longer than they did. That inflation is strongest in
-  the years that appear best. An apparent fall in twelve-month survival from 72%
-  (2022) to 43% (2025) was reported here and is **withdrawn**: the confound
-  produces the trend. The rise in nought-or-one-lesson departures (~5% → ~20%)
-  is compromised the same way, since inflated old lifetimes push those students
-  out of the under-three-months bucket.
-  Safe to use: start dates (independently confirmed by MMS `DateStarted`),
-  current-roster tenure, and anything measured from 2026-07-28 forward under
-  consistent record-keeping. Pre-2024 history is a decent record of when people
-  started and a poor one of when they stopped. This is the argument for the
-  snapshot lane: the comparable series begins with its first row, not with 2019.
-  The refresh now also reports **calendar marking completeness** — the share of
-  past lessons carrying a definite status, where a marked absence counts as a
-  success because the goal is engagement with the calendar, not attendance
-  rate. 73% (2019) → 22% (2021) → 31% (2023) → 50% (2024) → 87% (2025) → 90%
-  (2026), currently 89% of 8,974 lessons over the trailing twelve months. The
-  step change follows MMS attendance becoming the basis for tutor pay in 2024:
-  the register got kept because money depended on it. This is the dial that
-  validates the retention figures beside it, so it is stored in the same
-  snapshot row — if it falls, those numbers degrade with no other signal.
-  Also fixed here: students with only future lessons booked were getting a
-  negative tenure and dragging the median down.
-  A successful `--apply` run **books its own next review** as the single
-  `planning_student_lifecycle_review` row in `Planning_Items`, reusing the
-  self-renewing pattern proven by the Sheets backup, with the headline figures
-  written to `Planning_Progress_Log` so the next person sees whether anything
-  moved without opening the tab. Deliberately not a cron or scheduled Action:
-  the value is in a human reading the report, an unattended job would fill the
-  snapshot lane with noise instead of a few measurements that meant something,
-  and it would need the MMS token as a CI secret for no gain. It works only
-  because tenure ages a day per day, so a termly figure is never meaningfully
-  stale. Retry backoff also gained jitter — five workers retrying in lockstep
-  were re-triggering the same HTTP 429 and left up to 14 students unread on a
-  run; now one.
+
 ## Current operating contracts
 
 | Area | Current boundary |

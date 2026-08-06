@@ -1,7 +1,7 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: 2026-08-04
+last_verified: 2026-08-06
 ---
 # Google Sheets read discipline
 
@@ -80,6 +80,15 @@ adds a direct `spreadsheets.get`/`values.get` outside `core.mjs`, or a
 ## Known limitation
 
 The read cache is in-process. Each Railway instance warms its own, so a restart
-or a scale-out starts cold and briefly reads at full cost. Raising the per-user
-quota in the Google Cloud console is the appropriate lever for that; caching is
-the lever for steady-state load.
+or a scale-out starts cold and briefly reads at full cost.
+
+**Raising the quota is not available as a lever.** The Google Cloud console
+exposes `Read requests per minute per user` as editable, but its permitted range
+is 0–60 — 60 *is* the maximum, not a default someone chose. The only direction
+that field moves is down. (The separate per-project limit of 300/minute is not
+the one being hit: one service account means the app is a single user.)
+
+So cold-start cost can only be reduced by reading less: batching several tabs
+into one `batchGet`, or warming the cache on boot before traffic arrives.
+Neither is built. Caching remains the only lever for steady-state load, and
+there is no headroom to buy.

@@ -1,7 +1,7 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: 2026-07-27
+last_verified: 2026-08-06
 ---
 # Tutor Absence And Pause Contract
 
