@@ -1,7 +1,14 @@
 // Shared lesson-notes formatting for the tutor dashboard (NotesPanel) and the
-// student portal (StudentNotes): quiet small-caps section labels, and
-// transcript dialogue laid out as dialogue (known speaker names bolded, each
-// turn on its own line). Pure functions — safe in server and client components.
+// student portal (StudentNotes): quiet small-caps section labels, tutor-written
+// emphasis, and transcript dialogue laid out as dialogue (known speaker names
+// bolded, each turn on its own line). Pure functions — safe in server and client
+// components.
+//
+// The marker grammar itself lives in lib/notes-markup.mjs, which is also what
+// the parent email and the MMS note render from. One home: a note has to look
+// the same wherever it is read.
+
+import { BULLET_LINE, WHOLE_LINE_HEADING, noteEmphasisPattern } from '@/lib/notes-markup.mjs';
 
 function escapeRegExp(value = '') {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -39,41 +46,97 @@ export function speakerNamesFor(tutorName = '', studentName = '') {
   ].filter((name) => name && name.length > 1);
 }
 
+function renderInline(text, speakerNames = [], keyPrefix = '') {
+  if (!text) return text;
+
+  const nodes = [];
+  let lastIndex = 0;
+  let match;
+  // Fresh regex per call: the shared /g literal carries lastIndex state.
+  const emphasis = noteEmphasisPattern();
+
+  while ((match = emphasis.exec(text)) !== null) {
+    const [full, boldInner, italicLead, italicInner] = match;
+    if (match.index > lastIndex) {
+      nodes.push(renderWithSpeakers(text.slice(lastIndex, match.index), speakerNames));
+    }
+    if (boldInner !== undefined) {
+      nodes.push(<strong key={`${keyPrefix}b${match.index}`}>{renderWithSpeakers(boldInner, speakerNames)}</strong>);
+    } else {
+      if (italicLead) nodes.push(italicLead);
+      nodes.push(<em key={`${keyPrefix}i${match.index}`}>{renderWithSpeakers(italicInner, speakerNames)}</em>);
+    }
+    lastIndex = match.index + full.length;
+  }
+
+  if (!nodes.length) return renderWithSpeakers(text, speakerNames);
+  if (lastIndex < text.length) nodes.push(renderWithSpeakers(text.slice(lastIndex), speakerNames));
+  return nodes;
+}
+
 export function formatNotesText(text, speakerNames = []) {
   if (!text) return text;
 
   const lines = text.split('\n');
+  const output = [];
+  // Consecutive bullet lines collapse into one list rather than becoming a run
+  // of paragraphs that happen to start with a dash.
+  let bulletRun = null;
 
-  return lines.map((line, index) => {
+  const flushBullets = () => {
+    if (!bulletRun) return;
+    output.push(
+      <ul key={`ul-${bulletRun.index}`} className="mb-1.5 ml-5 list-disc space-y-1">
+        {bulletRun.items.map((item, i) => (
+          <li key={i}>{renderInline(item, speakerNames, `${bulletRun.index}-${i}-`)}</li>
+        ))}
+      </ul>,
+    );
+    bulletRun = null;
+  };
+
+  lines.forEach((line, index) => {
+    const bullet = line.match(BULLET_LINE);
+    if (bullet) {
+      if (!bulletRun) bulletRun = { index, items: [] };
+      bulletRun.items.push(bullet[1]);
+      return;
+    }
+    flushBullets();
+
     // Section headers arrive as **bold** lines — render as quiet small-caps
     // labels so the content stays the loudest thing on the card
-    if (line.includes('**') && !line.includes('***')) {
-      const boldText = line.replace(/\*\*(.*?)\*\*/g, '$1').trim();
-      if (boldText) {
-        return (
-          <div key={index} className="mt-5 mb-1.5 text-xs font-bold uppercase tracking-wider text-amber-700/80 first:mt-0">
-            {boldText.replace(/:$/, '')}
-          </div>
-        );
-      }
+    const heading = line.match(WHOLE_LINE_HEADING);
+    if (heading && !line.includes('***')) {
+      output.push(
+        <div key={index} className="mt-5 mb-1.5 text-xs font-bold uppercase tracking-wider text-amber-700/80 first:mt-0">
+          {heading[1].replace(/:$/, '')}
+        </div>,
+      );
+      return;
     }
 
     // ***name:*** markers: bold the name at body size
     if (line.includes('***')) {
       const parts = line.split(/\*\*\*(.*?)\*\*\*/g);
-      return (
+      output.push(
         <div key={index} className="mb-1.5 mt-2">
           {parts.map((part, i) => (i % 2 === 1 ? <strong key={i}>{part}</strong> : renderWithSpeakers(part, speakerNames)))}
-        </div>
+        </div>,
       );
+      return;
     }
 
     // Regular text line
     if (line.trim()) {
-      return <div key={index} className="mb-1.5">{renderWithSpeakers(line, speakerNames)}</div>;
+      output.push(<div key={index} className="mb-1.5">{renderInline(line, speakerNames, `${index}-`)}</div>);
+      return;
     }
 
     // Empty line for spacing
-    return <div key={index} className="h-3"></div>;
+    output.push(<div key={index} className="h-3"></div>);
   });
+
+  flushBullets();
+  return output;
 }

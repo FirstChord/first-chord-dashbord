@@ -1,11 +1,11 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: 2026-08-04
+last_verified: 2026-08-06
 ---
 # State Tabs Schema
 
-Last updated: 2026-08-04
+Last updated: 2026-08-06
 
 This note is the canonical map for dashboard-owned state lanes. It documents the Google Sheets tabs that store workflow state, cache snapshots, append-only logs, or derived context. It is intentionally about dashboard state, not the main `Students` operational sheet.
 
@@ -110,6 +110,21 @@ Some source formats are fragile because they come from human-edited external sys
   before it is written. Duplicate titles are not guessed and one-word titles
   require a song-work cue. Never treat an unreviewed proposal or unlisted title
   as a stable song join.
+- **Practice Note markup.** The note stored in `Practice_Notes_Log.raw_note_text`
+  is plain text carrying three markers: `**bold**`, `_italic_`, and `- ` at the
+  start of a line for a bullet. They are produced by the Practice Chat PWA
+  (`public/src/note-markup.js`) and understood by every renderer here
+  (`lib/notes-markup.mjs`, used by the parent email and the MMS
+  `StudentNote`, plus `components/shared/notes-formatting.js` for the portal).
+  **The note never contains HTML**: renderers escape first and convert markers
+  second, so escaping keeps its injection guarantee. Two rules follow. A line is
+  a portal section heading only when the *whole* line is wrapped in `**` —
+  testing for `**` anywhere would swallow inline emphasis into a heading.
+  Anything that *analyses* the note rather than displaying it (song title
+  matching, the safety check) must read `stripNoteMarkers` output, because song
+  titles are matched exactly and a stray marker fails silently. The two
+  implementations live in separate repositories; change one and you must change
+  the other. Unmarked notes written before this contract render unchanged.
 - GitHub scheduled workflows can be disabled after long inactivity. The schedule-refresh cron is useful, but it should still be checked from the health/operations rhythm rather than assumed permanent.
 - **Pause planning notes → pause forecast.** `buildPauseForecast` (`lib/admin/pause-forecast.mjs`) parses pause-window dates from the `Planning_Items` notes written by `buildStructuredPausePlanningDraft` (producers: the planning pause builder, the tutor-absence bridge, and incoming-message conversion — `buildIncomingPlanningDraft` reuses the same builder when an absence message carries extracted dates and a matched student): `First lesson to pause date: YYYY-MM-DD` + `Returning from date: YYYY-MM-DD` (away period), and `Lesson date: YYYY-MM-DD` (single lesson). Parked pause items are ignored; done items can still forecast because "done" means the admin action was completed, not that the future/active pause stopped existing. If that helper's note wording changes, update the regexes/tests in `pause-forecast.mjs` — otherwise the forecast silently stops seeing those pauses (it does surface an `unparsedCount`, but only for items it recognises as pauses by title/notes).
 - **Pause History → payment expectation is an explicit write.** Ordinary Overview,

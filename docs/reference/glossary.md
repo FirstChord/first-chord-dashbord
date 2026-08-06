@@ -256,3 +256,12 @@ The tutor's optional one-tap answer ("How was it for them?" — *cruised it / ab
 ## Song request
 
 A tutor's one-tap "Request "X"" on a Song Browser search miss, appended as a `status='new'` row to the `Song_Requests` tab. The catalogue's intake queue — resolved during curation by the `add-song` skill (or a sheet edit), deliberately not via any admin page.
+
+## Note markup
+
+The three formatting markers a Practice Chat note may carry: `**bold**`, `_italic_`, and `- ` starting a line for a bullet.
+
+- **The note is always plain text.** Tutors format in the PWA's rich editor, but the editor is *serialised* to these markers before anything is saved, hashed, emailed or shown. Nothing downstream ever receives HTML a tutor produced.
+- Renderers **escape first, convert second**. Markers are ASCII, so escaping cannot touch them — which is how emphasis reaches a parent's inbox while a pasted `<script>` still arrives as visible text.
+- Code that *analyses* the note rather than displaying it reads `stripNoteMarkers` output. Song matching compares titles exactly and the safety check works on word boundaries, so `**Clocks**` would silently stop matching `Clocks`.
+- Contract and cross-repo warning: [State tabs → Format Contracts](../architecture/data/state-tabs.md).

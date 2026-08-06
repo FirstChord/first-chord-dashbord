@@ -26,6 +26,24 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
+- **Practice Chat notes carry formatting (2026-08-06):** tutors can bold,
+  italicise and bullet in the note editor, and that formatting now reaches the
+  parent email, the MMS `StudentNote` and the student portal. **The note itself
+  stays plain text.** The PWA serialises its editor to three markers —
+  `**bold**`, `_italic_`, `- ` for a bullet — and every renderer escapes first
+  and converts markers second, so emphasis reaches a parent while a pasted
+  `<script>` still arrives as visible text. Two rules make it safe and both are
+  in [State tabs → Format Contracts](./architecture/data/state-tabs.md): a portal
+  section heading is a line *entirely* wrapped in `**` (testing for `**`
+  anywhere silently swallowed inline emphasis into a heading — a latent bug fixed
+  here), and anything that *analyses* the note rather than displaying it reads
+  stripped text, because song titles are matched exactly and `**Clocks**` would
+  quietly stop matching. Underline was deliberately left out: it has no
+  plain-text form and reads as a broken link in email. The copy action now puts
+  both plain and HTML on the clipboard so the legacy paste-into-MMS flow gets
+  real formatting rather than literal asterisks. The review screen's note box
+  also grows with the content instead of scrolling inside 300px, which had been
+  cutting a normal three-section note off mid-sentence.
 - **Every household on a group lesson, and one shape for planning cards
   (2026-08-06):** an MMS event carrying several students was collapsed to its
   first student, so siblings and class members silently vanished from the
@@ -232,54 +250,6 @@ deliberate school-improvement prompt.
   MMS assignments must be ended or reassigned and re-audited before either
   tutor is hidden. The durable sequence and safe future preview contract are in
   [Tutor arrival and handover](./workflows/tutors/arrival-and-handover.md).
-- **Payroll save latency (2026-07-29):** "Review and generate statement" was
-  intermittently hanging on its spinner — sometimes ~1s, sometimes ~7s, with the
-  work already saved by the time the browser was refreshed. The spinner was
-  timing the wrong thing: a server action's `revalidatePath` rebuilds the whole
-  page inside the same POST, so every button on the payroll page paid for the
-  page's slowest fetch. Cold MMS attendance measured 4.7s (951 rows, 35 days, 16
-  tutors) against 1.2s for the five Sheets reads beside it, and the attendance
-  cache's 30-minute hard ceiling meant a normal stop-start review session
-  crossed it and blocked. The payroll page now passes `allowExpired` and never
-  waits on MMS: it renders whatever is cached at any age, refreshes behind the
-  request, and — only when what it served is past the old ceiling — says so in
-  the header summary. `↻ Refresh MMS & recalculate` remains the deliberate wait
-  and is unchanged. The page also streams: the shell renders from the URL alone
-  and the tutor workspace arrives behind a `Suspense` boundary (TTFB 0.15s
-  against a 1.9–2.8s full render). No change to what is calculated, saved or
-  paid. Contract: [state tabs → payroll attendance cache](./architecture/data/state-tabs.md).
-  Shipped alongside it: **outbound request timeouts**. Neither `fetch` nor the
-  Sheets client had one, so a stalled connection hung a render forever with no
-  error and nothing in the logs — that, not slowness, was the true "stuck until
-  I refresh" case. MMS calls now route through `mmsFetch` (readable message on
-  abort, since these strings reach the admin UI verbatim) and Sheets sets
-  `timeout` once on the client. Both 30s, both deliberately generous against a
-  4.7s real worst case; `MMS_REQUEST_TIMEOUT_MS` tunes the MMS one without a
-  deploy.
-  The last two findings from that audit closed on **2026-08-01**. The statement
-  now uses the same `buildPayrollAttendanceQuery` shape as the payroll page, so
-  opening one off the back of that page is a cache hit — safe because
-  `buildPayrollPreview` filters by teacher and period itself, verified across all
-  37 real reviewed/paid runs with zero difference in lesson count, minutes or
-  amount, with `attendanceQueryCoversPeriod` falling back to the narrow window if
-  a hand-set period sits outside the page's. And recording attendance now folds
-  the new status into the cached rows (`patchScopeStale`) rather than dropping
-  them, so Present/Absent/Cancelled no longer pays a 4.7s refetch to learn a
-  field the dashboard just set; patched entries are left **stale, not fresh**, so
-  MMS still gets the last word on the next read, and an unpatchable row falls
-  back to invalidating. Nothing about what is calculated, saved or paid changed.
-  Then on **2026-08-01** the 951-rows-against-a-1000-page-size loose end closed,
-  by removing the boundary rather than moving it. `fetchAllPages` decided it was
-  done when a page came back short — a rule that assumes MMS honours the `limit`
-  we send, so raising the page size for headroom could have made every page look
-  final and truncated in silence. Probing found MMS already returns
-  `TotalItemCount` on every `/search` response, so completeness is now verified
-  against it and the walk throws if it holds any other number; the short-page
-  rule survives only as a fallback. That makes page size a latency decision
-  rather than a correctness one, so it moved to 2000
-  (`PAYROLL_ATTENDANCE_PAGE_SIZE`, one home — it is part of the cache key).
-  Measured: the window is 951 rows in one request; a 3,229-row window pages
-  correctly in two with nothing duplicated or lost.
 
 ## Current operating contracts
 
