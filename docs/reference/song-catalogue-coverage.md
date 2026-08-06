@@ -5,7 +5,7 @@ last_verified: null
 ---
 # Song Catalogue — Coverage and Gaps
 
-Last updated: 2026-07-19 · **311 entries** · Teaching layer: 243 entries carry a `tutorNote`, 160 a `studentNote` (every *song* by a known artist is covered; Rockschool Originals and technical exercises are deliberately blank rather than invented — write those only from the actual scores)
+Last updated: 2026-08-06 · **312 entries** · Teaching layer: 244 entries carry a `tutorNote`, 161 a `studentNote` (every *song* by a known artist is covered; Rockschool Originals and technical exercises are deliberately blank rather than invented — write those only from the actual scores)
 
 The single home for *what repertoire exists, what is missing, and why*. Coverage numbers
 here are a snapshot; the catalogue itself (`lib/config/songs-catalogue.mjs`) is the truth.
@@ -65,13 +65,13 @@ book and are correctly unbadged.
 
 The RSL series runs **Debut → Grade 6**. Levels are only comparable *inside* a series.
 
-### Guitar (acoustic) — 55 entries · 114 students
+### Guitar (acoustic) — 56 entries · 114 students
 | Level | Songs | Exercises |
 |---|---|---|
 | Debut | 9 | 2 |
 | Grade 1 | 6 | 2 |
 | Grade 2 | 6 | 2 |
-| Grade 3 | 8 | 2 |
+| Grade 3 | 9 | 2 |
 | Grade 4 | 6 | — |
 | Grade 5 | 5 | 2 |
 | Grade 6 | 5 | — |

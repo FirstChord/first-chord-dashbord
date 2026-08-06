@@ -265,3 +265,12 @@ The three formatting markers a Practice Chat note may carry: `**bold**`, `_itali
 - Renderers **escape first, convert second**. Markers are ASCII, so escaping cannot touch them — which is how emphasis reaches a parent's inbox while a pasted `<script>` still arrives as visible text.
 - Code that *analyses* the note rather than displaying it reads `stripNoteMarkers` output. Song matching compares titles exactly and the safety check works on word boundaries, so `**Clocks**` would silently stop matching `Clocks`.
 - Contract and cross-repo warning: [State tabs → Format Contracts](../architecture/data/state-tabs.md).
+
+## On the go
+
+The line on the tutor notes card listing the pieces a student currently has in flight, with a distinct-lesson count and a start date.
+
+- It is **mined from the student's own notes**, not from an assignment: a multi-word phrase recurring across two or more of their lessons, Title-Cased in the raw text.
+- Mined phrases are matched against the song catalogue. **A match supplies both identity and name**, so spellings the transcriber got wrong collapse into one correctly-titled entry. A phrase matching nothing is shown exactly as the tutor said it, never corrected.
+- Three guards stop it inventing things: a mishearing must share the word's first three letters, a phrase matching several *different* catalogue titles names none of them, and an ambiguous fragment may only resolve to a song the same student's other notes already name outright.
+- So a wrong or duplicated entry is usually a **catalogue** problem — a missing song, or one title stored several ways — rather than an algorithm one. Rules live in `lib/admin/practice-summary-helpers.mjs`.

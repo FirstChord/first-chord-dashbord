@@ -26,6 +26,20 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
+- **"On the go" names songs from the catalogue (2026-08-06):** the tutor card
+  listed one piece several times — *Who Sold the World*, *Man Who Sold* and *Who
+  Solved the World* were all The Man Who Sold the World, each with its own lesson
+  count. Mined phrases are now matched against the song catalogue: a match
+  decides both identity and displayed name, variants collapse into one entry
+  counted by **distinct lessons** rather than summed tallies, and an unmatched
+  phrase is still shown exactly as the tutor said it. Three rules keep it
+  honest — a mishearing must share the first three letters of the word ("sitting"
+  was matching "getting"), a phrase matching several *different* titles names
+  none of them ("riff exercise" is three catalogue entries), and an ambiguous
+  fragment may only resolve to a song the **same student's** other notes already
+  name outright. Correctness for anything unmatched is a catalogue-coverage
+  question, not an algorithm one: adding *I Don't Want to Miss a Thing* fixed two
+  students at once. Live: 27 pieces named from the catalogue, 38 as written.
 - **Practice Chat notes carry formatting (2026-08-06):** tutors can bold,
   italicise and bullet in the note editor, and that formatting now reaches the
   parent email, the MMS `StudentNote` and the student portal. **The note itself
@@ -229,28 +243,6 @@ deliberate school-improvement prompt.
   data completeness. A genuinely missed baseline is never invented: comparison
   falls back visibly to the month's earliest weekly snapshot, then to a labelled
   current estimate.
-- **Matthew tutor handover (2026-07-30):** Matthew Leung
-  (`tch_zLY8Jn`, piano inferred from the confirmed student/lesson set) is now in
-  the canonical Brain tutor lists, the dashboard tutor identity, and the derived
-  `FC_Tutors`/`FC_Students` lanes. The five explicitly selected student records
-  were aligned in one five-cell `Students.Tutor` batch plus the registry, with a
-  pre-change Sheets backups and attempted/completed `Event_Log` evidence. The
-  selected calendar handover is now clean on 15, 22, and 29 August: Matthew has
-  exactly four intended slots covering all five students and neither outgoing
-  tutor has those lessons. Matthew's `Tutor_Pay` row is explicit at £24/hour,
-  weekly, active, normal route; `Tutor_Phones` holds his verified number; Wise
-  remains intentionally unconfigured. The shared payroll rule now adds £2 once
-  to every group slot, including his 60-minute Sophia/Athena lesson, and the
-  finance assumption version records that basis change. No attendance, Stripe,
-  Wise, payment-execution, or MMS write was made by the dashboard work.
-  Patrick and Eléna remain **leaving**, with Matthew recorded as their
-  replacement; do not retire them yet. A full outgoing-tutor audit found six
-  other Patrick lessons and one Eléna/Pablo Cunningham lesson on each checked
-  Saturday, plus Ezra still has an active Patrick billing profile. Those live
-  MMS assignments must be ended or reassigned and re-audited before either
-  tutor is hidden. The durable sequence and safe future preview contract are in
-  [Tutor arrival and handover](./workflows/tutors/arrival-and-handover.md).
-
 ## Current operating contracts
 
 | Area | Current boundary |
@@ -273,6 +265,31 @@ Canonical details live in [state ownership](./architecture/data/ownership.md),
 
 ## Next choices
 
+- **The tutor notes card, measured 2026-08-06 and only half addressed.** The
+  card is read at the start of a lesson as a 5–10 second reminder. Its
+  typography is genuinely good and should be left alone: body text is 14.18:1 on
+  the yellow (AAA), the measure is 57 characters (Bringhurst's 45–75, near Dyson
+  & Haselgrove's ~55 optimum), line height is 1.62, and the section labels are
+  what make layer-cake scanning possible. The **yellow is right on evidence** — a
+  pastel tint avoids the veil-of-light that pure white creates behind black text.
+  What does not work, across a 7-student sample: two of seven cards are **taller
+  than the viewport** (1041px and 1303px against 900px), and the transcript
+  dominates them — Guy Pilsworth has 290 characters of guidance against 1835 of
+  dialogue. Ranked: (1) **collapse the Progress & Challenges transcript behind a
+  disclosure** — it is a record, not guidance, and this alone makes every card
+  fit the screen; (2) **make Lesson Focus glanceable** — it is unedited
+  transcribed speech, up to 430 characters, so the bottom line is buried
+  mid-paragraph; bullets in Practice Chat now flow through, so the structural fix
+  is upstream; (3) minor: the lesson-date heading is 16px against 17px body, two
+  heading vocabularies are live (older notes say `WHAT WOULD BE GOOD PRACTICE
+  OVER THE WEEK? (AND HOW!)`), and `max-w-[68ch]` is **inert** — it computes to
+  728px while the column is pinned at 488px at every width from 1280 to 2560.
+- **Catalogue duplicates block "On the go" merging.** Dock of the Bay is in the
+  catalogue three times — `(Sittin' On) The Dock of the Bay`, `(Sittin' On) The
+  Dock Of The Bay`, `Sitting on the Dock of The Bay` — so the matcher sees three
+  different names, correctly refuses to pick one, and one student still sees the
+  song twice. Deduplicating is a catalogue edit, and it matters beyond this
+  surface (song assignment sees the same three entries).
 - **Notes access lifecycle, not notes brute force.** The realistic way practice
   notes reach the wrong person is that the code lives in the WhatsApp group
   description, so anyone ever in that group keeps access until it is reset — a
