@@ -26,6 +26,22 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
+- **One tutor is one tutor (2026-08-07):** teaching history showed *"Calum,
+  Calum Steel +1 · 2 students"* — the same person twice. Two causes, both fixed.
+  The note-to-shelf sync wrote `acting_tutor` into `assigned_by`, but that is a
+  **label** (`Self-attested: Calum`) built for the note log's audit column, not a
+  name; `assigned_via` already carries the self-attested caveat, so the identity
+  column takes the plain name (stripped at the call site and defensively in the
+  sync). Underneath that sat a pre-existing, school-wide inconsistency: the
+  tutor surface and `assigned_by` use short names while `tutor_name` on notes
+  often carries the full name, **and both forms appear in the same column**.
+  `resolveTutorName` (`lib/admin/tutor-identity.mjs`) resolves through the
+  canonical `ADMIN_TUTORS` roster — a closed-vocabulary lookup that returns an
+  unrecognised name unchanged and refuses a name two tutors answer to. It is
+  **injected** into the history builder so the roster never reaches the client
+  bundle. Live effect: nine tutor identities collapse to the seven real people.
+  One mislabelled row was repaired in place. Contract recorded in
+  [state tabs](./architecture/data/state-tabs.md) → Format Contracts.
 - **Songs know what they teach, and Sheets reads got batched (2026-08-07):**
   the catalogue already held a skills vocabulary nobody had separated out — 68
   tags across 230 songs, roughly two thirds describing a *skill* rather than a

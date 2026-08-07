@@ -9,6 +9,7 @@ import {
   SONG_OUTCOMES_SHEET,
 } from '@/lib/admin/sheets';
 import { getRegistryEntries } from '@/lib/admin/registry';
+import { resolveTutorName } from '@/lib/admin/tutor-identity.mjs';
 import { buildSongTeachingHistory } from '@/lib/songs/teaching-history.mjs';
 import { getTutorSurfaceTokenSecret, verifyStudentNotesToken } from '@/lib/tutor-surface-token.mjs';
 import { requireTutorDashboardAccess, tutorAuthErrorBody } from '@/lib/tutor-auth';
@@ -65,6 +66,9 @@ export async function GET(request) {
     outcomeRows,
     practiceNotes,
     excludeMmsIds,
+    // Resolved here rather than inside the builder so the tutor roster stays
+    // server-side; the same module's summariser runs in the browser.
+    resolveTutorName,
   });
 
   return NextResponse.json({ success: true, history });

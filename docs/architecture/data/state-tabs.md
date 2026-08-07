@@ -100,6 +100,17 @@ Some source formats are fragile because they come from human-edited external sys
   `legacy`. Do not overwrite proposal fields during review or count untouched
   rows as labelled truth. Actionability values are `action_needed`,
   `reply_needed`, `uncertain`, and `no_action`.
+- **Tutor names are not a stable key.** The school records tutors under two
+  forms and always has: the tutor surface and `Song_Assignments.assigned_by` use
+  the short name (`Calum`, `Dean`), while `Practice_Notes_Log.tutor_name` often
+  carries the full name (`Calum Steel`, `Dean Louden`) — and **both forms appear
+  inside the same column**. Any view gathering across lanes must resolve through
+  `resolveTutorName` (`lib/admin/tutor-identity.mjs`), which looks names up in
+  the canonical `ADMIN_TUTORS` roster and returns an unrecognised name unchanged
+  rather than approximating it. Song teaching history shipped without this and
+  showed "Calum, Calum Steel +1 · 2 students" — one human counted twice. Note
+  that `acting_tutor` is a *label* (`Self-attested: Calum`), not a name: never
+  copy it into an identity column.
 - **Practice Note song links.** `Practice_Notes_Log.song_ids_json` and
   `song_titles_json` are JSON arrays with matching order and at most twelve
   values. `unlisted_song_titles_json` holds at most six tutor-confirmed raw

@@ -439,7 +439,12 @@ export async function POST(request) {
       await syncNoteSongsToShelf({
         studentMmsId: studentId,
         songIds: songLinks.songIds,
-        tutorName: selfAttestedTutor.actingTutor || snapshot.tutorName || snapshot.tutor || '',
+        // The plain name, never `actingTutor` — that is a *label*
+        // ("Self-attested: Calum") built for the note log's audit column. Put
+        // it in an identity column and one human becomes two tutors in every
+        // cross-song view. `assigned_via = note` already records that this
+        // identity is self-attested, which is the whole reason it exists.
+        tutorName: selfAttestedTutor.tutor || snapshot.tutorName || snapshot.tutor || '',
       });
     }
 

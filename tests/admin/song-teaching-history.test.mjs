@@ -141,6 +141,22 @@ test('songs nobody has taught are absent, not empty', () => {
   assert.equal(history.fc_song_never_taught, undefined);
 });
 
+test('one tutor is one tutor, however their name reached the row', () => {
+  // A real defect: the note-to-shelf sync wrote `acting_tutor` — a display
+  // label, "Self-attested: Calum" — into assigned_by, so Calum appeared twice
+  // on the same song as two different people. The sync strips the prefix now;
+  // this pins the consequence rather than the mechanism.
+  const history = buildSongTeachingHistory({
+    assignmentRows: [
+      assignment({ mmsId: 'sdt_a', assignedBy: 'Calum Steel' }),
+      assignment({ mmsId: 'sdt_b', assignedBy: 'Calum Steel' }),
+    ],
+  });
+
+  assert.deepEqual(history.fc_song_crazy.tutors, [{ name: 'Calum Steel', students: 2 }]);
+  assert.equal(history.fc_song_crazy.studentCount, 2);
+});
+
 test('summary names who to ask and how many students', () => {
   assert.equal(
     summariseTeachingHistory({ tutors: [{ name: 'Tom', students: 3 }], studentCount: 3 }),
