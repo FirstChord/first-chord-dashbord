@@ -274,3 +274,15 @@ The line on the tutor notes card listing the pieces a student currently has in f
 - Mined phrases are matched against the song catalogue. **A match supplies both identity and name**, so spellings the transcriber got wrong collapse into one correctly-titled entry. A phrase matching nothing is shown exactly as the tutor said it, never corrected.
 - Three guards stop it inventing things: a mishearing must share the word's first three letters, a phrase matching several *different* catalogue titles names none of them, and an ambiguous fragment may only resolve to a song the same student's other notes already name outright.
 - So a wrong or duplicated entry is usually a **catalogue** problem — a missing song, or one title stored several ways — rather than an algorithm one. Rules live in `lib/admin/practice-summary-helpers.mjs`.
+
+**`songIdSource` says how much the id is worth**, and consumers must check it:
+
+| Value | Meaning |
+|---|---|
+| `confirmed` | A tutor selected this song in Practice Chat. A real join. |
+| `inferred` | Matched from note text against the catalogue. A proposal, not a join. |
+| `''` | No catalogue match; `label` is the tutor's own wording. |
+
+Confirmed links are preferred wherever they exist and a confirmed song appears even when no phrase named it — mining needs a phrase to recur across **two** lessons, so it structurally cannot see a song taught once. Where both describe the same song the count is the union of both, with `confirmedLessonCount` recording how much of it is confirmed evidence; counting only confirmed lessons would drop a long-running piece to "1 lesson" the first time a tutor used the selector.
+
+**Do not aggregate an `inferred` id as if it were a join** (cross-student counts, time-on-piece). Errors that are tolerable on one card compound across students. Mining is a bridge until confirmed links cover most recent notes, and it scales the wrong way: 18 of 299 catalogue titles are already fully contained inside another title, so a growing catalogue means more ambiguous refusals, not fewer.

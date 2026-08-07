@@ -292,3 +292,77 @@ test('a mishearing must share the start of the word', () => {
   assert.ok(piece);
   assert.doesNotMatch(piece.label, /getting|together/iu);
 });
+
+function noteWithSongs({ date, did = '', songIds = [], songTitles = [] }) {
+  return { ...note({ date, did }), songIds, songTitles };
+}
+
+test('a tutor-confirmed song link is recorded as confirmed, not inferred', () => {
+  const notes = [
+    noteWithSongs({
+      date: '2026-07-01',
+      did: 'We played through it twice.',
+      songIds: ['fc_song_ho_hey'],
+      songTitles: ['Ho Hey'],
+    }),
+    noteWithSongs({ date: '2026-07-08', did: 'More of the same.', songIds: ['fc_song_ho_hey'], songTitles: ['Ho Hey'] }),
+  ];
+  const { pieces } = buildPracticeSummary(notes);
+  const piece = pieces.find((entry) => entry.songId === 'fc_song_ho_hey');
+
+  assert.ok(piece, 'a confirmed song appears even though no phrase named it');
+  assert.equal(piece.songIdSource, 'confirmed');
+  assert.equal(piece.label, 'Ho Hey');
+  assert.equal(piece.lessonCount, 2);
+  assert.equal(piece.confirmedLessonCount, 2);
+});
+
+test('a mined piece stays labelled inferred so nothing mistakes it for a join', () => {
+  const notes = [
+    note({ date: '2026-07-01', did: 'Started The Man Who Sold the World.' }),
+    note({ date: '2026-07-08', did: 'The Man Who Sold the World again.' }),
+  ];
+  const { pieces } = buildPracticeSummary(notes);
+  const piece = pieces.find((entry) => /sold the world/i.test(entry.label));
+
+  assert.ok(piece);
+  assert.ok(piece.songId, 'the catalogue supplied an id');
+  assert.equal(piece.songIdSource, 'inferred');
+  assert.equal(piece.confirmedLessonCount, 0);
+});
+
+test('an unmatched piece carries no song id and no source', () => {
+  const notes = [
+    note({ date: '2026-07-01', did: 'Started Zarbatron Waltz.' }),
+    note({ date: '2026-07-08', did: 'Zarbatron Waltz again.' }),
+  ];
+  const { pieces } = buildPracticeSummary(notes);
+  const piece = pieces.find((entry) => /zarbatron/i.test(entry.label));
+
+  assert.ok(piece);
+  assert.equal(piece.songId, '');
+  assert.equal(piece.songIdSource, '');
+});
+
+test('confirming a song a phrase already found upgrades it without losing lessons', () => {
+  // The regression this guards: counting only confirmed lessons would drop a
+  // piece worked on for weeks to "1 lesson" the moment a tutor first used the
+  // selector, which reads as the feature breaking.
+  const notes = [
+    note({ date: '2026-07-01', did: 'Started The Man Who Sold the World.' }),
+    note({ date: '2026-07-08', did: 'The Man Who Sold the World, chorus.' }),
+    noteWithSongs({
+      date: '2026-07-15',
+      did: 'Kept going with it.',
+      songIds: ['fc_song_the_man_who_sold_the_world'],
+      songTitles: ['The Man Who Sold the World'],
+    }),
+  ];
+  const { pieces } = buildPracticeSummary(notes);
+  const matching = pieces.filter((entry) => /sold the world/i.test(entry.label));
+
+  assert.equal(matching.length, 1, 'the confirmed link and the mined phrase are one piece');
+  assert.equal(matching[0].songIdSource, 'confirmed');
+  assert.equal(matching[0].lessonCount, 3, 'all three lessons count');
+  assert.equal(matching[0].confirmedLessonCount, 1, 'but only one is confirmed evidence');
+});

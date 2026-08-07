@@ -92,12 +92,16 @@ export default function NotesPanel({ notes, source, studentName = '', onLoadHist
             On the go{' '}
           </span>
           {pieces.map((piece, index) => (
-            <span key={piece.phrase}>
+            // A confirmed song link has no mined phrase, so the id is the
+            // stable identity and the phrase is only a fallback.
+            <span key={piece.songId || piece.phrase || piece.label}>
               {index > 0 && ' · '}
               <span className="font-semibold text-gray-800">{piece.label}</span>
               {' '}
               <span className="text-gray-500">
-                ({piece.lessonCount} lessons
+                {/* One lesson is reachable now that a confirmed link counts from
+                    the first lesson; a mined phrase always needed two. */}
+                ({piece.lessonCount} lesson{piece.lessonCount === 1 ? '' : 's'}
                 {piece.firstDate ? `, since ${formatShortDate(piece.firstDate)}` : ''}
                 {piece.latestTempo ? `, at ${piece.latestTempo}%` : ''})
               </span>

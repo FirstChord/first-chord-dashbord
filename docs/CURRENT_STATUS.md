@@ -40,6 +40,20 @@ deliberate school-improvement prompt.
   name outright. Correctness for anything unmatched is a catalogue-coverage
   question, not an algorithm one: adding *I Don't Want to Miss a Thing* fixed two
   students at once. Live: 27 pieces named from the catalogue, 38 as written.
+  **Confirmed song links now win, and the difference is recorded.** Every piece
+  carries `songIdSource` — `confirmed` (a tutor selected it in Practice Chat, a
+  real join), `inferred` (matched from note text, a proposal), or `''` (no
+  match). A confirmed song appears even when no phrase named it: mining needs a
+  phrase to recur across *two* lessons, so it cannot see a song taught once.
+  Counts are the union of both kinds of evidence with `confirmedLessonCount`
+  recording how much is confirmed — counting only confirmed lessons would drop a
+  long-running piece to "1 lesson" the first time a tutor used the selector.
+  **Nothing may aggregate an `inferred` id as a join** (cross-student counts,
+  time-on-piece): tolerable per-card error compounds across students. Mining is
+  explicitly a bridge and scales the wrong way — 18 of 299 catalogue titles are
+  already contained inside another title, so a growing catalogue produces more
+  ambiguous refusals, not fewer. The number that retires it is adoption: since
+  the selector shipped, **1 of 14 notes carries a confirmed link**.
 - **Practice Chat notes carry formatting (2026-08-06):** tutors can bold,
   italicise and bullet in the note editor, and that formatting now reaches the
   parent email, the MMS `StudentNote` and the student portal. **The note itself
@@ -284,6 +298,14 @@ Canonical details live in [state ownership](./architecture/data/ownership.md),
   heading vocabularies are live (older notes say `WHAT WOULD BE GOOD PRACTICE
   OVER THE WEEK? (AND HOW!)`), and `max-w-[68ch]` is **inert** — it computes to
   728px while the column is pinned at 488px at every width from 1280 to 2560.
+- **Song-link adoption is the lever, not the matcher.** Since the Practice Chat
+  song selector shipped (2026-08-04), **1 of 14 notes** carries a confirmed link,
+  at a run rate of ~130 notes/month. The flow exists; adoption does not. Every
+  confirmed link is exact, is a real object reference, and unlocks what inference
+  never can — cross-student repertoire counts, time-on-piece per grade, direct
+  Soundslice/level links. Improving capture in Practice Chat is worth more than
+  any further work on the matcher, which should be retired once confirmed links
+  cover most recent notes.
 - **Catalogue duplicates block "On the go" merging.** Dock of the Bay is in the
   catalogue three times — `(Sittin' On) The Dock of the Bay`, `(Sittin' On) The
   Dock Of The Bay`, `Sitting on the Dock of The Bay` — so the matcher sees three
