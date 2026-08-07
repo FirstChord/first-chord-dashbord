@@ -20,6 +20,16 @@ if (process.argv.includes('--json')) {
 const pct = Math.round((coverage.withSkills / coverage.total) * 100);
 console.log(`Songs with at least one skill: ${coverage.withSkills} of ${coverage.total} (${pct}%)\n`);
 
+// The number that actually matters. A tutor sees one instrument's shelf, so an
+// instrument at zero means a blank feature for them however healthy the total.
+console.log('By instrument');
+for (const row of coverage.byInstrument) {
+  const share = Math.round((row.withSkills / row.total) * 100);
+  const flag = row.withSkills === 0 ? '  ← nothing shows on any card' : share < 50 ? '  ← thin' : '';
+  console.log(`  ${row.instrument.padEnd(17)} ${String(row.withSkills).padStart(3)} of ${String(row.total).padEnd(4)} (${share}%)${flag}`);
+}
+console.log('');
+
 console.log('Most-taught skills');
 for (const skill of coverage.skillUse.filter((s) => s.count).slice(0, 12)) {
   console.log(`  ${String(skill.count).padStart(3)}  ${skill.label} (${skill.area})`);

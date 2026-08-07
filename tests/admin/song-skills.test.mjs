@@ -119,3 +119,38 @@ test('the real catalogue produces skills for a meaningful share of songs', () =>
     `expected at least 120 songs with skills, got ${coverage.withSkills}`,
   );
 });
+
+// Instruments whose songs carry no skill tags yet, so every card is blank for
+// the tutors who teach them. Tagging happened instrument by instrument and
+// these were never done. Not a design decision — a backlog, written down so it
+// stays loud. **Remove an instrument from this set as soon as it is tagged;**
+// the test below fails either way, whether a listed instrument is still empty
+// when it should not be or has quietly been fixed without updating this.
+const INSTRUMENTS_WITHOUT_SKILLS = new Set(['Bass', 'Electric Guitar']);
+
+test('no instrument silently shows a blank skill layer to its tutors', () => {
+  // A healthy total hides an empty shelf: this shipped at 41% overall with bass
+  // and electric guitar at zero, so the tutors who teach them saw nothing on
+  // any card. A tutor looks at one instrument, so that is the unit coverage has
+  // to be judged in — never the catalogue-wide average.
+  const { byInstrument } = buildSkillCoverage(SONGS_CATALOGUE);
+  assert.ok(byInstrument.length >= 3, 'expected several instruments');
+
+  for (const row of byInstrument) {
+    if (row.total < 20) continue; // too small a shelf to conclude anything
+    if (INSTRUMENTS_WITHOUT_SKILLS.has(row.instrument)) {
+      assert.equal(
+        row.withSkills,
+        0,
+        `${row.instrument} now has skills — remove it from INSTRUMENTS_WITHOUT_SKILLS`,
+      );
+      continue;
+    }
+    assert.ok(
+      row.withSkills > 0,
+      `${row.instrument} has ${row.total} songs and no skills at all, so its tutors see a blank `
+      + 'card every time. Tag some of them (node scripts/song-skills-report.mjs) or add it to '
+      + 'INSTRUMENTS_WITHOUT_SKILLS with a reason.',
+    );
+  }
+});

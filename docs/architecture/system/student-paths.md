@@ -194,6 +194,17 @@ confident wrong data at catalogue scale. Coverage is therefore partial by
 design: `node scripts/song-skills-report.mjs` shows the gaps, with each song's
 tutor note alongside so a human can pick the right tag quickly.
 
+**Judge coverage per instrument, never as a catalogue average.** A tutor looks
+at one instrument's shelf, so an instrument at zero is a blank feature for them
+however healthy the total. This shipped at 41% overall with **Bass and Electric
+Guitar at zero** — tagging had been done instrument by instrument and those two
+were never started, so the bass tutor saw an empty card every time. The
+catalogue-wide number hid it and the first test measured exactly that number.
+`INSTRUMENTS_WITHOUT_SKILLS` in `tests/admin/song-skills.test.mjs` now names the
+untagged instruments explicitly and fails in both directions: if a listed
+instrument is fixed without the list being updated, and if any unlisted
+instrument goes blank.
+
 Skills are the layer every later difficulty-rating or sequencing idea needs.
 "This student has met syncopation four times and struggled each time" is
 unanswerable while the unit of knowledge is the song.

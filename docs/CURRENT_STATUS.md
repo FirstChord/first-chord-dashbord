@@ -38,7 +38,12 @@ deliberate school-improvement prompt.
   tutor note would manufacture confident wrong data at catalogue scale.
   `node scripts/song-skills-report.mjs` lists the gaps with each tutor note
   alongside, so a human fills them fast. A test fails when a new tag is neither
-  a skill nor declared filing. This is the layer any later difficulty-rating or
+  a skill nor declared filing. **Coverage must be judged per instrument, not as
+  an average:** this shipped at 41% overall with **Bass and Electric Guitar at
+  zero** (Guitar 91%, Piano 50%) — tagging was done instrument by instrument and
+  those two were never started, so their tutors see a blank row on every card.
+  The total hid it and the first test measured the total.
+  `INSTRUMENTS_WITHOUT_SKILLS` now names them and fails in both directions. This is the layer any later difficulty-rating or
   sequencing work needs — "this student keeps struggling with syncopation" is
   unanswerable while the unit of knowledge is the song.
   **Reads:** `prefetchSheetValues(ranges)` fetches several tabs in one
