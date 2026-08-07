@@ -5,7 +5,9 @@ import {
   getCachedSheetValues,
   getSheetObjects,
   getSheetsReadBudget,
+  getSpreadsheetMetadata,
   getStaleCachedSheetValues,
+  prefetchSheetValues,
   resetSheetsReadBudgetForTests,
   setCachedSheetValues,
 } from '../../lib/admin/sheets/core.mjs';
@@ -123,7 +125,7 @@ test('the Sheets client is built with a request timeout', async () => {
 // cost three requests per student-context load. See
 // docs/architecture/data/sheets-reads.md.
 
-function withFakeSheets({ values, onRead }, fn) {
+function withFakeSheets({ values, onRead, onBatch }, fn) {
   const saved = {
     spreadsheetId: process.env.GOOGLE_SPREADSHEET_ID,
     client: globalThis.__firstChordSheetsClientPromise,
@@ -138,6 +140,10 @@ function withFakeSheets({ values, onRead }, fn) {
         get: async () => {
           onRead?.();
           return { data: { values } };
+        },
+        batchGet: async ({ ranges = [] }) => {
+          onBatch?.(ranges);
+          return { data: { valueRanges: ranges.map((range) => ({ range, values })) } };
         },
       },
     },
@@ -178,6 +184,108 @@ test('the read budget counts real API reads, not cache hits', async () => {
     await getSheetObjects('Students');
     assert.equal(getSheetsReadBudget().reads, 1, 'a cache hit does not');
   });
+});
+
+// --- batched prefetch ----------------------------------------------------
+// The quota cannot be raised, so reading less is the only lever. A batchGet of
+// N tabs costs one request where N gets cost N.
+
+test('a prefetched tab set costs one request, not one per tab', async () => {
+  let gets = 0;
+  let batches = 0;
+  await withFakeSheets({
+    values: [['mms_id'], ['sdt_1']],
+    onRead: () => { gets += 1; },
+    onBatch: () => { batches += 1; },
+  }, async () => {
+    await prefetchSheetValues(['Students', 'Review_Flags', 'Waiting_List_State']);
+
+    // Every reader underneath now finds its tab already cached.
+    await getSheetObjects('Students');
+    await getSheetObjects('Review_Flags');
+    await getSheetObjects('Waiting_List_State');
+
+    assert.equal(batches, 1, 'three tabs must be fetched in one batch request');
+    assert.equal(gets, 0, 'a prefetched tab must not be read again individually');
+    assert.equal(getSheetsReadBudget().reads, 1, 'a batchGet spends one unit of quota');
+  });
+});
+
+test('prefetch returns the same values a direct read would', async () => {
+  await withFakeSheets({ values: [['mms_id', 'name'], ['sdt_1', 'Ada']] }, async () => {
+    await prefetchSheetValues(['Students', 'Review_Flags']);
+    assert.deepEqual(await getSheetObjects('Students'), [{ mms_id: 'sdt_1', name: 'Ada' }]);
+  });
+});
+
+test('a single range is left to the normal read path', async () => {
+  let batches = 0;
+  await withFakeSheets({
+    values: [['mms_id'], ['sdt_1']],
+    onBatch: () => { batches += 1; },
+  }, async () => {
+    await prefetchSheetValues(['Students']);
+    assert.equal(batches, 0, 'batching one range would be pure overhead');
+  });
+});
+
+test('already-cached tabs are not re-fetched by a prefetch', async () => {
+  let batches = 0;
+  await withFakeSheets({
+    values: [['mms_id'], ['sdt_1']],
+    onBatch: (ranges) => { batches += 1; assert.deepEqual(ranges, ['Review_Flags', 'Waiting_List_State']); },
+  }, async () => {
+    await getSheetObjects('Students'); // warms one tab the normal way
+    await prefetchSheetValues(['Students', 'Review_Flags', 'Waiting_List_State']);
+    assert.equal(batches, 1);
+  });
+});
+
+test('a failed batch leaves readers able to fetch for themselves', async () => {
+  await withFakeSheets({
+    values: [['mms_id'], ['sdt_1']],
+    onBatch: () => { throw new Error('batchGet exploded'); },
+  }, async () => {
+    await prefetchSheetValues(['Students', 'Review_Flags']);
+    // The prefetch is an optimisation, never a dependency.
+    assert.deepEqual(await getSheetObjects('Students'), [{ mms_id: 'sdt_1' }]);
+  });
+});
+
+test('parallel callers share one spreadsheet metadata request', async () => {
+  // A page touching four managed tabs calls ensureManagedSheet four times at
+  // once. With only a completed-result cache, all four missed and all four
+  // fetched — four requests for one answer, on every cold start.
+  let metadataCalls = 0;
+  const saved = {
+    spreadsheetId: process.env.GOOGLE_SPREADSHEET_ID,
+    client: globalThis.__firstChordSheetsClientPromise,
+  };
+  process.env.GOOGLE_SPREADSHEET_ID = `metadata-${Math.random().toString(36).slice(2)}`;
+  const sheets = {
+    spreadsheets: {
+      get: async () => {
+        metadataCalls += 1;
+        await new Promise((resolve) => { setTimeout(resolve, 5); });
+        return { data: { sheets: [{ properties: { title: 'Students', sheetId: 1 } }] } };
+      },
+    },
+  };
+
+  try {
+    const spreadsheetId = process.env.GOOGLE_SPREADSHEET_ID;
+    const results = await Promise.all(
+      [1, 2, 3, 4].map(() => getSpreadsheetMetadata({ sheets, spreadsheetId })),
+    );
+    assert.equal(metadataCalls, 1, 'four parallel callers must share one request');
+    for (const result of results) {
+      assert.equal(result[0].properties.title, 'Students', 'every caller gets the answer');
+    }
+  } finally {
+    if (saved.spreadsheetId === undefined) delete process.env.GOOGLE_SPREADSHEET_ID;
+    else process.env.GOOGLE_SPREADSHEET_ID = saved.spreadsheetId;
+    globalThis.__firstChordSheetsClientPromise = saved.client;
+  }
 });
 
 test('the read budget warns below the quota, not after it is spent', () => {

@@ -253,6 +253,12 @@ The explicit, reviewed list (in `tests/admin/songs-catalogue.test.mjs`) of instr
 
 The tutor's optional one-tap answer ("How was it for them?" — *cruised it / about right / a battle*, plus an optional note) when a song assignment reaches `done` or gets parked, appended to the `Song_Outcomes` tab. Opinions with a timestamp, never workflow state — `Song_Assignments.status` stays the only current truth. Sibling tab `Song_Status_Log` records every status transition automatically ("free data before asked data"). Distilled slowly into catalogue `tutorNote`s and path ordering; read live by [song teaching history](#song-teaching-history).
 
+## Song skill
+
+What a song *teaches*, as opposed to what it is. A vocabulary of about thirty skills across five areas (technique, rhythm, harmony, reading, expression), defined in `lib/config/song-skills.mjs` and **derived from the tags catalogue entries already carry** — no entry had to change. `NON_SKILL_TAGS` names the filing tags (`exam piece`, `2025 syllabus`, genre) deliberately, so "not a skill" stays distinguishable from "not yet classified"; a test fails when a new tag is neither.
+
+Only one structural inference: `contentType: 'scale'` teaches scales. Nothing is ever read out of a title or tutor note, because guessing skills from prose manufactures confident wrong data at catalogue scale — so coverage is partial by design and `scripts/song-skills-report.mjs` shows the gaps. Skills are the layer any later difficulty-rating or sequencing work depends on: while the unit of knowledge is the song, "this student keeps struggling with syncopation" cannot be asked.
+
 ## Song teaching history
 
 What the school knows about teaching one song, gathered from every lane that records it — who has taught it, to how many students, what they said in an outcome note, and how often it appears in practice notes. Built by `buildSongTeachingHistory` and shown on the Song Browser card, so a tutor choosing a song sees colleagues' experience of it first.

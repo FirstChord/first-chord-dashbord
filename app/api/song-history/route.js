@@ -3,6 +3,10 @@ import {
   getPracticeNoteLogRows,
   getSongAssignmentRows,
   getSongOutcomeRows,
+  prefetchSheetValues,
+  PRACTICE_NOTES_LOG_SHEET,
+  SONG_ASSIGNMENTS_SHEET,
+  SONG_OUTCOMES_SHEET,
 } from '@/lib/admin/sheets';
 import { getRegistryEntries } from '@/lib/admin/registry';
 import { buildSongTeachingHistory } from '@/lib/songs/teaching-history.mjs';
@@ -35,6 +39,13 @@ export async function GET(request) {
   if (!tutorSession.ok) {
     return NextResponse.json(tutorAuthErrorBody(tutorSession), { status: tutorSession.status });
   }
+
+  // Three tabs for one answer, so fetch them as one request rather than three.
+  await prefetchSheetValues([
+    SONG_ASSIGNMENTS_SHEET,
+    SONG_OUTCOMES_SHEET,
+    PRACTICE_NOTES_LOG_SHEET,
+  ]).catch(() => {});
 
   // History is enrichment: a lane that fails costs detail, never the panel.
   const [assignmentRows, outcomeRows, practiceNotes, registryEntries] = await Promise.all([

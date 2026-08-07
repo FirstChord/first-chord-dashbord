@@ -170,6 +170,34 @@ status durations can inform termly catalogue-note and path-order changes. Use th
 [parked distillation plan](../../plans/parked/song-loop-distillation.md); do not
 turn raw telemetry directly into canonical teaching guidance.
 
+## Skills: what a song teaches
+
+A song is a vehicle; the thing that transfers between songs is the skill. Skills
+live in `lib/config/song-skills.mjs` as a vocabulary (`SONG_SKILLS`, grouped by
+`SKILL_AREAS`) plus a mapping from the tags catalogue entries already carry.
+
+This was **derived, not migrated**. The catalogue already held sixty-eight
+distinct tags across two hundred and thirty songs, roughly two thirds of them
+describing a skill rather than a category; nobody had separated the teaching
+vocabulary from the filing vocabulary, so none of it was usable. No catalogue
+entry had to change. A song may still declare `skills` explicitly and that
+always wins.
+
+`NON_SKILL_TAGS` names the filing tags on purpose, so "deliberately not a skill"
+stays distinguishable from "nobody has classified this yet". A test fails when a
+new tag is neither, which is how the next batch of songs gets noticed.
+
+One structural inference only: `contentType: 'scale'` teaches `scales`. Not
+`exercise` (which covers riffs, chords and technique alike), and never anything
+read out of a title or a tutor note — guessing skills from prose manufactures
+confident wrong data at catalogue scale. Coverage is therefore partial by
+design: `node scripts/song-skills-report.mjs` shows the gaps, with each song's
+tutor note alongside so a human can pick the right tag quickly.
+
+Skills are the layer every later difficulty-rating or sequencing idea needs.
+"This student has met syncopation four times and struggled each time" is
+unanswerable while the unit of knowledge is the song.
+
 ## Teaching history: the read side of the loop
 
 `buildSongTeachingHistory` (`lib/songs/teaching-history.mjs`) reduces
@@ -204,11 +232,12 @@ card means "nobody has taught this yet", not "history is unavailable here".
 | Portal join and fail-safe read | `lib/songs/portal-songs.mjs` |
 | Requests and outcomes | `lib/songs/request-helpers.mjs`, `lib/songs/outcome-helpers.mjs` |
 | Cross-song teaching history | `lib/songs/teaching-history.mjs` |
+| Song skills vocabulary and mapping | `lib/config/song-skills.mjs`, `lib/songs/skills-helpers.mjs` |
 | Note-to-shelf sync (best-effort) | `lib/admin/practice-note-shelf-sync.mjs` |
 | Sheets adapter | `lib/admin/sheets/song-assignments.mjs` |
 | APIs | `app/api/song-assignments/`, `app/api/song-requests/`, `app/api/song-outcomes/`, `app/api/song-history/` |
 | Tutor and student UI | `components/tutor-dashboard/SongBrowser.js`, `components/student-portal/StudentSongs.js` |
-| Focused tests | `tests/admin/songs-catalogue.test.mjs`, `song-assignment-helpers`, `portal-songs`, `song-request-helpers`, `song-outcome-helpers`, `song-teaching-history`, `note-song-assignments`, `paths-signal` |
+| Focused tests | `tests/admin/songs-catalogue.test.mjs`, `song-assignment-helpers`, `portal-songs`, `song-request-helpers`, `song-outcome-helpers`, `song-teaching-history`, `note-song-assignments`, `song-skills`, `paths-signal` |
 
 ## Change checklist
 

@@ -4,7 +4,15 @@ import { getCommunicationLog } from '@/lib/admin/communications';
 import { getIncomingMessageInbox } from '@/lib/admin/incoming-messages';
 import { buildLearningInsights } from '@/lib/admin/learning-insights.mjs';
 import { getParentUnderstandingWorkflow } from '@/lib/admin/parent-understanding';
-import { getPracticeNoteLogRows, getSongAssignmentRows } from '@/lib/admin/sheets';
+import {
+  getPracticeNoteLogRows,
+  getSongAssignmentRows,
+  prefetchSheetValues,
+  COMMUNICATION_LOG_SHEET,
+  INCOMING_MESSAGE_INBOX_SHEET,
+  PRACTICE_NOTES_LOG_SHEET,
+  SONG_ASSIGNMENTS_SHEET,
+} from '@/lib/admin/sheets';
 import { getRegistryEntries } from '@/lib/admin/registry';
 import { buildPathsSignal } from '@/lib/songs/paths-signal.mjs';
 
@@ -43,6 +51,14 @@ function ThemeList({ title, rows = [], empty = 'Nothing recorded yet.' }) {
 }
 
 export default async function AdminInsightsPage() {
+  // A read-only page over four large tabs: one request instead of four.
+  await prefetchSheetValues([
+    PRACTICE_NOTES_LOG_SHEET,
+    INCOMING_MESSAGE_INBOX_SHEET,
+    COMMUNICATION_LOG_SHEET,
+    SONG_ASSIGNMENTS_SHEET,
+  ]).catch(() => {});
+
   const [practiceNotes, parentWorkflow, incomingMessages, communications, registryEntries, songAssignments] = await Promise.all([
     getPracticeNoteLogRows(),
     getParentUnderstandingWorkflow(),

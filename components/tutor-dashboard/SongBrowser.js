@@ -29,6 +29,7 @@ import {
   inferStudentLevel,
   inferStudentSeries,
 } from '@/lib/songs/shelf-helpers.mjs';
+import { skillLabelsForSong } from '@/lib/songs/skills-helpers.mjs';
 import { summariseTeachingHistory } from '@/lib/songs/teaching-history.mjs';
 import { PATH_TEMPLATES } from '@/lib/config/path-templates.mjs';
 
@@ -620,6 +621,9 @@ export default function SongBrowser({ student }) {
                 const songHistory = history?.[song.songId] || null;
                 const historyLine = summariseTeachingHistory(songHistory);
                 const historyOpen = historyOpenFor === song.songId;
+                // What the song teaches, from the tags it already carries.
+                // Absent on a song nobody has tagged yet, which is honest.
+                const skillLabels = skillLabelsForSong(song);
                 return (
                   <div
                     key={song.songId}
@@ -662,6 +666,19 @@ export default function SongBrowser({ student }) {
                         {(song.contentType || 'song') !== 'song' ? ` · ${song.contentType}` : ''}
                       </p>
                     )}
+                    {skillLabels.length > 0 && (
+                      <p className="mt-1.5 flex flex-wrap gap-1">
+                        {skillLabels.map((label) => (
+                          <span
+                            key={label}
+                            className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-600"
+                          >
+                            {label}
+                          </span>
+                        ))}
+                      </p>
+                    )}
+
                     {/* What colleagues know. Only appears when someone has
                         actually taught it, so a quiet card means "no history
                         yet" rather than "history not offered here". */}

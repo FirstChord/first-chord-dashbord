@@ -26,6 +26,30 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
+- **Songs know what they teach, and Sheets reads got batched (2026-08-07):**
+  the catalogue already held a skills vocabulary nobody had separated out — 68
+  tags across 230 songs, roughly two thirds describing a *skill* rather than a
+  category. `lib/config/song-skills.mjs` splits teaching vocabulary from filing
+  vocabulary and maps the existing tags onto ~30 skills in five areas, so **no
+  catalogue entry had to change**; an explicit `skills` list still wins where
+  the tags are wrong. Skills show on the Song Browser card. Coverage is 129 of
+  312 and **partial by design**: the only structural inference is
+  `contentType: 'scale'` → scales, because guessing skills from a title or
+  tutor note would manufacture confident wrong data at catalogue scale.
+  `node scripts/song-skills-report.mjs` lists the gaps with each tutor note
+  alongside, so a human fills them fast. A test fails when a new tag is neither
+  a skill nor declared filing. This is the layer any later difficulty-rating or
+  sequencing work needs — "this student keeps struggling with syncopation" is
+  unanswerable while the unit of knowledge is the song.
+  **Reads:** `prefetchSheetValues(ranges)` fetches several tabs in one
+  `batchGet` and warms the cache every existing reader already uses, so call
+  sites batch without any adapter changing. Measured live on song-history:
+  **cold start 9 requests → 5, steady state 3 → 1.** Also fixed: parallel
+  `ensureManagedSheet` calls each missed the metadata cache and spent a request
+  each — four tabs cost four requests for one answer on every cold start; the
+  in-flight request is now shared. Wired into the busiest path
+  (`loadStudentContextCollection`), song-history and insights. Contract in
+  [sheets-reads](./architecture/data/sheets-reads.md).
 - **A practice note now puts songs on the shelf (2026-08-07):** the shelf fed
   the note (assigned songs are its picker *and* its transcription prompt) but
   nothing fed back, so a tutor saying "we worked on this" produced a link no

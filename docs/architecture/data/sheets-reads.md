@@ -88,7 +88,37 @@ is 0–60 — 60 *is* the maximum, not a default someone chose. The only directi
 that field moves is down. (The separate per-project limit of 300/minute is not
 the one being hit: one service account means the app is a single user.)
 
-So cold-start cost can only be reduced by reading less: batching several tabs
-into one `batchGet`, or warming the cache on boot before traffic arrives.
-Neither is built. Caching remains the only lever for steady-state load, and
-there is no headroom to buy.
+So cold-start cost can only be reduced by reading less. **Batching is now
+built** (2026-08-07); boot-time cache warming still is not.
+
+## Batched prefetch
+
+`prefetchSheetValues(ranges)` fetches several tabs in one `batchGet` and leaves
+them in the same cache `getSheetValues` reads from. It is a **cache-warmer, not
+a new read API**: call it once at the top of anything touching several tabs, and
+every reader underneath finds its data already there and issues no request. The
+batching decision therefore lives at the call site, where all the tabs are
+visible at once, rather than being threaded through each adapter.
+
+Ranges already fresh are skipped, a single range is left to the normal path, and
+a failed batch is not fatal — the readers behind it fetch as they always did.
+
+Measured on the song-history route (three tabs), against the live sheet:
+
+| | Requests before | after |
+|---|---|---|
+| Cold instance | 9 | 5 |
+| Steady state (values cache expired, headers warm) | 3 | 1 |
+
+The remaining cold-start cost is one header read per managed tab
+(`ensureManagedSheet` reads `'Tab'!1:1` through its own cache, not this one), and
+those amortise to zero for the life of the instance. Batching those too would
+mean routing header reads through `getSheetValues`, which is load-bearing for
+writes — not worth the risk for a one-off cost.
+
+`getSpreadsheetMetadata` now shares its in-flight request. Four managed tabs
+touched in parallel used to miss the completed-result cache four times and spend
+four requests on one answer, on every cold start.
+
+Current call sites: `loadStudentContextCollection` (the busiest path in the app),
+`/api/song-history`, and `/admin/insights`.
