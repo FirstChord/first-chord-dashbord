@@ -26,6 +26,25 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
+- **A practice note now puts songs on the shelf (2026-08-07):** the shelf fed
+  the note (assigned songs are its picker *and* its transcription prompt) but
+  nothing fed back, so a tutor saying "we worked on this" produced a link no
+  shelf reflected — both linked notes so far name songs the student was never
+  assigned. `syncNoteSongsToShelf` closes it, making note-taking able to *create*
+  the fact rather than only reference one. **Hooked to the Level 2 delivery
+  route, which is where real song links arrive** — both live examples came
+  through it, so wiring only the snapshot route would have covered nothing.
+  Three rules stop the lower-friction door degrading the stronger one:
+  **create-only** (a `done` song named in a recap does not reopen; a tutor's own
+  status always wins), **confirmed catalogue ids only** (`unlisted` titles are
+  observations, never Song facts), and a new **`assigned_via`** column recording
+  which door a row came through — `shelf` rows carry a token-verified
+  `assigned_by`, `note` rows carry a self-attested one, because Practice Chat
+  authenticates with a shared app secret rather than per-tutor identity. Never
+  read `assigned_by` as proven authorship without checking `assigned_via`. New
+  rows are born `working`, carry the same status-log entry a shelf assignment
+  would, and the write is best-effort after the note is stored — it can never
+  cost a tutor the note they spent a lesson making.
 - **Song teaching history, and a real "done" (2026-08-07):** an audit before
   briefing tutors on the song shelves found the write side healthy — every lane
   keys on `song_id`, every lane records the tutor, all fully populated — and the
@@ -241,8 +260,9 @@ Canonical details live in [state ownership](./architecture/data/ownership.md),
   song link create or update the assignment.** Today it is a one-way street —
   the shelf feeds the note's picker and transcription prompt, but the note never
   writes back, and both linked notes so far name songs the student was never
-  assigned. Closing it makes note-taking the low-friction capture path Finn
-  wants, instead of shelf admin being the only way a song becomes a fact.
+  assigned. **Shipped 2026-08-07** — see "A practice note now puts songs on the
+  shelf" above. The remaining half of the lever is unchanged: the flow exists,
+  adoption does not.
 - **Catalogue titles need normalising, and the catalogue has no concept of a
   "work" (corrected 2026-08-07).** Dock of the Bay appears three times —
   `(Sittin' On) The Dock of the Bay` (Guitar, Grade 2), `(Sittin' On) The Dock Of

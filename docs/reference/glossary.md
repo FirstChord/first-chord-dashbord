@@ -259,6 +259,12 @@ What the school knows about teaching one song, gathered from every lane that rec
 
 Its point is reciprocity: the four song lanes were written and never read for their first month, so capturing well returned nothing. Two rules hold it honest — **no student identity leaves the builder** (counts and tutor words only), and it is **per song, never per tutor**, because ranking tutors on outcomes would poison the notes it depends on.
 
+## `assigned_via` (the two doors onto a shelf)
+
+Which route created a `Song_Assignments` row. `shelf` — a tutor assigned it in the Song Browser, where `assigned_by` comes from a verified per-student token. `note` — a tutor confirmed the song in a Practice Note, where the tutor name is self-attested because that route authenticates with a shared app secret. Blank means `shelf` (written before the column existed).
+
+It exists so the weaker guarantee stays legible rather than being blurred into the stronger one — the same instinct as [`songIdSource`](#on-the-go) labelling a confirmed join apart from an inferred one. The note door is create-only: it can add a song to a shelf but never restates a status a tutor set.
+
 ## Song request
 
 A tutor's one-tap "Request "X"" on a Song Browser search miss, appended as a `status='new'` row to the `Song_Requests` tab. The catalogue's intake queue — resolved during curation by the `add-song` skill (or a sheet edit), deliberately not via any admin page.

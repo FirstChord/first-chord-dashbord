@@ -34,6 +34,7 @@ import {
 } from '@/lib/admin/practice-note-delivery-claims.mjs';
 import { getPracticeNoteLogRows, upsertPracticeNoteLogRow } from '@/lib/admin/sheets';
 import { authenticatePracticeChatRequest, corsHeaders } from '@/lib/admin/practice-chat-auth.mjs';
+import { syncNoteSongsToShelf } from '@/lib/admin/practice-note-shelf-sync.mjs';
 import { getAdminStudentByMmsId } from '@/lib/admin/students';
 
 export async function OPTIONS(request) {
@@ -429,6 +430,18 @@ export async function POST(request) {
     const result = delivery.deliveryResult;
     const practiceNoteLog = delivery.finalResult;
     const deliveryTrackingFailed = practiceNoteLog?.ok === false;
+
+    // A confirmed song link is the tutor saying "we worked on this", so it
+    // earns a place on the shelf. This is where real song links arrive — both
+    // of the first two came through Level 2, not the snapshot route. Runs only
+    // once the delivery is recorded, and cannot fail it.
+    if (!deliveryTrackingFailed) {
+      await syncNoteSongsToShelf({
+        studentMmsId: studentId,
+        songIds: songLinks.songIds,
+        tutorName: selfAttestedTutor.actingTutor || snapshot.tutorName || snapshot.tutor || '',
+      });
+    }
 
     return Response.json({
       success: true,

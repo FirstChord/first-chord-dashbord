@@ -5,6 +5,7 @@ import {
   resolveUnlistedPracticeNoteSongs,
 } from '@/lib/admin/practice-chat-music-context.mjs';
 import { authenticatePracticeChatRequest, corsHeaders } from '@/lib/admin/practice-chat-auth.mjs';
+import { syncNoteSongsToShelf } from '@/lib/admin/practice-note-shelf-sync.mjs';
 
 export async function OPTIONS(request) {
   return new Response(null, {
@@ -52,6 +53,17 @@ export async function POST(request) {
     }
 
     const result = await appendPracticeNoteLogRow(note);
+
+    // A confirmed song link is the tutor saying "we worked on this", so it
+    // earns a place on the shelf. After the note is safely stored, and unable
+    // to fail it.
+    if (!result?.skipped) {
+      await syncNoteSongsToShelf({
+        studentMmsId: note.studentMmsId,
+        songIds: note.songIds,
+        tutorName: note.actingTutor || note.tutorName,
+      });
+    }
 
     return Response.json({
       success: true,

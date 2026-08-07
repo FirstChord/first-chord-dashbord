@@ -107,6 +107,33 @@ fourth step of the chip's cycle the school recorded **zero** of them in a month,
 and park — one tap, always visible — collected songs tutors had actually
 finished. Read pre-August 2026 `parked` rows accordingly; some of them mean done.
 
+## The note is the second door onto the shelf
+
+A song a tutor confirms in a Practice Note is added to that student's shelf
+(`syncNoteSongsToShelf`). The shelf already fed the note — a student's assigned
+songs are the note's song picker and its transcription prompt — but nothing fed
+back, so a tutor saying "we worked on this" produced a link no shelf reflected.
+Both of the first two linked notes named songs the student had never been
+assigned. Note-taking is the lower-friction capture path, so it has to be able
+to create the fact rather than only reference one.
+
+Three rules keep the weaker door from degrading the stronger one:
+
+- **Create only.** An existing assignment keeps its status, order and
+  provenance. Evidence gathered next to prose may add a row; it may never
+  restate a tutor's own status. A `done` song mentioned in a recap stays done.
+- **Confirmed catalogue ids only.** `unlisted_song_titles_json` must never reach
+  this path — those are explicitly observations, not Song facts.
+- **`assigned_via` records the door.** The Practice Chat routes authenticate
+  with a shared app secret rather than per-tutor identity, so `assigned_by` on a
+  `note` row is self-attested. The label keeps that visible in the data instead
+  of blurring it into rows written from a verified token.
+
+New rows are born `working` rather than `assigned` — the note is evidence the
+song was in front of the student that lesson — which also carries them into the
+next lesson's transcription prompt. The write is best-effort after the note is
+stored and can never fail it: the note is what the tutor spent a lesson making.
+
 Path instantiation is idempotent. Existing songs are adopted without resetting
 their status or order; new steps append in template order and receive `path_id`
 and `step_label`. A template is a starting sequence, not a synchronised syllabus.
@@ -177,10 +204,11 @@ card means "nobody has taught this yet", not "history is unavailable here".
 | Portal join and fail-safe read | `lib/songs/portal-songs.mjs` |
 | Requests and outcomes | `lib/songs/request-helpers.mjs`, `lib/songs/outcome-helpers.mjs` |
 | Cross-song teaching history | `lib/songs/teaching-history.mjs` |
+| Note-to-shelf sync (best-effort) | `lib/admin/practice-note-shelf-sync.mjs` |
 | Sheets adapter | `lib/admin/sheets/song-assignments.mjs` |
 | APIs | `app/api/song-assignments/`, `app/api/song-requests/`, `app/api/song-outcomes/`, `app/api/song-history/` |
 | Tutor and student UI | `components/tutor-dashboard/SongBrowser.js`, `components/student-portal/StudentSongs.js` |
-| Focused tests | `tests/admin/songs-catalogue.test.mjs`, `song-assignment-helpers`, `portal-songs`, `song-request-helpers`, `song-outcome-helpers`, `song-teaching-history`, `paths-signal` |
+| Focused tests | `tests/admin/songs-catalogue.test.mjs`, `song-assignment-helpers`, `portal-songs`, `song-request-helpers`, `song-outcome-helpers`, `song-teaching-history`, `note-song-assignments`, `paths-signal` |
 
 ## Change checklist
 
