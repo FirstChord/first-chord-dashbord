@@ -61,8 +61,14 @@ Gmail facts remains a cache/audit record, not provider truth.
 ## Migration trigger
 
 The fortnightly Sheets backup writes a `census.json` using
-`lib/admin/sheet-census.mjs`. Watched lanes are ranked by row growth. Execute a
-storage move only when evidence shows at least one:
+`lib/admin/sheet-census.mjs`. Watched lanes are ranked by row growth. **A lane
+that is not watched is counted but never ranked, so the trigger below cannot
+fire for it** — `Song_Status_Log` and `Song_Outcomes` sat in that blind spot
+until 2026-08-07 because they were created after the watch list. Add an
+append-only machine-written lane to `CENSUS_WATCH_TABS` when it is created, not
+when it is already large.
+
+Execute a storage move only when evidence shows at least one:
 
 - sustained growth that harms reads, quotas, or recovery;
 - a demonstrated race/lost-update problem;

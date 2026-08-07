@@ -81,3 +81,26 @@ test('the watched set stays scoped to event-heavy machine lanes', () => {
   assert.ok(!CENSUS_WATCH_TABS.includes('Tutor_Pay'));
   assert.ok(!CENSUS_WATCH_TABS.includes('Students'));
 });
+
+test('append-only song telemetry is watched, so its growth can trigger a move', () => {
+  // Both lanes are machine-written and unbounded — one row per status change,
+  // one per recorded outcome — but were created after the watch list and so
+  // were counted without ever being ranked. The migration rule in
+  // storage-boundary.md needs measured growth, which needs them here.
+  assert.ok(CENSUS_WATCH_TABS.includes('Song_Status_Log'));
+  assert.ok(CENSUS_WATCH_TABS.includes('Song_Outcomes'));
+  // The shelf itself is tutor-paced and human-inspectable, so it stays out.
+  assert.ok(!CENSUS_WATCH_TABS.includes('Song_Assignments'));
+});
+
+test('a watched song lane appears in the growth ranking', () => {
+  const before = { tabs: [{ tabName: 'Song_Outcomes', rowCount: 5 }] };
+  const after = { tabs: [{ tabName: 'Song_Outcomes', rowCount: 500 }] };
+  const census = buildSheetCensus({ currentManifest: after, previousManifest: before });
+
+  assert.deepEqual(
+    census.fastestGrowing.map((tab) => `${tab.tabName} +${tab.delta}`),
+    ['Song_Outcomes +495'],
+  );
+  assert.match(formatCensusSummary(census), /Song_Outcomes \+495/);
+});
