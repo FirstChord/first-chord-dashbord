@@ -6,6 +6,7 @@ import {
   ArrowDown,
   ArrowUp,
   Check,
+  CheckCircle2,
   ChevronDown,
   ChevronRight,
   ExternalLink,
@@ -13,6 +14,7 @@ import {
   Plus,
   RotateCcw,
   Search,
+  Users,
   X,
 } from 'lucide-react';
 import {
@@ -27,10 +29,21 @@ import {
   inferStudentLevel,
   inferStudentSeries,
 } from '@/lib/songs/shelf-helpers.mjs';
+import { summariseTeachingHistory } from '@/lib/songs/teaching-history.mjs';
 import { PATH_TEMPLATES } from '@/lib/config/path-templates.mjs';
 
-// Tapping the status chip walks this cycle; parking lives on its own control.
-const STATUS_CYCLE = ['assigned', 'working', 'ready', 'done'];
+// The chip tracks progress *through* a song; the two ways out of it (done,
+// parked) each get their own one-tap control. `done` used to be the fourth
+// step of this cycle and the school recorded none in a month of use, while
+// park — one tap, right there — collected eight songs a tutor had actually
+// finished. A four-tap exit that wraps back to `assigned` is not an exit.
+const STATUS_CYCLE = ['assigned', 'working', 'ready'];
+// The tutor's own words for the outcome chips, kept human on the way back out.
+const OUTCOME_LABELS = {
+  cruised: 'Cruised it',
+  about_right: 'About right',
+  battle: 'A battle',
+};
 const STATUS_STYLES = {
   assigned: 'bg-gray-100 text-gray-600',
   working: 'bg-amber-100 text-amber-800',
@@ -63,6 +76,10 @@ export default function SongBrowser({ student }) {
   // "Request this song" on a search miss → Song_Requests curation queue.
   const [requestedTerm, setRequestedTerm] = useState(null);
   const [requesting, setRequesting] = useState(false);
+  // What colleagues know about each song. School-wide and student-free, so it
+  // is fetched once per panel open rather than per student.
+  const [history, setHistory] = useState(null); // null = not loaded
+  const [historyOpenFor, setHistoryOpenFor] = useState(null); // songId
 
   const studentId = student?.mms_id || student?.ID || '';
   const token = student?.noteAccessToken || student?.note_access_token || '';
@@ -83,6 +100,7 @@ export default function SongBrowser({ student }) {
     setSearch('');
     setOutcomePrompt(null);
     setOutcomeNote('');
+    setHistoryOpenFor(null);
   }, [studentId]);
 
   useEffect(() => {
@@ -103,6 +121,29 @@ export default function SongBrowser({ student }) {
       cancelled = true;
     };
   }, [open, assignments, studentId, token]);
+
+  // Teaching history is about songs, not this student, so it survives a
+  // student switch: fetch once and keep it.
+  useEffect(() => {
+    if (!open || history !== null || !studentId || !token) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/song-history?student=${encodeURIComponent(studentId)}&token=${encodeURIComponent(token)}`
+        );
+        const data = await res.json();
+        if (!cancelled) setHistory(data.history || {});
+      } catch {
+        // Enrichment only — a song with no history reads the same as a failed
+        // fetch, and neither is worth an error message on the shelf.
+        if (!cancelled) setHistory({});
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, history, studentId, token]);
 
   const canAssign = Boolean(studentId && token);
   const loaded = assignments !== null;
@@ -347,6 +388,7 @@ export default function SongBrowser({ student }) {
                 <ul className="max-w-2xl space-y-1.5 border-t border-[#2F6B3D]/10 p-3">
                   {orderedAssignments.map((assignment, index) => {
                     const isParked = assignment.status === 'parked';
+                    const isDone = assignment.status === 'done';
                     const busy = pendingId === assignment.songId;
                     const prompting = outcomePrompt?.songId === assignment.songId;
                     return (
@@ -362,7 +404,7 @@ export default function SongBrowser({ student }) {
                         </span>
                         <button
                           type="button"
-                          disabled={busy || isParked}
+                          disabled={busy || isParked || isDone}
                           onClick={() => cycleStatus(assignment)}
                           title="Tap to change status"
                           className={`rounded-full px-2 py-0.5 text-xs font-medium disabled:opacity-50 ${STATUS_STYLES[assignment.status] || STATUS_STYLES.assigned}`}
@@ -386,6 +428,25 @@ export default function SongBrowser({ student }) {
                           aria-label="Move down"
                         >
                           <ArrowDown className="h-3.5 w-3.5" />
+                        </button>
+                        {/* Finishing a song is its own act, one tap, next to
+                            parking — and it opens the same "how was it?" prompt,
+                            which is what feeds every other tutor's view of it. */}
+                        <button
+                          type="button"
+                          disabled={busy || isParked}
+                          onClick={() =>
+                            setStatus(assignment.songId, isDone ? 'assigned' : 'done')
+                          }
+                          className={`rounded p-1 disabled:opacity-30 ${
+                            isDone
+                              ? 'text-[#2F6B3D] hover:bg-green-100'
+                              : 'text-gray-400 hover:bg-green-100 hover:text-[#2F6B3D]'
+                          }`}
+                          aria-label={isDone ? 'Reopen' : 'Mark done'}
+                          title={isDone ? 'Reopen' : 'Mark done'}
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5" />
                         </button>
                         <button
                           type="button"
@@ -425,11 +486,7 @@ export default function SongBrowser({ student }) {
                             </button>
                           </div>
                           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                            {[
-                              ['cruised', 'Cruised it'],
-                              ['about_right', 'About right'],
-                              ['battle', 'A battle'],
-                            ].map(([value, label]) => (
+                            {Object.entries(OUTCOME_LABELS).map(([value, label]) => (
                               <button
                                 key={value}
                                 type="button"
@@ -560,6 +617,9 @@ export default function SongBrowser({ student }) {
               {shelfSongs.map((song) => {
                 const isAssigned = assignedSongIds.has(song.songId);
                 const busy = pendingId === song.songId;
+                const songHistory = history?.[song.songId] || null;
+                const historyLine = summariseTeachingHistory(songHistory);
+                const historyOpen = historyOpenFor === song.songId;
                 return (
                   <div
                     key={song.songId}
@@ -601,6 +661,53 @@ export default function SongBrowser({ student }) {
                         {song.level}
                         {(song.contentType || 'song') !== 'song' ? ` · ${song.contentType}` : ''}
                       </p>
+                    )}
+                    {/* What colleagues know. Only appears when someone has
+                        actually taught it, so a quiet card means "no history
+                        yet" rather than "history not offered here". */}
+                    {historyLine && (
+                      <div className="mt-1.5">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setHistoryOpenFor(historyOpen ? null : song.songId)
+                          }
+                          className="inline-flex items-start gap-1 text-left text-xs text-gray-500 hover:text-[#2F6B3D]"
+                          aria-expanded={historyOpen}
+                        >
+                          <Users className="mt-0.5 h-3 w-3 shrink-0" />
+                          <span>{historyLine}</span>
+                        </button>
+                        {historyOpen && (
+                          <div className="mt-1.5 space-y-1.5 rounded border border-gray-100 bg-gray-50/80 p-2">
+                            {songHistory.outcomes.length === 0 && (
+                              <p className="text-xs text-gray-400">
+                                No one has recorded how it went yet.
+                              </p>
+                            )}
+                            {songHistory.outcomes.map((entry) => (
+                              <p key={entry.recordedAt + entry.tutor} className="text-xs leading-snug text-gray-600">
+                                {entry.outcome && (
+                                  <span className="font-medium text-gray-700">
+                                    {OUTCOME_LABELS[entry.outcome] || entry.outcome}
+                                    {entry.note ? ' · ' : ''}
+                                  </span>
+                                )}
+                                {entry.note}
+                                {entry.tutor && (
+                                  <span className="text-gray-400"> — {entry.tutor}</span>
+                                )}
+                              </p>
+                            ))}
+                            {songHistory.noteMentions > 0 && (
+                              <p className="text-xs text-gray-400">
+                                In {songHistory.noteMentions} practice note
+                                {songHistory.noteMentions === 1 ? '' : 's'}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     )}
                     <div className="mt-2">
                       {isAssigned ? (

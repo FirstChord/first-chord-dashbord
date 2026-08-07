@@ -26,6 +26,29 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
+- **Song teaching history, and a real "done" (2026-08-07):** an audit before
+  briefing tutors on the song shelves found the write side healthy — every lane
+  keys on `song_id`, every lane records the tutor, all fully populated — and the
+  read side absent: `Song_Status_Log` and `Song_Outcomes` had **no consumers at
+  all**, and the one cross-student song aggregation drops the tutor. A tutor who
+  parked eight songs and wrote three careful outcome notes on 27 July got nothing
+  back, and nobody has recorded an outcome since. `buildSongTeachingHistory`
+  (`lib/songs/teaching-history.mjs`, `GET /api/song-history`) now gathers all
+  three lanes into one answer per song — who has taught it, to how many students,
+  what they said — on the Song Browser card at the moment of choosing. 33 songs
+  carried history on day one from rows already sitting there. Two boundaries are
+  structural, not stylistic: **no student identity leaves the builder** (the
+  output has nowhere to put one), and it aggregates **per song, never per
+  tutor** — `docs/policies/data-protection.md` forbids ranking tutors on
+  outcomes, and doing so would poison the candour the notes depend on. Also:
+  the school had recorded **zero** songs `done` in a month against 12 `parked`,
+  because park was one tap and done was the fourth step of a chip cycle that
+  wrapped back to `assigned`. Finishing and shelving are now separate one-tap
+  acts and the chip walks progress only — read pre-August `parked` rows knowing
+  some mean done. Next lever, not yet built: a note's song link is still a dead
+  end (both linked notes name songs the student was never assigned), so the
+  lower-friction capture Finn wants — evidence from note-taking — does not
+  reach the shelf.
 - **"On the go" names songs from the catalogue (2026-08-06):** the tutor card
   listed one piece several times — *Who Sold the World*, *Man Who Sold* and *Who
   Solved the World* were all The Man Who Sold the World, each with its own lesson
@@ -165,98 +188,7 @@ deliberate school-improvement prompt.
   manifests with the same scope; icons made before this correction must be
   removed and installed again because iOS stores launch metadata at install
   time.
-- **Blind Stripe foundation test (2026-08-03):** finance now locks one
-  first-write-wins monthly forecast from dashboard-owned roster, price,
-  expectation, schedule weekday and structured pause evidence before the Stripe
-  cache job is allowed to make any provider request. A failed forecast write
-  blocks the reveal rather than quietly turning it into a retrospective
-  estimate. The later collection cache preserves a compact per-student invoice
-  breakdown, preferring subscription identity and leaving ambiguous customer-
-  only money unmatched. `/admin/finance` therefore shows both the headline net
-  gap and gross student-level error: two opposite student mistakes can no longer
-  cancel into a reassuring total. Existing aggregate calibration remains
-  labelled legacy context; the first scored blind result appears after the
-  first locked month closes. This is forecast/reconciliation only—Stripe remains
-  provider truth and no payment action was added. A Playwright follow-up made
-  that proof the Finance front door: Overview now contains only the Stripe
-  prediction and the three real finance work links. Run-rate, break-even,
-  forecasts, warnings and history remain under **Evidence**; the seasonal
-  scenario planner is no longer advertised until real monthly results show that
-  it is decision-useful rather than merely plausible. The Overview server path
-  now reads only the forecast and collection lanes; it no longer fetches the
-  roster, schedules, planning, expenses and snapshot model merely to hide them.
-  The next forecast method is date-aware: a student paused when the month is
-  locked stays at zero only until the end of their structured pause window, then
-  their later scheduled lessons count as billable again. Missing return dates
-  remain conservatively zero and stopped students never revive. The original
-  August V1 row remains immutable evidence rather than being rewritten after
-  this correction. Stripe collection breakdowns now retain compact paid
-  day-of-month evidence so school-holiday effects can be measured later;
-  council holidays are context, not an automatic revenue deduction.
-- **Executable finance cron contracts (2026-08-03):** the finance snapshot and
-  Stripe cache HTTP boundaries now live in framework-free handler factories
-  exercised with fake providers. Tests prove missing/bad secrets cause no work,
-  monthly requests reach the idempotent skip, weekly requests append, Stripe
-  refreshes both caches against one fixed capture time, and provider errors
-  return failure without being mistaken for success. Next route files now only
-  wire those tested boundaries to the real Sheets and Stripe adapters.
-- **Zero-warning maintenance feedback (2026-08-03):** all 38 accumulated lint
-  warnings are resolved, including six Hook dependency warnings that could hold
-  stale tutor, schedule, or inbox closures. Lint now rejects the next warning
-  instead of letting background noise regrow. The unconsumed, authentication-
-  free Google Sheets fallback prototype and its credential-printing test script
-  are removed, Next.js production tracing is pinned to this repository, and
-  grouped weekly dependency updates cover both the root app and the separately
-  installed WhatsApp bridge.
-- **Abandoned Practice Chat claim recovery (2026-08-03):** a request that
-  crashed after claiming a delivery could leave the PostgreSQL row `claimed`
-  forever. The matching tutor retry now leaves fresh claims alone, but after a
-  conservative 15-minute window atomically parks the old claim as
-  `tracking_failed`, records a manual-follow-up audit/issue in Sheets, and
-  returns an explicit unknown-status conflict without calling MMS or Gmail.
-  Recovery therefore makes the stuck work visible without turning uncertainty
-  into a duplicate attendance update or parent email.
-- **Concurrent write collision reduction (2026-08-03):** `Students` mutations
-  now bypass the Sheets read cache before resolving an MMS ID. Normal student
-  edits send only the specifically changed cells instead of rewriting every
-  field in the row, payment-expectation batches locate their targets from a
-  fresh read, and archive/delete re-locates the student after the archive append
-  before deleting a row. Sheets is still last-write-wins rather than
-  transactional, but unrelated manual/admin edits no longer get copied back
-  from a stale full-row snapshot. Production registry writes now handle a
-  GitHub SHA conflict by fetching the latest file and reapplying the requested
-  student mutation; the previous retry paired the new SHA with stale contents
-  and could silently erase the concurrent commit.
-- **Production dependency and provider-liveness hardening (2026-08-03):** the
-  production npm audit moved from 14 advisories (one critical, seven high) to
-  zero without changing framework/auth majors. Two unused production packages
-  were removed, Next 15 and NextAuth 4 moved to patched releases, compatible
-  transitive fixes are pinned and build-tested, and the separately installed
-  WhatsApp bridge tree is also clear. Stripe and GitHub requests now share a
-  bounded 30-second abort path, so provider stalls fail explicitly instead of
-  holding an admin render, registry update, or scheduled refresh indefinitely.
-- **Agent readiness and finance measurement resilience (2026-08-03):** current
-  source now produces one deterministic module/export/test index instead of
-  freezing repository facts into model weights or a hand-maintained guide.
-  Module descriptions now enter that index only through an explicit
-  `@fileoverview`; ordinary comments on constants and implementation details are
-  blank and cannot affect query ranking. The generated grid reports overview
-  coverage so gaps can be improved deliberately without presenting heuristic
-  guesses as facts. Find now states its primary scope and file-body limitation,
-  and exact path/export matches elsewhere in the wider source graph appear as a
-  labelled fallback with consumers/tests. Zero primary matches therefore cannot
-  silently imply that a component or helper does not exist.
-  Narrow search and conservative impact queries cover every Next route handler,
-  and the matching route-security census exposed three obsolete scaffold routes
-  that have now been removed. CI blocks map drift and unsupported export syntax;
-  static evidence narrows inspection but does not prove runtime reachability.
-  The same health pass traced July's missing monthly Stripe comparison to a
-  workflow failure that was fixed but never retried. Monthly finance baselines
-  now retry idempotently on days 1–7, Stripe collections refresh on the first as
-  well as Mondays, and the overview distinguishes workflow cadence from actual
-  data completeness. A genuinely missed baseline is never invented: comparison
-  falls back visibly to the month's earliest weekly snapshot, then to a labelled
-  current estimate.
+
 ## Current operating contracts
 
 | Area | Current boundary |
@@ -305,13 +237,30 @@ Canonical details live in [state ownership](./architecture/data/ownership.md),
   never can — cross-student repertoire counts, time-on-piece per grade, direct
   Soundslice/level links. Improving capture in Practice Chat is worth more than
   any further work on the matcher, which should be retired once confirmed links
-  cover most recent notes.
-- **Catalogue duplicates block "On the go" merging.** Dock of the Bay is in the
-  catalogue three times — `(Sittin' On) The Dock of the Bay`, `(Sittin' On) The
-  Dock Of The Bay`, `Sitting on the Dock of The Bay` — so the matcher sees three
-  different names, correctly refuses to pick one, and one student still sees the
-  song twice. Deduplicating is a catalogue edit, and it matters beyond this
-  surface (song assignment sees the same three entries).
+  cover most recent notes. **The next concrete move (2026-08-07): let a note's
+  song link create or update the assignment.** Today it is a one-way street —
+  the shelf feeds the note's picker and transcription prompt, but the note never
+  writes back, and both linked notes so far name songs the student was never
+  assigned. Closing it makes note-taking the low-friction capture path Finn
+  wants, instead of shelf admin being the only way a song becomes a fact.
+- **Catalogue titles need normalising, and the catalogue has no concept of a
+  "work" (corrected 2026-08-07).** Dock of the Bay appears three times —
+  `(Sittin' On) The Dock of the Bay` (Guitar, Grade 2), `(Sittin' On) The Dock Of
+  The Bay` (Bass, Grade 1), `Sitting on the Dock of The Bay` (Electric Guitar,
+  Grade 3). These are **not duplicates to delete**: they are three real
+  arrangements of one song, and an earlier note here calling for deduplication
+  was wrong. What breaks the matcher is that one work is spelled three ways, so
+  it sees three names and correctly refuses to pick. The fix is title
+  normalisation, not deletion. Across the catalogue, 13 titles repeat and almost
+  all are this same legitimate pattern (Stand By Me guitar + electric, Come as
+  You Are, Thinking Out Loud); the genuinely ambiguous ones are generic exercise
+  labels — `Sight Reading` ×3, `Scales` ×2, `Chords` ×2, `Improvisation` ×2,
+  `Riff Exercise` ×2 — which are not songs and should probably never have been
+  matchable by title at all. The structural gap underneath: a song is currently
+  an instrument-specific arrangement with no parent work, so teaching history
+  for Dock of the Bay is split three ways and a First Chord path cannot say "this
+  song, on whichever instrument". Worth settling before the FC curriculum paths
+  are built on top of it.
 - **Notes access lifecycle, not notes brute force.** The realistic way practice
   notes reach the wrong person is that the code lives in the WhatsApp group
   description, so anyone ever in that group keeps access until it is reset — a

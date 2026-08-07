@@ -251,7 +251,13 @@ The explicit, reviewed list (in `tests/admin/songs-catalogue.test.mjs`) of instr
 
 ## Song outcome
 
-The tutor's optional one-tap answer ("How was it for them?" — *cruised it / about right / a battle*, plus an optional note) when a song assignment reaches `done` or gets parked, appended to the `Song_Outcomes` tab. Opinions with a timestamp, never workflow state — `Song_Assignments.status` stays the only current truth. Sibling tab `Song_Status_Log` records every status transition automatically ("free data before asked data"). Both exist to be distilled later into catalogue `tutorNote`s and path ordering, not to be dashboarded.
+The tutor's optional one-tap answer ("How was it for them?" — *cruised it / about right / a battle*, plus an optional note) when a song assignment reaches `done` or gets parked, appended to the `Song_Outcomes` tab. Opinions with a timestamp, never workflow state — `Song_Assignments.status` stays the only current truth. Sibling tab `Song_Status_Log` records every status transition automatically ("free data before asked data"). Distilled slowly into catalogue `tutorNote`s and path ordering; read live by [song teaching history](#song-teaching-history).
+
+## Song teaching history
+
+What the school knows about teaching one song, gathered from every lane that records it — who has taught it, to how many students, what they said in an outcome note, and how often it appears in practice notes. Built by `buildSongTeachingHistory` and shown on the Song Browser card, so a tutor choosing a song sees colleagues' experience of it first.
+
+Its point is reciprocity: the four song lanes were written and never read for their first month, so capturing well returned nothing. Two rules hold it honest — **no student identity leaves the builder** (counts and tutor words only), and it is **per song, never per tutor**, because ranking tutors on outcomes would poison the notes it depends on.
 
 ## Song request
 

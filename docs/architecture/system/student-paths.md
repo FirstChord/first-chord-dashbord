@@ -100,6 +100,13 @@ assigned | working | ready | done | parked
 Parked rows remain as workflow history but sit outside active ordering. Reordering
 normalises a student's sequence and skips parked neighbours.
 
+Finishing and shelving are separate acts and each gets its own one-tap control.
+The status chip walks `assigned → working → ready` only; `done` and `parked` are
+the two exits. This is a correction, not a preference: while `done` was the
+fourth step of the chip's cycle the school recorded **zero** of them in a month,
+and park — one tap, always visible — collected songs tutors had actually
+finished. Read pre-August 2026 `parked` rows accordingly; some of them mean done.
+
 Path instantiation is idempotent. Existing songs are adopted without resetting
 their status or order; new steps append in template order and receive `path_id`
 and `step_label`. A template is a starting sequence, not a synchronised syllabus.
@@ -136,6 +143,30 @@ status durations can inform termly catalogue-note and path-order changes. Use th
 [parked distillation plan](../../plans/parked/song-loop-distillation.md); do not
 turn raw telemetry directly into canonical teaching guidance.
 
+## Teaching history: the read side of the loop
+
+`buildSongTeachingHistory` (`lib/songs/teaching-history.mjs`) reduces
+`Song_Assignments`, `Song_Outcomes` and `Practice_Notes_Log` song links to one
+answer per song — who has taught it, to how many students, and what they said —
+served by `GET /api/song-history` and shown on the Song Browser card.
+
+It exists because until August 2026 all four song lanes were **written and never
+read**. A tutor who parked eight songs and wrote three careful outcome notes got
+nothing back, which is the whole reason capture stayed at three rows. Any new
+song telemetry should reach this function or justify why it is worth collecting.
+
+Two boundaries are structural:
+
+- **No student leaves the builder.** Outcome notes are written about a real child
+  in a real lesson, so the output has counts and tutor words and nowhere to put a
+  student. Callers cannot opt back in. Test students are excluded by the route.
+- **Per song only.** `docs/policies/data-protection.md` forbids turning
+  tutor-linked outcomes into performance ranking, so tutors are ordered by
+  experience *of that song* (who to ask) and never totalled across songs.
+
+A song with no history renders nothing rather than an empty state, so a quiet
+card means "nobody has taught this yet", not "history is unavailable here".
+
 ## Code map
 
 | Responsibility | Files |
@@ -145,10 +176,11 @@ turn raw telemetry directly into canonical teaching guidance.
 | Assignment and path rules | `lib/songs/assignment-helpers.mjs` |
 | Portal join and fail-safe read | `lib/songs/portal-songs.mjs` |
 | Requests and outcomes | `lib/songs/request-helpers.mjs`, `lib/songs/outcome-helpers.mjs` |
+| Cross-song teaching history | `lib/songs/teaching-history.mjs` |
 | Sheets adapter | `lib/admin/sheets/song-assignments.mjs` |
-| APIs | `app/api/song-assignments/`, `app/api/song-requests/`, `app/api/song-outcomes/` |
+| APIs | `app/api/song-assignments/`, `app/api/song-requests/`, `app/api/song-outcomes/`, `app/api/song-history/` |
 | Tutor and student UI | `components/tutor-dashboard/SongBrowser.js`, `components/student-portal/StudentSongs.js` |
-| Focused tests | `tests/admin/songs-catalogue.test.mjs`, `song-assignment-helpers`, `portal-songs`, `song-request-helpers`, `song-outcome-helpers`, `paths-signal` |
+| Focused tests | `tests/admin/songs-catalogue.test.mjs`, `song-assignment-helpers`, `portal-songs`, `song-request-helpers`, `song-outcome-helpers`, `song-teaching-history`, `paths-signal` |
 
 ## Change checklist
 
