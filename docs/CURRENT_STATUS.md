@@ -26,6 +26,24 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
+- **Bass and Electric Guitar have skills (2026-08-08):** both shelves went from
+  **0% to 93% and 90%** — 92 songs tagged, overall coverage 41% → 71%.
+  `INSTRUMENTS_WITHOUT_SKILLS` is now empty. Nothing was inferred by rule: each
+  song's tags were read off **its own `tutorNote`**, which for these two shelves
+  is unusually specific ("syncopated sixteenth-note funk with muting", "ghost
+  notes, sit behind the beat"). The 9 songs left untagged are exactly the 9 with
+  no tutor note — Rockschool Originals whose scores nobody here has read.
+  Inventing what they teach is the same error as inventing an artist.
+  18 skills were added for the two instruments; `palm muting` maps to the
+  existing `muting` and `chord stabs` to `staccato` + `chord_changes`, because a
+  skill earns its own id only when a tutor would work on it separately.
+  **Why the gap existed, since it will recur:** the Soundslice ingestion
+  pipeline emits `tags: []` and `tutorNote: ''` for every song — RSL supplies
+  title, artist, level and scorehash, *never* teaching data. Guitar and Piano
+  were seeded entry-by-entry with tags hand-written inline; Bass and Electric
+  were bulk-seeded (41 and 48 entries) with no tags at all, and the later
+  teaching-notes pass filled `tutorNote` without backfilling `tags`. Any future
+  bulk-seeded shelf arrives untagged by default.
 - **One tutor is one tutor (2026-08-07):** teaching history showed *"Calum,
   Calum Steel +1 · 2 students"* — the same person twice. Two causes, both fixed.
   The note-to-shelf sync wrote `acting_tutor` into `assigned_by`, but that is a
@@ -48,18 +66,18 @@ deliberate school-improvement prompt.
   category. `lib/config/song-skills.mjs` splits teaching vocabulary from filing
   vocabulary and maps the existing tags onto ~30 skills in five areas, so **no
   catalogue entry had to change**; an explicit `skills` list still wins where
-  the tags are wrong. Skills show on the Song Browser card. Coverage is 129 of
-  312 and **partial by design**: the only structural inference is
-  `contentType: 'scale'` → scales, because guessing skills from a title or
-  tutor note would manufacture confident wrong data at catalogue scale.
+  the tags are wrong. Skills show on the Song Browser card. **No automated
+  inference** derives skills from prose: the only structural rule is
+  `contentType: 'scale'` → scales, because a rule guessing from titles or notes
+  would manufacture confident wrong data at catalogue scale. Curation is a
+  different act and is allowed — see the tagging pass below.
   `node scripts/song-skills-report.mjs` lists the gaps with each tutor note
   alongside, so a human fills them fast. A test fails when a new tag is neither
   a skill nor declared filing. **Coverage must be judged per instrument, not as
   an average:** this shipped at 41% overall with **Bass and Electric Guitar at
-  zero** (Guitar 91%, Piano 50%) — tagging was done instrument by instrument and
-  those two were never started, so their tutors see a blank row on every card.
-  The total hid it and the first test measured the total.
-  `INSTRUMENTS_WITHOUT_SKILLS` now names them and fails in both directions. This is the layer any later difficulty-rating or
+  zero** (Guitar 91%, Piano 50%), and the total hid it because the first test
+  measured the total. `INSTRUMENTS_WITHOUT_SKILLS` fails in both directions.
+  This is the layer any later difficulty-rating or
   sequencing work needs — "this student keeps struggling with syncopation" is
   unanswerable while the unit of knowledge is the song.
   **Reads:** `prefetchSheetValues(ranges)` fetches several tabs in one

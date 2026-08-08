@@ -126,7 +126,12 @@ test('the real catalogue produces skills for a meaningful share of songs', () =>
 // stays loud. **Remove an instrument from this set as soon as it is tagged;**
 // the test below fails either way, whether a listed instrument is still empty
 // when it should not be or has quietly been fixed without updating this.
-const INSTRUMENTS_WITHOUT_SKILLS = new Set(['Bass', 'Electric Guitar']);
+//
+// Emptied 2026-08-08: Bass (93%) and Electric Guitar (90%) were tagged from
+// their own tutor notes. The set stays because the next bulk-seeded shelf will
+// arrive in exactly the same state — the pipeline emits `tags: []` for every
+// song it ingests, so an untagged shelf is the default, not an accident.
+const INSTRUMENTS_WITHOUT_SKILLS = new Set([]);
 
 test('no instrument silently shows a blank skill layer to its tutors', () => {
   // A healthy total hides an empty shelf: this shipped at 41% overall with bass

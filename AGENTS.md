@@ -124,6 +124,14 @@ Test names in the table refer to `tests/admin/*.test.mjs`.
   `lib/admin/pause-forecast.mjs`. Copy changes can affect finance forecasts.
 - Sheets updates are generally last-write-wins. Do not assume transactional
   claims or safe concurrent mutation.
+- Practice Chat is a **narrow side panel next to the dashboard**, roughly 520px,
+  on a desktop screen. It installs as a PWA and its live URL still says `pwa`,
+  but no tutor opens it on a phone — design and check its screens at side-panel
+  width, not mobile. Its code is a separate repo outside this tree:
+  `~/Desktop/Tools:Games/FC Admin Tools/practice-chat/` (GitHub `practicechatpwa`,
+  Firebase `practice-chat-pwa.web.app`; that domain is pinned in
+  `lib/admin/practice-chat-auth.mjs` and `components/navigation/QuickLinks.js`
+  and must not be renamed).
 - Practice Chat Level 2 is a documented trusted-tutor exception: the selected
   tutor is self-attested and must match the student's one clear recorded tutor
   assignment; the final screen must name the server-derived recipient and
