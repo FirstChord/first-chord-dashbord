@@ -26,6 +26,23 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
+- **Acoustic guitar re-tagged (2026-08-08):** 41 of 56 songs gained a skill their
+  own `tutorNote` already named; guitar is now **100% covered, 26 distinct skills
+  (was 21)**, catalogue 72%. Nothing was removed and no note was reinterpreted —
+  these were words sitting in plain text that the original pass did not tag.
+  `Steady pulse` and `Evenness` were the big misses ("steady", "even", "without
+  rushing", "lock with the backing track" appear constantly); River Man is in
+  **5/4** and nothing recorded it. **Guitar's notes are shorter than bass and
+  electric's** (median 68 chars vs 95 and 93), so its tags were never wrong,
+  there was simply less written down — the shelf looked narrow because it was
+  *described* briefly, not taught narrowly.
+  **What the remaining blanks do and do not mean:** re-tagging can only surface
+  what someone wrote down. Guitar still shows no `Legato`, `Staccato`, `Note
+  reading` or `Sight reading`, and that is a documentation gap, not proof the
+  repertoire lacks them. **Do not commission songs against blank cells in the
+  skill × level matrix** — its trustworthy findings are the structural ones that
+  hold regardless of tag quality: bass Debut is one song, Grade 6 is thin on
+  every shelf, and no reading strand exists for guitar or electric.
 - **Bass and Electric Guitar have skills (2026-08-08):** both shelves went from
   **0% to 93% and 90%** — 92 songs tagged, overall coverage 41% → 71%.
   `INSTRUMENTS_WITHOUT_SKILLS` is now empty. Nothing was inferred by rule: each
