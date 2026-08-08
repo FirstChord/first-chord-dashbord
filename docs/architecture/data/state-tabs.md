@@ -123,7 +123,7 @@ Some source formats are fragile because they come from human-edited external sys
   as a stable song join.
 - **Practice Note markup.** The note stored in `Practice_Notes_Log.raw_note_text`
   is plain text carrying three markers: `**bold**`, `_italic_`, and `- ` at the
-  start of a line for a bullet. They are produced by the Practice Chat PWA
+  start of a line for a bullet. They are produced by Practice Chat
   (`public/src/note-markup.js`) and understood by every renderer here
   (`lib/notes-markup.mjs`, used by the parent email and the MMS
   `StudentNote`, plus `components/shared/notes-formatting.js` for the portal).

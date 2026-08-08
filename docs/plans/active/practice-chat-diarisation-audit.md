@@ -30,7 +30,7 @@ Practice Chat spans **three repos**; only the API side lives in this one.
 Tutor dashboard (this repo)          →  builds the launch URL
   components/navigation/QuickLinks.js
         ↓  studentId, studentName, tutor, dashboardBaseUrl, practiceChatSecret
-Practice Chat PWA (practicechatpwa)  →  Firebase, practice-chat-pwa.web.app
+Practice Chat (repo `practicechatpwa`) →  Firebase, practice-chat-pwa.web.app
   app.js · asr-client.js · text-processor.js · practice-note-sync.js
         ↓  GET /api-key                    ↓  POST /api/practice-notes[/mms-test]
 Relay (enhanced-music-lesson-notes)     Dashboard API (this repo)
@@ -89,7 +89,7 @@ Two things worth stating plainly:
 
 ## 2. Relevant files and functions
 
-**PWA** (`~/Desktop/Tools:Games/FC Admin Tools/Practice Chat PWA/`)
+**PWA** (`~/Desktop/Tools:Games/FC Admin Tools/practice-chat/`)
 
 | File | What matters |
 |---|---|
