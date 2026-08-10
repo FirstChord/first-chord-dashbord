@@ -1,18 +1,15 @@
-import { ExternalLink, Copy, ExternalLink as LinkIcon, Check } from 'lucide-react';
+import Image from 'next/image';
+import { ExternalLink } from 'lucide-react';
 import { generateSmartUrls } from '@/lib/config';
 import { resolvePracticeChatAsrModel } from '@/lib/config/practice-chat-asr.mjs';
-import { useState } from 'react';
-import {
-  SheetMusicIcon,
-  ScoreReadersIcon,
-  ShootingStarIcon,
-  MountainFlagIcon,
-  PianoStairsIcon,
-} from '@/components/shared/FCIcons';
 
 const CANONICAL_PRACTICE_CHAT_DASHBOARD_BASE_URL =
   process.env.NEXT_PUBLIC_PRACTICE_CHAT_DASHBOARD_BASE_URL
   || 'https://first-chord-dashbord-production.up.railway.app';
+
+// Identifies the Practice Chat row without matching on its visible label, which
+// is copy and changes.
+const PRACTICE_CHAT_LINK_ID = 'practice-chat';
 
 function isLocalDashboardHost(hostname = '') {
   return ['localhost', '127.0.0.1'].includes(hostname);
@@ -52,10 +49,6 @@ function buildPracticeChatUrl(student, activeTutor = '') {
 }
 
 export default function QuickLinks({ student, activeTutor = '', onOpenPracticeChat }) {
-  const [showCredentials, setShowCredentials] = useState(false);
-  const [currentCredentials, setCurrentCredentials] = useState(null);
-  const [copySuccess, setCopySuccess] = useState(false);
-
   // Early return if no student is provided
   if (!student) {
     return (
@@ -68,47 +61,51 @@ export default function QuickLinks({ student, activeTutor = '', onOpenPracticeCh
 
   const smartUrls = {
     soundslice: generateSmartUrls.soundslice(student),
-    thetaMusic: generateSmartUrls.thetaMusic(student),
-    myMusicStaff: generateSmartUrls.myMusicStaff(student)
   };
 
   const links = [
     {
       name: "Soundslice Folder",
-      icon: <SheetMusicIcon className="h-10 w-10" />,
+      icon: (
+        <Image
+          src="/soundslice-flag.png"
+          alt=""
+          width={138}
+          height={160}
+          className="h-14 w-14 object-contain"
+        />
+      ),
       url: smartUrls.soundslice.url,
       instruction: smartUrls.soundslice.instruction,
-      requiresAuth: smartUrls.soundslice.requiresAuth,
     },
     {
-      name: "Practice Chat!",
-      icon: <ScoreReadersIcon className="h-10 w-10" />,
+      id: PRACTICE_CHAT_LINK_ID,
+      name: "Take Attendance + Practice Chat!",
+      icon: (
+        <Image
+          src="/practice-chat-readers.png"
+          alt=""
+          width={152}
+          height={160}
+          className="h-14 w-14 object-contain"
+        />
+      ),
       url: buildPracticeChatUrl(student, activeTutor),
-      instruction: "For taking homework notes",
-      requiresAuth: false,
-    },
-    {
-      name: "Theta Music Games",
-      icon: <ShootingStarIcon className="h-10 w-10" />,
-      url: smartUrls.thetaMusic.url,
-      instruction: smartUrls.thetaMusic.instruction,
-      requiresAuth: smartUrls.thetaMusic.requiresAuth,
-      credentials: smartUrls.thetaMusic.credentials,
-      autoLogin: smartUrls.thetaMusic.autoLogin,
-    },
-    {
-      name: "MyMusicStaff Profile",
-      icon: <MountainFlagIcon className="h-10 w-10" />,
-      url: smartUrls.myMusicStaff.url,
-      instruction: smartUrls.myMusicStaff.instruction,
-      requiresAuth: smartUrls.myMusicStaff.requiresAuth,
+      instruction: "Mark the register and take homework notes",
     },
     ...(student.instrument === 'Piano' ? [{
       name: "Piano Handbook",
-      icon: <PianoStairsIcon className="h-10 w-10" />,
+      icon: (
+        <Image
+          src="/piano-handbook.png"
+          alt=""
+          width={174}
+          height={160}
+          className="h-14 w-14 object-contain"
+        />
+      ),
       url: "https://canva.link/fkczhbdl8kv75d7",
       instruction: "Tutor resource for piano lessons",
-      requiresAuth: false,
     }] : [])
     // Seasonal show link. Keep hidden until the next show; update copy/form URL before re-enabling.
     /*
@@ -123,169 +120,36 @@ export default function QuickLinks({ student, activeTutor = '', onOpenPracticeCh
     }
     */
   ];
-  
-  const handleThetaMusicClick = (e, link) => {
-    if (link.autoLogin && link.credentials) {
-      e.preventDefault();
-      setCurrentCredentials({
-        username: link.credentials.username,
-        password: link.credentials.password,
-        url: link.url,
-        serviceName: link.name
-      });
-      setShowCredentials(true);
-    }
-  };
-
-  const copyToClipboard = async (text, type) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopySuccess(true);
-      console.log(`${type} copied to clipboard`);
-      // Reset the success state after 2 seconds
-      setTimeout(() => setCopySuccess(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy: ', err);
-      // Fallback for older browsers
-      const textArea = document.createElement('textarea');
-      textArea.value = text;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-      setCopySuccess(true);
-      setTimeout(() => setCopySuccess(false), 2000);
-    }
-  };
-
-  const openLoginPage = () => {
-    // First, try to logout by opening the logout URL, then redirect to login
-    const logoutUrl = 'https://trainer.thetamusic.com/en/user/logout';
-    const loginUrl = currentCredentials.url;
-    
-    // Open logout URL first
-    const logoutTab = window.open(logoutUrl, '_blank');
-    
-    // After a short delay, redirect the same tab to the login page
-    setTimeout(() => {
-      if (logoutTab && !logoutTab.closed) {
-        logoutTab.location.href = loginUrl;
-      }
-    }, 1500); // 1.5 second delay to allow logout to process
-    
-    setShowCredentials(false);
-  };
 
   return (
-    <>
-      <div className="space-y-3">
-        <h3 className="font-semibold text-gray-800 mb-3">Quick Access</h3>
-        {links.map((link) => {
-          const isPracticeChat = link.name === "Practice Chat!";
-          return (
-          <a
-            key={link.name}
-            href={link.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={
-              isPracticeChat && onOpenPracticeChat
-                ? (e) => {
-                    e.preventDefault();
-                    onOpenPracticeChat(link.url, student.name || 'Practice Chat');
-                  }
-                : link.name === "Theta Music Games"
-                  ? (e) => handleThetaMusicClick(e, link)
-                  : undefined
-            }
-            className="flex items-center gap-3 p-4 bg-white rounded-lg border border-[#2F6B3D]/25 hover:border-[#2F6B3D]/50 hover:shadow-md transition-all group"
-          >
-            <div className="shrink-0">
-              {link.icon}
-            </div>
-            <div className="flex-1">
-              <div className="font-medium">{link.name}</div>
-              <div className="text-sm text-gray-500">{link.instruction}</div>
-              {link.requiresAuth && link.credentials && !link.autoLogin && (
-                <div className="text-xs text-yellow-700 mt-1">
-                  {link.credentials.passwordHint}
-                </div>
-              )}
-              {link.autoLogin && (
-                <div className="text-xs text-[#2F6B3D] mt-1">
-                  Auto-fill: {link.credentials.username}
-                </div>
-              )}
-            </div>
-            <ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
-          </a>
-          );
-        })}
-      </div>
-
-      {/* Credentials Modal */}
-      {showCredentials && currentCredentials && (
-        <div className="fixed inset-0 backdrop-blur-sm bg-white bg-opacity-10 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl border">
-            <div className="text-center mb-4">
-              <ShootingStarIcon className="w-12 h-12 mx-auto mb-2" />
-              <h3 className="text-lg font-semibold text-gray-800">
-                {currentCredentials.serviceName} Login
-              </h3>
-              <p className="text-sm text-gray-600">
-                Use this for both username and password
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              {/* Single Credential */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Username & Password
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={currentCredentials.username}
-                    readOnly
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-800 font-mono text-center text-lg"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => copyToClipboard(currentCredentials.username, 'Credentials')}
-                className={`flex-1 px-4 py-2 text-white rounded-lg transition-colors flex items-center justify-center gap-2 ${
-                  copySuccess 
-                    ? 'bg-green-500 hover:bg-green-600' 
-                    : 'bg-blue-500 hover:bg-blue-600'
-                }`}
-              >
-                {copySuccess ? (
-                  <>
-                    <Check className="w-4 h-4" />
-                    Copied!
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-4 h-4" />
-                    Copy
-                  </>
-                )}
-              </button>
-              <button
-                onClick={openLoginPage}
-                className="flex-1 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
-              >
-                <LinkIcon className="w-4 h-4" />
-                Go to Login
-              </button>
-            </div>
+    <div className="space-y-3">
+      <h3 className="font-semibold text-gray-800 mb-3">Quick Access</h3>
+      {links.map((link) => (
+        <a
+          key={link.name}
+          href={link.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={
+            link.id === PRACTICE_CHAT_LINK_ID && onOpenPracticeChat
+              ? (e) => {
+                  e.preventDefault();
+                  onOpenPracticeChat(link.url, student.name || 'Practice Chat');
+                }
+              : undefined
+          }
+          className="flex items-center gap-3 p-4 bg-white rounded-lg border border-[#2F6B3D]/25 hover:border-[#2F6B3D]/50 hover:shadow-md transition-all group"
+        >
+          <div className="shrink-0">
+            {link.icon}
           </div>
-        </div>
-      )}
-    </>
+          <div className="flex-1">
+            <div className="font-medium">{link.name}</div>
+            <div className="text-sm text-gray-500">{link.instruction}</div>
+          </div>
+          <ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
+        </a>
+      ))}
+    </div>
   );
 }
