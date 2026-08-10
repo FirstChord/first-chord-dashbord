@@ -101,6 +101,16 @@ A read-only First Chord calendar and experimental iCalendar feeds can be exposed
 in this phase because they are useful parity surfaces. They must be labelled as
 MMS-backed and cannot become operational truth merely because they look correct.
 
+Phase 2's first production slice is deliberately narrower than a calendar UI. A
+daily GitHub workflow calls a secret-gated route at 05:45 UTC and observes 14
+London calendar days back through 42 days ahead. `/admin/lessons` shows source
+freshness, exact calendar/attendance endpoint totals, changes, field coverage,
+raw attendance states and recent runs. The Overview checks both the database
+result and the scheduled workflow. Failed runs stay visible but cannot displace
+the last verified snapshot; absence is reported as “not observed”, never
+cancelled. This creates evidence for the remaining exception questions without
+moving any operational consumer or write authority.
+
 ### Phase 3 — Attach Existing Systems to First Chord IDs
 
 Gradually make payroll, tutor cover, WhatsApp context, Practice Chat, student
@@ -161,10 +171,10 @@ revisions. Integrity checks found no orphaned events or participations and no
 event lacking a calendar observation. Names and free text were not emitted by
 the operator commands.
 
-No automatic schedule exists and no operational reader uses the mirror. MMS
-remains schedule and attendance truth, no MMS write was performed, and no
-existing school workflow changed. The next step is observed parity work, not a
-consumer cutover.
+Phase 2 now schedules the bounded read and exposes aggregate evidence at
+`/admin/lessons`; no operational reader uses the mirror. MMS remains schedule
+and attendance truth, no MMS write is performed, and no existing school workflow
+has changed. This is observed parity work, not a consumer cutover.
 
 ### Included
 
@@ -235,11 +245,11 @@ is visible and repairable; a false automatic merge can corrupt history.
 
 ## Cadence After the First Reconciliation
 
-The target is one bounded whole-school sweep per day, with a small overlapping
-look-back so late attendance edits are observed and a useful future horizon so
-schedule changes are caught. Exact production windows and timing will be chosen
-from measured row counts and MMS response times during parity. Larger historical
-backfills are separate operator runs, not hidden inside the daily job.
+The production cadence is one bounded whole-school sweep daily at 05:45 UTC: 14
+London calendar days back, today, and 42 days ahead. The overlap observes late
+attendance edits; the future horizon catches schedule changes without hiding a
+historical backfill inside the daily job. Both MMS endpoints are paginated and
+their reported totals must match before SQL accepts the snapshot.
 
 Daily cadence improves observation; it still does not turn polling into a true
 provider change log. A lesson created and removed entirely between successful
@@ -260,9 +270,10 @@ The first slice is ready to run in production only when:
 - rollback is documented as disabling the mirror trigger and reverting code,
   without deleting append-only revisions or guessing at provider repair.
 
-Automatic daily scheduling is a later, separately observable rollout step. No
-existing operational surface waits on the mirror, so a sync failure is visible
-but does not interrupt school work.
+Automatic daily scheduling is separately observable through the GitHub workflow
+and Overview health card. No existing operational surface waits on the mirror,
+so a sync failure is visible but does not interrupt school work or replace the
+last verified parity view.
 
 ## Phase 2 Questions to Answer with Evidence
 

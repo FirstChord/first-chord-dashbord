@@ -137,7 +137,10 @@ Some source formats are fragile because they come from human-edited external sys
   titles are matched exactly and a stray marker fails silently. The two
   implementations live in separate repositories; change one and you must change
   the other. Unmarked notes written before this contract render unchanged.
-- GitHub scheduled workflows can be disabled after long inactivity. The schedule-refresh cron is useful, but it should still be checked from the health/operations rhythm rather than assumed permanent.
+- GitHub scheduled workflows can be disabled after long inactivity. The
+  schedule-refresh and daily lesson-mirror jobs are useful, but both must be
+  checked from the Overview health/operations rhythm rather than assumed
+  permanent.
 - **Pause planning notes → pause forecast.** `buildPauseForecast` (`lib/admin/pause-forecast.mjs`) parses pause-window dates from the `Planning_Items` notes written by `buildStructuredPausePlanningDraft` (producers: the planning pause builder, the tutor-absence bridge, and incoming-message conversion — `buildIncomingPlanningDraft` reuses the same builder when an absence message carries extracted dates and a matched student): `First lesson to pause date: YYYY-MM-DD` + `Returning from date: YYYY-MM-DD` (away period), and `Lesson date: YYYY-MM-DD` (single lesson). Parked pause items are ignored; done items can still forecast because "done" means the admin action was completed, not that the future/active pause stopped existing. If that helper's note wording changes, update the regexes/tests in `pause-forecast.mjs` — otherwise the forecast silently stops seeing those pauses (it does surface an `unparsedCount`, but only for items it recognises as pauses by title/notes).
 - **Pause History → payment expectation is an explicit write.** Ordinary Overview,
   Issues, and live Stripe scans derive context and may sync `Issue_Queue`, but
@@ -234,9 +237,12 @@ earlier MMS/Gmail outcome is unknown.
 
 The PostgreSQL lesson mirror is the other explicit exception. One advisory-locked
 transaction upserts a provider-complete series/event/participation snapshot and
-its changed-state revisions, then marks the sync successful. It has no current
-application reader or MMS writer. Incomplete/failed runs never infer missing or
-cancelled lessons; retry the bounded read instead.
+its changed-state revisions, then marks the sync successful. A secret-gated daily
+job reads 14 London calendar days back through 42 days ahead, and the authenticated
+`/admin/lessons` page reads aggregate parity evidence. No operational workflow
+consumes it and it has no MMS writer. Incomplete/failed runs never replace the
+last verified snapshot or infer missing/cancelled lessons; retry the bounded read
+instead.
 
 Use append-only tabs for history (`Event_Log`, `Planning_Progress_Log`, archives). Use keyed upserts for current workflow state.
 

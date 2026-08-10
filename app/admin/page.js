@@ -40,6 +40,8 @@ function healthPriority(health) {
     health.financeWorkflow.status,
     health.stripeWorkflow.status,
     health.scheduleWorkflow.status,
+    health.lessonMirrorWorkflow.status,
+    health.lessonMirror.status,
     health.financeAutomation.status,
     health.flagsFreshness.status,
   ];
@@ -110,7 +112,7 @@ function buildTrustSummary(health, systemHealth) {
     return {
       label: 'All clear',
       tone: 'border-emerald-100 bg-emerald-50/70 text-emerald-950',
-      detail: 'MMS healthy · Review flags fresh · Automation quiet',
+      detail: 'MMS healthy · Lesson mirror current · Review flags fresh · Automation quiet',
       href: '',
     };
   }
@@ -136,6 +138,12 @@ function buildTrustSummary(health, systemHealth) {
   }
   if (['Failing', 'Stale', 'Running', 'Aging'].includes(health.scheduleWorkflow.status)) {
     details.push(`Schedule refresh ${String(health.scheduleWorkflow.status || 'unknown').toLowerCase()}`);
+  }
+  if (['Failing', 'Stale', 'Running', 'Aging'].includes(health.lessonMirrorWorkflow.status)) {
+    details.push(`Lesson mirror daily ${String(health.lessonMirrorWorkflow.status || 'unknown').toLowerCase()}`);
+  }
+  if (['Failing', 'Stale', 'Running', 'Aging'].includes(health.lessonMirror.status)) {
+    details.push(`Lesson mirror data ${String(health.lessonMirror.status || 'unknown').toLowerCase()}`);
   }
   if (['Failing', 'Stale', 'Running', 'Aging'].includes(health.financeAutomation.status)) {
     details.push(`Finance data ${String(health.financeAutomation.status || 'unknown').toLowerCase()}`);
@@ -552,6 +560,20 @@ async function OverviewSystemChecks() {
       link: health.scheduleWorkflow.htmlUrl,
     },
     {
+      label: 'Lesson Mirror',
+      status: health.lessonMirror.status,
+      detail: health.lessonMirror.detail,
+      updatedAt: health.lessonMirror.updatedAt,
+      href: '/admin/lessons',
+    },
+    {
+      label: 'Lesson Mirror Daily',
+      status: health.lessonMirrorWorkflow.status,
+      detail: calmHealthDetail(health.lessonMirrorWorkflow.detail),
+      updatedAt: health.lessonMirrorWorkflow.updatedAt,
+      link: health.lessonMirrorWorkflow.htmlUrl,
+    },
+    {
       label: 'Finance Data',
       status: health.financeAutomation.status,
       detail: health.financeAutomation.detail,
@@ -582,6 +604,11 @@ async function OverviewSystemChecks() {
               <a href={item.link} target="_blank" rel="noreferrer" className="mt-3 inline-block text-sm font-medium text-slate-900 underline-offset-2 hover:underline">
                 Open workflow run
               </a>
+            ) : null}
+            {item.href ? (
+              <Link href={item.href} className="mt-3 inline-block text-sm font-medium text-slate-900 underline-offset-2 hover:underline">
+                Open lesson parity
+              </Link>
             ) : null}
           </div>
         ))}

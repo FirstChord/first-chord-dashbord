@@ -3,6 +3,12 @@ import { CARD_CLASSES } from '@/components/admin/ui/Card';
 
 const workflowSections = [
   {
+    href: '/admin/lessons',
+    title: 'Lesson Parity',
+    description: 'Inspect the read-only MMS mirror: freshness, endpoint parity, observed changes, field coverage, and recent runs.',
+    status: 'Read-only',
+  },
+  {
     href: '/admin/tutors',
     title: 'Tutors',
     description: 'Track tutor departures, review handover warnings, and retire tutors from live choices.',

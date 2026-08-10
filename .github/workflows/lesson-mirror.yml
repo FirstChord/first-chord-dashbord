@@ -1,0 +1,38 @@
+name: Lesson Mirror
+
+# Builds an observed MMS parity history without changing MMS or any operational
+# reader. The endpoint derives a bounded London-date window (14 days back,
+# 42 days forward), verifies both provider totals, and commits SQL atomically.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "45 5 * * *" # daily at 05:45 UTC
+
+concurrency:
+  group: lesson-mirror
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Reconcile MMS into the First Chord lesson mirror
+        env:
+          ENDPOINT: https://first-chord-dashbord-production.up.railway.app/api/cron/lesson-mirror
+          SECRET: ${{ secrets.SCHEDULE_REFRESH_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SECRET}" ]; then
+            echo "SCHEDULE_REFRESH_SECRET is not set in repo secrets"; exit 1
+          fi
+          resp=$(curl -sS -X POST "${ENDPOINT}" \
+            -H "x-firstchord-schedule-secret: ${SECRET}" \
+            -H "content-type: application/json" \
+            --max-time 300)
+          echo "Response: ${resp}"
+          ok=$(echo "${resp}" | jq -r '.success // false')
+          if [ "${ok}" != "true" ]; then
+            echo "Endpoint returned an error"; exit 1
+          fi

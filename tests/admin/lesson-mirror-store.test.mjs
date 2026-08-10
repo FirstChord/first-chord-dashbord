@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   assessLessonMirrorStatus,
+  getLessonMirrorParityReport,
   getLessonMirrorStatus,
   lessonMirrorFailureCode,
   persistLessonMirrorSnapshot,
@@ -126,4 +127,60 @@ test('status assessment distinguishes never-run, failed, running, stuck, fresh, 
   assert.equal(assessLessonMirrorStatus({ status: 'running', started_at: '2026-08-10T10:00:00Z' }, { now }).state, 'stuck');
   assert.equal(assessLessonMirrorStatus({ status: 'succeeded', completed_at: '2026-08-10T10:00:00Z' }, { now }).state, 'fresh');
   assert.equal(assessLessonMirrorStatus({ status: 'succeeded', completed_at: '2026-08-08T10:00:00Z' }, { now }).state, 'stale');
+});
+
+test('parity report exposes bounded counts, revisions, raw statuses, and non-observation uncertainty', async () => {
+  const calls = [];
+  const database = {
+    async query(sql, params = []) {
+      const text = `${sql}`;
+      calls.push({ text, params });
+      if (text.includes("WHERE latest.status = 'succeeded'")) {
+        return { rows: [{
+          sync_run_id: 'run-verified',
+          status: 'succeeded',
+          completed_at: '2026-08-11T05:00:00Z',
+          calendar_expected_count: 10,
+          calendar_received_count: 10,
+          attendance_expected_count: 9,
+          attendance_received_count: 9,
+        }] };
+      }
+      if (text.includes('FROM fc_lesson_sync_runs latest')) {
+        return { rows: [{
+          sync_run_id: 'run-latest',
+          status: 'failed',
+          completed_at: '2026-08-11T06:00:00Z',
+          failure_code: 'provider_read_failed',
+        }] };
+      }
+      if (text.includes('WITH recent_runs AS')) {
+        return { rows: [{ sync_run_id: 'run-1', events_changed: 2 }] };
+      }
+      if (text.includes('window_events AS')) {
+        return { rows: [{ events_not_observed_latest: 1, participations_not_observed_latest: 2 }] };
+      }
+      if (text.includes('raw_attendance_status')) {
+        return { rows: [{ status: 'Present', count: 7 }, { status: '(blank)', count: 2 }] };
+      }
+      throw new Error('unexpected parity query');
+    },
+  };
+  const report = await getLessonMirrorParityReport({
+    database,
+    runLimit: 7,
+    now: new Date('2026-08-11T12:00:00Z'),
+  });
+
+  assert.equal(report.assessment.state, 'failed');
+  assert.equal(report.latestSuccessful.sync_run_id, 'run-verified');
+  assert.equal(report.runs[0].events_changed, 2);
+  assert.equal(report.metrics.events_not_observed_latest, 1);
+  assert.deepEqual(report.attendanceStatuses, [{ status: 'Present', count: 7 }, { status: '(blank)', count: 2 }]);
+  assert.deepEqual(calls.find((call) => call.text.includes('WITH recent_runs AS')).params, [7]);
+  const sql = calls.map((call) => call.text).join('\n');
+  assert.match(sql, /last_observed_at < latest\.started_at/u);
+  assert.match(sql, /JOIN window_events event ON event\.fc_event_id = participation\.fc_event_id/u);
+  assert.equal((sql.match(/WHERE status = 'succeeded'/gu) || []).length, 2);
+  assert.doesNotMatch(sql, /student_name|student_full_name|parent/u);
 });
