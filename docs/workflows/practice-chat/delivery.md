@@ -109,7 +109,7 @@ whether a student liked a song from ordinary English in prose; optional
 On the canonical Railway admin service:
 
 ```text
-DATABASE_URL=<Railway PostgreSQL URL>
+DATABASE_URL=<Neon PostgreSQL URL supplied to Railway>
 PRACTICE_CHAT_API_SECRET=<shared PWA handoff secret>
 # Optional emergency/temporary restriction only:
 PRACTICE_NOTES_ENABLED_TUTORS=<comma-separated canonical names>

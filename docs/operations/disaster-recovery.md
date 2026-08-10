@@ -14,7 +14,7 @@ code, not the state held in Sheets or PostgreSQL.
 | --- | --- | --- |
 | Google Sheet | Students, workflow state, logs, payroll review, assignments | Restore the latest complete local backup to a scratch Sheet, verify, then promote |
 | Railway app | Dashboard, portals, APIs, crons | Redeploy a known-good GitHub commit and restore the canonical service variables |
-| Railway PostgreSQL | Practice Note delivery claims plus the rebuildable MMS lesson mirror | Restore provider backup/snapshot; reconcile claims before enabling delivery; rebuild mirror observations from MMS if necessary |
+| Neon PostgreSQL | Practice Note delivery claims plus the rebuildable MMS lesson mirror | Restore provider backup/snapshot; reconcile claims before enabling delivery; rebuild mirror observations from MMS if necessary |
 | Local Mac | WhatsApp capture, scheduled local backups, local tokens/tools | Rebuild from GitHub, password manager/provider consoles, and launchd templates |
 | Provider credential | Affected integration reads/writes | Reissue with the minimum documented scope and replace it in Railway/local secret storage |
 
@@ -33,7 +33,7 @@ to a scratch spreadsheet with headers and row counts verified. Re-run
 The following remain unproven and must not be described as guaranteed:
 
 - a clean-machine cold start
-- Railway PostgreSQL point-in-time restore and Practice Note claim reconciliation
+- Neon PostgreSQL point-in-time restore and Practice Note claim reconciliation
 - off-machine survival of the local Sheets backup directory
 - recovery of WhatsApp traffic missed while the bridge was offline
 

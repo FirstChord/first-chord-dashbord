@@ -92,7 +92,7 @@ These names come from real code reads of `process.env` and local token paths.
 | `ADMIN_AI_OPENAI_API_KEY` | Server-side OpenAI Responses API call for issue briefing | AI pilot returns unavailable; deterministic Issues workflow is unaffected | Use a separate restricted/budget-capped project key on the canonical admin Railway service only. Do not reuse the historically exposed Practice Chat relay key. Never expose as `NEXT_PUBLIC_*`. |
 | `ADMIN_AI_OPENAI_MODEL` | Optional model override shared by the bounded admin AI pilots | Defaults to `gpt-5.6-luna` | Change only with representative contract/evaluation checks; record the model used in pilot results. |
 | `GOOGLE_SPREADSHEET_ID` | Admin Sheets integration | Admin data reads/writes fail | Set to the main First Chord operational Sheet ID. FINN TO FILL IN exact Sheet link. |
-| `DATABASE_URL` | Practice Note delivery claim store and lesson mirror | Execute route returns 503 before MMS/Gmail work; lesson migration/sync/status commands fail | Railway PostgreSQL connection URL. Run `npm run ensure:practice-delivery-claims` for the claim schema. Apply lesson migrations separately with `node scripts/apply-lesson-mirror-migrations.mjs` only through the reviewed rollout below. The mirror is rebuildable and owns no current MMS fact. |
+| `DATABASE_URL` | Practice Note delivery claim store and lesson mirror | Execute route returns 503 before MMS/Gmail work; lesson migration/sync/status commands fail | Neon PostgreSQL connection URL supplied to the Railway app. Run `npm run ensure:practice-delivery-claims` for the claim schema. Apply lesson migrations separately with `node scripts/apply-lesson-mirror-migrations.mjs` only through the reviewed rollout below. The mirror is rebuildable and owns no current MMS fact. |
 | `SHEETS_REFRESH_TOKEN` | Google Sheets OAuth | Sheets reads/writes fail once token is invalid | Generate a new OAuth refresh token with Sheets scope, then update Railway. FINN TO FILL IN exact refresh procedure. |
 | `SHEETS_CLIENT_ID` | Google Sheets OAuth | Sheets reads/writes fail | Update from Google Cloud OAuth credentials. |
 | `SHEETS_CLIENT_SECRET` | Google Sheets OAuth | Sheets reads/writes fail | Update from Google Cloud OAuth credentials. |
@@ -209,7 +209,7 @@ and attendance truth. The commands below read MMS and write only the First Chord
 PostgreSQL mirror.
 
 Applying the schema is a production migration. Before doing so, confirm the
-target `DATABASE_URL`, Railway backup/PITR position, a known-good application
+target `DATABASE_URL`, Neon backup/PITR position, a known-good application
 rollback commit, and that `practice_note_delivery_claims` is healthy. Then run:
 
 ```bash
