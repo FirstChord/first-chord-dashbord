@@ -1,7 +1,7 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: 2026-08-06
+last_verified: 2026-08-10
 ---
 # Admin current status
 
@@ -26,6 +26,22 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
+- **Practice Chat is the register (2026-08-10):** attendance had two routes out
+  of Quick Access — a MyMusicStaff link that opened the system of record for
+  manual marking, and Practice Chat, labelled "For taking homework notes" while
+  quietly writing MMS attendance through its delivery flow. Practice Chat is now
+  the single signposted route (**Take Attendance + Practice Chat!**), and the
+  MyMusicStaff and Theta rows are gone. **MMS is still the system of record** —
+  what was removed is the parallel manual route, not the authority; if delivery
+  fails the register still has to be opened there. Theta went because the tutor
+  side wasn't using it; the student portal keeps its own Theta link, and both
+  URL generators stay in `lib/config` for the portal and SetupWizard. Deleting
+  that one row also retired a credentials modal, three `useState` hooks and a
+  clipboard fallback that nothing else could reach — the component halved.
+  **Durable:** the Practice Chat row used to be identified in the render loop by
+  its visible label, so renaming the button would have silently sent it to a new
+  tab instead of the in-dashboard panel; it carries a stable `id` now. Behaviour
+  must never branch on user-facing copy.
 - **Acoustic guitar re-tagged (2026-08-08):** 41 of 56 songs gained a skill their
   own `tutorNote` already named; guitar is now **100% covered, 26 distinct skills
   (was 21)**, catalogue 72%. Nothing was removed and no note was reinterpreted —
@@ -279,14 +295,6 @@ deliberate school-improvement prompt.
   The occasional done/parked `Song_Outcomes`
   prompt remains supplementary evidence—the high-volume Practice Note stream is
   intended to become the main song-learning memory.
-- **One inbox-first admin web app (2026-08-04):** the competing Planning and
-  Messages manifests have been collapsed into the single **FC Messages** app,
-  preserving its `/admin/incoming-messages` identity and launch target. A fresh
-  home-screen install retains Inbox, Planning, and Overview in the standalone
-  bottom bar. This avoids iOS choosing the old Planning start URL from two
-  manifests with the same scope; icons made before this correction must be
-  removed and installed again because iOS stores launch metadata at install
-  time.
 
 ## Current operating contracts
 

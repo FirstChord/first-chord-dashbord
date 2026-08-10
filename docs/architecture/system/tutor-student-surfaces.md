@@ -1,7 +1,7 @@
 ---
 status: supporting
 audience: [human, agent]
-last_verified: 2026-07-24
+last_verified: 2026-08-10
 ---
 # Tutor and student surfaces
 
@@ -17,10 +17,12 @@ Tutor dashboard:
 
 - self-select a tutor profile and load the current MMS roster;
 - view a read-only daily MMS schedule and attendance context;
-- search/open students, recent notes, Soundslice, Theta, and MMS;
+- search/open students, recent notes, and Soundslice;
 - browse/assign catalogue songs and paths, reorder/status assignments, request a
   missing song, and optionally record an outcome;
-- open Practice Chat with student and API handoff context.
+- open Practice Chat with student and API handoff context — the dashboard's only
+  route to taking the register (2026-08-10). Quick Access no longer links Theta
+  or MyMusicStaff; the student portal keeps its own Theta link.
 
 Student portal:
 
