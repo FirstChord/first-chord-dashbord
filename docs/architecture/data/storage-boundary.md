@@ -1,7 +1,7 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: 2026-07-20
+last_verified: 2026-08-10
 ---
 # Sheets and database boundary
 
@@ -14,11 +14,18 @@ The per-lane mechanical contract remains
 Google Sheets is the general application state store. It is intentionally useful
 for human-paced records that Finn/Tom can inspect and correct directly.
 
-PostgreSQL has one narrow production responsibility:
-`practice_note_delivery_claims` atomically claims a unique Practice Chat
-`delivery_key` before MMS or Gmail work. It exists because a last-write-wins
-Sheet cannot safely prevent duplicate delivery across Railway instances. Sheets
-still holds the note/delivery audit and portal read model.
+PostgreSQL has two deliberately bounded responsibilities:
+
+- `practice_note_delivery_claims` atomically claims a unique Practice Chat
+  `delivery_key` before MMS or Gmail work; and
+- the `fc_lesson_*` mirror holds high-volume, machine-written MMS lesson series,
+  events, student participations, revisions and completeness evidence.
+
+The first exists because a last-write-wins Sheet cannot safely prevent duplicate
+delivery across Railway instances. The second exists because event/participation
+grain, transactional snapshots, history and parity queries are a poor fit for a
+human-edited Sheet. The lesson mirror is rebuildable and MMS remains schedule and
+attendance truth. No operational reader uses it in its first slice.
 
 There is no general-purpose application database and no plan to replace working
 Sheets lanes wholesale.
@@ -49,7 +56,8 @@ results into truth merely to make querying convenient.
 
 - **Stay in Sheets:** human-owned workflow/configuration, planning, finance review,
   payroll review, issue state, append-only operating logs, and bounded caches.
-- **Already transactional:** Practice Chat's delivery claim only.
+- **Already transactional:** Practice Chat's delivery claim and the dormant,
+  operator-run MMS lesson mirror. The mirror does not own schedule truth.
 - **Watch first:** machine-written inbound-message/event lanes, especially where
   bridge writes and admin review can race or retention remains undecided.
 - **Reassess later:** event/audit lanes when measured growth or query needs make
@@ -86,11 +94,12 @@ Before moving state, document:
 6. concurrency/idempotency behaviour;
 7. health signals and named operator response.
 
-## PostgreSQL claim boundary
+## PostgreSQL claim and lesson-mirror boundary
 
-`DATABASE_URL` is required by the Practice Chat execute route and
-`npm run ensure:practice-delivery-claims` creates/verifies the claim table.
-Claim failure returns `503` before MMS attendance or Gmail email is attempted.
+`DATABASE_URL` is shared by two independently bounded schemas. The Practice Chat
+execute route requires it, and `npm run ensure:practice-delivery-claims`
+creates/verifies the claim table. Claim failure returns `503` before MMS
+attendance or Gmail email is attempted.
 
 Terminal claim rows are safety state. Do not delete or recreate them to force a
 retry: an ambiguous Gmail result can mean the parent already received the email.
@@ -99,10 +108,19 @@ Gmail evidence without guessing. See
 [Practice Chat delivery](../../workflows/practice-chat/delivery.md) and
 [the operations runbook](../../operations/runbook.md).
 
+The lesson mirror uses checksummed migrations under
+`db/migrations/lesson-mirror/`; application requests never create its schema.
+Its first-slice commands are manual, its snapshots are transactionally locked,
+and no existing app workflow waits on it. A mirror failure is retried from a
+verified bounded MMS read. It never justifies deleting or recreating Practice
+Chat claims. See [the active lesson-ledger plan](../../plans/active/lesson-occurrence-model.md).
+
 ## Open decisions
 
 - Retention/pruning for auto-archived incoming-message noise.
-- Whether/when an off-device PostgreSQL backup is available and rehearsed.
+- Whether/when an off-device PostgreSQL backup and PITR are available and
+  rehearsed. Mirror rows can be rebuilt; Practice Chat claims cannot safely be
+  guessed back into existence.
 - The census/race threshold that would trigger moving the incoming inbox.
 - A human-correctable admin path before any Sheet lane loses its direct correction
   surface.

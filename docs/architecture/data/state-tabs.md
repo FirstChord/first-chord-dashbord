@@ -1,11 +1,11 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: 2026-08-06
+last_verified: 2026-08-10
 ---
 # State Tabs Schema
 
-Last updated: 2026-08-06
+Last updated: 2026-08-10
 
 This note is the canonical map for dashboard-owned state lanes. It documents the Google Sheets tabs that store workflow state, cache snapshots, append-only logs, or derived context. It is intentionally about dashboard state, not the main `Students` operational sheet.
 
@@ -14,10 +14,11 @@ This note is the canonical map for dashboard-owned state lanes. It documents the
 External systems own external truth. The dashboard stores workflow state, action history, cached snapshots, and derived context that helps humans close loops.
 
 **Sheets/database boundary:** Sheets remains the general workflow store because
-humans can inspect and correct its human-paced lanes. PostgreSQL currently has
-one deliberately narrow responsibility: the unique Practice Chat delivery claim
-that must be committed before provider work. It is not a general application
-database or a replacement for Sheets. New event-heavy/machine-generated state
+humans can inspect and correct its human-paced lanes. PostgreSQL has two bounded
+responsibilities: the unique Practice Chat delivery claim committed before
+provider work, and the rebuildable event-grain MMS lesson mirror used to prove
+parity before any source cutover. It is not a wholesale replacement for Sheets,
+and the mirror is not schedule truth. New event-heavy/machine-generated state
 must justify its concurrency, growth, correction, backup, and recovery model; use
 [the storage boundary](./storage-boundary.md) and sheet census rather than adding
 another tab or broad database layer by instinct.
@@ -230,6 +231,12 @@ execution lock. A row left `claimed` for 15 minutes is never recycled. The next
 matching request atomically changes it to `tracking_failed`, mirrors manual
 follow-up into `Practice_Notes_Log`, and performs no provider action because the
 earlier MMS/Gmail outcome is unknown.
+
+The PostgreSQL lesson mirror is the other explicit exception. One advisory-locked
+transaction upserts a provider-complete series/event/participation snapshot and
+its changed-state revisions, then marks the sync successful. It has no current
+application reader or MMS writer. Incomplete/failed runs never infer missing or
+cancelled lessons; retry the bounded read instead.
 
 Use append-only tabs for history (`Event_Log`, `Planning_Progress_Log`, archives). Use keyed upserts for current workflow state.
 

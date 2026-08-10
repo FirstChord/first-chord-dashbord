@@ -1,7 +1,7 @@
 ---
 status: supporting
 audience: [human, agent]
-last_verified: 2026-08-04
+last_verified: 2026-08-10
 ---
 # Data Protection Map And Open Decisions
 
@@ -29,6 +29,7 @@ clear access boundaries, and plain-language transparency matter especially.
 | `Stripe_Forecast_Monthly`, `Stripe_Collected_Monthly` | student identity plus forecast/revealed collection amounts used to test finance completeness and investigate discrepancies | proposed 6 years with other financial reconciliation records; one compact row per month |
 | Stripe/MMS/Google/Wise/Soundslice/GitHub | provider-held data required for payments, lessons, content, hosting and code | governed by the school purpose plus provider terms/DPA |
 | Railway PostgreSQL `practice_note_delivery_claims` | pseudonymous delivery key and acting tutor used to prevent duplicate sends | retain while it is required to prove/block delivery replay; no note body |
+| Railway PostgreSQL `fc_lesson_*` mirror | pseudonymous student/tutor/provider IDs, lesson date/time/location/category, raw attendance status, sync evidence and changed-state revisions; used to prove MMS parity and provide stable lesson identity | proposed: enrolled plus 2 years after leaving; no automated pruning until the school approves a lesson-history/right-to-erasure procedure |
 | local Sheets backups | copies of managed operational tabs | bounded backup-set count; off-machine copies must use the same window |
 | OpenAI proposal/briefing inputs | bounded redacted operational projections when an explicitly enabled pilot calls the model | ephemeral provider processing plus minimal decision/evaluation telemetry; the reply pilot is explicit-press, one message at a time |
 
@@ -61,7 +62,7 @@ When a store or purpose is added there, update this map in the same change.
 
 The existing leave action archives the `Students` row and removes the registry
 entry. It does not currently prune related notes, message logs, communications,
-understanding notes, or all provider copies.
+understanding notes, SQL lesson participations/revisions, or all provider copies.
 
 For access or erasure, use this inventory and stable student/provider IDs to
 search every store. Preserve records required by legal obligation (including

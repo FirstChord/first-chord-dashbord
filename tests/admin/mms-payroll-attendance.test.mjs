@@ -5,6 +5,7 @@ import {
   clearPayrollAttendanceCacheForTests,
   updatePayrollAttendanceStatus,
   peekPayrollAttendanceAge,
+  LESSON_MIRROR_MMS_PAGE_SIZE,
   PAYROLL_ATTENDANCE_PAGE_SIZE,
 } from '../../lib/admin/mms.js';
 
@@ -18,6 +19,10 @@ import {
 // 2. The attendance cache is TTL + stale-while-revalidate + in-flight coalescing
 //    (mirroring lib/admin/sheets/core.mjs), so a "Mark reviewed" save never blocks
 //    on a ~950-row MMS fetch.
+//
+// 3. The whole-school lesson mirror uses verified pagination too. Its default
+//    page should keep current 28-day calendar/attendance sweeps to one request
+//    per endpoint; paging is the correctness safety net, not the normal cost.
 
 const TTL_MS = 10 * 60 * 1000;
 const HARD_MAX_AGE_MS = TTL_MS + 20 * 60 * 1000;
@@ -459,4 +464,11 @@ test('a window inside the page size costs exactly one MMS request', async () => 
       'the page size must keep real headroom over the current window, or this stops being true',
     );
   });
+});
+
+test('the lesson mirror page size has headroom over the verified whole-school window', () => {
+  assert.ok(
+    LESSON_MIRROR_MMS_PAGE_SIZE > 772,
+    'the 2026-08-10 live calendar sample should fit in one request',
+  );
 });

@@ -1,7 +1,7 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: 2026-07-20
+last_verified: 2026-08-10
 ---
 # Disaster Recovery
 
@@ -14,12 +14,14 @@ code, not the state held in Sheets or PostgreSQL.
 | --- | --- | --- |
 | Google Sheet | Students, workflow state, logs, payroll review, assignments | Restore the latest complete local backup to a scratch Sheet, verify, then promote |
 | Railway app | Dashboard, portals, APIs, crons | Redeploy a known-good GitHub commit and restore the canonical service variables |
-| Railway PostgreSQL | Practice Note delivery claims and cross-instance duplicate-send protection | Restore provider backup/snapshot; reconcile claims against Sheets, Gmail, and MMS before enabling delivery |
+| Railway PostgreSQL | Practice Note delivery claims plus the rebuildable MMS lesson mirror | Restore provider backup/snapshot; reconcile claims before enabling delivery; rebuild mirror observations from MMS if necessary |
 | Local Mac | WhatsApp capture, scheduled local backups, local tokens/tools | Rebuild from GitHub, password manager/provider consoles, and launchd templates |
 | Provider credential | Affected integration reads/writes | Reissue with the minimum documented scope and replace it in Railway/local secret storage |
 
 MMS and Stripe retain their own provider truth. Sheets owns First Chord
-operational records. PostgreSQL owns the narrow Practice Note execution claim.
+operational records. PostgreSQL owns the narrow Practice Note execution claim
+and First Chord lesson identities/retained MMS observations. The lesson mirror
+does not own current schedule or attendance truth.
 Neither a UI state nor `Issue_Queue` substitutes for those owners.
 
 ## Proven And Unproven Recovery
@@ -31,7 +33,7 @@ to a scratch spreadsheet with headers and row counts verified. Re-run
 The following remain unproven and must not be described as guaranteed:
 
 - a clean-machine cold start
-- Railway PostgreSQL point-in-time restore and claim reconciliation
+- Railway PostgreSQL point-in-time restore and Practice Note claim reconciliation
 - off-machine survival of the local Sheets backup directory
 - recovery of WhatsApp traffic missed while the bridge was offline
 
@@ -75,6 +77,27 @@ re-enabling after a database loss:
 
 Never delete a terminal claim or resend an ambiguous email merely to make the
 stores agree. Record any recovery action.
+
+## Restore The Lesson Mirror
+
+Lesson mirror rows are rebuildable from MMS; Practice Note claims in the same
+database are not. Prefer a provider restore that preserves both. If the mirror
+alone must be rebuilt after database recovery:
+
+1. keep every current application reader on its existing source (the first slice
+   already does this)
+2. apply the checksummed schema with
+   `node scripts/apply-lesson-mirror-migrations.mjs`
+3. run one small explicit window using `scripts/sync-lesson-mirror.mjs`
+4. confirm both expected/received totals and stored counts with
+   `node scripts/lesson-mirror-status.mjs`
+5. backfill larger windows separately and repeat parity checks before enabling
+   any future consumer
+
+Do not restore a stale mirror over newer MMS truth, infer cancelled lessons from
+a recovery gap, or drop/recreate the whole PostgreSQL database merely to rebuild
+these tables. A failed mirror rebuild does not justify disabling the established
+Practice Chat claim boundary.
 
 ## Cold Start A Replacement Mac
 

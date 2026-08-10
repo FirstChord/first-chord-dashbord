@@ -159,6 +159,20 @@ The count of matching records MMS returns alongside the rows on every `/search` 
 - Used to decide when a paged fetch is **complete**. The alternative — "a page smaller than we asked for must be the last one" — quietly assumes the endpoint honours the limit we send; if it caps below that, every page looks final and the result truncates in silence. On payroll that means a short total that looks entirely plausible.
 - Because completeness is now checked against this number, page size is a speed decision rather than a correctness one. See `lib/admin/mms-pagination.mjs`.
 
+## Lesson series, event, participation, and sync run
+
+A **lesson series** is the stable First Chord identity for a recurring run of
+lessons. A **lesson event** is one dated calendar slot. A **lesson participation**
+is one student expected at that event, which is why a five-student group is one
+event and five participations rather than five unrelated events. A one-off event
+does not need a fabricated series.
+
+A **lesson sync run** is the evidence envelope around one bounded MMS mirror
+attempt: requested dates, MMS-reported and received totals, outcome and observed
+entity counts. During the mirror/parity phases these SQL facts are retained MMS
+observations, not authority to edit the calendar or reinterpret missing rows as
+cancellations.
+
 ## Server component
 
 A page rendered on the server (fetching its data there) before sending HTML to the browser. Most admin pages are server components — hence the data wait on navigation and the value of the loading skeleton.

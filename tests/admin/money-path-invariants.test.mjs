@@ -138,6 +138,20 @@ test('a total needing more pages than the cap fails loudly and says so', async (
   );
 });
 
+test('pagination refuses to combine pages when the provider total changes mid-walk', async () => {
+  let page = 0;
+  await assert.rejects(
+    fetchAllPages(async () => {
+      page += 1;
+      return {
+        rows: Array.from({ length: 100 }, (_, index) => ({ id: `${page}:${index}` })),
+        total: page === 1 ? 200 : 201,
+      };
+    }, { pageSize: 100, maxPages: 5, label: 'attendance' }),
+    /total changed from 200 to 201/u,
+  );
+});
+
 test('array-returning fetchers keep the old heuristic behaviour', async () => {
   const random = rng(7);
   for (let round = 0; round < 25; round += 1) {

@@ -1,7 +1,7 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: 2026-08-03
+last_verified: 2026-08-10
 ---
 # Operations Runbook
 
@@ -63,7 +63,7 @@ students, or mutate MMS/Stripe/Sheets operational truth.
 | System | What it owns | Dashboard dependency |
 | --- | --- | --- |
 | Google Sheets | Operational school truth and dashboard workflow state | Most admin pages, issues, planning, parent understanding, tutor absence, backups |
-| PostgreSQL | Practice Note delivery execution claims only | Cross-instance duplicate-send protection; execute fails closed when unavailable |
+| PostgreSQL | Practice Note delivery execution claims plus the rebuildable MMS lesson mirror | Cross-instance duplicate-send protection; operator-run lesson parity foundation |
 | Registry | Portal/dashboard config truth | Student portal routes, registry-vs-Sheets issue checks |
 | MMS | Lesson/scheduling/contact truth | Waiting list, schedule context, onboarding, capacity, tutor absences |
 | Stripe | Payment provider truth | Payment issue checks and student Stripe refreshes |
@@ -92,7 +92,7 @@ These names come from real code reads of `process.env` and local token paths.
 | `ADMIN_AI_OPENAI_API_KEY` | Server-side OpenAI Responses API call for issue briefing | AI pilot returns unavailable; deterministic Issues workflow is unaffected | Use a separate restricted/budget-capped project key on the canonical admin Railway service only. Do not reuse the historically exposed Practice Chat relay key. Never expose as `NEXT_PUBLIC_*`. |
 | `ADMIN_AI_OPENAI_MODEL` | Optional model override shared by the bounded admin AI pilots | Defaults to `gpt-5.6-luna` | Change only with representative contract/evaluation checks; record the model used in pilot results. |
 | `GOOGLE_SPREADSHEET_ID` | Admin Sheets integration | Admin data reads/writes fail | Set to the main First Chord operational Sheet ID. FINN TO FILL IN exact Sheet link. |
-| `DATABASE_URL` | Practice Note delivery claim store | Execute route returns 503 before MMS or Gmail work | Railway PostgreSQL connection URL. Run `npm run ensure:practice-delivery-claims` when provisioning a new database. This database contains the narrow idempotency claim table, not general dashboard state. |
+| `DATABASE_URL` | Practice Note delivery claim store and lesson mirror | Execute route returns 503 before MMS/Gmail work; lesson migration/sync/status commands fail | Railway PostgreSQL connection URL. Run `npm run ensure:practice-delivery-claims` for the claim schema. Apply lesson migrations separately with `node scripts/apply-lesson-mirror-migrations.mjs` only through the reviewed rollout below. The mirror is rebuildable and owns no current MMS fact. |
 | `SHEETS_REFRESH_TOKEN` | Google Sheets OAuth | Sheets reads/writes fail once token is invalid | Generate a new OAuth refresh token with Sheets scope, then update Railway. FINN TO FILL IN exact refresh procedure. |
 | `SHEETS_CLIENT_ID` | Google Sheets OAuth | Sheets reads/writes fail | Update from Google Cloud OAuth credentials. |
 | `SHEETS_CLIENT_SECRET` | Google Sheets OAuth | Sheets reads/writes fail | Update from Google Cloud OAuth credentials. |
@@ -201,6 +201,57 @@ or contact details to logs. Fix and
 evaluate with synthetic/redacted fixtures before re-enabling. If the shared
 restricted AI key may be exposed, rotate it and re-check both AI pilots.
 
+## Lesson Mirror Operator Runbook
+
+The first lesson-mirror slice is dormant by default: no route, page or scheduled
+workflow calls it, and no operational reader depends on it. MMS remains schedule
+and attendance truth. The commands below read MMS and write only the First Chord
+PostgreSQL mirror.
+
+Applying the schema is a production migration. Before doing so, confirm the
+target `DATABASE_URL`, Railway backup/PITR position, a known-good application
+rollback commit, and that `practice_note_delivery_claims` is healthy. Then run:
+
+```bash
+node scripts/apply-lesson-mirror-migrations.mjs
+node scripts/lesson-mirror-status.mjs
+```
+
+The migration runner is checksummed, serialised with an advisory lock and refuses
+an applied migration whose SQL later changed. Application requests never create
+these tables.
+
+For the first bounded reconciliation, choose explicit end-exclusive dates. Do
+not hide a historical backfill inside this first run:
+
+```bash
+node scripts/sync-lesson-mirror.mjs \
+  --start 2026-08-01 \
+  --end-exclusive 2026-08-29 \
+  --write-mirror
+node scripts/lesson-mirror-status.mjs
+```
+
+Healthy evidence is `status=succeeded`, equal expected/received counts for both
+MMS endpoints, and plausible series/event/participation counts. Group lessons
+make participation count differ from event count; that is expected. Output is
+counts and opaque IDs only, never student names or credentials.
+
+If a run fails:
+
+1. inspect the run ID and bounded failure category;
+2. fix token, date window, pagination ceiling, migration or database health;
+3. rerun the same bounded window—the writes are idempotent and revisions append
+   only when state actually changes; and
+4. do not mark unseen rows cancelled or repair provider state from the mirror.
+
+Immediate rollback is to stop invoking the sync command and revert the code.
+There is no consumer cutover or MMS mutation to undo. Leave the additive tables
+and append-only revisions in place while reviewing the failed rollout; do not
+drop them as an emergency gesture, and never touch Practice Chat claims. Automatic
+daily scheduling requires a separate observed rollout after the first parity
+results and is intentionally absent from this slice.
+
 ## Component Recovery Matrix
 
 This is the first place to look when something is down. The detailed docs linked in the final column remain the source for edge cases.
@@ -210,6 +261,7 @@ This is the first place to look when something is down. The detailed docs linked
 | Admin app, auth, and Railway deploy | Hosts `/admin`, portals, APIs, and authenticated operating workflows. Owner: Finn. | Railway service `pure-spontaneity` is serving the canonical domain; `/admin/login` works; `npm run test:admin` and `npm run build` pass locally. | Railway redeploy of the last good commit; local rebuild; restart service after env changes. | Do not push/redeploy untested code to fix a live outage unless local build passes or rollback is the explicit plan. | This runbook; `docs/operations/incidents/bug-fixes.md`; `/admin`; `/admin/login`. |
 | Google Sheets state store | Operational school truth and dashboard workflow state. Owner: Finn/Tom depending on workflow. | Admin pages load; writes persist; backup script completes; managed tabs match `docs/architecture/data/state-tabs.md`. | Re-run a failed save only after checking the page did not already write; run `npm run backup:sheets` for recovery snapshots; run `npm run ensure:state-tabs` when tabs are missing. | Do not rename headers/tabs casually. Do not bulk paste over a tab without first duplicating it or using a dated backup. | `docs/architecture/data/state-tabs.md`; `scripts/backup-sheets-tabs.mjs`; `npm run backup:sheets`; `/admin/planning`, `/admin/issues`. |
 | MMS integration | External lesson, schedule, attendance, contact, and billing-continuity source. Owner: Finn. | MMS health card is healthy; waiting list/capacity/tutor absence lesson lookup return expected data; `MMS_BEARER_TOKEN` is present. | Restart after env changes; refresh specific schedule caches; use `DISABLE_MMS_CACHE=true` briefly only for stale-read diagnosis. | Do not assume an empty MMS result means no lessons exist until token, date, tutor ID, and cache have been checked. Do not drop MMS attendance writes while payroll still relies on MMS. | `/admin/waiting`; `/admin/capacity`; `/admin/workflows/tutor-absence`; `lib/admin/mms.js`; `docs/workflows/tutors/absence-to-pause.md`. |
+| Lesson mirror | Rebuildable MMS lesson series/event/student-participation observations and stable First Chord IDs. Owner: Finn. | Latest manual sync succeeded; both expected/received totals match; status counts are plausible. No existing workflow depends on it. | Re-run the same bounded end-exclusive window after fixing the reported failure. | Do not infer cancellation from absence, merge replacement event IDs heuristically, write MMS, enable a schedule before review, or treat SQL as current provider truth. | `docs/plans/active/lesson-occurrence-model.md`; `scripts/sync-lesson-mirror.mjs`; `scripts/lesson-mirror-status.mjs`; `tests/admin/lesson-mirror-*.test.mjs`. |
 | Practice Chat and Gmail delivery | Captures lesson notes, optionally marks attendance, and sends parent emails. Owner: Finn. | The final tutor screen names the selected student and exact server-derived parent email, and requires the recipient-specific checkbox; the selected tutor self-attests and matches the student's single recorded tutor assignment. `Practice_Notes_Log` records that self-attestation, Gmail ID, MMS attendance ID, and completed state; `practice_note_delivery_claims` holds one matching terminal claim. | If a draft/snapshot failed before provider work, re-run after checking the selected lesson. After an MMS-success/Gmail-error row, follow up manually—the route deliberately refuses to retry an ambiguous Gmail send. A matching request parks a claim left `claimed` for 15 minutes as manual follow-up without provider replay; then compare PostgreSQL, Sheets, MMS, and Gmail. | Do not double-submit parent emails, delete/reset a terminal or abandoned claim to “try again,” or change note text to bypass the delivery key. Do not treat `acting_tutor` as verified identity; investigate a mismatch or missing/conflicting tutor record before sending. | `docs/workflows/practice-chat/delivery.md`; `docs/architecture/data/state-tabs.md`; `tests/admin/practice-notes-*.test.mjs`; student detail recent notes panel. |
 | Incoming WhatsApp bridge | Captures live messages from confirmed lesson groups into a review inbox. Owner: Finn/Tom for local operation. | Bridge is connected; heartbeat is fresh; confirmed-group count is non-zero; one live confirmed-group message appears once in `Incoming_Message_Inbox`. | Use Quick capture for urgent misses; restart/re-link the single bridge; signal a live group sync when mappings are stale. | Do not expect star or cache replay, run two sockets on one auth directory, or let captured evidence auto-act. | `docs/operations/integrations/whatsapp-incoming-bridge.md`; `tools/whatsapp-incoming-bridge/README.md`; `/admin/incoming-messages`. |
 | Tutor absence and pause bridge | Turns tutor-away decisions into cover/cancel communication and structured pause plans. Owner: Finn/Tom. | Tutor absence record shows the chosen outcome; cancelled dates produce grouped structured pause planning items; superseded single-day plans are parked; finance pause forecast reads the grouped item. | Repair/merge structured pause dates from the planning card if capture was messy; park duplicate plans instead of deleting history unless they are test records. | Do not run Stripe pauses automatically from tutor absence. Do not message parents before cover/cancel decision is confirmed. | `docs/workflows/tutors/absence-to-pause.md`; `/admin/workflows/tutor-absence`; `/admin/planning`; tests around tutor absence pause planning. |
