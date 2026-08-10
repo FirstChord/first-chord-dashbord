@@ -145,22 +145,26 @@ do not keep a zombie integration indefinitely.
 
 ## First Slice: Exact Scope
 
-### Implementation status — 2026-08-10
+### Implementation and rollout status — 2026-08-10
 
-The repository implementation for this slice is complete locally: verified MMS
-reads, pure normalization, the initial checksummed PostgreSQL migration,
-transactional storage, sync-run status, operator commands and focused tests are
-present. A live read-only verification for `2026-08-01` through the
-end-exclusive `2026-08-29` returned matching provider totals: 772/772 calendar
-events and 767/767 attendance rows. It normalized to 219 series, 772 events and
-767 participations without persisting names or free text. The final migration
-and bulk transaction were also executed against a disposable local PostgreSQL
-database; repeating an unchanged synthetic snapshot added no revisions.
+The repository implementation is deployed. The initial checksummed migration
+was explicitly applied to the production Neon PostgreSQL database after its
+six-hour restore window was confirmed. The existing Practice Chat delivery
+claim table remained at 111 terminal claims with no active claim before and
+after the rollout.
 
-The production migration has deliberately not been applied, no production
-mirror rows have been written, and no automatic schedule exists. Those are the
-material rollout gate described below, not missing application behaviour. No
-existing school workflow has changed.
+The first bounded production reconciliation covered `2026-08-01` through the
+end-exclusive `2026-08-29`. It succeeded with matching provider totals: 772/772
+calendar events and 767/767 attendance rows. The mirror contains 219 series,
+772 events, 767 participations, 1,758 external references and 1,758 initial
+revisions. Integrity checks found no orphaned events or participations and no
+event lacking a calendar observation. Names and free text were not emitted by
+the operator commands.
+
+No automatic schedule exists and no operational reader uses the mirror. MMS
+remains schedule and attendance truth, no MMS write was performed, and no
+existing school workflow changed. The next step is observed parity work, not a
+consumer cutover.
 
 ### Included
 

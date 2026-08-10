@@ -33,7 +33,9 @@ to a scratch spreadsheet with headers and row counts verified. Re-run
 The following remain unproven and must not be described as guaranteed:
 
 - a clean-machine cold start
-- Neon PostgreSQL point-in-time restore and Practice Note claim reconciliation
+- an end-to-end Neon PostgreSQL point-in-time restore and Practice Note claim
+  reconciliation drill (the configured restore window was six hours on
+  2026-08-10, but no restore was executed)
 - off-machine survival of the local Sheets backup directory
 - recovery of WhatsApp traffic missed while the bridge was offline
 

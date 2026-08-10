@@ -217,6 +217,13 @@ node scripts/apply-lesson-mirror-migrations.mjs
 node scripts/lesson-mirror-status.mjs
 ```
 
+For the initial production rollout on 2026-08-10, the Neon restore window was
+confirmed at six hours before migration. Migration `001_initial_lesson_mirror`
+and the bounded `2026-08-01` to `2026-08-29` reconciliation then succeeded with
+772/772 calendar rows, 767/767 attendance rows, 219 series, 772 events and 767
+participations. This is rollout evidence, not a substitute for checking the
+current restore window before a future migration.
+
 The migration runner is checksummed, serialised with an advisory lock and refuses
 an applied migration whose SQL later changed. Application requests never create
 these tables.

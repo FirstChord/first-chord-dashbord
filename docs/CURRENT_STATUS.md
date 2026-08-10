@@ -26,6 +26,14 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
+- **Lesson mirror first slice live (2026-08-10):** the additive schema is on
+  production Neon PostgreSQL and one bounded whole-school MMS reconciliation
+  succeeded for 1–28 August: calendar 772/772, attendance 767/767, producing 219
+  stable series, 772 events and 767 student participations with no orphaned
+  rows. The existing 111 Practice Chat delivery claims were unaffected. This is
+  deliberately a dormant read model: there is no automatic schedule, no
+  operational reader, no MMS write and no authority cutover. MMS remains truth;
+  the next step is measured parity and exception classification.
 - **Practice Chat is the register (2026-08-10):** attendance had two routes out
   of Quick Access — a MyMusicStaff link that opened the system of record for
   manual marking, and Practice Chat, labelled "For taking homework notes" while
@@ -307,6 +315,7 @@ deliberate school-improvement prompt.
 | Pauses | Generic completion never changes payment state. The guarded pause-completion action requires human confirmation, writes through the existing student route, and logs to `Event_Log`. For new guided tutor-absence cancellations, an undated paused-expected flag cannot suppress the dated structured pause card or unlock its final message; only an explicit per-lesson payment-not-needed decision takes the message-only path. |
 | Messaging | Parent communication remains approval-first. `Communication_Log` means copied to send, not proven sent; inbound classifications and reply drafts remain proposals. |
 | Practice Chat | All registered tutors are enabled unless temporarily constrained. The tutor self-attests, the student must have one clear tutor assignment, the final screen names the server-derived recipient, and PostgreSQL claims the delivery key before MMS/Gmail work. Ambiguous Gmail outcomes require manual follow-up. |
+| Lesson mirror | Neon PostgreSQL holds rebuildable MMS observations and stable First Chord series/event/participation IDs. MMS remains schedule and attendance truth; no current workflow reads the mirror, no schedule runs automatically, and absence from a sweep never proves cancellation. |
 | Student portal notes | Profile URLs and non-note resources stay public. Practice Chat notes load through a separate no-store API; families are moved individually to memorable-code protection through the claimed admin rollout queue. A missing rollout row remains legacy-public, while an access-state failure fails closed. The memorable code is a light privacy guard proportionate to what it protects — a child's practice notes — not a defence against a determined attacker, and it is not sized to become one. |
 | Finance | Sheets holds operating estimates/review state; Stripe and Wise remain provider truth. Payroll preparation does not execute Wise payment. |
 | Public tutor surfaces | Low-friction tutor identity is not durable authentication. Do not add broader sensitive reads or consequential writes before tutor auth. |
