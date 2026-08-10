@@ -57,3 +57,8 @@ next-env.d.ts
 /lib/student-helpers.js
 /lib/student-url-mappings.js
 .playwright-mcp/
+
+# Stray screenshots. Browser tooling given a bare filename writes it to the repo
+# root, where `git add .` would happily commit it. Nothing legitimate lives here;
+# real images belong in public/.
+/*.png
