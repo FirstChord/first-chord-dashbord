@@ -35,13 +35,13 @@
     "generate-configs": "node scripts/generate-configs.js"
   },
   "dependencies": {
-    "googleapis": "^161.0.0",
-    "lucide-react": "^0.539.0",
-    "next": "^15.5.22",
+    "googleapis": "^174.0.1",
+    "lucide-react": "^1.29.0",
+    "next": "^16.3.0",
     "next-auth": "^4.24.15",
     "pg": "^8.16.3",
-    "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
