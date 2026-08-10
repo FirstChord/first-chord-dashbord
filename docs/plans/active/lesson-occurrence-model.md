@@ -111,6 +111,16 @@ the last verified snapshot; absence is reported as “not observed”, never
 cancelled. This creates evidence for the remaining exception questions without
 moving any operational consumer or write authority.
 
+The first production Phase 2 dispatch on 2026-08-10 covered `2026-07-27` through
+the end-exclusive `2026-09-22` and completed in about four seconds. It matched
+MMS totals exactly: 1,597/1,597 calendar events and 1,579/1,579 attendance
+participations across 221 series. It found no attendance-only events, missing
+tutor/duration/series references, or event/participation non-observations; 748
+events had no location and remain coverage evidence rather than assumed errors.
+The overlapping observation added 825 events, 812 participations and two changed
+participation revisions. The separate Practice Chat claim table remained at 111
+completed claims with none active.
+
 ### Phase 3 — Attach Existing Systems to First Chord IDs
 
 Gradually make payroll, tutor cover, WhatsApp context, Practice Chat, student

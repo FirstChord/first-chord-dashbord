@@ -33,6 +33,11 @@ deliberate school-improvement prompt.
   rows. Phase 2 adds an authenticated, read-only `/admin/lessons` parity surface
   and a daily 05:45 UTC sweep covering 14 London calendar days back and 42 days
   ahead. The Overview reports both data freshness and GitHub workflow health.
+  The first scheduled-style run covered 27 July through 21 September in about
+  four seconds: calendar 1,597/1,597 and attendance 1,579/1,579, with zero event
+  or participation non-observations. It retained 221 series, caught two changed
+  participation records in the overlap, and left all 111 completed Practice Chat
+  claims unchanged.
   Failed attempts cannot replace the last verified snapshot, and absence from a
   sweep is labelled “not observed”, never cancelled. No operational reader, MMS
   write or authority cutover exists; MMS remains schedule and attendance truth.
