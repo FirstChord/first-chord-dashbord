@@ -26,6 +26,18 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
+- **Cover got its door back (2026-08-11):** the one-door rule for tutor-absence
+  cards was right for Cancel and wrong for Cover. Cancel's follow-through really
+  does live on the card, but Cover's — cover tutor, briefing, calendar, parent
+  message — only exists on `/admin/workflows/tutor-absence`, so removing the link
+  left the card instructing you to open a screen it had just taken away, with the
+  grey `Workflow:` metadata pill as the only remaining route. Cover-decided cards
+  now show **Finish cover checklist →**, deep-linked to that tutor and date;
+  Cancel keeps its single door. The workflow is also listed on `/admin/workflows`
+  again, for the case where there is no card in hand. The rule that survives:
+  a second door is duplication only when the first door can actually finish the
+  work.
+
 - **Practice Chat is being measured for six weeks (2026-08-11):** `Practice_Notes_Log`
   only gains a row when a tutor reaches the end, so abandonment, transcription
   failures, retries and pre-save edits were invisible by construction.
@@ -295,59 +307,6 @@ deliberate school-improvement prompt.
   `/admin` finally has an error boundary instead of Next's bare exception page.
   The rule and its per-module tiers live in
   [Sheets read discipline](./architecture/data/sheets-reads.md).
-- **Evidence-first message intake and Practice Note song links (2026-08-04):**
-  incoming classification now separates topic, intent and actionability, so a
-  social mention of summer, a music-book payment, or an already-settled slot no
-  longer becomes work merely because it contains a trigger word. New rows keep
-  the machine proposal, confidence and evidence beside the human-final decision;
-  Signals counts only explicit accepts/corrections as reviewed topic evidence.
-  Converting to Planning leaves the message open until the idempotent linked plan
-  has actually saved, and linked plan status is visible back on the card. A later
-  school message is weak engagement evidence for only the nearest preceding open
-  row, never proof of reply or blanket closure. Every readable open card keeps a
-  visible Planning path. **Reply + Plan** always opens a compact preview before
-  anything is written, with the proposed student and type, editable extracted
-  dates, and an editable deterministic parent reply. **Copy reply & open plan**
-  puts that reviewed wording on the clipboard, stores the same draft with the
-  idempotent linked plan, and opens that plan. For pause cards the reviewed
-  reply becomes the final WhatsApp handoff after the payment tool; the card
-  still cannot close until a human confirms the message was sent. The confirmed
-  dates—not a hidden parser guess—feed the structured pause card.
-  Bare
-  role-marked ordinals such as “on the 12th … back on the 19th” resolve against
-  the message date, and an explicit singular missed lesson stays one-off rather
-  than becoming an extended absence merely because a return date was mentioned.
-  Mobile cards now lead with student, sender and original message rather than
-  classifier badges. The action row now says what happens: **Reply + Plan** and
-  **Reply**, followed by compact Later, Done and More controls. Reply is now the
-  one-message-at-a-time consent boundary for the bounded AI drafting pilot; it
-  falls back to the editable standard template whenever drafting is disabled,
-  unavailable or rejected by deterministic validation. General drafts may
-  acknowledge the actual message but cannot promise operational outcomes;
-  ambiguous policy evidence never reaches the model. There is no bulk or
-  background drafting, and proposal evidence no longer duplicates the parent
-  message. **Copy & open WhatsApp** puts the final text on the clipboard and
-  opens WhatsApp's chat chooser with it prefilled. The
-  human still chooses the conversation and taps Send, and the copy remains a
-  Communication Log record rather than proof of sending. No-action, evidence,
-  classifier detail, correction and test deletion sit behind one More
-  disclosure. Later is a wake-up time on the still-open message, with separate
-  Open/Later/Done views, and never masquerades as resolution. Correction
-  controls and their large student list are mounted only when opened. Practice
-  Notes can now carry up to
-  twelve tutor-confirmed catalogue `song_id` links plus title snapshots and six
-  explicitly unlisted raw titles. Both note routes reject unknown catalogue
-  IDs; student history shows catalogue and unlisted evidence separately, and
-  Signals aggregates linked notes plus an unlisted-repertoire review list
-  without inferring sentiment. The separate Firebase PWA selector is live:
-  exact note-title suggestions prioritise the
-  current shelf but remain unchecked until the tutor selects them; catalogue
-  search and an unlisted-title escape hatch cover everything else. The selector
-  remains optional, so ignoring it preserves the previous Practice Chat flow.
-  The occasional done/parked `Song_Outcomes`
-  prompt remains supplementary evidence—the high-volume Practice Note stream is
-  intended to become the main song-learning memory.
-
 ## Current operating contracts
 
 | Area | Current boundary |

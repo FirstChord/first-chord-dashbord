@@ -45,6 +45,12 @@ const workflowSections = [
     status: 'Campaign',
   },
   {
+    href: '/admin/workflows/tutor-absence',
+    title: 'Tutor Absence',
+    description: 'Pick a tutor and date, choose cancel or cover, then work the cover checklist. Usually reached from its Planning card; this is the way in without one.',
+    status: 'Active workflow',
+  },
+  {
     href: '/admin/workflows/cover-bank',
     title: 'Cover Bank',
     description: 'Call workflow for tutor cover availability: who is happy to cover, which days, cross-checked against teaching days.',

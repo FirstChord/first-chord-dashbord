@@ -268,13 +268,17 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
 
       {/* Tutor-absence cards deliberately have no workflow link: the decision and
           its follow-through both live on this card, so a second door to a
-          separate workflow screen only asked "which one is the real one?" */}
-      {linkedWorkflowHref && !isPauseReminder && !isTutorAbsenceCard ? (
+          separate workflow screen only asked "which one is the real one?"
+          Cover is the exception — its follow-through (cover tutor, briefing,
+          calendar, parent message) only exists on the workflow screen, so
+          suppressing the link left the card telling you to open a door it had
+          just taken away. */}
+      {linkedWorkflowHref && !isPauseReminder && (!isTutorAbsenceCard || tutorAbsenceDecision === 'cover') ? (
         <Link
           href={linkedWorkflowHref}
           className="mt-3 inline-flex rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-white"
         >
-          Open linked workflow
+          {tutorAbsenceDecision === 'cover' ? 'Finish cover checklist →' : 'Open linked workflow'}
         </Link>
       ) : null}
 
