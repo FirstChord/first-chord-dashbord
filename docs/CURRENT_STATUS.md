@@ -93,6 +93,24 @@ deliberate school-improvement prompt.
   skill × level matrix** — its trustworthy findings are the structural ones that
   hold regardless of tag quality: bass Debut is one song, Grade 6 is thin on
   every shelf, and no reading strand exists for guitar or electric.
+  **Durable rule from the corrections that followed (`4127be2`, `47e617a`): a tag
+  means different things in different contexts, so a mapping is only valid where
+  it was written.** `picking pattern` → `fingerpicking` is right on acoustic and
+  wrong on electric, where picking means a plectrum. `left hand` →
+  `hand_position` was wrong everywhere: it says *which hand plays*, not where it
+  sits, and it is itself ambiguous between "one hand alone" and "this hand
+  carries the melody", so no single mapping could be right. `left hand`/`right
+  hand` are filing tags now, and `hands_separately` ("One hand alone", sibling of
+  the existing `hands_together`) marks the pieces whose notes really do say one
+  hand only. That skill is the **one vocabulary addition made outside the
+  December distillation**, justified as correcting a false claim rather than
+  growing vocabulary — The Dancing Bear was asserting a skill its note never
+  describes. Expect this class of error again on piano: largest tag vocabulary,
+  155 songs.
+  **Clearest evidence that a `tutorNote` describes the recording, not the
+  arrangement:** *I Don't Want to Miss a Thing* is fingerpicked throughout and was
+  tagged `strumming`. Its note mentions neither, so the tag was filled in when
+  the song was added. Finn caught it by eye; nothing in the notes could have.
 - **Bass and Electric Guitar have skills (2026-08-08):** both shelves went from
   **0% to 93% and 90%** — 92 songs tagged, overall coverage 41% → 71%.
   `INSTRUMENTS_WITHOUT_SKILLS` is now empty. Nothing was inferred by rule: each
@@ -404,6 +422,41 @@ Canonical details live in [state ownership](./architecture/data/ownership.md),
   for Dock of the Bay is split three ways and a First Chord path cannot say "this
   song, on whichever instrument". Worth settling before the FC curriculum paths
   are built on top of it.
+- **Piano is the last untagged shelf, and the riskiest one to tag.** 77 of 155
+  songs carry no skill (50% covered, the other three shelves are 90–100%). The
+  gap splits cleanly: **42 have a `tutorNote` to tag from — a short curation pass
+  — and 35 do not**, and those 35 need somebody at the score, not another pass
+  over prose. `node scripts/song-skills-report.mjs --gaps` lists both.
+  Two cautions specific to piano, both learned the hard way on the other shelves.
+  First, it has the **largest tag vocabulary**, so expect the mapping-context
+  error class described in "Acoustic guitar re-tagged" above — `left hand` →
+  `hand_position` was exactly this and came from piano. Check what each existing
+  mapping asserts before reusing it. Second, the coverage doc the `add-song`
+  skill tells you to read "first, every time" moved to
+  [song catalogue coverage](./reference/song-catalogue-coverage.md); the skill
+  still pointed at the old `docs/admin/` path, so every run of it began by
+  failing to find its own stated authority — plausibly how *I Don't Want to Miss
+  a Thing* was given `strumming`. The skill was corrected 2026-08-11. **A
+  user-level skill can rot silently against a repo that moved**: `docs:check`
+  guards paths inside this repo and cannot see `~/.claude/skills/`.
+- **The FC levelled path (guitar, bass, piano) targeted for 2027 — what the
+  skills layer can and cannot contribute.** The skill × level matrix per
+  instrument is buildable now and is **one input, not the syllabus**. Trust its
+  structural findings (bass Debut is one song; Grade 6 is thin on every shelf; no
+  reading strand exists for guitar or electric) and distrust its blank cells, for
+  the reason recorded above. The intended sequence is **December distillation
+  first, commissioning briefs second** — briefs written before then rest on tags
+  no tutor has confirmed. Booked as `planning_song_loop_distillation` in
+  `Planning_Items`, target **2026-12-07**, owner Finn, with a stop condition in
+  its notes: under ~40 `Song_Outcomes` rows across more than one tutor, re-book
+  rather than run. Recipe: `docs/plans/parked/song-loop-distillation.md`.
+  **The test that decides whether the skills layer earned its place:** can you
+  ask a question about a student that names a skill and get a true answer —
+  *"has this student met syncopation before, and how did it go?"* If December's
+  data supports that, the aggregate views (skill history per student, "what
+  next" by skill overlap) become worth building. Until then they would be built
+  on an unconfirmed draft, and a confidently wrong suggestion costs more trust
+  than no suggestion.
 - **Notes access lifecycle, not notes brute force.** The realistic way practice
   notes reach the wrong person is that the code lives in the WhatsApp group
   description, so anyone ever in that group keeps access until it is reset — a
