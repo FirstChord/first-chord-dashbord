@@ -1,7 +1,7 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: 2026-08-10
+last_verified: 2026-08-11
 ---
 # Admin current status
 
@@ -25,6 +25,25 @@ earns attention only when it represents work for today, near-term action, or a
 deliberate school-improvement prompt.
 
 ## Recently shipped
+
+- **Practice Chat is being measured for six weeks (2026-08-11):** `Practice_Notes_Log`
+  only gains a row when a tutor reaches the end, so abandonment, transcription
+  failures, retries and pre-save edits were invisible by construction.
+  `Practice_Chat_Sessions` now records one row per *attempt* — durations, counts
+  and flags, with no audio, no transcript and no note text. Two tiers: the silent
+  one runs school-wide and changes nothing anyone sees; the rating card is gated
+  to `NEXT_PUBLIC_PRACTICE_CHAT_EVAL_TUTORS` (unset = nobody), asks at most once a
+  day, and takes "stop asking me" permanently. Abandonment is derived from age
+  rather than claimed by a client that may have been closed mid-lesson, and a
+  session that might still be running counts on neither side of the completion
+  rate. Per-tutor adoption lives in `npm run eval:practice-chat`, not on the page,
+  because state-tabs.md forbids that surface becoming a tutor leaderboard.
+  **Two things need Finn:** set the two Railway variables, and hand-time ~10
+  manual notes into `lib/config/practice-chat-baseline.mjs` — that baseline cannot
+  be collected once the ritual is habitual, and without it the ritual's duration
+  is a fact about the tool rather than a saving. The lane is time-boxed: decide
+  keep or purge at week six.
+  [Evaluation workflow](workflows/practice-chat/evaluation.md).
 
 - **Lesson mirror parity loop live (2026-08-10):** the additive Phase 1 schema is
   on production Neon PostgreSQL and its first whole-school MMS reconciliation

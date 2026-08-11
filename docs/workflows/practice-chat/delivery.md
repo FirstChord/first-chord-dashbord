@@ -115,7 +115,14 @@ PRACTICE_CHAT_API_SECRET=<shared PWA handoff secret>
 PRACTICE_NOTES_ENABLED_TUTORS=<comma-separated canonical names>
 # Optional transcription trial only. Unset = the PWA's own default (whisper-1).
 NEXT_PUBLIC_PRACTICE_CHAT_ASR_MODEL=<supported model id>
+# Six-week evaluation only. Unset = no tutor is ever prompted.
+NEXT_PUBLIC_PRACTICE_CHAT_EVAL_TUTORS=<comma-separated short names>
+NEXT_PUBLIC_PRACTICE_CHAT_EVAL_SAMPLE=<prompt on 1 in N sessions>
 ```
+
+The two evaluation variables gate the rating card only; session telemetry runs
+regardless and changes nothing a tutor sees. See
+[the evaluation workflow](./evaluation.md).
 
 ## Transcription Model
 
