@@ -1,9 +1,12 @@
 import Image from 'next/image';
+import Link from 'next/link';
+import { ArrowLeftRight } from 'lucide-react';
 import StudentNotesGate from './StudentNotesGate';
 import StudentLinks from './StudentLinks';
 import StudentSongs from './StudentSongs';
 import HeaderGreenery from '@/components/tutor-dashboard/HeaderGreenery';
 import TimeOfDaySky from '@/components/shared/TimeOfDaySky';
+import { getStudentDashboardSwitch } from '@/lib/student-dashboard-switches.mjs';
 
 function possessive(name = '') {
   return name.endsWith('s') ? `${name}’` : `${name}’s`;
@@ -47,6 +50,8 @@ export default function StudentDashboard({ student, assignedSongs = [] }) {
     );
   }
 
+  const dashboardSwitch = getStudentDashboardSwitch(student.id);
+
   return (
     <TimeOfDaySky className="min-h-screen relative overflow-hidden">
       {/* Cloud */}
@@ -71,6 +76,15 @@ export default function StudentDashboard({ student, assignedSongs = [] }) {
             {possessive(student.name.split(' ')[0])} Dashboard
           </h1>
           <p className="mt-1 text-sm sm:text-base text-gray-600">Welcome back!</p>
+          {dashboardSwitch ? (
+            <Link
+              href={dashboardSwitch.href}
+              className="mt-3 inline-flex min-h-11 items-center justify-center gap-2 rounded-full border-2 border-[#2F6B3D]/30 bg-white/90 px-4 py-2 text-sm font-bold text-[#245530] shadow-sm transition-colors hover:border-[#2F6B3D]/50 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F6B3D] focus-visible:ring-offset-2"
+            >
+              <ArrowLeftRight className="h-4 w-4" aria-hidden="true" />
+              {dashboardSwitch.label}
+            </Link>
+          ) : null}
         </div>
       </header>
 
