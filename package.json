@@ -27,6 +27,8 @@
     "code-map:impact": "node scripts/code-map.mjs impact",
     "hygiene:check": "node scripts/hygiene-check.mjs",
     "eval:incoming": "node scripts/eval-incoming-classifier.mjs",
+    "eval:practice-chat": "node scripts/eval-practice-chat.mjs",
+    "eval:practice-summaries": "node scripts/eval-practice-summaries.mjs",
     "install:backup-schedule": "node scripts/install-sheets-backup-launch-agent.mjs",
     "lint": "eslint app components lib middleware.js --max-warnings=0",
     "analyze": "ANALYZE=true npm run build",

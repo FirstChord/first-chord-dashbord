@@ -11,6 +11,7 @@ import {
   buildManagedStateSheetDefinitions,
   INCOMING_MESSAGE_INBOX_HEADERS,
   LIFECYCLE_SNAPSHOT_HEADERS,
+  PRACTICE_CHAT_SESSIONS_HEADERS,
   PRACTICE_NOTES_LOG_HEADERS,
   PROPOSALS_HEADERS,
   SONG_ASSIGNMENTS_HEADERS,
@@ -23,6 +24,7 @@ import {
 } from '../../lib/admin/sheets/core.mjs';
 import { buildIncomingMessageSheetRow } from '../../lib/admin/sheets/incoming-messages.mjs';
 import { buildPracticeNoteLogSheetRow } from '../../lib/admin/practice-notes-helpers.mjs';
+import { buildPracticeChatSessionSheetRow } from '../../lib/admin/practice-chat-session-helpers.mjs';
 import {
   buildLifecycleSnapshotRow,
   buildStudentLifecycleRow,
@@ -108,6 +110,7 @@ const BUILDER_CONTRACTS = [
   ['Stripe_Forecast_Monthly', STRIPE_FORECAST_MONTHLY_HEADERS, buildStripeForecastRow],
   ['Incoming_Message_Inbox', INCOMING_MESSAGE_INBOX_HEADERS, buildIncomingMessageSheetRow],
   ['Practice_Notes_Log', PRACTICE_NOTES_LOG_HEADERS, buildPracticeNoteLogSheetRow],
+  ['Practice_Chat_Sessions', PRACTICE_CHAT_SESSIONS_HEADERS, buildPracticeChatSessionSheetRow],
 ];
 
 test('row builders emit exactly their sheet headers', () => {

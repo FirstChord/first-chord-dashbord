@@ -6,7 +6,77 @@ import { ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 import { formatNotesText, speakerNamesFor } from '@/components/shared/notes-formatting';
 import { stripDuplicatePracticeGoals } from '@/lib/tutor-dashboard-helpers.mjs';
 
-export default function NotesPanel({ notes, source, studentName = '', onLoadHistory, onLoadSummary }) {
+/**
+ * The one question that cannot honestly be asked at the end of the lesson that
+ * produced the note: was it useful *next* time?
+ *
+ * So it is asked here instead — next lesson, with the note on screen, by the
+ * tutor who just used it or didn't. That placement is also why it doubles as
+ * the continuity evidence: nothing else on this surface distinguishes a note
+ * that changed the lesson from one that was merely displayed.
+ *
+ * Skipping is a first-class answer and is recorded as one. A prompt people
+ * decline is a finding about the prompt.
+ */
+function PriorNoteRating({ onAnswer, onSkip }) {
+  const [done, setDone] = useState('');
+
+  if (done) {
+    return (
+      <div className="mt-4 rounded-lg border border-[#2F6B3D]/20 bg-white/70 px-4 py-3 text-sm text-gray-600">
+        {done === 'answered' ? 'Thanks — noted.' : 'No problem.'}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-4 rounded-lg border border-[#2F6B3D]/25 bg-white/70 p-4">
+      <p className="text-sm font-semibold text-gray-800">
+        Did last week’s note change what you did today?
+      </p>
+      <p className="mt-0.5 text-xs text-gray-500">
+        Six-week check on whether Practice Chat is earning its place. Two taps, then it goes away.
+      </p>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {[1, 2, 3, 4, 5].map((score) => (
+          <button
+            key={score}
+            type="button"
+            onClick={() => {
+              setDone('answered');
+              onAnswer?.(score);
+            }}
+            className="h-9 w-9 rounded-full border border-[#2F6B3D]/30 bg-white text-sm font-semibold text-gray-700 transition hover:border-[#2F6B3D] hover:bg-green-50"
+            aria-label={`${score} out of 5`}
+          >
+            {score}
+          </button>
+        ))}
+        <span className="ml-1 text-xs text-gray-500">1 = not at all · 5 = a lot</span>
+        <button
+          type="button"
+          onClick={() => {
+            setDone('skipped');
+            onSkip?.();
+          }}
+          className="ml-auto text-xs font-semibold text-gray-500 underline transition hover:text-gray-700"
+        >
+          Skip
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default function NotesPanel({
+  notes,
+  source,
+  studentName = '',
+  onLoadHistory,
+  onLoadSummary,
+  onHistoryOpened,
+  priorRating = null,
+}) {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [history, setHistory] = useState(null);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -36,6 +106,11 @@ export default function NotesPanel({ notes, source, studentName = '', onLoadHist
       return;
     }
     setHistoryOpen(true);
+    // The one deliberate act in this panel. The previous note and the Lesson
+    // Focus summary are rendered automatically on student select, so they prove
+    // nothing about whether a tutor used them; choosing to open earlier lessons
+    // is the only thing here a tutor has to decide to do.
+    onHistoryOpened?.();
     if (history === null && onLoadHistory) {
       setHistoryLoading(true);
       try {
@@ -143,6 +218,10 @@ export default function NotesPanel({ notes, source, studentName = '', onLoadHist
           </span>
         )}
       </p>
+
+      {priorRating?.show && (
+        <PriorNoteRating onAnswer={priorRating.onAnswer} onSkip={priorRating.onSkip} />
+      )}
 
       {onLoadHistory && (
         <div className="mt-4 border-t border-yellow-200 pt-3">

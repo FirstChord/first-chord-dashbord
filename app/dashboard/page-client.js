@@ -16,6 +16,7 @@ import {
   excludeGroupOnlyStudents,
   filterTutorStudentsBySearch,
 } from '@/lib/tutor-dashboard-helpers.mjs';
+import { resolvePracticeChatEvalPrompt, shouldSample } from '@/lib/config/practice-chat-eval.mjs';
 
 const TUTOR_STORAGE_KEY = 'fc_dashboard_tutor';
 const LOADING_MESSAGES = [
@@ -47,14 +48,36 @@ function timeAwareGreeting() {
   return 'Good evening';
 }
 
-function notesUrlForStudent(student = {}, { history = false, summary = false } = {}) {
+function notesUrlForStudent(student = {}, { history = false, summary = false, priorRating = false } = {}) {
   const studentId = student.mms_id || student.ID || '';
   const token = student.noteAccessToken || student.note_access_token || '';
   const params = new URLSearchParams();
   if (token) params.set('token', token);
   if (history) params.set('history', '1');
   if (summary) params.set('summary', '1');
-  return `/api/notes/${encodeURIComponent(studentId)}${params.toString() ? `?${params.toString()}` : ''}`;
+  const path = `/api/notes/${encodeURIComponent(studentId)}${priorRating ? '/prior-rating' : ''}`;
+  return `${path}${params.toString() ? `?${params.toString()}` : ''}`;
+}
+
+// Whole days since the previous note, or null when there is no usable date.
+// Used only to describe what the tutor had in front of them; it never decides
+// anything.
+function priorNoteAgeDays(notes, now = Date.now()) {
+  const time = new Date(notes?.lesson_date || '').getTime();
+  if (!Number.isFinite(time)) return null;
+  return Math.max(0, Math.round((now - time) / (24 * 60 * 60 * 1000)));
+}
+
+// Asked once per student per day at most, and only where the answer could mean
+// something — there has to be a previous note to have been useful. Deterministic
+// on student + date so a re-render never rolls the dice again and pops a prompt
+// at a tutor who just dismissed one.
+function shouldAskPriorRating({ tutor, student, notes, answered }) {
+  if (!notes || answered) return false;
+  const { prompt, sample } = resolvePracticeChatEvalPrompt({ tutor });
+  if (!prompt) return false;
+  const studentId = student?.mms_id || '';
+  return shouldSample(`${studentId}:${new Date().toISOString().slice(0, 10)}`, sample);
 }
 
 export default function DashboardClient({ tutorOptions = [], authAccess = {} }) {
@@ -72,6 +95,10 @@ export default function DashboardClient({ tutorOptions = [], authAccess = {} }) 
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [practiceChatPanel, setPracticeChatPanel] = useState(null);
+  // Evaluation-only, and per student: whether this tutor deliberately opened
+  // earlier lessons, and whether they have already answered the usefulness
+  // prompt for this student. Reset when the selected student changes.
+  const [priorNoteReview, setPriorNoteReview] = useState({ historyOpened: false, ratingAnswered: false });
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [todayLessons, setTodayLessons] = useState([]);
   const searchInputRef = useRef(null);
@@ -79,6 +106,7 @@ export default function DashboardClient({ tutorOptions = [], authAccess = {} }) 
   // Selecting a student slides the sidebar away so the view is all about them
   const handleSelectStudent = (student) => {
     setSelectedStudent(student);
+    setPriorNoteReview({ historyOpened: false, ratingAnswered: false });
     if (student) setSidebarOpen(false);
   };
 
@@ -583,6 +611,36 @@ export default function DashboardClient({ tutorOptions = [], authAccess = {} }) 
                           const data = await res.json();
                           return data.summary || null;
                         }}
+                        onHistoryOpened={() => {
+                          setPriorNoteReview((current) => ({ ...current, historyOpened: true }));
+                        }}
+                        priorRating={{
+                          show: shouldAskPriorRating({
+                            tutor,
+                            student: selectedStudent,
+                            notes: lastNotes,
+                            answered: priorNoteReview.ratingAnswered,
+                          }),
+                          // Both paths are fire-and-forget: an evaluation answer
+                          // must never interrupt a tutor mid-lesson, so a failed
+                          // write is dropped rather than surfaced.
+                          onAnswer: (rating) => {
+                            setPriorNoteReview((current) => ({ ...current, ratingAnswered: true }));
+                            fetch(notesUrlForStudent(selectedStudent, { priorRating: true }), {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ rating }),
+                            }).catch(() => {});
+                          },
+                          onSkip: () => {
+                            setPriorNoteReview((current) => ({ ...current, ratingAnswered: true }));
+                            fetch(notesUrlForStudent(selectedStudent, { priorRating: true }), {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ skipped: true }),
+                            }).catch(() => {});
+                          },
+                        }}
                       />
                     )
                   )}
@@ -594,6 +652,11 @@ export default function DashboardClient({ tutorOptions = [], authAccess = {} }) 
                     student={selectedStudent}
                     activeTutor={tutor}
                     onOpenPracticeChat={(url, name) => setPracticeChatPanel({ url, name, completed: false })}
+                    priorNote={{
+                      exists: Boolean(lastNotes),
+                      ageDays: priorNoteAgeDays(lastNotes),
+                      historyOpened: priorNoteReview.historyOpened,
+                    }}
                   />
                 </div>
               </div>

@@ -2,53 +2,7 @@ import mmsClient from '@/lib/mms-client-cached';
 import { getPracticeNoteLogRows } from '@/lib/admin/sheets';
 import { selectLatestPortalPracticeNote } from '@/lib/admin/practice-notes-helpers.mjs';
 import { buildPracticeSummary } from '@/lib/admin/practice-summary-helpers.mjs';
-import { getTutorSurfaceTokenSecret, verifyStudentNotesToken } from '@/lib/tutor-surface-token.mjs';
-import { requireTutorDashboardAccess, tutorAuthErrorBody } from '@/lib/tutor-auth';
-
-function authorizeNotesRequest(request, studentId) {
-  const { searchParams } = new URL(request.url);
-  const token = searchParams.get('token') || '';
-  const secret = getTutorSurfaceTokenSecret();
-
-  if (!secret) {
-    return {
-      ok: false,
-      status: 503,
-      body: {
-        success: false,
-        code: 'notes_token_secret_missing',
-        message: 'Notes access is not configured',
-      },
-    };
-  }
-
-  const payload = verifyStudentNotesToken(token, { studentId, secret });
-  if (!payload) {
-    return {
-      ok: false,
-      status: 401,
-      body: {
-        success: false,
-        code: 'notes_token_required',
-        message: 'A valid notes access token is required',
-      },
-    };
-  }
-
-  return { ok: true, tutor: payload.tutor || '' };
-}
-
-async function authorizeTutorSession(tutor) {
-  const tutorAuth = await requireTutorDashboardAccess({ requestedTutor: tutor });
-  if (!tutorAuth.ok) {
-    return {
-      ok: false,
-      status: tutorAuth.status,
-      body: tutorAuthErrorBody(tutorAuth),
-    };
-  }
-  return { ok: true };
-}
+import { authorizeNotesRequest, authorizeTutorSession } from '@/lib/admin/notes-route-auth.mjs';
 
 async function getFirstChordPortalNote(studentId) {
   try {
