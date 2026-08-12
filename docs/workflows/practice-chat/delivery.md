@@ -180,3 +180,24 @@ After a deployment, use one explicitly approved real end-to-end note and verify
 the confirmation copy, parent receipt, MMS attendance, audit row, database claim,
 and duplicate response. Do not create a real delivery merely for an automated
 smoke test.
+
+### Look at the email
+
+```bash
+npm run preview:email            # both MIME alternatives, plus layout checks
+npm run preview:email -- --open  # writes an HTML file to open in a browser
+npm run preview:email -- --note path/to/note.txt
+```
+
+Sends nothing and calls no provider, so it is safe to run at any time.
+
+**Run it whenever the email body, the note markup, or their shared renderers
+change.** Assertions on this path check that content is present and correctly
+escaped; they cannot see how it is arranged. Section headings once rendered
+inside the body paragraph — leaving Gmail no block boundary to space around, so
+parents received a wall of text — while every test passed, because presence and
+arrangement are different properties and only one of them was ever asserted.
+
+Styling must be inline. Gmail discards `<style>` blocks and `<head>` entirely,
+so a stylesheet silently does nothing; the preview reports whether any crept in,
+and whether raw `[section]` brackets are still reaching parents.
