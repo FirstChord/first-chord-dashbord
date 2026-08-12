@@ -1,7 +1,7 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: 2026-08-11
+last_verified: 2026-08-12
 ---
 # Admin current status
 
@@ -26,6 +26,15 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
+- **Primary navigation follows the work, not the alarm state (2026-08-12):**
+  the four equal white pills made persistent navigation look like competing
+  actions and gave no visible current location. The header now reads
+  **Overview → Planning → Workflows → Issues**: orient first, move through normal
+  planned work and specialised processes, then handle exceptions. Inactive
+  destinations are quiet text links; the current section has a green underline
+  and `aria-current="page"`. Deeper operational routes such as Waiting, Payroll
+  and Finance retain the Workflows location cue. The targets remain at least
+  44px high and scroll rather than wrap on a narrow viewport.
 - **Summer finance state reconciled before the next snapshot (2026-08-12):**
   the scheduled jobs were healthy and the weekly series clearly showed the
   summer contraction, but the 10 August run-rate was faithfully preserving
@@ -337,25 +346,12 @@ deliberate school-improvement prompt.
   correctly-scoped statement about the *Mark pause completed* button became false
   when compressed into a panel-level badge, because step one of that panel opens
   the Payment Pause PWA, which does write to Stripe.
-- **Sheets read budget and graceful quota failure (2026-08-04):** intermittent
-  "Application error" pages across `/admin` were a Google Sheets 429 — 60 reads
-  per minute per *user*, shared by the whole app through one service account.
-  `getSheetObjects` read straight past the cache, so every
-  `loadStudentContextCollection` spent three requests regardless of how recently
-  it had run; it now shares the read cache. Ordinary reads serve bounded-stale
-  data rather than failing when Sheets rate-limits, while forced (pre-write)
-  reads still fail loudly rather than act on an old copy. 429 gets a short retry
-  ladder because a per-minute quota does not clear in seconds and each attempt
-  spends more of it. A rolling read counter warns at 75% of the ceiling, and
-  `/admin` finally has an error boundary instead of Next's bare exception page.
-  The rule and its per-module tiers live in
-  [Sheets read discipline](./architecture/data/sheets-reads.md).
 ## Current operating contracts
 
 | Area | Current boundary |
 |---|---|
 | Context | Student lifecycle, schedule, payment value, and capacity summaries are derived/read-only. They do not become provider truth or authorise actions. |
-| Navigation | Overview starts work; Issues handles detected problems; Workflows holds recurring processes; Planning holds due work, reflection, notes, and initiatives. Student records are reached through search and workflow links. |
+| Navigation | Overview orients; Planning holds due work, reflection, notes, and initiatives; Workflows holds specialised and recurring processes; Issues handles detected exceptions. Persistent navigation visibly identifies the current section. Student records are reached through search and workflow links. |
 | Capacity | MMS `Free` events remain source truth. Waiting-list matches are hints filtered by instrument, never reservations or automatic assignment. |
 | Planning | `Planning_Items` is human work state, not a project-management or workflow engine. Friday reflection and Monday scheduling are seeded planning prompts. |
 | Pauses | Generic completion never changes payment state. The guarded pause-completion action requires human confirmation, writes through the existing student route, and logs to `Event_Log`. For new guided tutor-absence cancellations, an undated paused-expected flag cannot suppress the dated structured pause card or unlock its final message; only an explicit per-lesson payment-not-needed decision takes the message-only path. |

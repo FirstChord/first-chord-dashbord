@@ -124,8 +124,13 @@ Background health and passive numbers stay lower or inside their workflow unless
 something is wrong. Navigation represents modes of work, not every data object:
 
 ```text
-Overview | Issues | Workflows | Planning
+Overview | Planning | Workflows | Issues
 ```
+
+The order moves from orientation to normal planned work, then specialised
+processes, then exceptions. Persistent navigation should look like navigation,
+not a row of equally prominent action buttons, and it must visibly and
+programmatically identify the current section.
 
 Use [copy and tone](./copy-and-tone.md) and [UI conventions](./ui-conventions.md)
 for action wording, async feedback, density, and error states.

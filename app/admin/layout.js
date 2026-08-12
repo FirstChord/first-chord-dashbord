@@ -2,29 +2,12 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { PawPrint } from 'lucide-react';
 import { AdminSignOutButton } from '@/components/admin/AdminAuthButton';
+import AdminPrimaryNavigation from '@/components/admin/AdminPrimaryNavigation';
 
 // The whole /admin tree reads live data (Sheets, MMS) per request; without this,
 // removing getServerSession from the layout lets Next.js try to prerender admin
 // pages at build time, where those credentials aren't available.
 export const dynamic = 'force-dynamic';
-
-const navItems = [
-  { href: '/admin', label: 'Overview' },
-  { href: '/admin/flags', label: 'Issues' },
-  { href: '/admin/workflows', label: 'Workflows' },
-  { href: '/admin/planning', label: 'Planning' },
-];
-
-function NavLink({ href, label }) {
-  return (
-    <Link
-      href={href}
-      className="rounded-full border border-blue-200/70 bg-white/75 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-blue-300 hover:bg-white hover:text-slate-900"
-    >
-      {label}
-    </Link>
-  );
-}
 
 export default function AdminLayout({ children }) {
   return (
@@ -49,12 +32,8 @@ export default function AdminLayout({ children }) {
           </div>
           <AdminSignOutButton />
         </div>
-        <nav className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-6 pb-5">
-          <div className="flex flex-wrap items-center gap-3">
-            {navItems.map((item) => (
-              <NavLink key={item.href} href={item.href} label={item.label} />
-            ))}
-          </div>
+        <nav aria-label="Admin dashboard" className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-6 pb-4">
+          <AdminPrimaryNavigation />
           <form action="/admin/students" className="flex min-w-0 items-center gap-2">
             <input
               type="search"
