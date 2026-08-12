@@ -173,6 +173,57 @@ for (const file of exactPathSources) {
   }
 }
 
+// --- Obsidian vault freshness ---------------------------------------------
+//
+// The vault carries `last_verified` dates that nothing ever checked, so they
+// asserted a freshness no one was maintaining — worse than no date, because an
+// unverified claim that looks verified gets trusted. This checks them.
+//
+// Warnings only, never errors. The vault lives in iCloud and is not in any git
+// repository, so it is absent on CI and on other machines; a check that cannot
+// run everywhere must not be able to fail a build. Acting on these belongs to
+// the review rhythm, not to a gate.
+//
+// Only `status: current` notes are judged. `redirect` stubs, `historical`
+// records and `idea` notes make no freshness claim, and the Learning Log is
+// deliberately a dated archive rather than something to re-verify.
+const VAULT_STALE_DAYS = Number(process.env.VAULT_STALE_DAYS) || 60;
+const vaultRoot = process.env.FIRST_CHORD_VAULT || path.join(
+  process.env.HOME || '',
+  'Library/Mobile Documents/iCloud~md~obsidian/Documents/First Chord OS/docs/obsidian',
+);
+
+const vaultWarnings = [];
+let vaultChecked = 0;
+let vaultOldest = null;
+
+if (fs.existsSync(vaultRoot)) {
+  for (const file of walk(vaultRoot, (f) => f.endsWith('.md'))) {
+    const metadata = frontmatter(fs.readFileSync(file, 'utf8'));
+    if (!metadata || metadata.get('status') !== 'current') continue;
+
+    const raw = metadata.get('last_verified');
+    const name = path.relative(vaultRoot, file).split(path.sep).join('/');
+    if (!raw || raw === 'null') {
+      vaultWarnings.push(`${name}: status current but no last_verified date`);
+      continue;
+    }
+
+    const verified = new Date(raw);
+    if (Number.isNaN(verified.getTime())) {
+      vaultWarnings.push(`${name}: unreadable last_verified "${raw}"`);
+      continue;
+    }
+
+    vaultChecked += 1;
+    const days = Math.floor((Date.now() - verified.getTime()) / 86400000);
+    if (!vaultOldest || days > vaultOldest.days) vaultOldest = { name, days };
+    if (days > VAULT_STALE_DAYS) {
+      vaultWarnings.push(`${name}: last verified ${days} days ago`);
+    }
+  }
+}
+
 if (errors.length > 0) {
   console.error(`Documentation check failed with ${errors.length} issue${errors.length === 1 ? '' : 's'}:`);
   for (const error of [...new Set(errors)].sort()) console.error(`- ${error}`);
@@ -180,3 +231,14 @@ if (errors.length > 0) {
 }
 
 console.log(`Documentation check passed (${markdownFiles.length} docs, ${markdownSources.length} Markdown sources).`);
+
+if (!fs.existsSync(vaultRoot)) {
+  console.log('Vault not present here; skipped (set FIRST_CHORD_VAULT to check it).');
+} else {
+  const oldest = vaultOldest ? `oldest ${vaultOldest.days}d — ${vaultOldest.name}` : 'none dated';
+  console.log(`Vault: ${vaultChecked} current note${vaultChecked === 1 ? '' : 's'} dated, ${oldest}.`);
+  if (vaultWarnings.length > 0) {
+    console.log(`Vault warnings (${vaultWarnings.length}, not failures — review, do not gate):`);
+    for (const warning of vaultWarnings.sort()) console.log(`- ${warning}`);
+  }
+}
