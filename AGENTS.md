@@ -22,6 +22,24 @@ copying it here.
 External handovers and the Obsidian vault may add operating context, but they
 must not be the only source of a safety-critical implementation rule.
 
+## Start Here: Current State
+
+Run this first, before reading anything:
+
+```bash
+npm run state
+```
+
+It prints the branch, drift from `origin/main`, uncommitted file count, code-map
+freshness and what `origin/main` is currently running. All of it is derived from
+git, so unlike a handover file it cannot be out of date.
+
+**Read the drift line before you judge the working tree.** A branch that is
+behind `main` makes already-shipped files look like uncommitted work in
+progress; committing them then reintroduces superseded code. If the line says
+you are behind, diff changed files against `origin/main` before assuming they
+are new.
+
 ## Fast Code Orientation
 
 Use the Workflow Map below to choose the area and its safety documents. For the
