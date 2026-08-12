@@ -26,13 +26,17 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
-- **Paul Maher's Practice Chat recipient repaired (2026-08-12):** his contact
-  address existed in the dashboard-owned `Students` sheet but was blank in MMS,
-  including the adult-contact profile Practice Chat is required to use. After an
-  explicit approval, the existing address was reconciled into that linked MMS
-  profile without changing delivery code or weakening the server-derived
-  recipient boundary. A read-after-write check and the real dry-run preview both
-  resolve one recipient; no email or attendance mutation was used to test it.
+- **Practice Chat recipient data audited and repaired (2026-08-12):** Paul
+  Maher's contact address existed in the dashboard-owned `Students` sheet but
+  was blank in MMS, including the adult-contact profile Practice Chat is required
+  to use. After explicit approval, the existing address was reconciled into that
+  linked MMS profile without changing delivery code or weakening the
+  server-derived recipient boundary. The same read-only comparison across all
+  198 dashboard students found four more sheet-to-MMS gaps; their exact matched
+  contacts were repaired after approval and verified with non-email fields
+  preserved. **196 of 198 now pass the real recipient rule.** Anji Goddard and
+  Katrina Caldwell remain because neither source has an address to reconcile.
+  No email or attendance mutation was used to test any repair.
 - **Practice note emails read as three sections (2026-08-12):** the parent email
   put each heading *inside* its body paragraph, separated only by a `<br>`, with
   the raw `[What we did]` brackets showing — Gmail had no block boundary to space
