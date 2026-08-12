@@ -37,8 +37,8 @@ function WorkflowGroup({ group }) {
 
 export default function AdminWorkflowsPage() {
   return (
-    <div className="space-y-8">
-      <section>
+    <div className="space-y-10">
+      <section className="border-b border-blue-200/70 pb-7">
         <p className="text-xs uppercase tracking-[0.25em] text-slate-500">School operations</p>
         <h2
           className="mt-2 fc-display text-3xl text-slate-900"
