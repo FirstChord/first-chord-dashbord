@@ -1,95 +1,37 @@
 import Link from 'next/link';
-import { CARD_CLASSES } from '@/components/admin/ui/Card';
+import { ArrowRight } from 'lucide-react';
+import { WORKFLOW_DIRECTORY_GROUPS } from '@/lib/admin/workflow-directory.mjs';
 
-const workflowSections = [
-  {
-    href: '/admin/lessons',
-    title: 'Lesson Parity',
-    description: 'Inspect the read-only MMS mirror: freshness, endpoint parity, observed changes, field coverage, and recent runs.',
-    status: 'Read-only',
-  },
-  {
-    href: '/admin/tutors',
-    title: 'Tutors',
-    description: 'Track tutor departures, review handover warnings, and retire tutors from live choices.',
-    status: 'Lifecycle',
-  },
-  {
-    href: '/admin/waiting',
-    title: 'Waiting List',
-    description: 'Move enquiries from waiting state toward welcome group, placement, and onboarding.',
-    status: 'Active workflow',
-  },
-  {
-    href: '/admin/showcase',
-    title: 'Showcase',
-    description: 'Recurring showcase checklist, message copy, assets, and planning state.',
-    status: 'Recurring',
-  },
-  {
-    href: '/admin/holidays',
-    title: 'Holidays',
-    description: 'Seasonal admin checklist for school breaks, pauses, and related communication.',
-    status: 'Recurring',
-  },
-  {
-    href: '/admin/workflows/parent-understanding',
-    title: 'Parent Understanding',
-    description: 'Call workflow for checking parent understanding, recording feedback, and closing follow-up loops.',
-    status: 'Campaign',
-  },
-  {
-    href: '/admin/workflows/student-notes-access',
-    title: 'Student Notes Privacy',
-    description: 'Work through families, add their memorable notes code to WhatsApp, explain the change, and activate protection.',
-    status: 'Campaign',
-  },
-  {
-    href: '/admin/workflows/tutor-absence',
-    title: 'Tutor Absence',
-    description: 'Pick a tutor and date, choose cancel or cover, then work the cover checklist. Usually reached from its Planning card; this is the way in without one.',
-    status: 'Active workflow',
-  },
-  {
-    href: '/admin/workflows/cover-bank',
-    title: 'Cover Bank',
-    description: 'Call workflow for tutor cover availability: who is happy to cover, which days, cross-checked against teaching days.',
-    status: 'Campaign',
-  },
-  {
-    href: '/admin/incoming-messages',
-    title: 'Message Inbox',
-    description: 'Review inbound parent messages from paste/starred WhatsApp before turning them into planning or workflow action.',
-    status: 'Intake',
-  },
-  {
-    href: '/admin/finance/payroll',
-    title: 'Payroll',
-    description: 'Wednesday tutor-pay review from MMS attendance: per-tutor pay window (since last paid), mark reviewed/paid.',
-    status: 'Recurring',
-  },
-  {
-    href: '/admin/finance',
-    title: 'Finance',
-    description: 'Run-rate, upcoming pressure, payroll, and absence reconciliation.',
-    status: 'Planning estimate',
-  },
-];
-
-function WorkflowCard({ section }) {
+function WorkflowLink({ item }) {
   return (
     <Link
-      href={section.href}
-      className={`block ${CARD_CLASSES} transition hover:border-blue-200 hover:bg-white hover:shadow-[0_16px_44px_rgba(15,23,42,0.08)]`}
+      href={item.href}
+      className="group flex min-h-16 items-center justify-between gap-4 px-5 py-3 transition-colors hover:bg-blue-50/65 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#2F6B3D]/45"
     >
-      <div className="flex items-start justify-between gap-4">
-        <h3 className="text-lg font-semibold text-slate-900">{section.title}</h3>
-        <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-medium text-slate-600">
-          {section.status}
-        </span>
+      <div className="min-w-0">
+        <h4 className="text-sm font-semibold text-slate-900 group-hover:text-[#2F6B3D]">{item.title}</h4>
+        <p className="mt-0.5 text-sm leading-5 text-slate-600">{item.description}</p>
       </div>
-      <p className="mt-3 text-sm leading-6 text-slate-600">{section.description}</p>
+      <ArrowRight aria-hidden="true" className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-[#2F6B3D]" />
     </Link>
+  );
+}
+
+function WorkflowGroup({ group }) {
+  return (
+    <section className="overflow-hidden rounded-[1.2rem] border border-blue-100 bg-white/90 shadow-[0_12px_36px_rgba(15,23,42,0.05)]">
+      <header className="border-b border-blue-100/80 bg-blue-50/35 px-5 py-4">
+        <h3 className="text-base font-semibold text-slate-900">{group.title}</h3>
+        <p className="mt-1 text-sm text-slate-600">{group.description}</p>
+      </header>
+      <ul className="divide-y divide-blue-100/80">
+        {group.items.map((item) => (
+          <li key={item.href}>
+            <WorkflowLink item={item} />
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -97,22 +39,22 @@ export default function AdminWorkflowsPage() {
   return (
     <div className="space-y-8">
       <section>
-        <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Process surfaces</p>
+        <p className="text-xs uppercase tracking-[0.25em] text-slate-500">School operations</p>
         <h2
           className="mt-2 fc-display text-3xl text-slate-900"
         >
           Workflows
         </h2>
         <p className="mt-2 max-w-3xl text-sm text-slate-600">
-          Action-led admin areas for moving work from intent to completion.
+          Choose the kind of school work you need to do.
         </p>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2">
-        {workflowSections.map((section) => (
-          <WorkflowCard key={section.href} section={section} />
+      <div className="grid items-start gap-5 lg:grid-cols-2">
+        {WORKFLOW_DIRECTORY_GROUPS.map((group) => (
+          <WorkflowGroup key={group.title} group={group} />
         ))}
-      </section>
+      </div>
     </div>
   );
 }

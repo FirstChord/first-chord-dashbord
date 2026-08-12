@@ -26,7 +26,7 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
-- **Primary navigation follows the work, not the alarm state (2026-08-12):**
+- **Navigation follows the work, not the alarm state (2026-08-12):**
   the four equal white pills made persistent navigation look like competing
   actions and gave no visible current location. The header now reads
   **Overview → Planning → Workflows → Issues**: orient first, move through normal
@@ -34,7 +34,13 @@ deliberate school-improvement prompt.
   destinations are quiet text links; the current section has a green underline
   and `aria-current="page"`. Deeper operational routes such as Waiting, Payroll
   and Finance retain the Workflows location cue. The targets remain at least
-  44px high and scroll rather than wrap on a narrow viewport.
+  44px high and scroll rather than wrap on a narrow viewport. The Workflows page
+  applies the same rule internally: its 12 equal cards and incomparable taxonomy
+  badges became four stable directory groups — **Families & enquiries, Tutors &
+  cover, Regular school routines, School checks** — with compact full-row links.
+  Overview owns changing urgency; this directory stays a predictable map. Three
+  labels now describe the actual job in plain English: Parent Check-ins, Tutor
+  Changes and Lesson Data Checks.
 - **Summer finance state reconciled before the next snapshot (2026-08-12):**
   the scheduled jobs were healthy and the weekly series clearly showed the
   summer contraction, but the 10 August run-rate was faithfully preserving

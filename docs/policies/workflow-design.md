@@ -132,6 +132,12 @@ processes, then exceptions. Persistent navigation should look like navigation,
 not a row of equally prominent action buttons, and it must visibly and
 programmatically identify the current section.
 
+The Workflows directory is a stable map, not another live priority board.
+Overview owns what needs attention now; the directory groups destinations by the
+kind of school work someone is looking for. Prefer compact semantic link lists
+under clear headings to a wall of equal cards, and show a badge only when it
+communicates real changing state rather than a static taxonomy label.
+
 Use [copy and tone](./copy-and-tone.md) and [UI conventions](./ui-conventions.md)
 for action wording, async feedback, density, and error states.
 
