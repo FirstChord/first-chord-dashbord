@@ -28,6 +28,37 @@ test('buildPracticeNoteEmailContent creates plain text and escaped HTML', () => 
   assert.match(content.html, /A &lt;scale&gt; &amp; rhythm/u);
 });
 
+test('buildPracticeNoteEmailContent gives each section heading its own block', () => {
+  const content = buildPracticeNoteEmailContent({
+    studentName: 'Test Studenty',
+    tutorName: 'Finn',
+    noteText: [
+      '[What we did]',
+      'Scales and Twinkle.',
+      '',
+      '[Progress & Challenges]',
+      'F chord still tricky.',
+      '',
+      '[Practice Goals]',
+      '- Scales daily',
+    ].join('\n'),
+  });
+
+  // Gmail needs a real block boundary: the heading used to share a <p> with the
+  // body, separated only by <br>, which left nothing to put space around.
+  assert.match(content.html, /<p style="[^"]*font-weight:bold;">What we did<\/p><p>Scales and Twinkle\.<\/p>/u);
+  assert.match(content.html, /<p style="[^"]*font-weight:bold;">Progress &amp; Challenges<\/p>/u);
+  assert.match(content.html, /<p style="[^"]*font-weight:bold;">Practice Goals<\/p><ul><li>Scales daily<\/li><\/ul>/u);
+
+  // Styling has to be inline; Gmail discards <style> blocks and <head>.
+  assert.equal(/<style|<head/u.test(content.html), false);
+
+  // The brackets are an internal marker, not something a parent should read.
+  assert.equal(content.html.includes('[What we did]'), false);
+  assert.match(content.plain, /^What we did:$/mu);
+  assert.equal(content.plain.includes('[What we did]'), false);
+});
+
 test('buildGmailRawMessage returns base64url MIME without leaking newlines in headers', () => {
   const raw = buildGmailRawMessage({
     fromEmail: 'musiclessons@firstchord.co.uk',
