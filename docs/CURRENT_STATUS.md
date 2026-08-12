@@ -26,6 +26,21 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
+- **Summer finance state reconciled before the next snapshot (2026-08-12):**
+  the scheduled jobs were healthy and the weekly series clearly showed the
+  summer contraction, but the 10 August run-rate was faithfully preserving
+  stale inputs: 98 students still said `stripe_paused_expected` after Pause
+  History no longer showed an active pause. The existing guarded preview split
+  them rather than bulk-reactivating blindly: 55 had high-confidence
+  subscription-ID and next-lesson evidence to return to active now, 27 correctly
+  remain paused until their next billable lesson, and 16 remain review cases.
+  After a complete Sheets backup and Finn's explicit approval, the standard
+  three-write reconciliation changed exactly those 55 rows and appended 55
+  attempt plus 55 completion events. A second preview returns zero changes.
+  Current run-rate now reads 94 active / 55 paused, £10,006.45 monthly gross and
+  approximately -£1,990.93 margin, instead of 39 / 55, £3,803.42 and
+  -£5,448.96. No Stripe/provider state changed and no off-schedule snapshot was
+  fabricated; Monday's normal job will capture the corrected state.
 - **Practice Chat recipient data audited and repaired (2026-08-12):** Paul
   Maher's contact address existed in the dashboard-owned `Students` sheet but
   was blank in MMS, including the adult-contact profile Practice Chat is required
