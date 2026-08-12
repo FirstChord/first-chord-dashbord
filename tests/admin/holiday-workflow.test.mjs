@@ -37,3 +37,11 @@ test('Easter 2027 parent copy does not imply Easter falls in April', () => {
   assert.doesNotMatch(message, /throughout April/u);
   assert.match(message, /through Easter and the spring school holidays/u);
 });
+
+test('Christmas 2026 parent copy carries the confirmed closure and return dates', () => {
+  const message = getHolidayWorkflow({ season: 'christmas' }).templates.parentAnnouncement;
+
+  assert.match(message, /Monday 21st December through Monday 4th January/u);
+  assert.match(message, /lessons returning on Tuesday 5th January/u);
+  assert.doesNotMatch(message, /Monday 22nd December/u);
+});
