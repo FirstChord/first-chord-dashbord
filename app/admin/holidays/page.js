@@ -7,7 +7,7 @@ export default async function AdminHolidaysPage({ searchParams }) {
   const workflow = await hydrateHolidayWorkflow(
     getHolidayWorkflow({
       season: params?.season || 'christmas',
-      year: params?.year || '2026',
+      year: params?.year,
     }),
   );
 

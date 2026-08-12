@@ -5,8 +5,8 @@ import { Check, ChevronDown, Copy, Loader2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { roomyCardClasses as cardClasses } from '@/components/admin/ui/Card';
 
-function seasonHref(season) {
-  return `/admin/holidays?season=${season}&year=2026`;
+function seasonHref({ season, year }) {
+  return `/admin/holidays?season=${season}&year=${year}`;
 }
 
 function CheckboxButton({ checked, pending, onToggle }) {
@@ -147,16 +147,12 @@ export default function AdminHolidayWorkflowPageClient({ workflow }) {
       </section>
 
       <section className="flex flex-wrap gap-3">
-        {[
-          { key: 'christmas', label: 'Christmas 2026' },
-          { key: 'easter', label: 'Easter 2026' },
-          { key: 'summer', label: 'Summer 2026' },
-        ].map((item) => (
+        {workflow.seasonOptions.map((item) => (
           <Link
-            key={item.key}
-            href={seasonHref(item.key)}
+            key={item.season}
+            href={seasonHref(item)}
             className={`rounded-full border px-4 py-2 text-sm font-medium shadow-sm transition ${
-              workflow.season === item.key
+              workflow.season === item.season
                 ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
                 : 'border-blue-200/70 bg-white/75 text-slate-700 hover:border-blue-300 hover:bg-white hover:text-slate-900'
             }`}

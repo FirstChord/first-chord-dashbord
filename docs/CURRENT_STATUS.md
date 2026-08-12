@@ -26,6 +26,18 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
+- **Holiday workflow rolled forward without inventing reminders (2026-08-12):**
+  the Holiday selector now keeps the upcoming Christmas workflow at 2026 while
+  moving Easter and Summer to their 2027 workflow instances. Easter parent copy
+  no longer says lessons continue "throughout April" because Good Friday falls
+  on 26 March in 2027; the wording now covers Easter and the spring school
+  holidays without making a false month claim. A read-only audit of all 651 live
+  `Planning_Items` rows found no school-wide Christmas, Easter or summer workflow
+  reminder cards. Recommended meeting-day targets are 23 November 2026, 8 March
+  2027 and 17 May 2027 respectively, but no Planning state was created without
+  human approval. The Christmas 2026 parent template still carries the old
+  “Monday 22nd December / January 5th” dates and needs the actual First Chord
+  closure dates before it is changed.
 - **Navigation follows the work, not the alarm state (2026-08-12):**
   the four equal white pills made persistent navigation look like competing
   actions and gave no visible current location. The header now reads
