@@ -26,6 +26,23 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
+- **Practice note emails read as three sections (2026-08-12):** the parent email
+  put each heading *inside* its body paragraph, separated only by a `<br>`, with
+  the raw `[What we did]` brackets showing — Gmail had no block boundary to space
+  around, so the note arrived as one wall of text. The portal had always
+  normalised those brackets and styled the headings; the email never called that
+  step, so the two renderers disagreed despite the contract that a note reads the
+  same in both. The normaliser is exported and used once for both MIME
+  alternatives, which also drops the brackets from the text/plain half. Heading
+  rendering in `noteMarkupToHtml` is opt-in via `renderHeading`, so the **MMS
+  payload is byte-identical** — MMS applies its own styling, Gmail renders what it
+  is given. **Durable:** email styling must be inline; Gmail discards `<style>`
+  blocks and `<head>` outright. **And the reason this shipped for months
+  unnoticed:** every assertion on this path checked that content was *present* and
+  escaped, never that it was *arranged* — a suite can be rigorous about injection
+  and blind to layout at the same time.
+  Reasoning: Obsidian `06 Learning Log/2026-08-12 - Present Is Not Arranged`.
+
 - **Cover got its door back (2026-08-11):** the one-door rule for tutor-absence
   cards was right for Cancel and wrong for Cover. Cancel's follow-through really
   does live on the card, but Cover's — cover tutor, briefing, calendar, parent
