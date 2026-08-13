@@ -47,13 +47,35 @@ test('only no-response and closed records return to the contacted stage', () => 
   assert.equal(getWaitingStatusLabel('no_response'), 'No response');
 });
 
-test('buildWelcomeGroupMessage injects the parent first name', () => {
+test('buildWelcomeGroupMessage addresses a parent and refers to the student by name', () => {
   const message = buildWelcomeGroupMessage({
+    firstName: 'Jamie',
+    lastName: 'Smith',
+    fullName: 'Jamie Smith',
     parentFirstName: 'Jennifer',
+    parentLastName: 'Smith',
   });
 
   assert.match(message, /^Hey Jennifer!/);
+  assert.match(message, /sort Jamie out with a first lesson/);
+  assert.match(message, /their musical interests and goals/);
+  assert.match(message, /match them with the perfect tutor/);
+  assert.match(message, /Alternatively, feel free to just give us a ring/);
   assert.match(message, /firstchord\.co\.uk\/handbook/);
+});
+
+test('buildWelcomeGroupMessage uses direct pronouns for an adult student contact', () => {
+  const message = buildWelcomeGroupMessage({
+    firstName: 'Sian',
+    lastName: 'Malyin',
+    fullName: 'Sian Malyin',
+    parentFirstName: 'Sian',
+    parentLastName: 'Malyin',
+  });
+
+  assert.match(message, /sort you out with a first lesson/);
+  assert.match(message, /your musical interests and goals/);
+  assert.match(message, /match you with the perfect tutor/);
 });
 
 test('buildOnboardedWaitingNote preserves existing notes and appends onboarding context', () => {
