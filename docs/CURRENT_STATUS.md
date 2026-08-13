@@ -26,15 +26,17 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
-- **Hamish tutor identity registered; dashboard deploy pending (2026-08-13):**
+- **Hamish tutor identity registered — DEPLOYED 2026-08-13 (`8e2990e`,
+  `bc9da08`):**
   MMS teacher `tch_zLnnJw` is Hamish Roberts and its teacher profile records
   Guitar even though its roster and calendar are still empty. The canonical
   Brain lists now contain the same identity, the live FC identity tabs contain
   18 tutors including `fc_tut_ec272a25`, and the generated dashboard roster is
-  staged locally. A missing `Tutor_Lifecycle` row deliberately means active, so
-  no activation row was invented. Production `/dashboard` will not show Hamish
-  until this dashboard commit is pushed by the normal human deploy step. No
-  student assignment, lesson, attendance, payment or payroll record changed.
+  live. A missing `Tutor_Lifecycle` row deliberately means active, so no
+  activation row was invented. CI passed in 1m50s, all three Railway contexts
+  succeeded, both public `/dashboard` services render Hamish, and his production
+  roster endpoint returns 200 with zero students. No student assignment, lesson,
+  attendance, payment or payroll record changed.
 - **Holiday workflow rolled forward with three low-noise reminders (2026-08-12):**
   the Holiday selector now keeps the upcoming Christmas workflow at 2026 while
   moving Easter and Summer to their 2027 workflow instances. Easter parent copy
