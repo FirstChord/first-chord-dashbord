@@ -86,13 +86,17 @@ function CapacityValuePanel({ value }) {
 }
 
 export default async function AdminWaitingPage() {
-  const { students, capacityContext } = await getWaitingStudentsWithCapacity();
+  const { students, inactiveStudents, capacityContext } = await getWaitingStudentsWithCapacity();
   const capacityValue = buildCapacityValue(students);
 
   return (
     <div className="space-y-6">
       <CapacityValuePanel value={capacityValue} />
-      <AdminWaitingPageClient initialStudents={students} initialCapacityContext={capacityContext} />
+      <AdminWaitingPageClient
+        initialStudents={students}
+        initialInactiveStudents={inactiveStudents}
+        initialCapacityContext={capacityContext}
+      />
     </div>
   );
 }

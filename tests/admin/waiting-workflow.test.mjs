@@ -7,6 +7,11 @@ import {
   isActiveWaitingStatus,
   normaliseWaitingStatus,
 } from '../../lib/admin/waiting-workflow.js';
+import {
+  getWaitingRestoreStatus,
+  getWaitingStatusLabel,
+  partitionWaitingStudents,
+} from '../../lib/admin/waiting-status.mjs';
 
 test('normaliseWaitingStatus falls back to new for unknown values', () => {
   assert.equal(normaliseWaitingStatus('contacted'), 'contacted');
@@ -19,6 +24,27 @@ test('isActiveWaitingStatus excludes parked and completed waiting states', () =>
   assert.equal(isActiveWaitingStatus('closed'), false);
   assert.equal(isActiveWaitingStatus('no_response'), false);
   assert.equal(isActiveWaitingStatus('onboarded'), false);
+});
+
+test('partitionWaitingStudents keeps inactive records available without counting them as active', () => {
+  const students = [
+    { mmsId: 'new', waitingStatus: 'new' },
+    { mmsId: 'cold', waitingStatus: 'no_response' },
+    { mmsId: 'parked', waitingStatus: 'closed' },
+    { mmsId: 'done', waitingStatus: 'onboarded' },
+  ];
+
+  const result = partitionWaitingStudents(students);
+
+  assert.deepEqual(result.activeStudents.map((student) => student.mmsId), ['new']);
+  assert.deepEqual(result.inactiveStudents.map((student) => student.mmsId), ['cold', 'parked', 'done']);
+});
+
+test('only no-response and closed records return to the contacted stage', () => {
+  assert.equal(getWaitingRestoreStatus('no_response'), 'contacted');
+  assert.equal(getWaitingRestoreStatus('closed'), 'contacted');
+  assert.equal(getWaitingRestoreStatus('onboarded'), '');
+  assert.equal(getWaitingStatusLabel('no_response'), 'No response');
 });
 
 test('buildWelcomeGroupMessage injects the parent first name', () => {

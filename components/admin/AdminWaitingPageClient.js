@@ -1,24 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { Archive, Check, Copy, Loader2 } from 'lucide-react';
+import { Archive, Check, Copy, Loader2, RotateCcw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { AgeChip } from '@/components/admin/ui/AgeChip';
 import { logCommunicationCopy } from '@/lib/admin/log-communication-copy.js';
-
-const WAITING_STATUS_OPTIONS = [
-  { value: 'new', label: 'New' },
-  { value: 'contacted', label: 'Contacted' },
-  { value: 'welcome_group_added', label: 'Welcome group added' },
-  { value: 'welcome_call_booked', label: 'Welcome call booked' },
-  { value: 'call_completed', label: 'Call completed' },
-  { value: 'onboarding_ready', label: 'Onboarding ready' },
-  { value: 'onboarded', label: 'Onboarded' },
-  { value: 'no_response', label: 'No response' },
-  { value: 'closed', label: 'Closed' },
-];
-
-const INACTIVE_WAITING_STATUSES = new Set(['closed', 'no_response', 'onboarded']);
+import {
+  getWaitingRestoreStatus,
+  getWaitingStatusLabel,
+  isActiveWaitingStatus,
+  WAITING_STATUS_OPTIONS,
+} from '@/lib/admin/waiting-status.mjs';
 
 function getAgeBadge(ageInDays) {
   if (ageInDays == null) {
@@ -86,12 +78,15 @@ function mergeRefreshedStudents(currentStudents, refreshedStudents) {
 
   return refreshedStudents.map((student) => {
     const current = currentByMmsId.get(student.mmsId);
-    if (!current) return student;
+    if (!current) {
+      return { ...student, savedWaitingStatus: student.waitingStatus };
+    }
 
     return {
       ...student,
       waitingNote: current.waitingNote,
       waitingStatus: current.waitingStatus,
+      savedWaitingStatus: student.waitingStatus,
       waitingUpdatedAt: current.waitingUpdatedAt,
     };
   });
@@ -109,8 +104,19 @@ function buildOnboardSlotHref(student, tutor, slot) {
   return `/admin/onboard?${params.toString()}`;
 }
 
-export default function AdminWaitingPageClient({ initialStudents, initialCapacityContext = null }) {
-  const [students, setStudents] = useState(initialStudents);
+function prepareStudents(activeStudents = [], inactiveStudents = []) {
+  return [...activeStudents, ...inactiveStudents].map((student) => ({
+    ...student,
+    savedWaitingStatus: student.waitingStatus,
+  }));
+}
+
+export default function AdminWaitingPageClient({
+  initialStudents,
+  initialInactiveStudents = [],
+  initialCapacityContext = null,
+}) {
+  const [students, setStudents] = useState(() => prepareStudents(initialStudents, initialInactiveStudents));
   const [actionState, setActionState] = useState({ pendingId: '', error: '' });
   const [refreshState, setRefreshState] = useState({
     pending: false,
@@ -120,8 +126,8 @@ export default function AdminWaitingPageClient({ initialStudents, initialCapacit
   const [copiedId, setCopiedId] = useState('');
 
   useEffect(() => {
-    setStudents(initialStudents);
-  }, [initialStudents]);
+    setStudents(prepareStudents(initialStudents, initialInactiveStudents));
+  }, [initialStudents, initialInactiveStudents]);
 
   useEffect(() => {
     setRefreshState((current) => ({
@@ -179,16 +185,25 @@ export default function AdminWaitingPageClient({ initialStudents, initialCapacit
         return;
       }
 
-      setStudents((current) => current.map((entry) => (
-        entry.mmsId === student.mmsId
-          ? {
-            ...entry,
-            waitingStatus: payload.state.status,
-            waitingNote: payload.state.note,
-            waitingUpdatedAt: payload.state.updatedAt,
-          }
-          : entry
-      )).filter((entry) => !INACTIVE_WAITING_STATUSES.has(entry.waitingStatus)));
+      setStudents((current) => current.map((entry) => {
+        if (entry.mmsId !== student.mmsId) return entry;
+
+        const wasActive = isActiveWaitingStatus(entry.savedWaitingStatus);
+        const isActive = isActiveWaitingStatus(payload.state.status);
+        return {
+          ...entry,
+          waitingStatus: payload.state.status,
+          savedWaitingStatus: payload.state.status,
+          waitingNote: payload.state.note,
+          waitingUpdatedAt: payload.state.updatedAt,
+          ...(!wasActive && isActive ? {
+            capacityMatches: [],
+            capacityMatchDays: [],
+            capacityMatchStatus: 'refresh_required',
+            capacityMatchReason: 'Refresh free slots to calculate current matches.',
+          } : {}),
+        };
+      }));
       setActionState({ pendingId: '', error: '' });
     } catch (error) {
       setActionState({ pendingId: '', error: error.message || 'Waiting update failed' });
@@ -225,7 +240,10 @@ export default function AdminWaitingPageClient({ initialStudents, initialCapacit
         return;
       }
 
-      setStudents((current) => mergeRefreshedStudents(current, payload.students || []));
+      setStudents((current) => mergeRefreshedStudents(
+        current,
+        [...(payload.students || []), ...(payload.inactiveStudents || [])],
+      ));
       setRefreshState({
         pending: false,
         error: '',
@@ -247,6 +265,9 @@ export default function AdminWaitingPageClient({ initialStudents, initialCapacit
         : entry
     )));
   }
+
+  const activeStudents = students.filter((student) => isActiveWaitingStatus(student.savedWaitingStatus));
+  const inactiveStudents = students.filter((student) => !isActiveWaitingStatus(student.savedWaitingStatus));
 
   return (
     <div className="space-y-6">
@@ -303,7 +324,7 @@ export default function AdminWaitingPageClient({ initialStudents, initialCapacit
       ) : null}
 
       <div className="space-y-4">
-        {students.map((student) => {
+        {activeStudents.map((student) => {
           const ageBadge = getAgeBadge(student.ageInDays);
           const pending = actionState.pendingId === student.mmsId;
           const mmsNoteFacts = buildMmsNoteFacts(student);
@@ -509,7 +530,65 @@ export default function AdminWaitingPageClient({ initialStudents, initialCapacit
             </div>
           );
         })}
+        {!activeStudents.length ? (
+          <div className="rounded-2xl border border-slate-200 bg-white/80 px-5 py-8 text-center text-sm text-slate-600">
+            No active waiting enquiries.
+          </div>
+        ) : null}
       </div>
+
+      {inactiveStudents.length ? (
+        <details className="group rounded-[1.6rem] border border-slate-200 bg-white/80 p-5 shadow-[0_12px_36px_rgba(15,23,42,0.04)]">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
+            <div>
+              <h3 className="text-base font-semibold text-slate-900">Inactive waiting records</h3>
+              <p className="mt-1 text-sm text-slate-600">
+                No response, parked and onboarded records stay visible here and do not count toward active capacity.
+              </p>
+            </div>
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+              {inactiveStudents.length}
+            </span>
+          </summary>
+
+          <div className="mt-4 divide-y divide-slate-200 border-t border-slate-200">
+            {inactiveStudents.map((student) => {
+              const restoreStatus = getWaitingRestoreStatus(student.savedWaitingStatus);
+              const pending = actionState.pendingId === student.mmsId;
+
+              return (
+                <div key={student.mmsId} className="flex flex-col gap-3 py-4 md:flex-row md:items-center md:justify-between">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-medium text-slate-900">{student.fullName || student.mmsId}</p>
+                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+                        {getWaitingStatusLabel(student.savedWaitingStatus)}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {student.mmsId} · Updated {formatDateTime(student.waitingUpdatedAt)}
+                    </p>
+                    {student.waitingNote ? (
+                      <p className="mt-2 whitespace-pre-wrap text-sm text-slate-600">{student.waitingNote}</p>
+                    ) : null}
+                  </div>
+                  {restoreStatus ? (
+                    <button
+                      type="button"
+                      onClick={() => handleSave(student, { status: restoreStatus })}
+                      disabled={pending}
+                      className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+                      {pending ? 'Restoring…' : 'Return to contacted'}
+                    </button>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        </details>
+      ) : null}
     </div>
   );
 }
