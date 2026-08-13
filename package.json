@@ -15,6 +15,7 @@
     "pretest:admin": "node scripts/generate-configs.js --no-backup",
     "test:admin": "node --test tests/admin/*.test.mjs",
     "sync-admin-tutors": "node scripts/sync-admin-tutors.js",
+    "check-admin-tutors": "node scripts/sync-admin-tutors.js --check",
     "backup:sheets": "node scripts/backup-sheets-tabs.mjs",
     "restore:drill": "node scripts/restore-drill.mjs",
     "retention:report": "node scripts/retention-report.mjs",

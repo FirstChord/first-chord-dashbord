@@ -37,23 +37,36 @@ Do this before their first student is transferred.
    Before their first lesson exists, verify the full name and instruments from
    the MMS teacher profile itself: `FullName` and `Subjects` remain available
    even when roster and calendar searches correctly return no rows.
-2. Add the tutor to the canonical `TUTORS` list in
-   `first-chord-brain/generate_fc_ids.py` with:
+2. Add the tutor once to the canonical `TUTORS` list in
+   `first-chord-brain/tutors.py` with:
    - short name
    - full name
    - MMS teacher ID
    - instruments taught
-3. Until the duplicated Brain tutor lists are consolidated, add the same identity
-   to `first-chord-brain/src/mms_client.py`; Brain onboarding still reads that
-   copy.
-4. From `first-chord-brain`, run `python3 generate_fc_ids.py --no-sheets` first.
+3. From `first-chord-brain`, run
+   `python3 -m unittest tests/test_tutor_roster.py`, then
+   `python3 generate_fc_ids.py --no-sheets`.
    Check that the tutor count increases by one and the new MMS ID produces one
-   tutor/person identity.
-5. From this dashboard repository, run `npm run sync-admin-tutors`, then validate,
-   commit, and deploy the generated tutor identity change.
-6. Check `/dashboard`: the new tutor should appear and an empty roster should
+   tutor/person identity. `--no-sheets` writes local derived CSVs but cannot
+   change the live FC tabs; its final summary must say the tabs were not updated.
+4. After reviewing that rehearsal, run `python3 generate_fc_ids.py` without
+   `--no-sheets` to update the live FC identity tabs. This is the explicit live
+   write step. Confirm `FC_Tutors` contains the new MMS ID exactly once.
+5. Commit the canonical Brain source change and only its intended identity
+   artifacts, then push through the normal human-reviewed Brain release step.
+   Do not accidentally include unrelated onboarding vault or first-seen work.
+6. From this dashboard repository, run `npm run sync-admin-tutors`, followed by
+   `npm run check-admin-tutors`. Review the generated `lib/admin/tutors-data.js`,
+   then run `npm run validate`, `npm run test:admin`, `npm run lint` and
+   `npm run build`. Commit and deploy the generated identity change only after
+   those checks are understood.
+7. Check `/dashboard`: the new tutor should appear and an empty roster should
    load without error.
-7. Complete only the operational details that apply:
+8. If tutor-dashboard authentication is `pilot` or `required`, add the tutor's
+   exact Google email and short tutor key to Railway's
+   `TUTOR_DASHBOARD_EMAIL_MAP`. Test that their account can see their tutor only.
+   This grants access; it is separate from making the tutor appear in the roster.
+9. Complete only the operational details that apply:
    - `Tutor_Pay` — pay model, rate/salary, cadence, and payroll-active setting
    - `Tutor_Wise` — payee details if using the Wise batch
    - `Tutor_Phones` — tutor's school WhatsApp number if their replies should be recognised as school-side
@@ -186,7 +199,8 @@ of this dashboard workflow.
 
 | Symptom | Check |
 | --- | --- |
-| New tutor is not on `/dashboard` | Confirm their MMS ID, canonical Brain entry, `npm run sync-admin-tutors`, and deployment. |
+| New tutor is not on `/dashboard` | Confirm their MMS ID, `first-chord-brain/tutors.py` entry, `npm run check-admin-tutors`, and deployment. |
+| Tutor appears but cannot sign in | If auth is `pilot` or `required`, check their exact email-to-short-name entry in Railway's `TUTOR_DASHBOARD_EMAIL_MAP`; never commit personal email addresses. |
 | New tutor appears but has no students | Check MMS teacher assignment first; the dashboard reads the roster live from MMS. |
 | Student appears under both tutors | Check MMS assignment, then align the Students sheet and Registry deliberately; resolve any tutor-conflict flag. |
 | Student has two lessons after the handover date | End the outgoing recurring series from the boundary; do not treat the incoming billing profile as proof of completion. Check at least the boundary date and the next two recurrences. |

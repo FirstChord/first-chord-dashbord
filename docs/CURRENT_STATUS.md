@@ -1,7 +1,7 @@
 ---
 status: canonical
 audience: [human, agent]
-last_verified: 2026-08-12
+last_verified: 2026-08-13
 ---
 # Admin current status
 
@@ -26,11 +26,18 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
+- **Waiting records remain recoverable and welcome copy is current — DEPLOYED
+  2026-08-13 (`e792934`, `6e24841`):** No response, Closed and Onboarded rows
+  remain visible in a collapsed inactive shelf while staying outside active
+  capacity and finance totals. No response and Closed can return to Contacted.
+  The copied welcome-group message now uses the parent name and chooses direct
+  `you/your` wording for adult contacts or the student's name plus `their/them`
+  for parent contacts. No live waiting status was changed by the deployment.
 - **Hamish tutor identity registered — DEPLOYED 2026-08-13 (`8e2990e`,
   `bc9da08`):**
   MMS teacher `tch_zLnnJw` is Hamish Roberts and its teacher profile records
-  Guitar even though its roster and calendar are still empty. The canonical
-  Brain lists now contain the same identity, the live FC identity tabs contain
+  Guitar even though its roster and calendar are still empty. Brain's durable
+  identity data contains the same identity, the live FC identity tabs contain
   18 tutors including `fc_tut_ec272a25`, and the generated dashboard roster is
   live. A missing `Tutor_Lifecycle` row deliberately means active, so no
   activation row was invented. CI passed in 1m50s, all three Railway contexts
