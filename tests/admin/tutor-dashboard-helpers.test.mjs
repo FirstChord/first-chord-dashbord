@@ -23,7 +23,7 @@ const SAMPLE_TUTORS = {
   },
 };
 
-test('canonical tutor identities keep unique MMS IDs and include Matthew', () => {
+test('canonical tutor identities keep unique MMS IDs and include registered arrivals', () => {
   const teacherIds = Object.values(ADMIN_TUTORS).map((tutor) => tutor.teacherId);
 
   assert.equal(new Set(teacherIds).size, teacherIds.length);
@@ -31,6 +31,11 @@ test('canonical tutor identities keep unique MMS IDs and include Matthew', () =>
     fullName: 'Matthew Leung',
     teacherId: 'tch_zLY8Jn',
     instruments: ['piano'],
+  });
+  assert.deepEqual(ADMIN_TUTORS.Hamish, {
+    fullName: 'Hamish Roberts',
+    teacherId: 'tch_zLnnJw',
+    instruments: ['guitar'],
   });
 });
 

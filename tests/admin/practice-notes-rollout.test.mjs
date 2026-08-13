@@ -11,6 +11,7 @@ import { ADMIN_TUTORS } from '../../lib/admin/tutors-data.js';
 test('Practice Chat enables the full registered tutor roster unless a rollout list is configured', () => {
   assert.deepEqual(getPracticeNotesEnabledTutors({}), Object.keys(ADMIN_TUTORS));
   assert.equal(getPracticeNotesEnabledTutors({}).includes('Matthew'), true);
+  assert.equal(getPracticeNotesEnabledTutors({}).includes('Hamish'), true);
   assert.deepEqual(getPracticeNotesEnabledTutors({ PRACTICE_NOTES_ENABLED_TUTORS: 'Kenny, Eléna Esposito' }), ['Kenny', 'Eléna']);
 });
 

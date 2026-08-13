@@ -1,13 +1,13 @@
 ---
 status: supporting
 audience: [human, agent]
-last_verified: 2026-07-30
+last_verified: 2026-08-13
 ---
 # Workflow: Tutor Arrival and Handover
 
 **Purpose:** Bring a tutor into First Chord once, transfer a departing tutor's students safely, and retire the old tutor only when the transfer is real.
 
-**Last updated:** 30 July 2026
+**Last updated:** 13 August 2026
 
 ## The short version
 
@@ -34,6 +34,9 @@ MMS is the source of truth for a tutor's active student roster and schedule. The
 Do this before their first student is transferred.
 
 1. Create the teacher in MMS and record their MMS teacher ID (`tch_...`).
+   Before their first lesson exists, verify the full name and instruments from
+   the MMS teacher profile itself: `FullName` and `Subjects` remain available
+   even when roster and calendar searches correctly return no rows.
 2. Add the tutor to the canonical `TUTORS` list in
    `first-chord-brain/generate_fc_ids.py` with:
    - short name
