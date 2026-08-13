@@ -196,6 +196,11 @@ export default function AdminOnboardForm({ initialData, tutorOptions, initialDup
             </ul>
           </section>
         ) : null}
+        {form.freeEventId ? (
+          <section className="rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950">
+            The selected MMS Free event will be checked again and removed only after the first lesson is confirmed.
+          </section>
+        ) : null}
         <section className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <h3 className="text-lg font-semibold text-slate-900">Student + parent details</h3>
@@ -473,6 +478,17 @@ export default function AdminOnboardForm({ initialData, tutorOptions, initialDup
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
               MMS setup still needs attention:
               <div className="mt-2 font-mono text-xs break-words">{result.lessonWarning}</div>
+            </div>
+          ) : null}
+          {result.freeSlotWarning ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              The lesson exists, but the selected MMS Free event still needs attention:
+              <div className="mt-2 font-mono text-xs break-words">{result.freeSlotWarning}</div>
+            </div>
+          ) : null}
+          {result.freeSlot ? (
+            <div className="rounded-xl border border-emerald-200 bg-white p-4 text-sm text-emerald-900">
+              Selected MMS Free event {result.freeSlot.eventId} was removed after the lesson was confirmed.
             </div>
           ) : null}
           {result.waitingCloseoutWarning ? (

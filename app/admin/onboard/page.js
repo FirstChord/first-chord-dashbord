@@ -37,6 +37,7 @@ export default async function AdminOnboardPage({ searchParams }) {
   const resolvedSearchParams = await searchParams;
   const mmsId = normaliseQueryValue(resolvedSearchParams?.mmsId);
   const requestedLessonDate = normaliseQueryValue(resolvedSearchParams?.lessonDate);
+  const requestedFreeEventId = normaliseQueryValue(resolvedSearchParams?.freeEventId);
   const requestedLessonTime = normaliseQueryValue(resolvedSearchParams?.lessonTime);
   const requestedLessonLength = normaliseQueryValue(resolvedSearchParams?.lessonLength);
   const requestedTeacherId = normaliseQueryValue(resolvedSearchParams?.teacherId);
@@ -77,6 +78,7 @@ export default async function AdminOnboardPage({ searchParams }) {
         lessonDay: '',
         lessonTime: requestedLessonTime,
         lessonDate: requestedLessonDate,
+        freeEventId: requestedFreeEventId,
         isRecurring: true,
         tutorShortName: initialTutor?.shortName || '',
         thetaUsername: `${(details.firstName || '').toLowerCase()}${(details.lastName || '').toLowerCase()}fc`.replace(/[^a-z0-9]/g, ''),
@@ -98,7 +100,7 @@ export default async function AdminOnboardPage({ searchParams }) {
       <section>
         <h2 className="text-2xl font-semibold text-slate-900">Onboarding</h2>
         <p className="mt-2 text-sm text-slate-600">
-          Scaffold page for the next admin workflow slice. Waiting-list selection is now wired through.
+          Complete the student record, MMS setup, first lesson, and waiting-list closeout in one recoverable flow.
         </p>
       </section>
 

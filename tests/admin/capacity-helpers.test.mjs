@@ -139,6 +139,7 @@ test('buildFreeSlotSummary keeps the nearest concrete occurrence for weekly slot
   assert.equal(summary.weeklySlots[0].occurrenceCount, 2);
   assert.equal(summary.weeklySlots[0].nextDate, '2026-05-18');
   assert.equal(summary.weeklySlots[0].nextStartAt, '2026-05-18T16:00:00');
+  assert.equal(summary.weeklySlots[0].eventId, 'evt_earlier');
 });
 
 test('buildScheduleCacheSummary highlights stale, missing, and shared slots', () => {
@@ -240,6 +241,7 @@ test('buildWaitingCapacityMatches suggests only instrument-compatible free slots
           fitsAvailability: null,
           slots: [
             {
+              eventId: 'evt_piano',
               startTime: '17:00',
               durationMinutes: '30',
               nextDate: '2026-05-19',
@@ -247,6 +249,7 @@ test('buildWaitingCapacityMatches suggests only instrument-compatible free slots
               occurrenceCount: 1,
             },
             {
+              eventId: 'evt_piano_2',
               startTime: '17:30',
               durationMinutes: '30',
               nextDate: '2026-05-19',

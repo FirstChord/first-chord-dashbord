@@ -5,8 +5,8 @@ import { getOnboardingPreflightState } from '@/lib/admin/onboarding';
 import { getStudentDetails } from '@/lib/admin/mms';
 import { ADMIN_TUTORS } from '@/lib/admin/tutors';
 
-function buildPreflightSummary({ duplicateState, operationalState, tutorFullName }) {
-  return {
+function buildPreflightSummary({ duplicateState, operationalState, tutorFullName, freeSlot = null, hasFreeEvent = false }) {
+  const summary = {
     sheets: {
       status: duplicateState.exactDuplicate ? 'blocked' : duplicateState.matchingTutorCount > 0 ? 'warning' : 'clear',
       label: 'Students sheet',
@@ -55,6 +55,18 @@ function buildPreflightSummary({ duplicateState, operationalState, tutorFullName
         : 'No matching lesson found for the selected slot.',
     },
   };
+
+  if (hasFreeEvent) {
+    summary.mmsFreeSlot = {
+      status: freeSlot ? 'ready' : 'blocked',
+      label: 'Selected MMS Free event',
+      detail: freeSlot
+        ? `Free event ${freeSlot.eventId} still matches this tutor, date, time, and lesson length. It will be removed after the lesson is confirmed.`
+        : 'The selected Free event could not be confirmed.',
+    };
+  }
+
+  return summary;
 }
 
 export async function POST(request) {
@@ -72,13 +84,15 @@ export async function POST(request) {
   }
 
   try {
-    const { duplicateState, operationalState } = await getOnboardingPreflightState({
+    const { duplicateState, operationalState, freeSlot } = await getOnboardingPreflightState({
       mmsId: payload.mmsId,
       tutorFullName: tutor.fullName,
       tutorShortName: payload.tutorShortName,
       teacherId: tutor.teacherId,
       lessonDate: payload.lessonDate || '',
       lessonTime: payload.lessonTime || '',
+      lessonLength: payload.lessonType === 'sibling_group' ? 45 : Number(payload.lessonLength || 30),
+      freeEventId: payload.freeEventId || '',
     });
 
     let secondary = null;
@@ -102,6 +116,7 @@ export async function POST(request) {
           duplicateState: secondaryState.duplicateState,
           operationalState: secondaryState.operationalState,
           tutorFullName: tutor.fullName,
+          hasFreeEvent: false,
         }),
       };
     }
@@ -114,6 +129,8 @@ export async function POST(request) {
         duplicateState,
         operationalState,
         tutorFullName: tutor.fullName,
+        freeSlot,
+        hasFreeEvent: Boolean(payload.freeEventId),
       }),
     });
   } catch (error) {

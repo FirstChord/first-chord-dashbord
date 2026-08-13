@@ -96,6 +96,7 @@ function buildOnboardSlotHref(student, tutor, slot) {
   const params = new URLSearchParams({ mmsId: student.mmsId });
 
   if (slot.nextDate) params.set('lessonDate', slot.nextDate);
+  if (slot.eventId) params.set('freeEventId', slot.eventId);
   if (slot.startTime) params.set('lessonTime', slot.startTime);
   if (slot.durationMinutes) params.set('lessonLength', slot.durationMinutes);
   if (tutor.teacherId) params.set('teacherId', tutor.teacherId);

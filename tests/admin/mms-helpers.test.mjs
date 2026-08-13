@@ -10,6 +10,7 @@ import {
   formatMmsErrorBody,
   parseLessonDateTime,
   parseNoteFields,
+  validateMmsFreeCalendarEvent,
 } from '../../lib/admin/mms-helpers.mjs';
 
 test('parseNoteFields extracts useful onboarding answers and skips placeholders', () => {
@@ -35,6 +36,87 @@ test('parseLessonDateTime preserves the MMS calendar wall-clock time', () => {
 
 test('parseLessonDateTime does not shift summer lesson times back by one hour', () => {
   assert.equal(parseLessonDateTime('2026-06-03', '18:30'), '2026-06-03T18:30:00');
+});
+
+test('validateMmsFreeCalendarEvent accepts the exact empty Free event selected for onboarding', () => {
+  assert.deepEqual(validateMmsFreeCalendarEvent({
+    eventId: 'evt_selected',
+    teacherId: 'tch_test',
+    lessonDate: '2026-05-03',
+    lessonTime: '13:00',
+    durationMinutes: 30,
+    event: {
+      ID: 'evt_selected',
+      StartDate: '2026-05-03T13:00:00',
+      Duration: 30,
+      TeacherID: 'tch_test',
+      EventCategory: { Name: 'Free' },
+      Students: [],
+      Attendances: [],
+      SeriesID: 'series_one',
+    },
+  }), {
+    eventId: 'evt_selected',
+    teacherId: 'tch_test',
+    startDate: '2026-05-03T13:00:00',
+    durationMinutes: 30,
+    seriesId: 'series_one',
+  });
+});
+
+test('validateMmsFreeCalendarEvent refuses a stale or occupied source event', () => {
+  assert.throws(() => validateMmsFreeCalendarEvent({
+    eventId: 'evt_selected',
+    teacherId: 'tch_test',
+    lessonDate: '2026-05-03',
+    lessonTime: '13:00',
+    durationMinutes: 30,
+    event: {
+      ID: 'evt_selected',
+      StartDate: '2026-05-03T13:00:00',
+      Duration: 30,
+      TeacherID: 'tch_test',
+      EventCategory: { Name: 'Lesson' },
+    },
+  }), /no longer marked Free/);
+
+  assert.throws(() => validateMmsFreeCalendarEvent({
+    eventId: 'evt_selected',
+    teacherId: 'tch_test',
+    lessonDate: '2026-05-03',
+    lessonTime: '13:00',
+    durationMinutes: 30,
+    event: {
+      ID: 'evt_selected',
+      StartDate: '2026-05-03T13:00:00',
+      Duration: 30,
+      TeacherID: 'tch_test',
+      EventCategory: { Name: 'Free' },
+      Students: [{ ID: 'sdt_taken' }],
+    },
+  }), /now has a student/);
+});
+
+test('validateMmsFreeCalendarEvent refuses changed tutor, time, length, and unsafe IDs', () => {
+  const base = {
+    eventId: 'evt_selected',
+    teacherId: 'tch_test',
+    lessonDate: '2026-05-03',
+    lessonTime: '13:00',
+    durationMinutes: 30,
+    event: {
+      ID: 'evt_selected',
+      StartDate: '2026-05-03T13:00:00',
+      Duration: 30,
+      TeacherID: 'tch_test',
+      EventCategory: { Name: 'Free' },
+    },
+  };
+
+  assert.throws(() => validateMmsFreeCalendarEvent({ ...base, teacherId: 'tch_other' }), /selected tutor/);
+  assert.throws(() => validateMmsFreeCalendarEvent({ ...base, lessonTime: '13:30' }), /date and time/);
+  assert.throws(() => validateMmsFreeCalendarEvent({ ...base, durationMinutes: 45 }), /lesson length/);
+  assert.throws(() => validateMmsFreeCalendarEvent({ ...base, eventId: '../students' }), /ID is invalid/);
 });
 
 test('buildBillingProfilePayload matches the observed MMS write shape', () => {

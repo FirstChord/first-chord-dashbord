@@ -27,6 +27,8 @@ A student is operationally onboarded only when:
 - MMS student state is active
 - the MMS billing profile is ready
 - the first lesson has been created
+- when onboarding started from a suggested MMS `Free` event, that exact source
+  event has been cleared after the lesson was confirmed
 
 Stripe linkage is a separate payment-setup workflow and may complete after the
 first lesson. A Stripe-managed setup becomes overdue for review seven days after
@@ -36,7 +38,7 @@ Onboarding crosses Sheets, registry/GitHub, and MMS and can partially succeed.
 Show every step result and recovery action; never collapse warnings into
 unconditional success. Keep the waiting record open, and do not create
 post-onboarding check-ins or notes-access follow-ups, until the canonical record
-and all three MMS conditions above are complete.
+and all applicable MMS conditions above are complete.
 
 ## Lessons, Cancellation, And Leaving
 

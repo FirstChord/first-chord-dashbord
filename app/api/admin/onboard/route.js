@@ -15,7 +15,14 @@ import {
   appendRegistryEntry,
   assertRegistryWriteAvailable,
 } from '@/lib/admin/registry';
-import { activateStudent, createFirstLesson, ensureBillingProfile, getStudentDetails } from '@/lib/admin/mms';
+import {
+  activateStudent,
+  consumeMmsFreeCalendarSlot,
+  createFirstLesson,
+  ensureBillingProfile,
+  getStudentDetails,
+  getValidatedMmsFreeCalendarSlot,
+} from '@/lib/admin/mms';
 import { generateFcStudentId, generateFriendlyUrl, normaliseExperienceLevel, normaliseInstrument } from '@/lib/admin/fc';
 import { ADMIN_TUTORS } from '@/lib/admin/tutors';
 import { markWaitingWorkflowStudentsOnboarded } from '@/lib/admin/waiting-workflow';
@@ -285,6 +292,7 @@ export async function POST(request) {
     steps = markOnboardingStep(steps, 'mmsActivation', 'skipped', 'No MMS write was attempted because registry preflight failed.');
     steps = markOnboardingStep(steps, 'mmsBillingProfile', 'skipped', 'No MMS write was attempted because registry preflight failed.');
     steps = markOnboardingStep(steps, 'mmsFirstLesson', 'skipped', 'No MMS write was attempted because registry preflight failed.');
+    steps = markOnboardingStep(steps, 'mmsFreeSlot', 'skipped', 'No MMS write was attempted because registry preflight failed.');
 
     return Response.json(
       {
@@ -314,6 +322,7 @@ export async function POST(request) {
     steps = markOnboardingStep(steps, 'mmsActivation', 'skipped', 'Skipped because an exact duplicate already exists.');
     steps = markOnboardingStep(steps, 'mmsBillingProfile', 'skipped', 'Skipped because an exact duplicate already exists.');
     steps = markOnboardingStep(steps, 'mmsFirstLesson', 'skipped', 'Skipped because an exact duplicate already exists.');
+    steps = markOnboardingStep(steps, 'mmsFreeSlot', 'skipped', 'Skipped because an exact duplicate already exists.');
 
     return Response.json(
       {
@@ -328,6 +337,30 @@ export async function POST(request) {
 
   try {
     steps = markOnboardingStep(steps, 'duplicateCheck', 'succeeded', duplicateState.warnings.length ? duplicateState.warnings.join(' ') : 'No blocking duplicate found.');
+
+    if (payload.freeEventId) {
+      try {
+        await getValidatedMmsFreeCalendarSlot({
+          eventId: payload.freeEventId,
+          teacherId: tutor.teacherId,
+          lessonDate: payload.lessonDate,
+          lessonTime: payload.lessonTime,
+          durationMinutes: resolvedLessonLength,
+        });
+      } catch (error) {
+        steps = markOnboardingStep(steps, 'sheetsWrite', 'skipped', 'No canonical write was attempted because the selected MMS Free event is stale or changed.');
+        steps = markOnboardingStep(steps, 'registryWrite', 'skipped', 'No canonical write was attempted because the selected MMS Free event is stale or changed.');
+        steps = markOnboardingStep(steps, 'mmsActivation', 'skipped', 'No MMS write was attempted because the selected Free event could not be confirmed.');
+        steps = markOnboardingStep(steps, 'mmsBillingProfile', 'skipped', 'No MMS write was attempted because the selected Free event could not be confirmed.');
+        steps = markOnboardingStep(steps, 'mmsFirstLesson', 'skipped', 'No lesson was created because the selected Free event could not be confirmed.');
+        steps = markOnboardingStep(steps, 'mmsFreeSlot', 'failed', error.message || 'The selected MMS Free event could not be confirmed.');
+        return Response.json({
+          error: error.message || 'The selected MMS Free event could not be confirmed.',
+          steps,
+          recoveryGuidance: ['No student records were written. Return to Waiting, refresh the capacity suggestions, and choose the current Free slot again.'],
+        }, { status: 409 });
+      }
+    }
 
     const primaryRecord = await appendCanonicalStudent({
       student: {
@@ -391,7 +424,10 @@ export async function POST(request) {
     }
 
     let lesson = null;
+    let lessonConfirmed = false;
     let lessonWarning = '';
+    let freeSlot = null;
+    let freeSlotWarning = '';
     let mmsStatus = {
       activated: false,
       billingProfileReady: false,
@@ -445,6 +481,7 @@ export async function POST(request) {
         billingProfile,
         isRecurring: payload.isRecurring !== false,
       });
+      lessonConfirmed = true;
       steps = markOnboardingStep(
         steps,
         'mmsFirstLesson',
@@ -465,6 +502,31 @@ export async function POST(request) {
       } else {
         steps = markOnboardingStep(steps, 'mmsFirstLesson', 'failed', lessonWarning);
       }
+    }
+
+    if (!payload.freeEventId) {
+      steps = markOnboardingStep(steps, 'mmsFreeSlot', 'skipped', 'No MMS Free source event was selected.');
+    } else if (lessonConfirmed) {
+      try {
+        freeSlot = await consumeMmsFreeCalendarSlot({
+          eventId: payload.freeEventId,
+          teacherId: tutor.teacherId,
+          lessonDate: payload.lessonDate,
+          lessonTime: payload.lessonTime,
+          durationMinutes: resolvedLessonLength,
+        });
+        steps = markOnboardingStep(
+          steps,
+          'mmsFreeSlot',
+          'succeeded',
+          `Removed selected MMS Free event ${freeSlot.eventId} after confirming the first lesson${freeSlot.seriesId ? ` (series ${freeSlot.seriesId})` : ''}.`,
+        );
+      } catch (error) {
+        freeSlotWarning = error.message || 'MMS Free event removal failed';
+        steps = markOnboardingStep(steps, 'mmsFreeSlot', 'failed', freeSlotWarning);
+      }
+    } else {
+      steps = markOnboardingStep(steps, 'mmsFreeSlot', 'skipped', 'The selected Free event was kept because the first lesson was not confirmed.');
     }
 
     const completionStatus = buildOnboardingCompletionStatus({ steps });
@@ -517,6 +579,8 @@ export async function POST(request) {
               next_status: state.status,
               lesson_id: lesson?.ID || '',
               lesson_warning: lessonWarning,
+              source_free_event_id: payload.freeEventId || '',
+              source_free_event_removed: Boolean(freeSlot),
             }),
           })));
         }
@@ -605,6 +669,8 @@ export async function POST(request) {
       recoveryGuidance: buildOnboardingRecoveryGuidance({ steps, duplicateState }),
       lessonId: lesson?.ID || '',
       lessonWarning,
+      freeSlot,
+      freeSlotWarning,
       mmsStatus,
       fcStudentId: primaryRecord.fcStudentId,
       friendlyUrl: primaryRecord.friendlyUrl,
@@ -666,12 +732,14 @@ export async function POST(request) {
       steps = markOnboardingStep(steps, 'mmsActivation', 'skipped', 'Skipped because the canonical registry write did not complete.');
       steps = markOnboardingStep(steps, 'mmsBillingProfile', 'skipped', 'Skipped because the canonical registry write did not complete.');
       steps = markOnboardingStep(steps, 'mmsFirstLesson', 'skipped', 'Skipped because the canonical registry write did not complete.');
+      steps = markOnboardingStep(steps, 'mmsFreeSlot', 'skipped', 'Skipped because the canonical registry write did not complete.');
     } else if (steps.sheetsWrite.status === 'pending') {
       steps = markOnboardingStep(steps, 'sheetsWrite', 'failed', error.message || 'Onboarding failed before the Students sheet write completed.');
       steps = markOnboardingStep(steps, 'registryWrite', 'skipped', 'Skipped because the Students sheet write did not complete.');
       steps = markOnboardingStep(steps, 'mmsActivation', 'skipped', 'Skipped because the Students sheet write did not complete.');
       steps = markOnboardingStep(steps, 'mmsBillingProfile', 'skipped', 'Skipped because the Students sheet write did not complete.');
       steps = markOnboardingStep(steps, 'mmsFirstLesson', 'skipped', 'Skipped because the Students sheet write did not complete.');
+      steps = markOnboardingStep(steps, 'mmsFreeSlot', 'skipped', 'Skipped because the Students sheet write did not complete.');
     }
 
     return Response.json(

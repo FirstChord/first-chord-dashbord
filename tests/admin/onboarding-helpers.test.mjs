@@ -86,6 +86,7 @@ test('createOnboardingSteps starts every onboarding step in a pending state', ()
     'mmsActivation',
     'mmsBillingProfile',
     'mmsFirstLesson',
+    'mmsFreeSlot',
   ]);
   assert.equal(steps.mmsFirstLesson.status, 'pending');
 });
@@ -190,6 +191,7 @@ test('buildOnboardingCompletionStatus marks canonical and MMS state separately',
   steps = markOnboardingStep(steps, 'mmsActivation', 'succeeded', 'Student activated in MMS.');
   steps = markOnboardingStep(steps, 'mmsBillingProfile', 'succeeded', 'Billing profile is ready.');
   steps = markOnboardingStep(steps, 'mmsFirstLesson', 'failed', 'MMS create lesson failed.');
+  steps = markOnboardingStep(steps, 'mmsFreeSlot', 'skipped', 'The Free event was kept because the lesson was not confirmed.');
 
   const status = buildOnboardingCompletionStatus({ steps });
 
@@ -206,11 +208,30 @@ test('buildOnboardingCompletionStatus treats skipped idempotent MMS steps as rea
   steps = markOnboardingStep(steps, 'mmsActivation', 'skipped', 'Student was already active in MMS.');
   steps = markOnboardingStep(steps, 'mmsBillingProfile', 'skipped', 'Existing billing profile reused in MMS.');
   steps = markOnboardingStep(steps, 'mmsFirstLesson', 'skipped', 'Matching recurring lesson series already existed in MMS.');
+  steps = markOnboardingStep(steps, 'mmsFreeSlot', 'skipped', 'No MMS Free source event was selected.');
 
   const status = buildOnboardingCompletionStatus({ steps });
 
   assert.equal(status.canonicalRecord.status, 'complete');
   assert.equal(status.mmsOperationalState.status, 'complete');
+});
+
+test('free-slot cleanup failure keeps MMS onboarding partial without suggesting another lesson', () => {
+  let steps = createOnboardingSteps();
+  steps = markOnboardingStep(steps, 'sheetsWrite', 'succeeded', 'Inserted into Students.');
+  steps = markOnboardingStep(steps, 'registryWrite', 'succeeded', 'Registry entry created.');
+  steps = markOnboardingStep(steps, 'mmsActivation', 'succeeded', 'Student activated.');
+  steps = markOnboardingStep(steps, 'mmsBillingProfile', 'succeeded', 'Billing ready.');
+  steps = markOnboardingStep(steps, 'mmsFirstLesson', 'succeeded', 'Lesson created.');
+  steps = markOnboardingStep(steps, 'mmsFreeSlot', 'failed', 'Free event removal failed.');
+
+  const status = buildOnboardingCompletionStatus({ steps });
+  const guidance = buildOnboardingRecoveryGuidance({ steps }).join(' ');
+
+  assert.equal(status.mmsOperationalState.status, 'partial');
+  assert.match(guidance, /first lesson already exists/i);
+  assert.match(guidance, /Do not recreate the lesson/i);
+  assert.match(guidance, /remove that remaining Free event manually/i);
 });
 
 test('isOnboardingOperationallyComplete requires both canonical and MMS completion', () => {
