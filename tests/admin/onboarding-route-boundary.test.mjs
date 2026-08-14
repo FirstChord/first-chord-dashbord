@@ -39,9 +39,11 @@ test('post-onboarding closeout waits for core readiness, not ancillary cleanup',
   assert.match(routeSource, /Student notes privacy follow-up was not queued because the canonical record or core MMS lesson setup is incomplete/);
 });
 
-test('preflight and UI surface half-onboarding as recovery rather than success', () => {
+test('preflight and UI surface partial work as a human summary with technical recovery detail', () => {
   assert.match(preflightRouteSource, /Use the SHEETS ONLY recovery action; do not rerun onboarding/);
   assert.match(preflightRouteSource, /\{ status: 503 \}/);
-  assert.match(formSource, /Onboarding partially complete/);
+  assert.match(formSource, /Onboarding needs attention/);
+  assert.match(formSource, /The finished steps have been saved/);
+  assert.match(formSource, /Technical details/);
   assert.match(formSource, /result\.recoveryGuidance/);
 });

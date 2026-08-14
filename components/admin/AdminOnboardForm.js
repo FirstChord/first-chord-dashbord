@@ -10,6 +10,13 @@ function deriveWeekday(dateValue) {
   return parsed.toLocaleDateString('en-GB', { weekday: 'long' });
 }
 
+function formatHumanDate(dateValue) {
+  if (!dateValue) return '';
+  const parsed = new Date(`${dateValue}T12:00:00`);
+  if (Number.isNaN(parsed.getTime())) return dateValue;
+  return parsed.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
+}
+
 function normalizeTimeValue(value) {
   const trimmed = `${value || ''}`.trim();
   if (!trimmed) return '';
@@ -85,6 +92,33 @@ function preflightClasses(status) {
   return 'border-slate-200 bg-slate-50 text-slate-700';
 }
 
+function stepResultClasses(status) {
+  if (status === 'succeeded' || status === 'skipped') return 'border-emerald-200 bg-emerald-50';
+  if (status === 'failed') return 'border-red-200 bg-red-50';
+  return 'border-slate-200 bg-slate-50';
+}
+
+function onboardingStepIsReady(step) {
+  return step?.status === 'succeeded' || step?.status === 'skipped';
+}
+
+function OutcomeTick({ children, detail = '' }) {
+  return (
+    <li className="flex gap-3 py-3 first:pt-0 last:pb-0">
+      <span
+        aria-hidden="true"
+        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-sm font-bold text-white"
+      >
+        ✓
+      </span>
+      <div>
+        <p className="font-semibold text-slate-900">{children}</p>
+        {detail ? <p className="mt-0.5 text-sm text-slate-600">{detail}</p> : null}
+      </div>
+    </li>
+  );
+}
+
 export default function AdminOnboardForm({ initialData, tutorOptions, initialDuplicateState = null, waitingStudents = [] }) {
   const [form, setForm] = useState(initialData);
   const [result, setResult] = useState(null);
@@ -115,8 +149,38 @@ export default function AdminOnboardForm({ initialData, tutorOptions, initialDup
 
   const derivedWeekday = useMemo(() => deriveWeekday(form.lessonDate), [form.lessonDate]);
   const initialWarnings = initialDuplicateState?.warnings || [];
-  const resultIsComplete = result?.completionStatus?.canonicalRecord?.status === 'complete'
-    && result?.completionStatus?.mmsOperationalState?.status === 'complete';
+  const resultCoreIsComplete = result?.completionStatus?.canonicalRecord?.status === 'complete'
+    && onboardingStepIsReady(result?.steps?.mmsActivation)
+    && onboardingStepIsReady(result?.steps?.mmsBillingProfile)
+    && onboardingStepIsReady(result?.steps?.mmsFirstLesson);
+  const resultAttentionItems = result ? [
+    result.lessonWarning ? {
+      key: 'lesson',
+      title: 'Finish the MMS setup',
+      detail: 'The First Chord record is saved, but the MMS lesson setup did not finish.',
+    } : null,
+    result.freeSlotWarning ? {
+      key: 'free-slot',
+      title: 'Remove the old Free slot in MMS',
+      detail: 'The new lesson is already booked. Remove only the old Free slot — do not recreate the lesson.',
+    } : null,
+    result.waitingCloseoutWarning ? {
+      key: 'waiting',
+      title: 'Check the waiting list',
+      detail: 'The waiting record could not be closed automatically.',
+    } : null,
+    result.firstLessonCheckinWarning ? {
+      key: 'check-in',
+      title: 'Add the first-lesson check-in',
+      detail: 'The Planning reminder could not be added automatically.',
+    } : null,
+    result.notesPrivacyFollowUpWarning ? {
+      key: 'notes-privacy',
+      title: 'Queue the notes-privacy follow-up',
+      detail: 'The notes-privacy follow-up could not be prepared automatically.',
+    } : null,
+  ].filter(Boolean) : [];
+  const resultHasAttention = resultAttentionItems.length > 0 || Boolean(result?.duplicateWarnings?.length);
 
   function updateField(key, value) {
     setForm((current) => ({
@@ -467,53 +531,93 @@ export default function AdminOnboardForm({ initialData, tutorOptions, initialDup
 
       {result ? (
         <section className={`space-y-4 rounded-2xl border p-6 ${
-          resultIsComplete
+          resultCoreIsComplete
             ? 'border-emerald-200 bg-emerald-50'
             : 'border-amber-200 bg-amber-50'
         }`}>
-          <h3 className={`text-lg font-semibold ${resultIsComplete ? 'text-emerald-900' : 'text-amber-950'}`}>
-            {resultIsComplete ? 'Onboarding complete' : 'Onboarding partially complete'}
-          </h3>
-          {result.lessonWarning ? (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-              MMS setup still needs attention:
-              <div className="mt-2 font-mono text-xs break-words">{result.lessonWarning}</div>
+          <div>
+            <div className="flex items-center gap-3">
+              <span
+                aria-hidden="true"
+                className={`flex h-9 w-9 items-center justify-center rounded-full text-lg font-bold text-white ${
+                  resultCoreIsComplete ? 'bg-emerald-700' : 'bg-amber-600'
+                }`}
+              >
+                {resultCoreIsComplete ? '✓' : '!'}
+              </span>
+              <h3 className={`text-xl font-semibold ${resultCoreIsComplete ? 'text-emerald-950' : 'text-amber-950'}`}>
+                {resultCoreIsComplete ? 'Onboarding complete' : 'Onboarding needs attention'}
+              </h3>
+            </div>
+            <p className="mt-3 text-sm text-slate-700">
+              {resultCoreIsComplete
+                ? resultHasAttention
+                  ? 'The student is set up. There is just a follow-up to check below.'
+                  : 'Everything important is in place.'
+                : 'The finished steps have been saved. Complete the item below rather than starting again.'}
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-emerald-200 bg-white px-4 py-1">
+            <ul className="divide-y divide-slate-100">
+              {result.completionStatus?.canonicalRecord?.status === 'complete' ? (
+                <OutcomeTick detail={`The First Chord ${result.siblingGroup ? 'student records are' : 'student record is'} ready.`}>
+                  {result.siblingGroup ? 'Students added' : 'Student added'}
+                </OutcomeTick>
+              ) : null}
+              {onboardingStepIsReady(result.steps?.mmsActivation) && onboardingStepIsReady(result.steps?.mmsBillingProfile) ? (
+                <OutcomeTick detail="The student is active and their billing profile is ready.">MMS setup ready</OutcomeTick>
+              ) : null}
+              {onboardingStepIsReady(result.steps?.mmsFirstLesson) ? (
+                <OutcomeTick detail={`${derivedWeekday || 'Lesson day'} at ${form.lessonTime || 'the agreed time'}.`}>
+                  First lesson booked
+                </OutcomeTick>
+              ) : null}
+              {form.freeEventId && result.freeSlot ? (
+                <OutcomeTick detail={result.freeSlot.alreadyAbsent ? 'The old slot was already clear.' : 'The old slot and its future placeholders were removed.'}>
+                  Free slot cleared
+                </OutcomeTick>
+              ) : null}
+              {result.waitingCloseout?.length ? (
+                <OutcomeTick>Waiting list closed</OutcomeTick>
+              ) : null}
+              {result.firstLessonCheckin ? (
+                <OutcomeTick detail={result.firstLessonCheckin.targetDate ? `Added to Planning for ${formatHumanDate(result.firstLessonCheckin.targetDate)}.` : 'Added to Planning.'}>
+                  First-lesson check-in added
+                </OutcomeTick>
+              ) : null}
+              {result.notesPrivacyFollowUp?.length ? (
+                <OutcomeTick>Notes-privacy follow-up ready</OutcomeTick>
+              ) : null}
+            </ul>
+          </div>
+
+          {resultHasAttention ? (
+            <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950">
+              <p className="font-semibold">Needs a quick check</p>
+              {resultAttentionItems.length ? (
+                <ul className="mt-3 space-y-3">
+                  {resultAttentionItems.map((item) => (
+                    <li key={item.key} className="flex gap-3">
+                      <span aria-hidden="true" className="font-bold">!</span>
+                      <div>
+                        <p className="font-semibold">{item.title}</p>
+                        <p className="mt-0.5 text-sm text-amber-900">{item.detail}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {result.duplicateWarnings?.length ? (
+                <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-amber-900">
+                  {result.duplicateWarnings.map((warning) => (
+                    <li key={warning}>{warning}</li>
+                  ))}
+                </ul>
+              ) : null}
             </div>
           ) : null}
-          {result.freeSlotWarning ? (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-              The lesson exists, but the selected MMS Free event still needs attention:
-              <div className="mt-2 font-mono text-xs break-words">{result.freeSlotWarning}</div>
-            </div>
-          ) : null}
-          {result.freeSlot ? (
-            <div className="rounded-xl border border-emerald-200 bg-white p-4 text-sm text-emerald-900">
-              Selected MMS Free event {result.freeSlot.eventId} was {result.freeSlot.alreadyAbsent ? 'already absent' : 'removed with its future occurrences'} after the lesson was confirmed.
-            </div>
-          ) : null}
-          {result.waitingCloseoutWarning ? (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-              The waiting-list closeout needs checking:
-              <div className="mt-2 font-mono text-xs break-words">{result.waitingCloseoutWarning}</div>
-            </div>
-          ) : null}
-          {result.waitingCloseout?.length ? (
-            <div className="rounded-xl border border-emerald-200 bg-white p-4 text-sm text-emerald-900">
-              Waiting list marked onboarded for {result.waitingCloseout.map((entry) => entry.mmsId).join(', ')}.
-            </div>
-          ) : null}
-          {result.firstLessonCheckin ? (
-            <div className="rounded-xl border border-emerald-200 bg-white p-4 text-sm text-emerald-900">
-              First-lesson check-in task added to the Planning inbox
-              {result.firstLessonCheckin.targetDate ? ` for ${result.firstLessonCheckin.targetDate}` : ''}.
-            </div>
-          ) : null}
-          {result.firstLessonCheckinWarning ? (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-              The first-lesson check-in task was not created:
-              <div className="mt-2 font-mono text-xs break-words">{result.firstLessonCheckinWarning}</div>
-            </div>
-          ) : null}
+
           {result.notesPrivacyFollowUp?.length ? (
             <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
               <p className="font-semibold">Student notes privacy is ready as a follow-up</p>
@@ -533,84 +637,78 @@ export default function AdminOnboardForm({ initialData, tutorOptions, initialDup
               </div>
             </div>
           ) : null}
-          {result.notesPrivacyFollowUpWarning ? (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-              The notes privacy follow-up was not queued:
-              <div className="mt-2 font-mono text-xs break-words">{result.notesPrivacyFollowUpWarning}</div>
-            </div>
-          ) : null}
-          {result.recoveryGuidance?.length ? (
-            <div className="rounded-xl border border-amber-200 bg-white p-4 text-sm text-slate-700">
-              <p className="font-semibold text-slate-900">Recovery guidance</p>
-              <ul className="mt-2 list-disc pl-5">
-                {result.recoveryGuidance.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-          {result.duplicateWarnings?.length ? (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-              <p className="font-semibold">Duplicate warnings</p>
-              <ul className="mt-2 list-disc pl-5">
-                {result.duplicateWarnings.map((warning) => (
-                  <li key={warning}>{warning}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-          {result.steps ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {Object.entries(result.steps).map(([key, step]) => (
-                <div key={key} className="rounded-xl border border-emerald-200 bg-white p-4">
-                  <p className="text-xs uppercase tracking-wide text-slate-500">{key}</p>
-                  <p className="mt-2 text-sm font-medium text-slate-900">{step.status}</p>
-                  {step.detail ? <p className="mt-2 text-sm text-slate-700">{step.detail}</p> : null}
+          <details className="rounded-xl border border-slate-200 bg-white">
+            <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-700">
+              Technical details
+            </summary>
+            <div className="space-y-4 border-t border-slate-200 p-4">
+              {result.steps ? (
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {Object.entries(result.steps).map(([key, step]) => (
+                    <div key={key} className={`rounded-xl border p-4 ${stepResultClasses(step.status)}`}>
+                      <p className="text-xs uppercase tracking-wide text-slate-500">{key}</p>
+                      <p className="mt-2 text-sm font-medium text-slate-900">{step.status}</p>
+                      {step.detail ? <p className="mt-2 text-sm text-slate-700">{step.detail}</p> : null}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          ) : null}
-          {result.completionStatus ? (
-            <div className="space-y-3">
-              <p className="text-sm font-semibold text-slate-900">Onboarding completion status</p>
-              <div className="grid gap-4 sm:grid-cols-2">
-                {Object.entries(result.completionStatus).map(([key, item]) => (
-                  <div key={key} className={`rounded-xl border p-4 ${statusClasses(item.status)}`}>
-                    <p className="text-xs uppercase tracking-wide opacity-70">{key}</p>
-                    <p className="mt-2 text-sm font-semibold">{item.label}</p>
-                    <p className="mt-2 text-sm">{item.detail}</p>
+              ) : null}
+              {result.completionStatus ? (
+                <div className="space-y-3">
+                  <p className="text-sm font-semibold text-slate-900">System status</p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {Object.entries(result.completionStatus).map(([key, item]) => (
+                      <div key={key} className={`rounded-xl border p-4 ${statusClasses(item.status)}`}>
+                        <p className="text-xs uppercase tracking-wide opacity-70">{key}</p>
+                        <p className="mt-2 text-sm font-semibold">{item.label}</p>
+                        <p className="mt-2 text-sm">{item.detail}</p>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </div>
+              ) : null}
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">FC Student ID</p>
+                  <p className="mt-2 break-words text-sm font-medium text-slate-900">{result.fcStudentId}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Friendly URL</p>
+                  <p className="mt-2 break-words text-sm font-medium text-slate-900">/{result.friendlyUrl}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Registry action</p>
+                  <p className="mt-2 text-sm font-medium text-slate-900">{result.registryAction || 'Appended new entry'}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Lesson</p>
+                  <p className="mt-2 break-words text-sm font-medium text-slate-900">{result.lessonId ? `Created (${result.lessonId})` : 'Not created automatically'}</p>
+                </div>
               </div>
+              {resultAttentionItems.length ? (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                  <p className="font-semibold text-slate-900">Provider messages</p>
+                  <ul className="mt-2 space-y-2 font-mono text-xs break-words">
+                    {result.lessonWarning ? <li>{result.lessonWarning}</li> : null}
+                    {result.freeSlotWarning ? <li>{result.freeSlotWarning}</li> : null}
+                    {result.waitingCloseoutWarning ? <li>{result.waitingCloseoutWarning}</li> : null}
+                    {result.firstLessonCheckinWarning ? <li>{result.firstLessonCheckinWarning}</li> : null}
+                    {result.notesPrivacyFollowUpWarning ? <li>{result.notesPrivacyFollowUpWarning}</li> : null}
+                  </ul>
+                </div>
+              ) : null}
+              {result.recoveryGuidance?.length ? (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                  <p className="font-semibold text-slate-900">Recovery guidance</p>
+                  <ul className="mt-2 list-disc pl-5">
+                    {result.recoveryGuidance.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
             </div>
-          ) : null}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-xl border border-emerald-200 bg-white p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-500">FC Student ID</p>
-              <p className="mt-2 text-sm font-medium text-slate-900">{result.fcStudentId}</p>
-            </div>
-            <div className="rounded-xl border border-emerald-200 bg-white p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-500">Friendly URL</p>
-              <p className="mt-2 text-sm font-medium text-slate-900">/{result.friendlyUrl}</p>
-            </div>
-            <div className="rounded-xl border border-emerald-200 bg-white p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-500">Registry action</p>
-              <p className="mt-2 text-sm font-medium text-slate-900">{result.registryAction || 'Appended new entry'}</p>
-            </div>
-            <div className="rounded-xl border border-emerald-200 bg-white p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-500">Lesson creation</p>
-              <p className="mt-2 text-sm font-medium text-slate-900">{result.lessonId ? `Created (${result.lessonId})` : 'Not created automatically'}</p>
-              <p className="mt-1 text-xs text-slate-500">{form.isRecurring ? 'Configured as recurring weekly series' : 'Configured as one-off lesson'}</p>
-            </div>
-            <div className="rounded-xl border border-emerald-200 bg-white p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-500">MMS activation</p>
-              <p className="mt-2 text-sm font-medium text-slate-900">{result.mmsStatus?.activated ? 'Student activated' : 'Not completed automatically'}</p>
-            </div>
-            <div className="rounded-xl border border-emerald-200 bg-white p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-500">MMS billing profile</p>
-              <p className="mt-2 text-sm font-medium text-slate-900">{result.mmsStatus?.billingProfileReady ? 'Ready' : 'Not created automatically'}</p>
-            </div>
-          </div>
+          </details>
           <div className="rounded-xl border border-emerald-200 bg-white p-4">
             <p className="text-sm font-semibold text-slate-900">WGCS label</p>
             <p className="mt-2 text-sm text-slate-700">{result.wgcs.whatsappGroupLabel}</p>
@@ -623,19 +721,6 @@ export default function AdminOnboardForm({ initialData, tutorOptions, initialDup
             <p className="text-sm font-semibold text-slate-900">Soundslice follow-up</p>
             <pre className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{result.wgcs.soundsliceFollowup}</pre>
           </div>
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-            Post-onboarding jobs are still manual in V1. Use the completion status panel above to track what is finished and what is still pending before the student is fully live.
-          </div>
-          {result.recoveryGuidance?.length ? (
-            <div className="rounded-xl border border-amber-200 bg-white p-4 text-sm text-slate-700">
-              <p className="font-semibold text-slate-900">Recovery guidance</p>
-              <ul className="mt-2 list-disc pl-5">
-                {result.recoveryGuidance.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
         </section>
       ) : null}
     </div>
