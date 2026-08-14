@@ -15,7 +15,6 @@ import {
   extractReflectionIntentions,
   getLatestSchoolForwardReflectionNote,
   flagNearbyPauses,
-  labelPlanningType,
   normaliseReflectionIntentionKey,
   parseLinkedStudentIds,
 } from '@/lib/admin/planning-helpers.mjs';
@@ -31,9 +30,9 @@ import {
   buildSchoolNoteItem,
   PAUSE_PAYMENT_CONFIRMATION_NOTE,
   EMPTY_FORM,
+  applySmartDefaults,
   buildQuickCaptureItem,
   buildPlanningRelationships,
-  buildProjectActionCompletionProgress,
 } from '@/lib/admin/planning-client-helpers.mjs';
 import { ExpandableText } from './planning/fields';
 import MondayIntentionRow from './planning/MondayIntentionRow';
@@ -56,15 +55,13 @@ const STATUS_GROUPS = [
 const PRIMARY_REVIEW_FILTERS = [
   { value: 'due_now', label: 'Due today' },
   { value: 'all', label: 'All' },
+  { value: 'school_notes', label: 'Let’s work on the school' },
   { value: 'owner_fennella', label: 'Fennella' },
 ];
 
 const ADVANCED_REVIEW_FILTERS = [
   { value: '', label: 'More filters' },
   { value: 'meeting', label: 'Meeting' },
-  { value: 'school_notes', label: 'School notes' },
-  { value: 'learning_note', label: 'Learning notes' },
-  { value: 'strategic_note', label: 'Strategic notes' },
   { value: 'unassigned', label: 'Unassigned' },
   { value: 'no_next_action', label: 'No next action' },
   { value: 'waiting_status', label: 'Waiting' },
@@ -72,22 +69,18 @@ const ADVANCED_REVIEW_FILTERS = [
   { value: 'stalled', label: 'Stalled' },
   { value: 'moving', label: 'Moving' },
   { value: 'initiative', label: 'Projects' },
-  { value: 'idea', label: 'Notes / ideas' },
   { value: 'action', label: 'Actions' },
   { value: 'done', label: 'Done' },
   { value: 'parked', label: 'Parked' },
 ];
 
 const EMPTY_SCHOOL_NOTE_FORM = {
-  noteKind: 'learning_note',
   title: '',
   owner: 'Unassigned',
-  status: 'active',
-  area: 'learning',
+  area: 'other',
   mainNote: '',
   keyIdeas: '',
   applications: '',
-  nextAction: '',
 };
 
 const PAUSE_EXPECTATION_SET_NOTE = 'Set Stripe paused expected from linked pause planning item.';
@@ -194,7 +187,7 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
         ? possibleParent
         : null,
       projectActions,
-      currentProjectAction: projectActions.find((action) => !['done', 'parked'].includes(action.status)) || null,
+      openProjectActions: projectActions.filter((action) => !['done', 'parked'].includes(action.status)),
     };
   }), [planning.items, planningRelationships]);
 
@@ -265,8 +258,8 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
   async function handleSchoolNoteCapture(event) {
     event.preventDefault();
     const item = buildSchoolNoteItem(schoolNoteForm);
-    if (!item.title || !item.notes) {
-      setSaveState({ pending: false, error: 'Add a title and main note before saving.', savedAt: '' });
+    if (!item.title) {
+      setSaveState({ pending: false, error: 'Add a short title for the idea before saving.', savedAt: '' });
       return;
     }
 
@@ -284,47 +277,34 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
     }
   }
 
-  async function handleCreateLinkedAction(item) {
-    const title = `${item.nextAction || ''}`.trim();
-    if (!title) {
-      setSaveState({ pending: false, error: 'Add a next action before creating a linked action.', savedAt: '' });
-      return;
-    }
-    if (item.itemType === 'initiative' && item.currentProjectAction) {
-      setSaveState({
-        pending: false,
-        error: `Finish or park “${item.currentProjectAction.title}” before creating another current action for this project.`,
-        savedAt: '',
-      });
-      return;
+  async function handleCreateProjectAction(project, { title = '', targetDate = '' } = {}) {
+    const cleanTitle = `${title || ''}`.trim();
+    if (!cleanTitle || !targetDate) {
+      setSaveState({ pending: false, error: 'Add an Action and choose the day you will do it.', savedAt: '' });
+      return false;
     }
 
     try {
       await postPlanning({
         mode: 'save',
         item: {
-          title,
-          notes: `Created from ${item.itemTypeLabel || labelPlanningType(item.itemType)}: ${item.title}`,
+          title: cleanTitle,
+          notes: `Part of project: ${project.title}`,
           itemType: 'action',
-          owner: item.owner || 'Unassigned',
+          owner: project.owner || 'Unassigned',
           status: 'active',
-          area: item.area || 'other',
-          parentPlanningId: item.planningId,
-          nextAction: title,
+          area: project.area || 'other',
+          parentPlanningId: project.planningId,
+          nextAction: cleanTitle,
+          targetDate,
         },
-        progressNote: `Created linked action from: ${item.title}`,
-      }, item.planningId);
-
-      await postPlanning({
-        mode: 'progress',
-        planningId: item.planningId,
-        progressNote: `Created linked action: ${title}`,
-        progressType: 'decision',
-        nextAction: item.nextAction,
-      }, item.planningId);
+        progressNote: `Created from project: ${project.title}`,
+      }, project.planningId);
+      return true;
     } catch (error) {
       setSaveState({ pending: false, error: error.message, savedAt: '' });
       setPendingId('');
+      return false;
     }
   }
 
@@ -506,10 +486,10 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
     }
   }
 
-  function startEdit(item) {
+  function startEdit(item, overrides = {}) {
     setEditingItem(item);
     setEditorMode(isPausePlanningItem(item) ? 'structured' : 'general');
-    setEditForm({
+    setEditForm(applySmartDefaults({
       ...EMPTY_FORM,
       title: item.title,
       notes: item.notes,
@@ -527,12 +507,27 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
       nextAction: item.nextAction,
       targetDate: item.targetDate,
       isPause: item.isPause || '',
+      ...overrides,
+    }));
+  }
+
+  function handleConvertSchoolIdea(item, itemType) {
+    startEdit(item, {
+      itemType,
+      status: 'active',
+      linkedWorkflowId: '',
+      targetDate: '',
+      nextAction: itemType === 'action' ? item.title : '',
     });
   }
 
   async function handleEdit(event) {
     event.preventDefault();
     if (!editingItem) {
+      return;
+    }
+    if (editForm.itemType === 'action' && ['active', 'waiting'].includes(editForm.status) && !editForm.targetDate) {
+      setSaveState({ pending: false, error: 'Choose the Do on date before activating this Action.', savedAt: '' });
       return;
     }
 
@@ -558,11 +553,6 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
         planningId: item.planningId,
         status,
       }, item.planningId);
-      const parent = planningRelationships.itemsById.get(item.parentPlanningId);
-      const projectProgress = buildProjectActionCompletionProgress(item, parent, status);
-      if (projectProgress) {
-        await postPlanning(projectProgress, parent.planningId);
-      }
     } catch (error) {
       setSaveState({ pending: false, error: error.message, savedAt: '' });
       setPendingId('');
@@ -989,7 +979,8 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
                       sortedEntry={sortedPauses[item.planningId] || null}
                       onRepairPauseDetails={handleRepairPauseDetails}
                       onOpenPauseTool={(url, name) => setPauseToolPanel({ url, name })}
-                      onCreateLinkedAction={handleCreateLinkedAction}
+                      onConvertSchoolIdea={handleConvertSchoolIdea}
+                      onCreateProjectAction={handleCreateProjectAction}
                       onTutorAbsenceDecision={handleTutorAbsenceDecision}
                       onTutorAbsenceNoticeSent={handleTutorAbsenceNoticeSent}
                       onTutorAbsenceFinalConfirmationSent={handleTutorAbsenceFinalConfirmationSent}
@@ -1031,7 +1022,8 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
                         sortedEntry={sortedPauses[item.planningId] || null}
                         onRepairPauseDetails={handleRepairPauseDetails}
                         onOpenPauseTool={(url, name) => setPauseToolPanel({ url, name })}
-                        onCreateLinkedAction={handleCreateLinkedAction}
+                        onConvertSchoolIdea={handleConvertSchoolIdea}
+                        onCreateProjectAction={handleCreateProjectAction}
                         onTutorAbsenceDecision={handleTutorAbsenceDecision}
                         onTutorAbsenceNoticeSent={handleTutorAbsenceNoticeSent}
                         onTutorAbsenceFinalConfirmationSent={handleTutorAbsenceFinalConfirmationSent}
@@ -1158,10 +1150,13 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
                 href="/admin/planning?filter=school_notes"
                 className="rounded-full border border-violet-200 bg-white px-3 py-1 text-xs font-semibold text-violet-900 hover:bg-violet-50"
               >
-                View school notes
+                View all ideas
               </Link>
             </div>
             <div className="mt-3 rounded-2xl border border-violet-100 bg-white/90 p-4">
+              <p className="mb-3 text-sm leading-6 text-slate-700">
+                Capture anything worth discussing about the school. Ideas saved anywhere in Planning appear in this view.
+              </p>
               <SchoolNoteCapture
                 form={schoolNoteForm}
                 onChange={setSchoolNoteForm}

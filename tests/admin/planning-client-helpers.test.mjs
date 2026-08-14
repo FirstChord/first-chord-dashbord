@@ -27,7 +27,6 @@ import {
   truncateTitle,
   applySmartDefaults,
   buildPlanningRelationships,
-  buildProjectActionCompletionProgress,
   buildSearchText,
   workflowHref,
   buildTutorAbsenceWorkflowHref,
@@ -104,6 +103,7 @@ test('filterPlanningItems routes every chip: done/parked veil, search, owners, t
   assert.deepEqual(ids({ filter: 'owner_fennella' }), ['a']);
   assert.deepEqual(ids({ filter: 'unassigned' }), ['b']);
   assert.deepEqual(ids({ filter: 'due_now' }), ['e']);
+  assert.deepEqual(ids({ filter: 'school_notes' }), ['b']);
 
   // Item-type chips, and unknown filters fall through to a momentum match.
   assert.deepEqual(ids({ filter: 'idea' }), ['b']);
@@ -265,6 +265,8 @@ test('getPlanningStory frames pause cards and falls back to the title', () => {
 
 test('getPlanningWhatToDo prefers nextAction, then pause/tutor-absence framing', () => {
   assert.equal(getPlanningWhatToDo({ nextAction: 'Call the parent' }), 'Call the parent');
+  assert.equal(getPlanningWhatToDo({ itemType: 'action', title: 'Call the parent', nextAction: 'Call the parent' }), '');
+  assert.match(getPlanningWhatToDo({ itemType: 'initiative' }), /open Actions/);
   assert.match(getPlanningWhatToDo({ title: 'Pause Ada' }), /pause the payment/);
   assert.match(getPlanningWhatToDo({ linkedWorkflowId: 'tutor-absence' }), /tutor-absence workflow/);
 });
@@ -289,10 +291,14 @@ test('truncateTitle takes the first line, strips bullets, and caps length', () =
   assert.equal(truncateTitle('x'.repeat(100), 10), 'xxxxxxxxx...');
 });
 
-test('applySmartDefaults promotes inbox actions/initiatives to active', () => {
+test('applySmartDefaults activates dated Actions and Projects but leaves undated Actions in Inbox', () => {
   assert.deepEqual(
     applySmartDefaults({ itemType: 'action', status: 'inbox', planMode: 'ongoing' }),
-    { itemType: 'action', status: 'active', planMode: 'task' },
+    { itemType: 'action', status: 'inbox', planMode: 'task' },
+  );
+  assert.deepEqual(
+    applySmartDefaults({ itemType: 'action', status: 'inbox', planMode: 'ongoing', targetDate: '2026-08-18' }),
+    { itemType: 'action', status: 'active', planMode: 'task', targetDate: '2026-08-18' },
   );
   assert.deepEqual(
     applySmartDefaults({ itemType: 'initiative', status: 'inbox', planMode: 'task' }),
@@ -319,45 +325,25 @@ test('buildPlanningRelationships links only action cards to Project parents', ()
     status: 'active',
     updatedAt: '2026-08-12T12:00:00Z',
   };
+  const secondOpen = {
+    planningId: 'action_second',
+    itemType: 'action',
+    parentPlanningId: 'project_1',
+    title: 'Price the printed handbook',
+    status: 'active',
+    updatedAt: '2026-08-11T12:00:00Z',
+  };
   const unrelatedNote = { planningId: 'note_1', itemType: 'idea', parentPlanningId: 'project_1' };
   const weeklyReview = { planningId: 'planning_weekly_school_forward_review', itemType: 'initiative' };
   const reflectionAction = { planningId: 'reflection_action', itemType: 'action', parentPlanningId: weeklyReview.planningId };
-  const relationships = buildPlanningRelationships([olderDone, unrelatedNote, project, current, weeklyReview, reflectionAction]);
+  const relationships = buildPlanningRelationships([olderDone, unrelatedNote, project, secondOpen, current, weeklyReview, reflectionAction]);
 
   assert.equal(relationships.itemsById.get('project_1'), project);
   assert.deepEqual(
     relationships.actionsByProjectId.get('project_1').map((item) => item.planningId),
-    ['action_current', 'action_old'],
+    ['action_current', 'action_second', 'action_old'],
   );
   assert.equal(relationships.actionsByProjectId.has(weeklyReview.planningId), false);
-});
-
-test('completing a Project action logs back to its parent and clears only the matching next step', () => {
-  const action = {
-    planningId: 'action_1',
-    itemType: 'action',
-    parentPlanningId: 'project_1',
-    title: 'Draft weeks 1–4 outcomes',
-  };
-  const parent = {
-    planningId: 'project_1',
-    itemType: 'initiative',
-    nextAction: 'Draft weeks 1–4 outcomes',
-  };
-  assert.deepEqual(buildProjectActionCompletionProgress(action, parent, 'done'), {
-    mode: 'progress',
-    planningId: 'project_1',
-    progressNote: 'Completed linked action: Draft weeks 1–4 outcomes',
-    progressType: 'action_completed',
-    nextAction: '',
-  });
-  assert.equal(buildProjectActionCompletionProgress(action, parent, 'waiting'), null);
-  assert.equal(buildProjectActionCompletionProgress(action, { ...parent, planningId: 'other' }, 'done'), null);
-  assert.equal(buildProjectActionCompletionProgress(
-    { ...action, parentPlanningId: 'planning_weekly_school_forward_review' },
-    { ...parent, planningId: 'planning_weekly_school_forward_review' },
-    'done',
-  ), null);
 });
 
 const STUDENTS = [
@@ -398,19 +384,20 @@ test('studentHref builds a student path or empty', () => {
 
 test('isSchoolNotePlanningItem / hasPausePaymentConfirmation classify by type/progress', () => {
   assert.equal(isSchoolNotePlanningItem({ itemType: 'learning_note' }), true);
+  assert.equal(isSchoolNotePlanningItem({ itemType: 'idea' }), true);
   assert.equal(isSchoolNotePlanningItem({ itemType: 'action' }), false);
   assert.equal(hasPausePaymentConfirmation({ progress: [{ progressNote: 'Payment pause confirmation message sent.' }] }), true);
   assert.equal(hasPausePaymentConfirmation({ progress: [{ progressNote: 'something else' }] }), false);
 });
 
-test('buildSchoolNoteItem maps a form into a planning item with sectioned notes', () => {
+test('buildSchoolNoteItem maps the school-thinking form into one Inbox Idea shape', () => {
   const item = buildSchoolNoteItem({ title: 'Marketing idea', noteKind: 'strategic_note', mainNote: 'do a campaign', keyIdeas: 'posters' });
-  assert.equal(item.itemType, 'strategic_note');
+  assert.equal(item.itemType, 'idea');
+  assert.equal(item.status, 'inbox');
   assert.equal(item.linkedWorkflowId, 'school-notes');
   assert.match(item.notes, /Main note \/ transcript summary:\ndo a campaign/);
   assert.match(item.notes, /Key ideas:\nposters/);
-  // unknown noteKind falls back to learning_note
-  assert.equal(buildSchoolNoteItem({ noteKind: 'bogus' }).itemType, 'learning_note');
+  assert.equal(buildSchoolNoteItem({ noteKind: 'bogus' }).itemType, 'idea');
 });
 
 test('buildSearchText flattens item fields to a lowercase haystack', () => {
@@ -451,11 +438,15 @@ test('buildQuickCaptureItem builds an item from a raw note (title truncated, act
   const project = buildQuickCaptureItem('beginner guitar curriculum', {
     itemType: 'initiative',
     outcome: 'A reviewed twelve-week pathway exists.',
-    nextAction: 'Draft weeks 1–4 outcomes',
   }, []);
   assert.equal(project.status, 'active');
   assert.equal(project.planMode, 'ongoing');
-  assert.equal(project.nextAction, 'Draft weeks 1–4 outcomes');
+  assert.equal(project.nextAction, '');
+  const datedAction = buildQuickCaptureItem('Call Rachel on 18 August', { targetDate: '2026-08-18' }, []);
+  assert.equal(datedAction.status, 'active');
+  const idea = buildQuickCaptureItem('Idea for Friday', { itemType: 'idea', targetDate: '2026-08-21' }, []);
+  assert.equal(idea.status, 'inbox');
+  assert.equal(idea.targetDate, '');
   // overrides win and control fields (e.g. studentSelectionSource) are stripped
   const withOverride = buildQuickCaptureItem('note', {
     title: 'Custom',

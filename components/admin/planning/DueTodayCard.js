@@ -21,7 +21,8 @@ export default function DueTodayCard({
   sortedEntry = null,
   onRepairPauseDetails,
   onOpenPauseTool,
-  onCreateLinkedAction,
+  onConvertSchoolIdea,
+  onCreateProjectAction,
   onTutorAbsenceDecision,
   onTutorAbsenceNoticeSent,
   onTutorAbsenceFinalConfirmationSent,
@@ -80,11 +81,11 @@ export default function DueTodayCard({
           <button
             type="button"
             onClick={() => onStatus(item, 'done')}
-            disabled={isPending || (item.itemType === 'initiative' && Boolean(item.currentProjectAction))}
+            disabled={isPending || (item.itemType === 'initiative' && Boolean(item.openProjectActions?.length))}
             className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-            {item.itemType === 'initiative' && item.currentProjectAction ? 'Finish current action first' : 'Mark done'}
+            {item.itemType === 'initiative' && item.openProjectActions?.length ? 'Finish open actions first' : 'Mark done'}
           </button>
         )}
         <button
@@ -122,7 +123,8 @@ export default function DueTodayCard({
             sortedEntry={sortedEntry}
             onRepairPauseDetails={onRepairPauseDetails}
             onOpenPauseTool={onOpenPauseTool}
-            onCreateLinkedAction={onCreateLinkedAction}
+            onConvertSchoolIdea={onConvertSchoolIdea}
+            onCreateProjectAction={onCreateProjectAction}
             onTutorAbsenceDecision={onTutorAbsenceDecision}
             onTutorAbsenceNoticeSent={onTutorAbsenceNoticeSent}
             onTutorAbsenceFinalConfirmationSent={onTutorAbsenceFinalConfirmationSent}

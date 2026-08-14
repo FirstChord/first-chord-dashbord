@@ -351,7 +351,7 @@ test('buildIncomingPlanningDraft maps a reviewed message into a planning item', 
   // Duration but no anchor date → stays a generic action, with the duration noted.
   assert.equal(draft.title, 'Extended absence: Alex Chang');
   assert.equal(draft.itemType, 'action');
-  assert.equal(draft.status, 'active');
+  assert.equal(draft.status, 'inbox');
   assert.equal(draft.area, 'workflow');
   assert.deepEqual(draft.linkedStudentIds, ['sdt_alex']);
   assert.match(draft.notes, /Alex is away for two weeks/u);

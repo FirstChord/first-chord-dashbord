@@ -26,15 +26,15 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
-- **Planning now has a lightweight Project → current Action loop — READY
-  LOCALLY 2026-08-14:** The ordinary model is Action, Project, or Note / idea;
-  `initiative` remains the stored compatibility value for Project and Mode is
-  derived rather than chosen. Projects keep their done-when outcome, next review
-  date and append-only progress, expose one linked current Action, and receive
-  the completion back when that Action is marked done. The save boundary rejects
-  a second open Action for the same Project. Area is optional and the new-choice
-  list is reduced to six stable school responsibilities. Existing area/type
-  values, school notes, Friday reflections and structured pauses remain intact.
+- **Planning's three ordinary shapes now have distinct jobs — READY LOCALLY
+  2026-08-14:** An active Action has a **Do on** date; an unscheduled Action stays
+  in Inbox. Notes / ideas, including the two legacy school-note types, share the
+  one **Let's work on the school** view and can be converted in place. A Project
+  is only a multi-action outcome: done-when context, an optional review reminder,
+  and any number of linked dated Actions. Their open/done states show progress,
+  so the first heavier version's manual Project reports, duplicate completion
+  log and exactly-one-child restriction were removed. Stored types, Friday
+  reflections and structured pauses remain backward-compatible.
 - **Waiting records remain recoverable and welcome copy is current — DEPLOYED
   2026-08-13 (`e792934`, `6e24841`):** No response, Closed and Onboarded rows
   remain visible in a collapsed inactive shelf while staying outside active

@@ -41,7 +41,7 @@ import PauseDatesEditor from './PauseDatesEditor';
 // pause items — the full pause toolkit (open the pause tool, copy the parent message,
 // the "Edit dates" repair builder, and the two-checkbox "Mark pause completed" gate).
 // Pure props in (item + studentOptions + handlers); also used inside DueTodayCard.
-export default function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides = {}, onStatus, onArchive, onEdit, onProgress, onPauseCompleted, onRepairPauseDetails, onOpenPauseTool, onCreateLinkedAction, onTutorAbsenceDecision, onTutorAbsenceNoticeSent, onTutorAbsenceFinalConfirmationSent, pendingId, compact = false, nearbyPause = null, sortedEntry = null }) {
+export default function PlanningCard({ item, studentOptions = [], paymentExpectationOverrides = {}, onStatus, onArchive, onEdit, onProgress, onPauseCompleted, onRepairPauseDetails, onOpenPauseTool, onConvertSchoolIdea, onCreateProjectAction, onTutorAbsenceDecision, onTutorAbsenceNoticeSent, onTutorAbsenceFinalConfirmationSent, pendingId, compact = false, nearbyPause = null, sortedEntry = null }) {
   const [progressNote, setProgressNote] = useState('');
   // Starts empty on purpose. The card already states the current next action
   // above; pre-filling the input printed the same sentence twice and made an
@@ -49,6 +49,10 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
   // submit handler.
   const [nextAction, setNextAction] = useState('');
   const [nextSessionDate, setNextSessionDate] = useState('');
+  const [projectActionTitle, setProjectActionTitle] = useState(() => (
+    item.itemType === 'initiative' && !(item.projectActions || []).length ? `${item.nextAction || ''}` : ''
+  ));
+  const [projectActionDate, setProjectActionDate] = useState('');
   const [pauseToolRan, setPauseToolRan] = useState(false);
   const [pauseMessageConfirmed, setPauseMessageConfirmed] = useState(false);
   const [copyState, setCopyState] = useState('');
@@ -58,10 +62,12 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
   const isSchoolForwardReview = item.planningId === SCHOOL_FORWARD_PLANNING_ID;
   const isProject = item.itemType === 'initiative' && !isSchoolForwardReview;
   const parentProject = item.parentProject?.itemType === 'initiative' ? item.parentProject : null;
-  const currentProjectAction = item.currentProjectAction || null;
+  const projectActions = item.projectActions || [];
+  const openProjectActions = item.openProjectActions || projectActions.filter((action) => !['done', 'parked'].includes(action.status));
+  const completedProjectActions = projectActions.filter((action) => action.status === 'done');
   // Ongoing plans are worked across sessions: log what you did + set the next
   // meeting day in one step. (School-forward review keeps its own reflection UI.)
-  const isOngoing = (isProject || item.planMode === 'ongoing') && !isSchoolForwardReview;
+  const isOngoing = item.planMode === 'ongoing' && !isProject && !isSchoolForwardReview;
   const isSystemPlanningItem = item.planningId === SCHOOL_FORWARD_PLANNING_ID || item.planningId === MONDAY_SCHEDULE_PLANNING_ID;
   const pausePaymentConfirmed = hasPausePaymentConfirmation(item);
   const isTutorAbsenceCard = item.linkedWorkflowId === 'tutor-absence' && Boolean(item.linkedTutorId);
@@ -231,6 +237,12 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
               <span>Review {formatTargetDate(item.targetDate)}</span>
             </>
           ) : null}
+          {item.itemType === 'action' && item.targetDate ? (
+            <>
+              <span>·</span>
+              <span>Do on {formatTargetDate(item.targetDate)}</span>
+            </>
+          ) : null}
         </div>
       )}
 
@@ -252,23 +264,59 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
 
       {/* Not on a pause card: the "Complete this pause" panel below is literally
           these steps, so restating them here was the same instruction twice. */}
-      {item.nextAction && !isPauseReminder && (!isProject || !currentProjectAction) && (
+      {item.nextAction && item.nextAction !== item.title && !isPauseReminder && !isProject && !isSchoolNote && (
         <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-slate-800">
           <span className="font-semibold">Next action: </span>
           {item.nextAction}
         </div>
       )}
 
-      {isProject && currentProjectAction ? (
+      {isProject ? (
         <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">Current action</p>
-          <Link
-            href={`/admin/planning?focus=${encodeURIComponent(currentProjectAction.planningId)}`}
-            className="mt-1 block text-sm font-semibold text-slate-900 hover:text-blue-800"
-          >
-            {currentProjectAction.title}
-          </Link>
-          <p className="mt-1 text-xs text-slate-600">{currentProjectAction.statusLabel || currentProjectAction.status}</p>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">Actions</p>
+            <span className="text-xs font-medium text-slate-600">
+              {openProjectActions.length} open · {completedProjectActions.length} done
+            </span>
+          </div>
+          {openProjectActions.length ? (
+            <ul className="mt-2 space-y-2">
+              {openProjectActions.map((action) => (
+                <li key={action.planningId} className="flex items-center justify-between gap-3 rounded-lg bg-white/80 px-3 py-2">
+                  <Link
+                    href={`/admin/planning?focus=${encodeURIComponent(action.planningId)}`}
+                    className="min-w-0 truncate text-sm font-semibold text-slate-900 hover:text-blue-800"
+                  >
+                    {action.title}
+                  </Link>
+                  <span className="shrink-0 text-xs text-slate-600">
+                    {action.targetDate ? formatTargetDate(action.targetDate) : action.statusLabel || action.status}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-2 text-sm text-slate-600">No open Actions yet.</p>
+          )}
+          {completedProjectActions.length ? (
+            <details className="mt-2 border-t border-blue-100 pt-2">
+              <summary className="cursor-pointer text-xs font-semibold text-slate-600">
+                Completed Actions ({completedProjectActions.length})
+              </summary>
+              <ul className="mt-2 space-y-1">
+                {completedProjectActions.map((action) => (
+                  <li key={action.planningId}>
+                    <Link
+                      href={`/admin/planning?filter=done&focus=${encodeURIComponent(action.planningId)}`}
+                      className="text-xs text-slate-600 hover:text-blue-800"
+                    >
+                      ✓ {action.title}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          ) : null}
         </div>
       ) : null}
 
@@ -368,23 +416,73 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
         </details>
       ) : null}
 
-      {(isSchoolNote || isProject) && item.nextAction && item.status !== 'done' && !currentProjectAction ? (
+      {isSchoolNote && !['done', 'parked'].includes(item.status) ? (
         <div className="mt-4 rounded-xl border border-violet-100 bg-violet-50 px-3 py-2">
-          <p className="text-sm font-semibold text-slate-900">{isProject ? 'Put the next step on the board' : 'Turn this thinking into work'}</p>
+          <p className="text-sm font-semibold text-slate-900">Ready to do something with this?</p>
           <p className="mt-1 text-sm leading-6 text-slate-700">
-            {isProject
-              ? 'The project keeps the outcome and history; its current action is the piece you can complete.'
-              : 'Keep the note as context, then create a linked action from the next step.'}
+            Make it an Action if it is one dated task, or a Project if the outcome needs several Actions.
           </p>
-          <button
-            type="button"
-            disabled={isPending}
-            onClick={() => onCreateLinkedAction?.(item)}
-            className="mt-3 inline-flex rounded-lg border border-violet-200 bg-white px-3 py-1.5 text-xs font-semibold text-violet-900 hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isProject ? 'Create current action' : 'Create linked action'}
-          </button>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={() => onConvertSchoolIdea?.(item, 'action')}
+              className="inline-flex rounded-lg border border-violet-200 bg-white px-3 py-1.5 text-xs font-semibold text-violet-900 hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Turn into Action
+            </button>
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={() => onConvertSchoolIdea?.(item, 'initiative')}
+              className="inline-flex rounded-lg border border-violet-200 bg-white px-3 py-1.5 text-xs font-semibold text-violet-900 hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Turn into Project
+            </button>
+          </div>
         </div>
+      ) : null}
+
+      {isProject && !['done', 'parked'].includes(item.status) ? (
+        <form
+          className="mt-4 grid gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-[1fr_auto_auto]"
+          onSubmit={async (event) => {
+            event.preventDefault();
+            if (!projectActionTitle.trim() || !projectActionDate) return;
+            const created = await onCreateProjectAction?.(item, {
+              title: projectActionTitle.trim(),
+              targetDate: projectActionDate,
+            });
+            if (!created) return;
+            setProjectActionTitle('');
+            setProjectActionDate('');
+          }}
+        >
+          <input
+            value={projectActionTitle}
+            onChange={(event) => setProjectActionTitle(event.target.value)}
+            placeholder="Add a concrete Action"
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400"
+          />
+          <input
+            type="date"
+            value={projectActionDate}
+            onChange={(event) => setProjectActionDate(event.target.value)}
+            title="Do on"
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
+          />
+          <button
+            type="submit"
+            disabled={isPending || !projectActionTitle.trim() || !projectActionDate}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            Add Action
+          </button>
+          <p className="text-xs leading-5 text-slate-500 md:col-span-3">
+            The Project is the outcome. These dated Actions are the work.
+          </p>
+        </form>
       ) : null}
 
       {!compact && (
@@ -393,7 +491,7 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
             <button
               key={status}
               type="button"
-              disabled={isPending || item.status === status || (status === 'done' && (isTutorAbsenceCapture || isTutorAbsenceNotice || isTutorAbsenceFinalConfirmation || (isProject && currentProjectAction) || (isPauseReminder && !pausePaymentConfirmed)))}
+              disabled={isPending || item.status === status || (status === 'done' && (isTutorAbsenceCapture || isTutorAbsenceNotice || isTutorAbsenceFinalConfirmation || (isProject && openProjectActions.length > 0) || (isPauseReminder && !pausePaymentConfirmed)))}
               onClick={() => onStatus(item, status)}
               className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -627,15 +725,14 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
 
       {/* Pause cards finish through the panel above and log their own progress,
           so the generic note form only ended the card on two empty inputs. */}
-      {!isPauseReminder ? (
+      {!isPauseReminder && !isProject && !isSchoolNote ? (
       <form
-        className={`mt-4 grid gap-2 ${isSchoolForwardReview ? 'md:grid-cols-[1fr_auto]' : isProject ? 'md:grid-cols-[1fr_1fr_auto_auto]' : isOngoing ? 'md:grid-cols-[1fr_auto_auto]' : 'md:grid-cols-[1fr_1fr_auto]'}`}
+        className={`mt-4 grid gap-2 ${isSchoolForwardReview ? 'md:grid-cols-[1fr_auto]' : isOngoing ? 'md:grid-cols-[1fr_auto_auto]' : 'md:grid-cols-[1fr_1fr_auto]'}`}
         onSubmit={(event) => {
           event.preventDefault();
           if (isOngoing) {
             onProgress(item, {
               progressNote,
-              nextAction: isProject && nextAction.trim() ? nextAction : undefined,
               targetDate: nextSessionDate || undefined,
               progressType: 'session_logged',
               status: 'active',
@@ -677,20 +774,11 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
               placeholder={isProject ? 'What moved or changed?' : 'What did you do this session?'}
               className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400"
             />
-            {isProject ? (
-              <input
-                value={nextAction}
-                onChange={(event) => setNextAction(event.target.value)}
-                placeholder={currentProjectAction ? 'Finish the current action before choosing another' : 'What happens next?'}
-                disabled={Boolean(currentProjectAction)}
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400"
-              />
-            ) : null}
             <input
               type="date"
               value={nextSessionDate}
               onChange={(event) => setNextSessionDate(event.target.value)}
-              title={isProject ? 'Review next' : 'Next session / meeting day'}
+              title="Next session / meeting day"
               className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800"
             />
           </>
@@ -716,7 +804,7 @@ export default function PlanningCard({ item, studentOptions = [], paymentExpecta
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-          {isSchoolForwardReview ? 'Add Friday reflection' : isProject ? 'Log project progress' : isOngoing ? 'Log session & set next date' : 'Add note'}
+          {isSchoolForwardReview ? 'Add Friday reflection' : isOngoing ? 'Log session & set next date' : 'Add note'}
         </button>
       </form>
       ) : null}

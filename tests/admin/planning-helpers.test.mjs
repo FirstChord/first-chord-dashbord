@@ -4,7 +4,6 @@ import {
   attachPlanningProgress,
   buildDateInputRange,
   flagNearbyPauses,
-  findOpenProjectAction,
   normalisePauseFlag,
   buildFirstLessonCheckinPlanningId,
   buildFirstLessonCheckinPlanningItem,
@@ -105,17 +104,6 @@ test('planning mode follows the visible item kind', () => {
   assert.equal(planningModeForItemType('action', 'ongoing'), 'task');
   assert.equal(planningModeForItemType('idea', 'ongoing'), 'task');
   assert.equal(planningModeForItemType('learning_note', 'ongoing'), 'ongoing');
-});
-
-test('a Project can have only one open current Action', () => {
-  const rows = [
-    { planningId: 'done', itemType: 'action', parentPlanningId: 'project_1', status: 'done' },
-    { planningId: 'current', title: 'Ask tutors', itemType: 'action', parentPlanningId: 'project_1', status: 'active' },
-    { planningId: 'other', itemType: 'action', parentPlanningId: 'project_2', status: 'active' },
-  ];
-  assert.equal(findOpenProjectAction(rows, 'project_1').planningId, 'current');
-  assert.equal(findOpenProjectAction(rows, 'project_1', 'current'), null);
-  assert.equal(findOpenProjectAction(rows, 'planning_weekly_school_forward_review'), null);
 });
 
 test('parses and serializes multi-student links from the single column', () => {
@@ -539,10 +527,10 @@ test('summarises planning items due today and overdue', () => {
   assert.deepEqual(summary.dueNowTitles, ['Message Elena students', 'Pause Coban']);
 });
 
-test('marks active initiatives with no next action clearly', () => {
+test('marks an active undated Action with no workflow cue clearly', () => {
   const momentum = derivePlanningMomentum({
     planningId: 'planning_1',
-    itemType: 'initiative',
+    itemType: 'action',
     status: 'active',
     nextAction: '',
     updatedAt: '2026-06-03T10:00:00.000Z',
@@ -637,8 +625,8 @@ test('attaches progress rows and builds summary counts', () => {
   assert.equal(summary.inbox, 1);
   assert.equal(summary.initiatives, 1);
   assert.equal(summary.activeInitiatives, 1);
-  assert.equal(summary.schoolNotes, 2);
-  assert.equal(summary.activeSchoolNotes, 1);
+  assert.equal(summary.schoolNotes, 3);
+  assert.equal(summary.activeSchoolNotes, 2);
   assert.equal(summary.learningNotes, 1);
   assert.equal(summary.strategicNotes, 1);
   assert.equal(summary.moving, 2);

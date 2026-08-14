@@ -184,9 +184,9 @@ function ActionCard({ label, value, href, helper = '', tone = 'border-slate-200 
   );
 }
 
-// The meeting agenda: the freshest captured school notes (learning + strategic),
-// so the aspirational section shows what Finn and Tom actually wrote down,
-// not standing prompts.
+// The meeting agenda: the freshest school Ideas, plus the two legacy school-note
+// types so older thinking keeps one home. This section is the discussion inbox,
+// not a second task list.
 function DiscussionList({ notes, totalOpen }) {
   if (!notes.length) {
     return (
@@ -195,7 +195,7 @@ function DiscussionList({ notes, totalOpen }) {
         <p className="mt-1 text-slate-600">
           When something sparks — an idea, a number to question, a thing worth trying —{' '}
           <Link href="/admin/planning?filter=school_notes" className="font-medium text-slate-900 underline-offset-2 hover:underline">
-            capture it as a school note
+            capture it as an idea
           </Link>{' '}
           and it will surface here.
         </p>
@@ -222,7 +222,7 @@ function DiscussionList({ notes, totalOpen }) {
       </ul>
       <div className="mt-4 border-t border-slate-100 pt-3 text-right">
         <Link href="/admin/planning?filter=school_notes" className="text-sm font-medium text-slate-700 underline-offset-2 hover:text-slate-900 hover:underline">
-          All school notes{totalOpen > notes.length ? ` (${totalOpen})` : ''}
+          All ideas{totalOpen > notes.length ? ` (${totalOpen})` : ''}
         </Link>
       </div>
     </div>
@@ -301,7 +301,7 @@ export default async function AdminHomePage() {
   const planningSummary = planningDashboard.summary || {};
   const planningDueNow = planningSummary.dueNow || 0;
   const openSchoolNotes = (planningDashboard.items || [])
-    .filter((item) => ['learning_note', 'strategic_note'].includes(item.itemType)
+    .filter((item) => ['idea', 'learning_note', 'strategic_note'].includes(item.itemType)
       && !['done', 'parked'].includes(item.status));
   // Recency, not priority: the point is "what did we last capture worth talking
   // about", and three items keeps the meeting stimulus meeting-sized.

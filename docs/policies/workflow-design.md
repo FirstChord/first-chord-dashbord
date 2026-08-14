@@ -145,27 +145,30 @@ for action wording, async feedback, density, and error states.
 
 Planning has three ordinary human-facing kinds:
 
-- **Action** — one concrete card that can be completed;
+- **Action** — one concrete task, scheduled on the day it should appear;
 - **Project** — a finishable outcome that needs several actions or work sessions;
 - **Note / idea** — useful context that is not yet committed work.
 
 Structured pauses remain their own guarded action shape. Learning and Strategic
-notes remain valid stored types behind their focused capture, but the general
-form does not ask people to classify ordinary work that finely.
+notes remain valid stored types, but new school thinking uses Note / idea and all
+three note shapes share the single **Let's work on the school** home. A Note /
+idea can be converted in place into a dated Action or a Project.
 
 `initiative` is the backward-compatible stored value for Project. Project mode
 is derived as `ongoing`; Action and Note / idea derive `task`, so the UI must not
-ask for a second overlapping Mode choice. `target_date` reads **Do by** for an
-Action and **Review next** for a Project.
+ask for a second overlapping Mode choice. `target_date` reads **Do on** for an
+Action and **Review next** for a Project. In the manual UI an active Action needs
+a date; an unscheduled Action stays in Inbox. A Project review date is optional
+and means “reconsider this outcome”, not “do the whole Project today”.
 
-A Project owns its outcome, context, next action, review date, and append-only
-progress history. It may have one open child Action linked through
-`parent_planning_id`. The child is the executable card on the board; the Project
-remains the durable home for why the work exists and what has changed. Completing
-the child logs that completion back to the Project and clears the matching next
-action so the next decision is explicit. This linkage changes Planning state
-only and must never imply provider, payment, message, attendance, or student
-state changes.
+A Project owns only the durable outcome, context, optional review reminder, and
+its linked Actions. It may have several child Actions through
+`parent_planning_id`; each child has its own **Do on** date and completion state.
+Those child cards are the progress record. Do not require a manual Project status
+report or duplicate an Action completion into `Planning_Progress_Log`. A Project
+cannot be completed while linked Actions remain open. This linkage changes
+Planning state only and must never imply provider, payment, message, attendance,
+or student state changes.
 
 Area is optional secondary context, not another work type. New manual choices
 use stable school responsibilities: Teaching & curriculum, Students & families,
@@ -180,7 +183,7 @@ Legacy area values remain readable and editable so existing rows round-trip.
 | Waiting/onboarding | Placement hints do not reserve; multi-system onboarding preserves partial results | [School policy](./school.md) |
 | Parent understanding | Manual campaign state; copies follow-up text but does not send or edit MMS | AGENTS workflow map |
 | Tutor absence | Per-date decisions remain auditable; repeated cancellations may group parent/pause work without deleting source rows | [Absence bridge](../workflows/tutors/absence-to-pause.md) |
-| Planning | Human work, reflection, notes, and a lightweight Project → current Action loop; not a second issue queue or full project-management suite | [State tabs](../architecture/data/state-tabs.md) |
+| Planning | Human work, reflection, ideas, and lightweight multi-action Projects; not a second issue queue or full project-management suite | [State tabs](../architecture/data/state-tabs.md) |
 | Pause completion | Requires confirmation, logs progress and `Event_Log`, then aligns expectation through the existing route | [Payments](./payments.md) |
 | Payroll | Review and export prepare provider work; a human pays in Wise | [Paying tutors](../workflows/finance/paying-tutors.md) |
 | Incoming messages | Capture, match, classify, and draft are proposals; no automatic school action or send | [WhatsApp bridge](../operations/integrations/whatsapp-incoming-bridge.md) |

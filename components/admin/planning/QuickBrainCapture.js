@@ -118,7 +118,22 @@ export default function QuickBrainCapture({
       itemType: next.itemType,
       planMode: next.planMode,
       status: next.status,
+      targetDate: value === 'idea' ? '' : (current.targetDate || effectiveOptions.targetDate || ''),
     }));
+  }
+
+  function setTargetDate(value) {
+    setOptions((current) => {
+      const itemType = current.itemType || effectiveOptions.itemType;
+      const status = current.status || effectiveOptions.status;
+      return {
+        ...current,
+        targetDate: value,
+        status: itemType === 'action'
+          ? (value && status === 'inbox' ? 'active' : (!value && status === 'active' ? 'inbox' : status))
+          : status,
+      };
+    });
   }
 
   function setTutorAbsenceOption(key, value) {
@@ -620,7 +635,7 @@ export default function QuickBrainCapture({
           ) : null}
           {effectiveOptions.targetDate ? (
             <span className="rounded-full bg-amber-50 px-2.5 py-1 text-amber-800">
-              {effectiveOptions.itemType === 'initiative' ? 'Review next' : 'Do by'} {formatTargetDate(effectiveOptions.targetDate)}
+              {effectiveOptions.itemType === 'initiative' ? 'Review next' : 'Do on'} {formatTargetDate(effectiveOptions.targetDate)}
             </span>
           ) : null}
           {effectiveOptions.linkedStudentIds.map((id) => (
@@ -673,11 +688,13 @@ export default function QuickBrainCapture({
             onChange={(value) => setOption('area', value)}
             options={PLANNING_PRIMARY_AREAS.map((value) => ({ value, label: labelPlanningArea(value) }))}
           />
-          <DateField
-            label={effectiveOptions.itemType === 'initiative' ? 'Review next' : 'Do by'}
-            value={effectiveOptions.targetDate}
-            onChange={(value) => setOption('targetDate', value)}
-          />
+          {effectiveOptions.itemType !== 'idea' ? (
+            <DateField
+              label={effectiveOptions.itemType === 'initiative' ? 'Review next (optional)' : 'Do on'}
+              value={effectiveOptions.targetDate}
+              onChange={setTargetDate}
+            />
+          ) : <div />}
           <SelectField
             label="Status"
             value={effectiveOptions.status}
@@ -694,16 +711,15 @@ export default function QuickBrainCapture({
                   placeholder="What will be true when this project is complete?"
                 />
               </div>
-              <div className="md:col-span-3">
-                <TextField
-                  label="First next action"
-                  value={effectiveOptions.nextAction || ''}
-                  onChange={(value) => setOption('nextAction', value)}
-                  placeholder="The first concrete step"
-                />
-              </div>
             </>
           ) : null}
+          {effectiveOptions.itemType === 'action'
+            && ['active', 'waiting'].includes(effectiveOptions.status)
+            && !effectiveOptions.targetDate ? (
+              <p className="md:col-span-5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900">
+                Choose a Do on date for an active Action, or leave it in Inbox until you are ready to schedule it.
+              </p>
+            ) : null}
           <div className="md:col-span-5">
             <StudentSearchField
               label="Linked Students"
@@ -719,7 +735,11 @@ export default function QuickBrainCapture({
       {pauseBuilderVisible ? null : (
         <button
           type="submit"
-          disabled={pending || !rawNote.trim()}
+          disabled={pending || !rawNote.trim() || (
+            effectiveOptions.itemType === 'action'
+            && ['active', 'waiting'].includes(effectiveOptions.status)
+            && !effectiveOptions.targetDate
+          )}
           className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-base font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
         >
           {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}

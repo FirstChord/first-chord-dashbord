@@ -32,6 +32,8 @@ export default function ItemForm({
     ? PLANNING_PRIMARY_AREAS
     : [form.area, ...PLANNING_PRIMARY_AREAS];
   const isProject = form.itemType === 'initiative';
+  const isAction = form.itemType === 'action';
+  const actionNeedsDate = isAction && ['active', 'waiting'].includes(form.status) && !form.targetDate;
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
@@ -71,13 +73,15 @@ export default function ItemForm({
             onChange={(value) => setValue('notes', value)}
             placeholder="Context, rough thinking, links, constraints, or why this matters"
           />
-          <TextAreaField
-            label={isProject ? 'Done when' : 'Outcome'}
-            value={form.outcome}
-            onChange={(value) => setValue('outcome', value)}
-            placeholder={isProject ? 'What will be true when this project is complete?' : 'Optional: what finished looks like'}
-            rows={2}
-          />
+          {isProject ? (
+            <TextAreaField
+              label="Done when"
+              value={form.outcome}
+              onChange={(value) => setValue('outcome', value)}
+              placeholder="What will be true when this project is complete?"
+              rows={2}
+            />
+          ) : null}
           <details className="rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2">
             <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.14em] text-slate-600">More details</summary>
             <div className="mt-3 grid gap-3 md:grid-cols-2">
@@ -111,28 +115,22 @@ export default function ItemForm({
         </>
       )}
 
-      <TextField
-        label={isProject ? 'Current next action' : 'Next action'}
-        value={form.nextAction}
-        onChange={(value) => setValue('nextAction', value)}
-        placeholder="The next concrete step"
-      />
-      <DateField
-        label={isProject ? 'Review next' : 'Do by'}
-        value={form.targetDate}
-        onChange={(value) => setValue('targetDate', value)}
-      />
-      <TextAreaField
-        label={compact ? 'Initial note' : 'Progress note'}
-        value={form.progressNote}
-        onChange={(value) => setValue('progressNote', value)}
-        placeholder="Optional: what moved, what changed, or why this was captured"
-        rows={2}
-      />
+      {isAction || isProject ? (
+        <DateField
+          label={isProject ? 'Review next (optional)' : 'Do on'}
+          value={form.targetDate}
+          onChange={(value) => setValue('targetDate', value)}
+        />
+      ) : null}
+      {actionNeedsDate ? (
+        <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900">
+          Choose the day this Action should appear. Leave it in Inbox if you are not ready to schedule it.
+        </p>
+      ) : null}
 
       <button
         type="submit"
-        disabled={pending}
+        disabled={pending || actionNeedsDate}
         className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
