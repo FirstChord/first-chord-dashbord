@@ -7,7 +7,7 @@ import {
   buildOnboardingRecoveryGuidance,
   createOnboardingSteps,
   getOnboardingDuplicateState,
-  isOnboardingOperationallyComplete,
+  isOnboardingCoreOperationallyComplete,
   markOnboardingStep,
 } from '@/lib/admin/onboarding';
 import { addStudentSheetRow, appendEventLogRows } from '@/lib/admin/sheets';
@@ -519,7 +519,9 @@ export async function POST(request) {
           steps,
           'mmsFreeSlot',
           'succeeded',
-          `Removed selected MMS Free event ${freeSlot.eventId} after confirming the first lesson${freeSlot.seriesId ? ` (series ${freeSlot.seriesId})` : ''}.`,
+          freeSlot.alreadyAbsent
+            ? `Selected MMS Free event ${freeSlot.eventId} was already absent after the first lesson was confirmed.`
+            : `Removed selected MMS Free event ${freeSlot.eventId} and its future occurrences after confirming the first lesson${freeSlot.seriesId ? ` (series ${freeSlot.seriesId})` : ''}.`,
         );
       } catch (error) {
         freeSlotWarning = error.message || 'MMS Free event removal failed';
@@ -530,13 +532,13 @@ export async function POST(request) {
     }
 
     const completionStatus = buildOnboardingCompletionStatus({ steps });
-    const operationallyComplete = isOnboardingOperationallyComplete(completionStatus);
+    const postOnboardingReady = isOnboardingCoreOperationallyComplete({ steps });
 
     let waitingCloseout = [];
     let waitingCloseoutWarning = '';
 
-    if (!operationallyComplete) {
-      waitingCloseoutWarning = 'Waiting status remains open because canonical or MMS onboarding is incomplete.';
+    if (!postOnboardingReady) {
+      waitingCloseoutWarning = 'Waiting status remains open because the canonical record or core MMS lesson setup is incomplete.';
     } else {
       try {
         const now = new Date().toISOString();
@@ -592,8 +594,8 @@ export async function POST(request) {
     let firstLessonCheckin = null;
     let firstLessonCheckinWarning = '';
 
-    if (!operationallyComplete) {
-      firstLessonCheckinWarning = 'First-lesson check-in was not queued because canonical or MMS onboarding is incomplete.';
+    if (!postOnboardingReady) {
+      firstLessonCheckinWarning = 'First-lesson check-in was not queued because the canonical record or core MMS lesson setup is incomplete.';
     } else {
       try {
         const checkin = await createFirstLessonCheckinPlanningItem({
@@ -635,8 +637,8 @@ export async function POST(request) {
 
     let notesPrivacyFollowUp = [];
     let notesPrivacyFollowUpWarning = '';
-    if (!operationallyComplete) {
-      notesPrivacyFollowUpWarning = 'Student notes privacy follow-up was not queued because canonical or MMS onboarding is incomplete.';
+    if (!postOnboardingReady) {
+      notesPrivacyFollowUpWarning = 'Student notes privacy follow-up was not queued because the canonical record or core MMS lesson setup is incomplete.';
     } else {
       try {
         notesPrivacyFollowUp = await Promise.all([

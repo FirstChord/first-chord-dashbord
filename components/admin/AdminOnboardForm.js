@@ -488,7 +488,7 @@ export default function AdminOnboardForm({ initialData, tutorOptions, initialDup
           ) : null}
           {result.freeSlot ? (
             <div className="rounded-xl border border-emerald-200 bg-white p-4 text-sm text-emerald-900">
-              Selected MMS Free event {result.freeSlot.eventId} was removed after the lesson was confirmed.
+              Selected MMS Free event {result.freeSlot.eventId} was {result.freeSlot.alreadyAbsent ? 'already absent' : 'removed with its future occurrences'} after the lesson was confirmed.
             </div>
           ) : null}
           {result.waitingCloseoutWarning ? (

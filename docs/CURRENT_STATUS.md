@@ -26,6 +26,16 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
+- **Onboarding now clears the chosen MMS Free series with the provider's real
+  contract — READY LOCALLY 2026-08-14:** MMS requires an explicit delete body;
+  the dashboard now sends `DeletionType: Future` with notifications disabled,
+  after revalidating the exact event and confirming the lesson. A missing event
+  on an idempotent cleanup counts as already cleared. Waiting closeout and the
+  genuine first-lesson/privacy follow-ups now depend on canonical plus core MMS
+  lesson readiness, so an ancillary cleanup warning cannot suppress them. Eve
+  Smith's partial onboarding was recovered without recreating her verified
+  lesson: Waiting is Onboarded, her 26 August check-in card exists, and her notes
+  privacy workflow is queued.
 - **Planning's three ordinary shapes now have distinct jobs — READY LOCALLY
   2026-08-14:** An active Action has a **Do on** date; an unscheduled Action stays
   in Inbox. Notes / ideas, including the two legacy school-note types, share the

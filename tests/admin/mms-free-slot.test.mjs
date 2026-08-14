@@ -9,7 +9,11 @@ async function withMockMmsFetch(responses, action) {
   const calls = [];
   process.env.MMS_BEARER_TOKEN = 'test-token-not-a-real-secret';
   globalThis.fetch = async (url, init = {}) => {
-    calls.push({ url: `${url}`, method: init.method || 'GET' });
+    calls.push({
+      url: `${url}`,
+      method: init.method || 'GET',
+      body: init.body ? JSON.parse(init.body) : null,
+    });
     const response = responses[calls.length - 1];
     if (!response) throw new Error(`Unexpected MMS call ${calls.length}: ${url}`);
     return {
@@ -58,12 +62,43 @@ test('consumeMmsFreeCalendarSlot revalidates the exact event before deleting it'
       {
         url: 'https://api.mymusicstaff.com/v1/calendar/events/evt_selected',
         method: 'GET',
+        body: null,
       },
       {
         url: 'https://api.mymusicstaff.com/v1/calendar/event/evt_selected',
         method: 'DELETE',
+        body: {
+          DeletionLogReason: 'IndividualEvent',
+          DeletionType: 'Future',
+          NotificationNote: null,
+          NotifyParentsByEmail: false,
+          NotifyParentsBySMS: false,
+          NotifyStudentsByEmail: false,
+          NotifyStudentsBySMS: false,
+          NotifyTeacherByEmail: false,
+          NotifyTeacherBySMS: false,
+        },
       },
     ]);
+  });
+});
+
+test('consumeMmsFreeCalendarSlot treats an already-absent prevalidated event as cleaned', async () => {
+  await withMockMmsFetch([
+    { ok: false, status: 404, body: { ErrorMessage: 'Not found' } },
+  ], async (calls) => {
+    const result = await consumeMmsFreeCalendarSlot({
+      eventId: 'evt_selected',
+      teacherId: 'tch_calum',
+      lessonDate: '2026-08-14',
+      lessonTime: '16:00',
+      durationMinutes: 30,
+    });
+
+    assert.equal(result.eventId, 'evt_selected');
+    assert.equal(result.alreadyAbsent, true);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].method, 'GET');
   });
 });
 

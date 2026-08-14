@@ -32,11 +32,11 @@ test('onboarding preserves an explicit registry-after-Sheets partial failure', (
   assert.match(routeSource, /'registryWrite', 'failed'/);
 });
 
-test('post-onboarding closeout remains gated on operational completion', () => {
-  assert.match(routeSource, /const operationallyComplete = isOnboardingOperationallyComplete\(completionStatus\)/);
-  assert.match(routeSource, /Waiting status remains open because canonical or MMS onboarding is incomplete/);
-  assert.match(routeSource, /First-lesson check-in was not queued because canonical or MMS onboarding is incomplete/);
-  assert.match(routeSource, /Student notes privacy follow-up was not queued because canonical or MMS onboarding is incomplete/);
+test('post-onboarding closeout waits for core readiness, not ancillary cleanup', () => {
+  assert.match(routeSource, /const postOnboardingReady = isOnboardingCoreOperationallyComplete\(\{ steps \}\)/);
+  assert.match(routeSource, /Waiting status remains open because the canonical record or core MMS lesson setup is incomplete/);
+  assert.match(routeSource, /First-lesson check-in was not queued because the canonical record or core MMS lesson setup is incomplete/);
+  assert.match(routeSource, /Student notes privacy follow-up was not queued because the canonical record or core MMS lesson setup is incomplete/);
 });
 
 test('preflight and UI surface half-onboarding as recovery rather than success', () => {

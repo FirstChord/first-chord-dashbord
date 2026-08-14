@@ -6,7 +6,7 @@ import {
   buildOnboardingRecoveryGuidance,
   createOnboardingSteps,
   evaluateOnboardingDuplicateState,
-  isOnboardingOperationallyComplete,
+  isOnboardingCoreOperationallyComplete,
   markOnboardingStep,
 } from '../../lib/admin/onboarding-helpers.mjs';
 
@@ -232,19 +232,20 @@ test('free-slot cleanup failure keeps MMS onboarding partial without suggesting 
   assert.match(guidance, /first lesson already exists/i);
   assert.match(guidance, /Do not recreate the lesson/i);
   assert.match(guidance, /remove that remaining Free event manually/i);
+  assert.equal(isOnboardingCoreOperationallyComplete({ steps }), true);
 });
 
-test('isOnboardingOperationallyComplete requires both canonical and MMS completion', () => {
-  assert.equal(isOnboardingOperationallyComplete({
-    canonicalRecord: { status: 'complete' },
-    mmsOperationalState: { status: 'complete' },
-  }), true);
-  assert.equal(isOnboardingOperationallyComplete({
-    canonicalRecord: { status: 'complete' },
-    mmsOperationalState: { status: 'partial' },
-  }), false);
-  assert.equal(isOnboardingOperationallyComplete({
-    canonicalRecord: { status: 'incomplete' },
-    mmsOperationalState: { status: 'complete' },
-  }), false);
+test('post-onboarding work waits for the lesson but not ancillary Free-slot cleanup', () => {
+  let steps = createOnboardingSteps();
+  steps = markOnboardingStep(steps, 'sheetsWrite', 'succeeded');
+  steps = markOnboardingStep(steps, 'registryWrite', 'succeeded');
+  steps = markOnboardingStep(steps, 'mmsActivation', 'succeeded');
+  steps = markOnboardingStep(steps, 'mmsBillingProfile', 'succeeded');
+  steps = markOnboardingStep(steps, 'mmsFirstLesson', 'failed');
+  steps = markOnboardingStep(steps, 'mmsFreeSlot', 'failed');
+
+  assert.equal(isOnboardingCoreOperationallyComplete({ steps }), false);
+
+  steps = markOnboardingStep(steps, 'mmsFirstLesson', 'succeeded');
+  assert.equal(isOnboardingCoreOperationallyComplete({ steps }), true);
 });
