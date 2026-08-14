@@ -258,6 +258,7 @@ export default async function AdminFinancePage({ searchParams }) {
     const openStripeForecast = openForecastRow ? {
       month: openForecastRow.month,
       forecastedAt: openForecastRow.forecasted_at,
+      method: openForecastRow.method,
       forecastTotal: Number.parseFloat(openForecastRow.forecast_total),
       coveragePct: Number.parseFloat(openForecastRow.coverage_pct),
       billedStudentCount: Number.parseInt(openForecastRow.billed_student_count, 10) || 0,

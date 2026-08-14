@@ -71,9 +71,26 @@ function formatMonth(month = '') {
     : date.toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' });
 }
 
+function formatForecastLockTime(value = '') {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? ''
+    : date.toLocaleString('en-GB', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+        timeZone: 'Europe/London',
+      });
+}
+
 function StripeProof({ reconciliation = {}, openForecast = null }) {
   const complete = reconciliation.forecastPresent && reconciliation.actualPresent;
   const largest = (reconciliation.differences || []).slice(0, 8);
+  const lockTime = formatForecastLockTime(openForecast?.forecastedAt);
+  const usedEarlierPauseModel = /_v1$/u.test(`${openForecast?.method || ''}`);
   const statusLabel = (status) => ({
     unforecast_collection: 'Collected but not forecast',
     no_paid_invoice: 'Forecast but no paid invoice',
@@ -116,19 +133,29 @@ function StripeProof({ reconciliation = {}, openForecast = null }) {
         </>
       ) : openForecast ? (
         <>
-          <p className="mt-2 text-sm text-slate-600">Prediction for {formatMonth(openForecast.month)}</p>
+          <p className="mt-2 text-sm text-slate-600">Original prediction for {formatMonth(openForecast.month)}</p>
           <p className="mt-4 text-4xl font-semibold tabular-nums text-slate-950">{formatMoney(openForecast.forecastTotal)}</p>
           <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-600">
-            {Number.isFinite(openForecast.billedStudentCount) ? <span><strong className="text-slate-900">{openForecast.billedStudentCount}</strong> expected to bill</span> : null}
-            {Number.isFinite(openForecast.zeroExpectedCount) ? <span><strong className="text-slate-900">{openForecast.zeroExpectedCount}</strong> paused or not billing</span> : null}
+            {Number.isFinite(openForecast.billedStudentCount) ? <span><strong className="text-slate-900">{openForecast.billedStudentCount}</strong> predicted to bill</span> : null}
+            {Number.isFinite(openForecast.zeroExpectedCount) ? <span><strong className="text-slate-900">{openForecast.zeroExpectedCount}</strong> predicted paused or not billing</span> : null}
             {Number.isFinite(openForecast.coveragePct) ? <span><strong className="text-slate-900">{openForecast.coveragePct}%</strong> priced</span> : null}
           </div>
-          <p className="mt-4 rounded-2xl bg-blue-50 px-4 py-3 text-sm text-blue-950">We’ll compare this prediction with Stripe after {formatMonth(openForecast.month)} closes.</p>
+          <div className="mt-4 rounded-2xl bg-blue-50 px-4 py-3 text-sm leading-6 text-blue-950">
+            <p>
+              This prediction was frozen{lockTime ? ` on ${lockTime}` : ''} before Stripe was read. It is not recalculated, so the comparison stays honest.
+            </p>
+            {usedEarlierPauseModel ? (
+              <p className="mt-2 font-medium">
+                This prediction used the earlier model, which treated students marked paused as paused for the whole month. The current model now uses structured pause return dates.
+              </p>
+            ) : null}
+            <p className="mt-2">We’ll compare this frozen prediction with Stripe after {formatMonth(openForecast.month)} closes.</p>
+          </div>
           <details className="mt-4 border-t border-slate-100 pt-4">
-            <summary className="cursor-pointer text-sm font-semibold text-slate-700">How this test works</summary>
+            <summary className="cursor-pointer text-sm font-semibold text-slate-700">Why this number stays frozen</summary>
             <p className="mt-3 text-sm leading-6 text-slate-600">
-              Locked {openForecast.forecastedAt ? new Date(openForecast.forecastedAt).toLocaleString('en-GB') : 'before the reveal'}, before Stripe was read.
-              {' '}{openForecast.approximateCount || 0} calendar or cadence assumptions are marked approximate
+              One prediction is locked each month before Stripe is revealed. Model improvements affect future predictions; they never rewrite this historical test.
+              {' '}{openForecast.approximateCount || 0} calendar or cadence assumptions were marked approximate
               {openForecast.unpricedCount ? ` and ${openForecast.unpricedCount} students could not be priced` : ''}.
             </p>
           </details>
