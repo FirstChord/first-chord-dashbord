@@ -141,6 +141,37 @@ communicates real changing state rather than a static taxonomy label.
 Use [copy and tone](./copy-and-tone.md) and [UI conventions](./ui-conventions.md)
 for action wording, async feedback, density, and error states.
 
+### Lightweight projects inside Planning
+
+Planning has three ordinary human-facing kinds:
+
+- **Action** — one concrete card that can be completed;
+- **Project** — a finishable outcome that needs several actions or work sessions;
+- **Note / idea** — useful context that is not yet committed work.
+
+Structured pauses remain their own guarded action shape. Learning and Strategic
+notes remain valid stored types behind their focused capture, but the general
+form does not ask people to classify ordinary work that finely.
+
+`initiative` is the backward-compatible stored value for Project. Project mode
+is derived as `ongoing`; Action and Note / idea derive `task`, so the UI must not
+ask for a second overlapping Mode choice. `target_date` reads **Do by** for an
+Action and **Review next** for a Project.
+
+A Project owns its outcome, context, next action, review date, and append-only
+progress history. It may have one open child Action linked through
+`parent_planning_id`. The child is the executable card on the board; the Project
+remains the durable home for why the work exists and what has changed. Completing
+the child logs that completion back to the Project and clears the matching next
+action so the next decision is explicit. This linkage changes Planning state
+only and must never imply provider, payment, message, attendance, or student
+state changes.
+
+Area is optional secondary context, not another work type. New manual choices
+use stable school responsibilities: Teaching & curriculum, Students & families,
+Tutors & team, School operations, Finance & administration, and Growth & events.
+Legacy area values remain readable and editable so existing rows round-trip.
+
 ## Existing workflow boundaries
 
 | Surface | Distinctive boundary | Focused document |
@@ -149,7 +180,7 @@ for action wording, async feedback, density, and error states.
 | Waiting/onboarding | Placement hints do not reserve; multi-system onboarding preserves partial results | [School policy](./school.md) |
 | Parent understanding | Manual campaign state; copies follow-up text but does not send or edit MMS | AGENTS workflow map |
 | Tutor absence | Per-date decisions remain auditable; repeated cancellations may group parent/pause work without deleting source rows | [Absence bridge](../workflows/tutors/absence-to-pause.md) |
-| Planning | Human work, reflection, and notes; not project management or a second issue queue | [State tabs](../architecture/data/state-tabs.md) |
+| Planning | Human work, reflection, notes, and a lightweight Project → current Action loop; not a second issue queue or full project-management suite | [State tabs](../architecture/data/state-tabs.md) |
 | Pause completion | Requires confirmation, logs progress and `Event_Log`, then aligns expectation through the existing route | [Payments](./payments.md) |
 | Payroll | Review and export prepare provider work; a human pays in Wise | [Paying tutors](../workflows/finance/paying-tutors.md) |
 | Incoming messages | Capture, match, classify, and draft are proposals; no automatic school action or send | [WhatsApp bridge](../operations/integrations/whatsapp-incoming-bridge.md) |

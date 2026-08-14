@@ -80,11 +80,11 @@ export default function DueTodayCard({
           <button
             type="button"
             onClick={() => onStatus(item, 'done')}
-            disabled={isPending}
+            disabled={isPending || (item.itemType === 'initiative' && Boolean(item.currentProjectAction))}
             className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-            Mark done
+            {item.itemType === 'initiative' && item.currentProjectAction ? 'Finish current action first' : 'Mark done'}
           </button>
         )}
         <button

@@ -4,6 +4,7 @@ import {
   attachPlanningProgress,
   buildDateInputRange,
   flagNearbyPauses,
+  findOpenProjectAction,
   normalisePauseFlag,
   buildFirstLessonCheckinPlanningId,
   buildFirstLessonCheckinPlanningItem,
@@ -36,6 +37,8 @@ import {
   derivePlanningMomentum,
   inferPlanningTargetDateFromText,
   isMeetingPlanningItem,
+  labelPlanningArea,
+  labelPlanningType,
   normalisePlanningArea,
   normalisePlanningItemType,
   normalisePlanningItem,
@@ -44,6 +47,7 @@ import {
   normalisePlanningProgressType,
   normalisePlanningStatus,
   parseLinkedStudentIds,
+  planningModeForItemType,
   serializeLinkedStudentIds,
 } from '../../lib/admin/planning-helpers.mjs';
 
@@ -83,9 +87,35 @@ test('normalises planning defaults conservatively', () => {
   assert.equal(normalisePlanningProgressType('bad'), 'note');
 });
 
+test('uses plain Project labels and responsibility-based area wording', () => {
+  assert.equal(labelPlanningType('initiative'), 'Project');
+  assert.equal(labelPlanningType('idea'), 'Note / idea');
+  assert.equal(labelPlanningArea('teaching'), 'Teaching & curriculum');
+  assert.equal(labelPlanningArea('student_experience'), 'Students & families');
+  assert.equal(labelPlanningArea('other'), 'No area');
+});
+
 test('normalisePlanningItem defaults plan mode to task and keeps ongoing', () => {
   assert.equal(normalisePlanningItem({}).planMode, 'task');
   assert.equal(normalisePlanningItem({ planMode: 'ongoing' }).planMode, 'ongoing');
+});
+
+test('planning mode follows the visible item kind', () => {
+  assert.equal(planningModeForItemType('initiative', 'task'), 'ongoing');
+  assert.equal(planningModeForItemType('action', 'ongoing'), 'task');
+  assert.equal(planningModeForItemType('idea', 'ongoing'), 'task');
+  assert.equal(planningModeForItemType('learning_note', 'ongoing'), 'ongoing');
+});
+
+test('a Project can have only one open current Action', () => {
+  const rows = [
+    { planningId: 'done', itemType: 'action', parentPlanningId: 'project_1', status: 'done' },
+    { planningId: 'current', title: 'Ask tutors', itemType: 'action', parentPlanningId: 'project_1', status: 'active' },
+    { planningId: 'other', itemType: 'action', parentPlanningId: 'project_2', status: 'active' },
+  ];
+  assert.equal(findOpenProjectAction(rows, 'project_1').planningId, 'current');
+  assert.equal(findOpenProjectAction(rows, 'project_1', 'current'), null);
+  assert.equal(findOpenProjectAction(rows, 'planning_weekly_school_forward_review'), null);
 });
 
 test('parses and serializes multi-student links from the single column', () => {

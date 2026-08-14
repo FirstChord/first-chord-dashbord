@@ -32,6 +32,8 @@ import {
   PAUSE_PAYMENT_CONFIRMATION_NOTE,
   EMPTY_FORM,
   buildQuickCaptureItem,
+  buildPlanningRelationships,
+  buildProjectActionCompletionProgress,
 } from '@/lib/admin/planning-client-helpers.mjs';
 import { ExpandableText } from './planning/fields';
 import MondayIntentionRow from './planning/MondayIntentionRow';
@@ -69,8 +71,8 @@ const ADVANCED_REVIEW_FILTERS = [
   { value: 'linked', label: 'Linked' },
   { value: 'stalled', label: 'Stalled' },
   { value: 'moving', label: 'Moving' },
-  { value: 'initiative', label: 'Initiatives' },
-  { value: 'idea', label: 'Ideas' },
+  { value: 'initiative', label: 'Projects' },
+  { value: 'idea', label: 'Notes / ideas' },
   { value: 'action', label: 'Actions' },
   { value: 'done', label: 'Done' },
   { value: 'parked', label: 'Parked' },
@@ -178,9 +180,27 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
     return flagNearbyPauses(entries);
   }, [planning.items]);
 
+  const planningRelationships = useMemo(
+    () => buildPlanningRelationships(planning.items || []),
+    [planning.items],
+  );
+
+  const planningItems = useMemo(() => (planning.items || []).map((item) => {
+    const projectActions = planningRelationships.actionsByProjectId.get(item.planningId) || [];
+    const possibleParent = planningRelationships.itemsById.get(item.parentPlanningId) || null;
+    return {
+      ...item,
+      parentProject: possibleParent?.itemType === 'initiative' && possibleParent.planningId !== SCHOOL_FORWARD_PLANNING_ID
+        ? possibleParent
+        : null,
+      projectActions,
+      currentProjectAction: projectActions.find((action) => !['done', 'parked'].includes(action.status)) || null,
+    };
+  }), [planning.items, planningRelationships]);
+
   const filteredItems = useMemo(
-    () => filterPlanningItems(planning.items, { filter, query, showDone }),
-    [planning.items, query, filter, showDone],
+    () => filterPlanningItems(planningItems, { filter, query, showDone }),
+    [planningItems, query, filter, showDone],
   );
 
   // `silent` skips the pending/savedAt/pendingId bookkeeping so a multi-step
@@ -268,6 +288,14 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
     const title = `${item.nextAction || ''}`.trim();
     if (!title) {
       setSaveState({ pending: false, error: 'Add a next action before creating a linked action.', savedAt: '' });
+      return;
+    }
+    if (item.itemType === 'initiative' && item.currentProjectAction) {
+      setSaveState({
+        pending: false,
+        error: `Finish or park “${item.currentProjectAction.title}” before creating another current action for this project.`,
+        savedAt: '',
+      });
       return;
     }
 
@@ -530,6 +558,11 @@ export default function AdminPlanningPageClient({ initialPlanning, initialFilter
         planningId: item.planningId,
         status,
       }, item.planningId);
+      const parent = planningRelationships.itemsById.get(item.parentPlanningId);
+      const projectProgress = buildProjectActionCompletionProgress(item, parent, status);
+      if (projectProgress) {
+        await postPlanning(projectProgress, parent.planningId);
+      }
     } catch (error) {
       setSaveState({ pending: false, error: error.message, savedAt: '' });
       setPendingId('');

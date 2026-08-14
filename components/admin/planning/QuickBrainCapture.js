@@ -3,9 +3,9 @@
 import { useState } from 'react';
 import { Loader2, Plus, Search, SlidersHorizontal, X } from 'lucide-react';
 import {
-  PLANNING_ITEM_TYPES,
+  PLANNING_PRIMARY_ITEM_TYPES,
   PLANNING_OWNERS,
-  PLANNING_AREAS,
+  PLANNING_PRIMARY_AREAS,
   PLANNING_STATUSES,
   labelPlanningType,
   labelPlanningArea,
@@ -23,6 +23,7 @@ import {
   inferStudentFromText,
   findStudentById,
   formatTargetDate,
+  applySmartDefaults,
 } from '@/lib/admin/planning-client-helpers.mjs';
 import { SelectField, TextField, DateField, StudentSearchField } from './fields';
 
@@ -108,6 +109,16 @@ export default function QuickBrainCapture({
 
   function setOption(key, value) {
     setOptions((current) => ({ ...current, [key]: value }));
+  }
+
+  function setItemType(value) {
+    const next = applySmartDefaults({ ...effectiveOptions, itemType: value });
+    setOptions((current) => ({
+      ...current,
+      itemType: next.itemType,
+      planMode: next.planMode,
+      status: next.status,
+    }));
   }
 
   function setTutorAbsenceOption(key, value) {
@@ -601,12 +612,16 @@ export default function QuickBrainCapture({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
           <span className="rounded-full bg-slate-100 px-2.5 py-1">{labelPlanningType(effectiveOptions.itemType)}</span>
-          <span className="rounded-full bg-slate-100 px-2.5 py-1">{labelPlanningArea(effectiveOptions.area)}</span>
+          {effectiveOptions.area !== 'other' ? (
+            <span className="rounded-full bg-slate-100 px-2.5 py-1">{labelPlanningArea(effectiveOptions.area)}</span>
+          ) : null}
           {effectiveOptions.linkedWorkflowId ? (
             <span className="rounded-full bg-blue-50 px-2.5 py-1 text-blue-800">{effectiveOptions.linkedWorkflowId}</span>
           ) : null}
           {effectiveOptions.targetDate ? (
-            <span className="rounded-full bg-amber-50 px-2.5 py-1 text-amber-800">Do by {formatTargetDate(effectiveOptions.targetDate)}</span>
+            <span className="rounded-full bg-amber-50 px-2.5 py-1 text-amber-800">
+              {effectiveOptions.itemType === 'initiative' ? 'Review next' : 'Do by'} {formatTargetDate(effectiveOptions.targetDate)}
+            </span>
           ) : null}
           {effectiveOptions.linkedStudentIds.map((id) => (
             <span key={id} className="rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-800">
@@ -614,23 +629,37 @@ export default function QuickBrainCapture({
             </span>
           ))}
         </div>
-        <button
-          type="button"
-          onClick={() => setExpanded(!expanded)}
-          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-        >
-          <SlidersHorizontal className="h-3.5 w-3.5" />
-          {expanded ? 'Fewer options' : 'More options'}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          {effectiveOptions.itemType !== 'initiative' ? (
+            <button
+              type="button"
+              onClick={() => {
+                setItemType('initiative');
+                setExpanded(true);
+              }}
+              className="inline-flex items-center gap-2 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-900 hover:bg-violet-100"
+            >
+              Plan a project
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => setExpanded(!expanded)}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            {expanded ? 'Fewer options' : 'More options'}
+          </button>
+        </div>
       </div>
 
       {expanded ? (
         <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-5">
           <SelectField
-            label="Type"
+            label="Kind"
             value={effectiveOptions.itemType}
-            onChange={(value) => setOption('itemType', value)}
-            options={PLANNING_ITEM_TYPES.map((value) => ({ value, label: labelPlanningType(value) }))}
+            onChange={setItemType}
+            options={PLANNING_PRIMARY_ITEM_TYPES.map((value) => ({ value, label: labelPlanningType(value) }))}
           />
           <SelectField
             label="Owner"
@@ -639,13 +668,13 @@ export default function QuickBrainCapture({
             options={PLANNING_OWNERS}
           />
           <SelectField
-            label="Area"
+            label="Area (optional)"
             value={effectiveOptions.area}
             onChange={(value) => setOption('area', value)}
-            options={PLANNING_AREAS.map((value) => ({ value, label: labelPlanningArea(value) }))}
+            options={PLANNING_PRIMARY_AREAS.map((value) => ({ value, label: labelPlanningArea(value) }))}
           />
           <DateField
-            label="Do by"
+            label={effectiveOptions.itemType === 'initiative' ? 'Review next' : 'Do by'}
             value={effectiveOptions.targetDate}
             onChange={(value) => setOption('targetDate', value)}
           />
@@ -655,6 +684,26 @@ export default function QuickBrainCapture({
             onChange={(value) => setOption('status', value)}
             options={PLANNING_STATUSES.map((value) => ({ value, label: labelPlanningStatus(value) }))}
           />
+          {effectiveOptions.itemType === 'initiative' ? (
+            <>
+              <div className="md:col-span-2">
+                <TextField
+                  label="Done when"
+                  value={effectiveOptions.outcome || ''}
+                  onChange={(value) => setOption('outcome', value)}
+                  placeholder="What will be true when this project is complete?"
+                />
+              </div>
+              <div className="md:col-span-3">
+                <TextField
+                  label="First next action"
+                  value={effectiveOptions.nextAction || ''}
+                  onChange={(value) => setOption('nextAction', value)}
+                  placeholder="The first concrete step"
+                />
+              </div>
+            </>
+          ) : null}
           <div className="md:col-span-5">
             <StudentSearchField
               label="Linked Students"
@@ -674,7 +723,7 @@ export default function QuickBrainCapture({
           className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-base font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
         >
           {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-          Capture
+          {effectiveOptions.itemType === 'initiative' ? 'Create project' : 'Capture'}
         </button>
       )}
     </form>

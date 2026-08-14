@@ -26,6 +26,8 @@ import {
   inferStudentFromText,
   truncateTitle,
   applySmartDefaults,
+  buildPlanningRelationships,
+  buildProjectActionCompletionProgress,
   buildSearchText,
   workflowHref,
   buildTutorAbsenceWorkflowHref,
@@ -85,12 +87,13 @@ test('filterPlanningItems routes every chip: done/parked veil, search, owners, t
     { planningId: 'c', title: 'Shipped thing', status: 'done', owner: 'Finn', itemType: 'action', momentum: '' },
     { planningId: 'd', title: 'Parked initiative', status: 'parked', owner: 'Finn', itemType: 'initiative', momentum: '' },
     { planningId: 'e', title: 'Due plan', status: 'active', owner: 'Finn', itemType: 'action', momentum: 'moving', targetDate: '2020-01-01' },
+    { planningId: 'planning_weekly_school_forward_review', title: 'Friday review', status: 'active', owner: 'Finn', itemType: 'initiative', momentum: 'moving' },
   ];
   const ids = (opts) => filterPlanningItems(items, opts).map((item) => item.planningId);
 
   // Done/parked stay hidden unless showDone or their own chip is active.
-  assert.deepEqual(ids({ filter: 'all' }), ['a', 'b', 'e']);
-  assert.deepEqual(ids({ filter: 'all', showDone: true }), ['a', 'b', 'c', 'd', 'e']);
+  assert.deepEqual(ids({ filter: 'all' }), ['a', 'b', 'e', 'planning_weekly_school_forward_review']);
+  assert.deepEqual(ids({ filter: 'all', showDone: true }), ['a', 'b', 'c', 'd', 'e', 'planning_weekly_school_forward_review']);
   assert.deepEqual(ids({ filter: 'done' }), ['c']);
   assert.deepEqual(ids({ filter: 'parked' }), ['d']);
 
@@ -104,6 +107,7 @@ test('filterPlanningItems routes every chip: done/parked veil, search, owners, t
 
   // Item-type chips, and unknown filters fall through to a momentum match.
   assert.deepEqual(ids({ filter: 'idea' }), ['b']);
+  assert.deepEqual(ids({ filter: 'initiative' }), []); // weekly review is not a long-running Project
   assert.deepEqual(ids({ filter: 'stalled' }), ['b']);
   assert.deepEqual(ids({ filter: 'no-such-momentum' }), []);
   assert.deepEqual(filterPlanningItems(undefined, { filter: 'all' }), []);
@@ -286,8 +290,74 @@ test('truncateTitle takes the first line, strips bullets, and caps length', () =
 });
 
 test('applySmartDefaults promotes inbox actions/initiatives to active', () => {
-  assert.equal(applySmartDefaults({ itemType: 'action', status: 'inbox' }).status, 'active');
-  assert.equal(applySmartDefaults({ itemType: 'idea', status: 'inbox' }).status, 'inbox'); // ideas stay
+  assert.deepEqual(
+    applySmartDefaults({ itemType: 'action', status: 'inbox', planMode: 'ongoing' }),
+    { itemType: 'action', status: 'active', planMode: 'task' },
+  );
+  assert.deepEqual(
+    applySmartDefaults({ itemType: 'initiative', status: 'inbox', planMode: 'task' }),
+    { itemType: 'initiative', status: 'active', planMode: 'ongoing' },
+  );
+  assert.equal(applySmartDefaults({ itemType: 'idea', status: 'inbox' }).status, 'inbox'); // notes/ideas stay
+});
+
+test('buildPlanningRelationships links only action cards to Project parents', () => {
+  const project = { planningId: 'project_1', itemType: 'initiative', title: 'Build curriculum' };
+  const olderDone = {
+    planningId: 'action_old',
+    itemType: 'action',
+    parentPlanningId: 'project_1',
+    title: 'Draft outline',
+    status: 'done',
+    updatedAt: '2026-08-10T12:00:00Z',
+  };
+  const current = {
+    planningId: 'action_current',
+    itemType: 'action',
+    parentPlanningId: 'project_1',
+    title: 'Ask tutors for feedback',
+    status: 'active',
+    updatedAt: '2026-08-12T12:00:00Z',
+  };
+  const unrelatedNote = { planningId: 'note_1', itemType: 'idea', parentPlanningId: 'project_1' };
+  const weeklyReview = { planningId: 'planning_weekly_school_forward_review', itemType: 'initiative' };
+  const reflectionAction = { planningId: 'reflection_action', itemType: 'action', parentPlanningId: weeklyReview.planningId };
+  const relationships = buildPlanningRelationships([olderDone, unrelatedNote, project, current, weeklyReview, reflectionAction]);
+
+  assert.equal(relationships.itemsById.get('project_1'), project);
+  assert.deepEqual(
+    relationships.actionsByProjectId.get('project_1').map((item) => item.planningId),
+    ['action_current', 'action_old'],
+  );
+  assert.equal(relationships.actionsByProjectId.has(weeklyReview.planningId), false);
+});
+
+test('completing a Project action logs back to its parent and clears only the matching next step', () => {
+  const action = {
+    planningId: 'action_1',
+    itemType: 'action',
+    parentPlanningId: 'project_1',
+    title: 'Draft weeks 1–4 outcomes',
+  };
+  const parent = {
+    planningId: 'project_1',
+    itemType: 'initiative',
+    nextAction: 'Draft weeks 1–4 outcomes',
+  };
+  assert.deepEqual(buildProjectActionCompletionProgress(action, parent, 'done'), {
+    mode: 'progress',
+    planningId: 'project_1',
+    progressNote: 'Completed linked action: Draft weeks 1–4 outcomes',
+    progressType: 'action_completed',
+    nextAction: '',
+  });
+  assert.equal(buildProjectActionCompletionProgress(action, parent, 'waiting'), null);
+  assert.equal(buildProjectActionCompletionProgress(action, { ...parent, planningId: 'other' }, 'done'), null);
+  assert.equal(buildProjectActionCompletionProgress(
+    { ...action, parentPlanningId: 'planning_weekly_school_forward_review' },
+    { ...parent, planningId: 'planning_weekly_school_forward_review' },
+    'done',
+  ), null);
 });
 
 const STUDENTS = [
@@ -359,7 +429,7 @@ test('isPauseCaptureText detects pause wording', () => {
 test('inferQuickCapture maps keywords to area/type defaults', () => {
   assert.equal(inferQuickCapture('pause Ada for holiday').area, 'admin');
   assert.equal(inferQuickCapture('stripe refund needed').area, 'finance');
-  assert.equal(inferQuickCapture('showcase poster').area, 'showcase');
+  assert.equal(inferQuickCapture('showcase poster').area, 'growth');
   assert.equal(inferQuickCapture('maybe revisit this idea').itemType, 'idea');
   assert.equal(inferQuickCapture('plain note').itemType, 'action'); // default
 });
@@ -377,6 +447,15 @@ test('buildQuickCaptureItem builds an item from a raw note (title truncated, act
   // an inferred action gets its nextAction defaulted to the title
   assert.equal(item.itemType, 'action');
   assert.equal(item.nextAction, item.title);
+  assert.equal(item.status, 'inbox'); // ordinary brain capture still lands in Inbox
+  const project = buildQuickCaptureItem('beginner guitar curriculum', {
+    itemType: 'initiative',
+    outcome: 'A reviewed twelve-week pathway exists.',
+    nextAction: 'Draft weeks 1–4 outcomes',
+  }, []);
+  assert.equal(project.status, 'active');
+  assert.equal(project.planMode, 'ongoing');
+  assert.equal(project.nextAction, 'Draft weeks 1–4 outcomes');
   // overrides win and control fields (e.g. studentSelectionSource) are stripped
   const withOverride = buildQuickCaptureItem('note', {
     title: 'Custom',
