@@ -131,7 +131,11 @@ classifying partial invoice evidence.
 Overview, Issue Queue, and Stripe reads never update
 `Students.payment_expectation`.
 
-`/admin/flags` provides the only high-confidence Pause History reconciliation:
+Two paths, and only two, may write `Students.payment_expectation` from Pause
+History. Both apply the identical eligibility test below; they differ only in who
+authorises the run.
+
+**Attended — `/admin/flags`,** for any run a human wants to see first:
 
 1. authenticated GET builds an exact preview
 2. the admin reviews affected students and transitions
@@ -139,7 +143,25 @@ Overview, Issue Queue, and Stripe reads never update
 4. only eligible changes write `Students.payment_expectation`
 5. each attempt and applied change appends an `Event_Log` record
 
-The confirmed run batches all attempt events, all eligible Students-cell
+**Unattended — `POST /api/cron/pause-expectations`,** nightly at 04:30 UTC via
+`.github/workflows/pause-expectations.yml`. It is gated on `PAUSE_SYNC_SECRET`
+(its own secret, not `SCHEDULE_REFRESH_SECRET`, so it can be revoked without
+disabling the schedule caches), previews before writing, applies the same
+eligible changes with the same three batched writes and the same `Event_Log`
+records under actor `cron@github-actions`, and then rescans live Stripe so the
+Issue Queue reflects the result.
+
+The unattended path exists because a pause ending is a silent event: Stripe
+resumes billing on its own, nothing prompts anyone to update the sheet, and the
+resulting `SUBSCRIPTION_STATE_MISMATCH` issues accumulate without meaning anyone
+was billed wrongly. Its extra guardrail is a cap — a plan above
+`MAX_UNATTENDED_CHANGES` (25) is refused with HTTP 409 before anything is
+written, naming the students it declined, because a routine night moves a
+handful and an unusually large plan means an upstream input changed shape. Clear
+a legitimate backlog by dispatching the workflow with a higher `maxChanges`,
+which is an explicit human decision, or by using the attended path.
+
+Either run batches all attempt events, all eligible Students-cell
 updates, and all completion events into at most three normal Sheets write
 requests, regardless of student count. Multiple Students rows for the same MMS
 ID are collapsed to one student decision and every matching expectation cell is
@@ -149,7 +171,9 @@ only work still outstanding.
 Eligibility is deliberately narrow: Stripe-managed student, subscription-ID
 Pause History match, high confidence, and coverage of a usual lesson.
 Setup-pending, inactive/stopped, low-confidence, missing-schedule, invalid-window,
-and no-usual-lesson cases are excluded. This action never changes Stripe.
+and no-usual-lesson cases are excluded. This narrowness is what makes the
+unattended path acceptable: anything weaker already becomes an issue for a human
+rather than a write. Neither path ever changes Stripe.
 
 ## Action Boundary
 

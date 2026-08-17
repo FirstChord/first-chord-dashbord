@@ -1,0 +1,53 @@
+name: Pause Expectation Sync
+
+# Reconciles payment_expectation from high-confidence Pause History + lesson
+# coverage, then rescans live Stripe so the Issues board reflects the result.
+# Nightly, because a pause ends on whatever weekday the student's lesson falls
+# on: a weekly run would let the board carry up to six days of stale mismatches,
+# which is how one summer produced 36 identical issues that meant nothing.
+#
+# Runs at 04:30 UTC, ahead of stripe-amounts (05:15/05:30) and the finance
+# snapshot (06:00), so those read corrected expectations.
+
+on:
+  workflow_dispatch:
+    inputs:
+      maxChanges:
+        description: "Unattended change cap (raise to clear a backlog)"
+        required: false
+        default: "25"
+        type: string
+  schedule:
+    - cron: "30 4 * * *" # daily at 04:30 UTC
+
+concurrency:
+  group: pause-expectations
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Reconcile pause expectations and rescan Stripe
+        env:
+          ENDPOINT: https://first-chord-dashbord-production.up.railway.app/api/cron/pause-expectations
+          SECRET: ${{ secrets.PAUSE_SYNC_SECRET }}
+          MAX_CHANGES: ${{ github.event.inputs.maxChanges || '25' }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SECRET}" ]; then
+            echo "PAUSE_SYNC_SECRET is not set in repo secrets"; exit 1
+          fi
+          # The rescan reads ~185 Stripe subscriptions sequentially.
+          resp=$(curl -sS -X POST "${ENDPOINT}?maxChanges=${MAX_CHANGES}" \
+            -H "x-firstchord-pause-secret: ${SECRET}" \
+            -H "content-type: application/json" \
+            --max-time 900)
+          echo "Response: ${resp}"
+          ok=$(echo "${resp}" | jq -r '.success // false')
+          if [ "${ok}" != "true" ]; then
+            echo "Endpoint returned an error"; exit 1
+          fi
+          echo "Changed: $(echo "${resp}" | jq -r '.changeCount') | open issues: $(echo "${resp}" | jq -r '.openIssueCount')"
+          echo "${resp}" | jq -r '.changes[]? | "  \(.studentName): \(.previousPaymentExpectation) -> \(.nextPaymentExpectation)"'
