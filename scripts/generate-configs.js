@@ -249,26 +249,29 @@ export function getStudentInfo(studentId) {
     return null;
   }
 
+  // The Theta credential is still read here, but only to derive the display
+  // name — it is deliberately NOT returned. The student dashboard's Theta
+  // button was removed on 2026-08-17 as the school moves off Theta Music
+  // Trainer, and this object is serialised into the page's RSC payload, so
+  // returning the credential would ship a live login to every student's browser
+  // for a feature that no longer exists.
   const thetaCredential = thetaCredentials[studentId];
   const soundsliceUrl = SOUNDSLICE_MAPPINGS[studentId];
 
   return {
     id: studentId,
     name: extractNameFromCredentials(thetaCredential),
-    thetaCredentials: thetaCredential ? {
-      username: thetaCredential,
-      password: thetaCredential
-    } : null,
     soundsliceUrl: soundsliceUrl,
-    hasTheta: !!thetaCredential,
     hasSoundslice: !!soundsliceUrl
   };
 }
 
+// Names come from the Theta credential ('mathildefc' -> 'Mathilde') because
+// that is where they have always come from. It outlives the Theta button and
+// has to be repointed at the registry before theta-credentials.js can go.
 function extractNameFromCredentials(credential) {
   if (!credential) return 'Student';
 
-  // Extract name from credentials like 'mathildefc' -> 'Mathilde'
   const name = credential.replace('fc', '').replace('firstchord', '');
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
