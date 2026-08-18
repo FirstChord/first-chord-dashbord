@@ -311,12 +311,36 @@ export async function POST(request) {
     tutorShortName: payload.tutorShortName,
   });
 
-  if (duplicateState.exactDuplicate) {
+  // A sibling group writes two canonical records in sequence. appendCanonicalStudent
+  // rechecks each student and throws, but by then the first sibling exists — so the
+  // second student's duplicate state has to block here, before any write.
+  const secondDuplicateState = secondStudentDetails?.mmsId
+    ? await getOnboardingDuplicateState({
+        mmsId: secondStudentDetails.mmsId,
+        tutorFullName: tutor.fullName,
+        tutorShortName: payload.tutorShortName,
+      })
+    : null;
+
+  const blockingReasons = [
+    ...duplicateState.blockingReasons,
+    ...(secondDuplicateState?.blockingReasons || []).map(
+      (reason) => `${secondStudentName || secondStudentDetails?.mmsId}: ${reason}`,
+    ),
+  ];
+  const duplicateWarnings = [
+    ...duplicateState.warnings,
+    ...(secondDuplicateState?.warnings || []).map(
+      (warning) => `${secondStudentName || secondStudentDetails?.mmsId}: ${warning}`,
+    ),
+  ];
+
+  if (blockingReasons.length > 0) {
     steps = markOnboardingStep(
       steps,
       'duplicateCheck',
       'failed',
-      duplicateState.blockingReasons.join(' '),
+      blockingReasons.join(' '),
     );
     steps = markOnboardingStep(steps, 'sheetsWrite', 'skipped', 'Skipped because an exact duplicate already exists.');
     steps = markOnboardingStep(steps, 'registryWrite', 'skipped', 'Skipped because an exact duplicate already exists.');
@@ -327,17 +351,22 @@ export async function POST(request) {
 
     return Response.json(
       {
-        error: duplicateState.blockingReasons.join(' '),
-        duplicateWarnings: duplicateState.warnings,
+        error: blockingReasons.join(' '),
+        duplicateWarnings,
         steps,
-        recoveryGuidance: buildOnboardingRecoveryGuidance({ steps, duplicateState }),
+        recoveryGuidance: buildOnboardingRecoveryGuidance({
+          steps,
+          duplicateState: secondDuplicateState?.exactDuplicate && !duplicateState.exactDuplicate
+            ? secondDuplicateState
+            : duplicateState,
+        }),
       },
       { status: 409 },
     );
   }
 
   try {
-    steps = markOnboardingStep(steps, 'duplicateCheck', 'succeeded', duplicateState.warnings.length ? duplicateState.warnings.join(' ') : 'No blocking duplicate found.');
+    steps = markOnboardingStep(steps, 'duplicateCheck', 'succeeded', duplicateWarnings.length ? duplicateWarnings.join(' ') : 'No blocking duplicate found.');
 
     if (payload.freeEventId) {
       try {
@@ -693,7 +722,7 @@ export async function POST(request) {
       firstLessonCheckinWarning,
       notesPrivacyFollowUp,
       notesPrivacyFollowUpWarning,
-      duplicateWarnings: duplicateState.warnings,
+      duplicateWarnings,
       siblingGroup: secondStudentDetails
         ? {
             billingGroupId,
@@ -701,8 +730,7 @@ export async function POST(request) {
             secondStudentName,
           }
         : null,
-      wgcs: {
-        whatsappGroupLabel: `${studentNamesLabel} - WGCS`,
+      messages: {
         welcomeMessage: buildWelcomeMessage({
           studentName,
           studentNamesLabel,

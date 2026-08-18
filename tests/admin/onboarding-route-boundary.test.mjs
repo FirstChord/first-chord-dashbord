@@ -6,10 +6,6 @@ const routeSource = await readFile(
   new URL('../../app/api/admin/onboard/route.js', import.meta.url),
   'utf8',
 );
-const preflightRouteSource = await readFile(
-  new URL('../../app/api/admin/onboard/preflight/route.js', import.meta.url),
-  'utf8',
-);
 const formSource = await readFile(
   new URL('../../components/admin/AdminOnboardForm.js', import.meta.url),
   'utf8',
@@ -39,11 +35,31 @@ test('post-onboarding closeout waits for core readiness, not ancillary cleanup',
   assert.match(routeSource, /Student notes privacy follow-up was not queued because the canonical record or core MMS lesson setup is incomplete/);
 });
 
-test('preflight and UI surface partial work as a human summary with technical recovery detail', () => {
-  assert.match(preflightRouteSource, /Use the SHEETS ONLY recovery action; do not rerun onboarding/);
-  assert.match(preflightRouteSource, /\{ status: 503 \}/);
+test('the submit path surfaces partial work as a human summary with technical recovery detail', () => {
   assert.match(formSource, /Onboarding needs attention/);
   assert.match(formSource, /The finished steps have been saved/);
   assert.match(formSource, /Technical details/);
   assert.match(formSource, /result\.recoveryGuidance/);
+});
+
+// The read-only preflight endpoint was removed once every check it reported was
+// enforced at submit. Keep that true: a reintroduced dry run is a sign the write
+// path stopped being safe to press.
+test('every state the removed preflight reported is still checked before the first write', () => {
+  const duplicateCheck = routeSource.indexOf('duplicateState = await getOnboardingDuplicateState');
+  const siblingCheck = routeSource.indexOf('const secondDuplicateState = secondStudentDetails?.mmsId');
+  const freeSlotCheck = routeSource.indexOf('await getValidatedMmsFreeCalendarSlot');
+  const firstCanonicalWrite = routeSource.indexOf('const primaryRecord = await appendCanonicalStudent');
+
+  for (const index of [duplicateCheck, siblingCheck, freeSlotCheck]) {
+    assert.notEqual(index, -1);
+    assert.ok(index < firstCanonicalWrite);
+  }
+
+  // Blocking states stop the run; the idempotent ones are absorbed, not repeated.
+  // The partial-record wording itself is pinned in onboarding-helpers.test.mjs.
+  assert.match(routeSource, /recoveryGuidance: buildOnboardingRecoveryGuidance\(\{\s*\n?\s*steps,\s*\n?\s*duplicateState/);
+  assert.match(routeSource, /activation\?\.alreadyActive \? 'skipped' : 'succeeded'/);
+  assert.match(routeSource, /billingProfile\?\.alreadyExists/);
+  assert.match(routeSource, /lesson\?\.duplicateSkipped \? 'skipped' : 'succeeded'/);
 });
