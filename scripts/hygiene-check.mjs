@@ -335,6 +335,18 @@ if (addedRawButtons.length) {
   });
 }
 
+const addedClipboardCalls = hasAddedLine(fileDiffs, (file, lines) => (
+  /^components\//u.test(file)
+  && file !== 'components/admin/ui/CopyButton.js'
+  && lines.some((line) => /clipboard\.writeText\(|execCommand\((['"])copy\1\)/u.test(line))
+));
+if (addedClipboardCalls.length) {
+  warnings.push({
+    title: 'New hand-rolled clipboard copy introduced',
+    body: `${addedClipboardCalls.map(([file]) => `  - ${file}`).join('\n')}\n  Use components/admin/ui/CopyButton.js so copy controls share one look, one confirmation, and the insecure-origin fallback — see docs/policies/ui-conventions.md → Copy To Clipboard.`,
+  });
+}
+
 // Label-looking strings (quoted, capital start) containing internal jargon.
 // Heuristic on purpose: state values like 'stripe_active_expected' are
 // lowercase and don't match; "Set paused expected" does.

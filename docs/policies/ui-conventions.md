@@ -39,6 +39,24 @@ Destructive actions should use an explicit confirmation step and should not be v
 
 Use `ConfirmButton` for new destructive admin actions unless the page already has a clearer local confirmation pattern.
 
+## Copy To Clipboard
+
+Use `components/admin/ui/CopyButton.js` for new "copy this text" controls, unless
+the surface needs something the shared button genuinely cannot express.
+
+- it sits in the top right of the block it copies, so nothing has to be selected
+  by hand
+- it confirms with `Copied` for two seconds, matching the pending → success rule
+  in [Copy and tone](./copy-and-tone.md) → Buttons
+- it falls back to a hidden textarea when `navigator.clipboard` is unavailable.
+  That is not defensive padding: the API is undefined on insecure origins, so
+  without it Copy silently does nothing when the admin is opened over plain http
+
+Ten page clients still hand-roll their own clipboard call. They work and are not
+worth churning on their own; new work should not add an eleventh.
+`npm run hygiene:check` warns when a new changed line outside the shared button
+introduces one.
+
 ## Page Refresh
 
 Avoid `window.location.reload()` in admin and tutor-facing workflows. Prefer:
