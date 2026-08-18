@@ -23,7 +23,6 @@ policy, or workflow contracts.
 - [Cover loop](./parked/cover-loop.md)
 - [Inbox reply proposals](./parked/proposals-inbox.md)
 - [Song-loop distillation](./parked/song-loop-distillation.md)
-- [Dashboard custom domain](./parked/dashboard-custom-domain.md)
 
 Parked means deliberately off the active path. Resume only after the decision or
 sign-off named in the document.
