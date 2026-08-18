@@ -8,17 +8,17 @@ import {
 } from '../../lib/admin/github-repos.mjs';
 
 test('the default is the repository name GitHub actually serves today', () => {
-  // Deliberately asserts the misspelling. When the repo is renamed this test is
-  // the reminder that the default has to move with it, not a typo to tidy up.
-  assert.equal(DEFAULT_DASHBOARD_REPO, 'FirstChord/first-chord-dashbord');
+  // Pinned deliberately: GitHub redirects the previous name, so a wrong default
+  // here fails silently on reads and only bites on the registry write.
+  assert.equal(DEFAULT_DASHBOARD_REPO, 'FirstChord/first-chord-dashboard');
   assert.equal(BRAIN_REPO, 'FirstChord/first-chord-brain');
   assert.equal(getDashboardRepo({}), DEFAULT_DASHBOARD_REPO);
 });
 
 test('GITHUB_DASHBOARD_REPO overrides the default so a rename needs no deploy', () => {
   assert.equal(
-    getDashboardRepo({ GITHUB_DASHBOARD_REPO: 'FirstChord/first-chord-dashboard' }),
-    'FirstChord/first-chord-dashboard',
+    getDashboardRepo({ GITHUB_DASHBOARD_REPO: 'FirstChord/renamed-later' }),
+    'FirstChord/renamed-later',
   );
 });
 
