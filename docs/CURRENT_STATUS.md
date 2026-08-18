@@ -26,6 +26,38 @@ deliberate school-improvement prompt.
 
 ## Recently shipped
 
+- **Onboarding lost its dry run and its last manual-era label — READY LOCALLY
+  2026-08-18:** the read-only `POST /api/admin/onboard/preflight` endpoint and
+  its "Run preflight" panel are deleted. Every state it reported is now enforced
+  at submit and enforced harder: duplicates and partial canonical records block
+  with a 409 before the first write, the selected Free slot is validated before
+  any write, and MMS activation, billing profile and first lesson are all
+  idempotent (`alreadyActive`, `alreadyExists`, `duplicateSkipped`). The one gap
+  preflight genuinely covered is closed rather than kept — a sibling group's
+  **second** student is now duplicate-checked before the primary is written, so
+  it can no longer fail halfway and leave one sibling created. **A reintroduced
+  dry run should be read as a sign the write path stopped being safe to press;**
+  `tests/admin/onboarding-route-boundary.test.mjs` pins that. The
+  `Name - WGCS` WhatsApp group label is also gone, along with the `wgcs` key in
+  the onboarding response (now `messages`) — the welcome message and Soundslice
+  follow-up are unchanged.
+- **A preselected Free slot can now start a student weeks later — READY
+  LOCALLY 2026-08-18:** the Waiting slot buttons pin one *occurrence* of a weekly
+  Free event, and the capacity summary always collapses a slot to its soonest
+  one, so choosing any start date past the next free week failed the exact
+  date-equality guard and blocked the entire onboarding before its first write.
+  A first lesson may now sit any whole number of weeks after the pinned
+  occurrence, capped at 12. Two decisions keep that safe. The bumped week is
+  confirmed against a live per-day MMS calendar search before anything is
+  written, so a bump can never book over a slot taken since the suggestions were
+  refreshed. And removal still deletes from the **pinned** occurrence forward,
+  deliberately taking the free weeks before the start date with it: a weekly Free
+  slot with a couple of occurrences left still advertises itself to the capacity
+  matcher as a full weekly slot, and would be offered to a second student who
+  collides with this one within a month. A different weekday or an earlier date
+  is still refused, and the form now bumps in whole weeks and offers onboarding
+  without the slot, rather than leaving a free-text date to drift out of
+  alignment and dead-end the run.
 - **Onboarding now clears the chosen MMS Free series with the provider's real
   contract and reports the outcome in human terms — READY LOCALLY 2026-08-14:**
   MMS requires an explicit delete body;
