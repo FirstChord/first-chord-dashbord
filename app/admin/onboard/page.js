@@ -79,6 +79,9 @@ export default async function AdminOnboardPage({ searchParams }) {
         lessonTime: requestedLessonTime,
         lessonDate: requestedLessonDate,
         freeEventId: requestedFreeEventId,
+        // The pinned Free event is one occurrence of a weekly slot, so the date it
+        // arrived with is the anchor every week bump is measured from.
+        freeEventDate: requestedFreeEventId ? requestedLessonDate : '',
         isRecurring: true,
         tutorShortName: initialTutor?.shortName || '',
         thetaUsername: `${(details.firstName || '').toLowerCase()}${(details.lastName || '').toLowerCase()}fc`.replace(/[^a-z0-9]/g, ''),

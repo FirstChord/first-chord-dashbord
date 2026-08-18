@@ -5,6 +5,11 @@ import Link from 'next/link';
 
 import CopyButton from '@/components/admin/ui/CopyButton';
 import { findOnboardingCompletionBlockers } from '@/lib/admin/onboarding-helpers.mjs';
+import {
+  MAX_FREE_SLOT_WEEK_OFFSET,
+  addDaysToCalendarDate,
+  resolveFreeSlotWeekOffset,
+} from '@/lib/admin/mms-helpers.mjs';
 
 // Onboarding without a Soundslice URL looks finished but leaves the student with
 // no practice link, and it is only noticed later when someone goes looking for
@@ -23,6 +28,27 @@ function formatHumanDate(dateValue) {
   const parsed = new Date(`${dateValue}T12:00:00`);
   if (Number.isNaN(parsed.getTime())) return dateValue;
   return parsed.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
+}
+
+function describeFreeSlotBump({ anchorDate, anchorWeekday, weekOffset, reason }, lessonDate) {
+  if (reason === 'ok' && weekOffset === 0) {
+    return 'Starting on the first free week. This slot and every week after it are removed once the first lesson is confirmed.';
+  }
+
+  if (reason === 'ok') {
+    const weeks = `${weekOffset} week${weekOffset === 1 ? '' : 's'}`;
+    return `Starting ${formatHumanDate(lessonDate)} — ${weeks} later. The ${weeks} free before it go with the slot, so nobody else is offered this time.`;
+  }
+
+  if (reason === 'before_slot') {
+    return `${formatHumanDate(lessonDate)} is before the slot's first free week. Use the week buttons to move forward from ${formatHumanDate(anchorDate)}.`;
+  }
+
+  if (reason === 'too_far') {
+    return `That is more than ${MAX_FREE_SLOT_WEEK_OFFSET} weeks after the slot. Onboard without the slot and remove it in MMS instead.`;
+  }
+
+  return `${formatHumanDate(lessonDate) || 'That date'} is not a ${anchorWeekday}. The first lesson has to be a whole number of weeks after ${formatHumanDate(anchorDate)} — use the week buttons.`;
 }
 
 function normalizeTimeValue(value) {
@@ -162,6 +188,21 @@ export default function AdminOnboardForm({ initialData, tutorOptions, initialDup
   );
 
   const derivedWeekday = useMemo(() => deriveWeekday(form.lessonDate), [form.lessonDate]);
+  const freeSlotBump = useMemo(() => {
+    if (!form.freeEventId || !form.freeEventDate) return null;
+
+    const { weekOffset, reason } = resolveFreeSlotWeekOffset({
+      slotDate: form.freeEventDate,
+      lessonDate: form.lessonDate,
+    });
+
+    return {
+      anchorDate: form.freeEventDate,
+      anchorWeekday: deriveWeekday(form.freeEventDate),
+      weekOffset,
+      reason,
+    };
+  }, [form.freeEventDate, form.freeEventId, form.lessonDate]);
   const initialWarnings = initialDuplicateState?.warnings || [];
   const resultCoreIsComplete = result?.completionStatus?.canonicalRecord?.status === 'complete'
     && onboardingStepIsReady(result?.steps?.mmsActivation)
@@ -201,6 +242,32 @@ export default function AdminOnboardForm({ initialData, tutorOptions, initialDup
       ...current,
       [key]: key === 'lessonTime' ? normalizeTimeValue(value) : value,
     }));
+  }
+
+  function bumpFreeSlotWeeks(delta) {
+    setForm((current) => {
+      if (!current.freeEventDate) return current;
+
+      const { weekOffset } = resolveFreeSlotWeekOffset({
+        slotDate: current.freeEventDate,
+        lessonDate: current.lessonDate,
+      });
+      // An off-grid date has no offset, so a bump snaps back onto the slot's own
+      // weekly grid rather than leaving the form in a state the server refuses.
+      const nextOffset = Math.min(
+        Math.max((weekOffset ?? 0) + delta, 0),
+        MAX_FREE_SLOT_WEEK_OFFSET,
+      );
+
+      return {
+        ...current,
+        lessonDate: addDaysToCalendarDate(current.freeEventDate, nextOffset * 7),
+      };
+    });
+  }
+
+  function clearFreeSlot() {
+    setForm((current) => ({ ...current, freeEventId: '', freeEventDate: '' }));
   }
 
   function updateLessonType(value) {
@@ -285,7 +352,50 @@ export default function AdminOnboardForm({ initialData, tutorOptions, initialDup
             </ul>
           </section>
         ) : null}
-        {form.freeEventId ? (
+        {form.freeEventId && freeSlotBump ? (
+          <section
+            className={`rounded-2xl border p-4 text-sm ${
+              freeSlotBump.reason === 'ok'
+                ? 'border-sky-200 bg-sky-50 text-sky-950'
+                : 'border-amber-200 bg-amber-50 text-amber-900'
+            }`}
+          >
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="font-semibold">
+                  Free slot: {freeSlotBump.anchorWeekday} {normalizeTimeValue(form.lessonTime)} · first free{' '}
+                  {formatHumanDate(freeSlotBump.anchorDate)}
+                </p>
+                <p className="mt-1">{describeFreeSlotBump(freeSlotBump, form.lessonDate)}</p>
+              </div>
+              <div className="flex shrink-0 gap-2">
+                <button
+                  type="button"
+                  onClick={() => bumpFreeSlotWeeks(-1)}
+                  disabled={freeSlotBump.weekOffset === 0}
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  − week
+                </button>
+                <button
+                  type="button"
+                  onClick={() => bumpFreeSlotWeeks(1)}
+                  disabled={freeSlotBump.weekOffset === MAX_FREE_SLOT_WEEK_OFFSET}
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  + week
+                </button>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={clearFreeSlot}
+              className="mt-3 text-xs underline underline-offset-2 hover:no-underline"
+            >
+              Onboard without this slot
+            </button>
+          </section>
+        ) : form.freeEventId ? (
           <section className="rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950">
             The selected MMS Free event will be checked again and removed only after the first lesson is confirmed.
           </section>
@@ -613,7 +723,15 @@ export default function AdminOnboardForm({ initialData, tutorOptions, initialDup
                 </OutcomeTick>
               ) : null}
               {form.freeEventId && result.freeSlot ? (
-                <OutcomeTick detail={result.freeSlot.alreadyAbsent ? 'The old slot was already clear.' : 'The old slot and its future placeholders were removed.'}>
+                <OutcomeTick
+                  detail={
+                    result.freeSlot.alreadyAbsent
+                      ? 'The old slot was already clear.'
+                      : result.freeSlot.weekOffset
+                        ? `The old slot and its future placeholders were removed, including the ${result.freeSlot.weekOffset} free week${result.freeSlot.weekOffset === 1 ? '' : 's'} before the first lesson.`
+                        : 'The old slot and its future placeholders were removed.'
+                  }
+                >
                   Free slot cleared
                 </OutcomeTick>
               ) : null}

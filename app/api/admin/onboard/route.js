@@ -358,7 +358,11 @@ export async function POST(request) {
         return Response.json({
           error: error.message || 'The selected MMS Free event could not be confirmed.',
           steps,
-          recoveryGuidance: ['No student records were written. Return to Waiting, refresh the capacity suggestions, and choose the current Free slot again.'],
+          recoveryGuidance: [
+            'No student records were written.',
+            'The first lesson must fall on the selected Free slot or a whole number of weeks after it. Use the week buttons on the free-slot banner to bump it forward.',
+            'If the slot itself has changed or is taken, return to Waiting, refresh the free slots, and choose again — or onboard without the slot and remove it in MMS afterwards.',
+          ],
         }, { status: 409 });
       }
     }
@@ -522,7 +526,11 @@ export async function POST(request) {
           'succeeded',
           freeSlot.alreadyAbsent
             ? `Selected MMS Free event ${freeSlot.eventId} was already absent after the first lesson was confirmed.`
-            : `Removed selected MMS Free event ${freeSlot.eventId} and its future occurrences after confirming the first lesson${freeSlot.seriesId ? ` (series ${freeSlot.seriesId})` : ''}.`,
+            : `Removed selected MMS Free event ${freeSlot.eventId} and its future occurrences after confirming the first lesson${freeSlot.seriesId ? ` (series ${freeSlot.seriesId})` : ''}.${
+              freeSlot.weekOffset
+                ? ` The first lesson starts ${freeSlot.weekOffset} week${freeSlot.weekOffset === 1 ? '' : 's'} later, so the free weeks before it were removed with the slot.`
+                : ''
+            }`,
         );
       } catch (error) {
         freeSlotWarning = error.message || 'MMS Free event removal failed';
@@ -584,6 +592,7 @@ export async function POST(request) {
               lesson_warning: lessonWarning,
               source_free_event_id: payload.freeEventId || '',
               source_free_event_removed: Boolean(freeSlot),
+              source_free_event_week_offset: freeSlot?.weekOffset ?? '',
             }),
           })));
         }

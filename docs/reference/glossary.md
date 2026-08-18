@@ -9,6 +9,18 @@ Plain-English explanations of technical terms used in the admin dashboard. This 
 
 - **Path template** — a named ordered list of catalogue song IDs (`lib/config/path-templates.mjs`, canonical hand-edited). "Assign path" instantiates it into per-student `Song_Assignments` rows; the student copy is personal from then on.
 
+## Free slot, pinned occurrence, and week bump
+
+A **Free slot** is a weekly recurring MMS calendar event in the `Free` category
+with no student attached — the school's way of marking a tutor hour as sellable.
+The capacity matcher summarises a slot by its **pinned occurrence**: the soonest
+dated event in that series, whose ID is what a Waiting-page slot button carries
+into onboarding. A **week bump** starts the first lesson a whole number of weeks
+after that occurrence (up to 12) when a student cannot start immediately. The
+bumped week is confirmed still free before anything is written, and clearing the
+slot afterwards always runs from the pinned occurrence, so no fragment of the
+series is left to be offered to somebody else.
+
 ## Incoming topic, intent, and actionability
 
 An incoming message's **topic** is what it mentions, such as schedule, payment,

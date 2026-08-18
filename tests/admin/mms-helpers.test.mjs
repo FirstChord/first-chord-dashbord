@@ -2,14 +2,18 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  MAX_FREE_SLOT_WEEK_OFFSET,
+  addDaysToCalendarDate,
   buildBillingProfilePayload,
   buildCalendarEventPayload,
   buildCalendarEventSearchPayload,
   buildWeeklyRepeatDetails,
+  findFreeCalendarOccurrence,
   findMatchingCalendarEvent,
   formatMmsErrorBody,
   parseLessonDateTime,
   parseNoteFields,
+  resolveFreeSlotWeekOffset,
   validateMmsFreeCalendarEvent,
 } from '../../lib/admin/mms-helpers.mjs';
 
@@ -61,7 +65,87 @@ test('validateMmsFreeCalendarEvent accepts the exact empty Free event selected f
     startDate: '2026-05-03T13:00:00',
     durationMinutes: 30,
     seriesId: 'series_one',
+    slotDate: '2026-05-03',
+    weekOffset: 0,
+    lessonStartDateTime: '2026-05-03T13:00:00',
   });
+});
+
+test('validateMmsFreeCalendarEvent accepts a first lesson bumped whole weeks past the pinned occurrence', () => {
+  const slot = validateMmsFreeCalendarEvent({
+    eventId: 'evt_selected',
+    teacherId: 'tch_test',
+    lessonDate: '2026-05-17',
+    lessonTime: '13:00',
+    durationMinutes: 30,
+    event: {
+      ID: 'evt_selected',
+      StartDate: '2026-05-03T13:00:00',
+      Duration: 30,
+      TeacherID: 'tch_test',
+      EventCategory: { Name: 'Free' },
+      Students: [],
+      Attendances: [],
+      SeriesID: 'series_one',
+    },
+  });
+
+  assert.equal(slot.weekOffset, 2);
+  assert.equal(slot.slotDate, '2026-05-03');
+  assert.equal(slot.lessonStartDateTime, '2026-05-17T13:00:00');
+});
+
+test('validateMmsFreeCalendarEvent refuses a bump that is not a weekly repeat of the slot', () => {
+  const base = {
+    eventId: 'evt_selected',
+    teacherId: 'tch_test',
+    lessonTime: '13:00',
+    durationMinutes: 30,
+    event: {
+      ID: 'evt_selected',
+      StartDate: '2026-05-03T13:00:00',
+      Duration: 30,
+      TeacherID: 'tch_test',
+      EventCategory: { Name: 'Free' },
+    },
+  };
+
+  // A different weekday would book the lesson on a day the tutor never offered.
+  assert.throws(() => validateMmsFreeCalendarEvent({ ...base, lessonDate: '2026-05-19' }), /whole number of weeks/);
+  assert.throws(() => validateMmsFreeCalendarEvent({ ...base, lessonDate: '2026-04-26' }), /before the selected MMS Free slot/);
+  assert.throws(() => validateMmsFreeCalendarEvent({ ...base, lessonDate: '2026-09-06' }), /more than 12 weeks/);
+});
+
+test('resolveFreeSlotWeekOffset separates a clean weekly bump from every way it can be wrong', () => {
+  assert.deepEqual(resolveFreeSlotWeekOffset({ slotDate: '2026-05-03', lessonDate: '2026-05-03' }), { weekOffset: 0, reason: 'ok' });
+  assert.deepEqual(resolveFreeSlotWeekOffset({ slotDate: '2026-05-03', lessonDate: '2026-05-24' }), { weekOffset: 3, reason: 'ok' });
+  assert.deepEqual(resolveFreeSlotWeekOffset({ slotDate: '2026-05-03', lessonDate: '2026-05-04' }), { weekOffset: null, reason: 'different_weekday' });
+  assert.deepEqual(resolveFreeSlotWeekOffset({ slotDate: '2026-05-03', lessonDate: '2026-04-26' }), { weekOffset: null, reason: 'before_slot' });
+  assert.deepEqual(resolveFreeSlotWeekOffset({ slotDate: '2026-05-03', lessonDate: '' }), { weekOffset: null, reason: 'unparsable' });
+
+  const beyondLimit = addDaysToCalendarDate('2026-05-03', (MAX_FREE_SLOT_WEEK_OFFSET + 1) * 7);
+  assert.deepEqual(resolveFreeSlotWeekOffset({ slotDate: '2026-05-03', lessonDate: beyondLimit }), { weekOffset: null, reason: 'too_far' });
+});
+
+test('addDaysToCalendarDate crosses a month and a British Summer Time change without drifting', () => {
+  assert.equal(addDaysToCalendarDate('2026-05-03', 28), '2026-05-31');
+  assert.equal(addDaysToCalendarDate('2026-10-18', 21), '2026-11-08');
+  assert.throws(() => addDaysToCalendarDate('not-a-date', 7), /Could not parse/);
+});
+
+test('findFreeCalendarOccurrence only accepts an empty Free event in the bumped week', () => {
+  const events = [
+    { ID: 'evt_lesson', StartDate: '2026-05-17T13:00:00', Duration: 30, TeacherID: 'tch_test', EventCategory: { Name: 'Lesson' } },
+    { ID: 'evt_other_tutor', StartDate: '2026-05-17T13:00:00', Duration: 30, TeacherID: 'tch_other', EventCategory: { Name: 'Free' } },
+    { ID: 'evt_taken', StartDate: '2026-05-17T14:00:00', Duration: 30, TeacherID: 'tch_test', EventCategory: { Name: 'Free' }, Students: [{ ID: 'sdt_x' }] },
+    { ID: 'evt_free', StartDate: '2026-05-17T13:00:00', Duration: 30, TeacherID: 'tch_test', EventCategory: { Name: 'Free' }, Students: [] },
+  ];
+  const match = { events, teacherId: 'tch_test', startDateTime: '2026-05-17T13:00:00', durationMinutes: 30 };
+
+  assert.equal(findFreeCalendarOccurrence(match).ID, 'evt_free');
+  assert.equal(findFreeCalendarOccurrence({ ...match, durationMinutes: 45 }), null);
+  assert.equal(findFreeCalendarOccurrence({ ...match, startDateTime: '2026-05-17T14:00:00' }), null);
+  assert.equal(findFreeCalendarOccurrence({ ...match, events: [] }), null);
 });
 
 test('validateMmsFreeCalendarEvent refuses a stale or occupied source event', () => {
@@ -115,6 +199,7 @@ test('validateMmsFreeCalendarEvent refuses changed tutor, time, length, and unsa
 
   assert.throws(() => validateMmsFreeCalendarEvent({ ...base, teacherId: 'tch_other' }), /selected tutor/);
   assert.throws(() => validateMmsFreeCalendarEvent({ ...base, lessonTime: '13:30' }), /date and time/);
+  assert.throws(() => validateMmsFreeCalendarEvent({ ...base, event: { ...base.event, StartDate: '' } }), /date and time/);
   assert.throws(() => validateMmsFreeCalendarEvent({ ...base, durationMinutes: 45 }), /lesson length/);
   assert.throws(() => validateMmsFreeCalendarEvent({ ...base, eventId: '../students' }), /ID is invalid/);
 });

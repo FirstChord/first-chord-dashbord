@@ -62,7 +62,9 @@ function buildPreflightSummary({ duplicateState, operationalState, tutorFullName
       status: freeSlot ? 'ready' : 'blocked',
       label: 'Selected MMS Free event',
       detail: freeSlot
-        ? `Free event ${freeSlot.eventId} still matches this tutor, date, time, and lesson length. It will be removed after the lesson is confirmed.`
+        ? freeSlot.weekOffset
+          ? `Free slot ${freeSlot.eventId} still matches this tutor, time, and lesson length, and is still free ${freeSlot.weekOffset} week${freeSlot.weekOffset === 1 ? '' : 's'} later on ${freeSlot.lessonStartDateTime.slice(0, 10)}. The slot and every week from ${freeSlot.slotDate} onwards will be removed after the lesson is confirmed.`
+          : `Free event ${freeSlot.eventId} still matches this tutor, date, time, and lesson length. It will be removed after the lesson is confirmed.`
         : 'The selected Free event could not be confirmed.',
     };
   }
