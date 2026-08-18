@@ -79,8 +79,19 @@ derived from the same index; regenerate it, never hand-edit it.
 - `app/**/route.{js,mjs,ts}`: every Next route handler is included in the
   generated code map and route-security census, including cron and public lanes.
 - `components/admin/`: interactive admin UI.
-- `lib/admin/*.js`: integration and workflow orchestration.
-- `lib/admin/*-helpers.mjs`: preferably pure business rules.
+- `lib/admin/*.js`: integration and workflow orchestration. These are the modules
+  that talk to Sheets, MMS, Stripe, GitHub or an auth session; 30 of the 34 do.
+  The exceptions are `auth.js` and the `*-data.js` static tables.
+- `lib/admin/*-helpers.mjs`: pure business rules. **No I/O, directly or through
+  an import** — `npm run code-map:check` fails otherwise, because this suffix is
+  what promises a module can be unit-tested without stubbing a provider. The
+  suffix does not imply a same-named `.js` orchestrator: only 18 of 66 have one,
+  and the rest are standalone.
+- `lib/admin/*.mjs` without the `-helpers` suffix: everything else, and the
+  largest group after helpers. Most are pure, but some are deliberate I/O
+  boundaries (`assistant-context-readers.mjs`, `finance-snapshot-runner.mjs`,
+  `practice-note-delivery-claims.mjs`). The name promises nothing here, so read
+  the `@fileoverview` rather than inferring from the extension.
 - `lib/admin/sheets/`: Google Sheets lane adapters.
 - `tests/admin/`: focused Node tests, usually matching helper names.
 - `docs/`: intent-led architecture, policy, operations, workflow, plan,

@@ -13,6 +13,7 @@ import {
   searchFileBodies,
   searchOutsideCodeIndex,
   validateAgentWorkflowMap,
+  validateHelperPurity,
   validateModuleOverviewCoverage,
 } from './code-map-core.mjs';
 
@@ -168,6 +169,7 @@ if (command === 'generate') {
     errors.push(`${CODE_MAP_RELATIVE_PATH} is stale; run npm run generate-code-map`);
   }
   errors.push(...validateModuleOverviewCoverage(index));
+  errors.push(...validateHelperPurity(index));
   errors.push(...validateAgentWorkflowMap({
     repoRoot,
     source: fs.readFileSync(path.join(repoRoot, 'AGENTS.md'), 'utf8'),
@@ -188,6 +190,7 @@ if (command === 'generate') {
   }
   console.log(`Code map and AGENTS Workflow Map are current (${index.records.length} modules, fingerprint ${index.fingerprint}).`);
   console.log(`Module overview coverage: ${index.records.length}/${index.records.length}.`);
+  console.log('Helper purity: every lib/**/*-helpers.mjs is free of I/O.');
 } else if (command === 'find') {
   const query = args.join(' ').trim();
   if (!query) {

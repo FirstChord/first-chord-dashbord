@@ -10,6 +10,11 @@ const MAPPED_ROOTS = ['lib/admin', 'lib/songs'];
 const GRAPH_ROOTS = ['app', 'components', 'lib', 'scripts', 'tests'];
 const MAX_MODULE_OVERVIEW_LENGTH = 220;
 const IGNORED_DIRECTORIES = new Set(['.git', '.next', 'backups', 'coverage', 'node_modules']);
+const PURE_MODULE_PATTERN = /^lib\/(?:admin|songs)\/[^/]*-helpers\.mjs$/u;
+// What makes a module a side-effect boundary rather than a rule. Deliberately a
+// short list of unmistakable markers: a network call, a database driver, the
+// filesystem, the Sheets client, or an auth session.
+const IO_MARKERS = /from\s*['"](?:googleapis|pg|next-auth(?:\/[^'"]*)?|node:fs(?:\/[^'"]*)?)['"]|\bfetch\(|fetchWithProviderTimeout\(/u;
 const MAX_BODY_SEARCH_TERMS = 4;
 const MIN_BODY_SEARCH_TERM_LENGTH = 3;
 // Natural-language concept queries carry filler that matches almost every file and
@@ -649,6 +654,51 @@ export function validateModuleOverviewCoverage(index) {
   return index.records
     .filter((record) => !record.moduleOverview.explicit)
     .map((record) => `${record.path}: missing an explicit @fileoverview module description`)
+    .sort();
+}
+
+// `*-helpers.mjs` is the repo's promise that a module holds rules and not
+// plumbing, which is what makes it unit-testable without stubbing Sheets or MMS.
+// Nothing checked it, so `issues-helpers.mjs` had quietly acquired the whole
+// Sheets path through a one-line tutor-name lookup. This walks the import graph
+// transitively, because an indirect dependency costs the caller exactly as much
+// as a direct one.
+export function findIoTouchingModules({ repoRoot, graph }) {
+  const io = new Set();
+  for (const sourcePath of graph.sourcePaths) {
+    if (IO_MARKERS.test(fs.readFileSync(path.join(repoRoot, sourcePath), 'utf8'))) io.add(sourcePath);
+  }
+  return io;
+}
+
+function findIoPath(startPath, graph, ioModules) {
+  const queue = [[startPath]];
+  const seen = new Set([startPath]);
+  while (queue.length) {
+    const trail = queue.shift();
+    const current = trail.at(-1);
+    if (current !== startPath && ioModules.has(current)) return trail;
+    for (const dependency of graph.importsByFile.get(current) || []) {
+      if (seen.has(dependency)) continue;
+      seen.add(dependency);
+      queue.push([...trail, dependency]);
+    }
+  }
+  return null;
+}
+
+export function validateHelperPurity(index) {
+  const ioModules = findIoTouchingModules(index);
+  return index.graph.sourcePaths
+    .filter((sourcePath) => PURE_MODULE_PATTERN.test(sourcePath))
+    .map((sourcePath) => {
+      const trail = ioModules.has(sourcePath)
+        ? [sourcePath]
+        : findIoPath(sourcePath, index.graph, ioModules);
+      if (!trail) return '';
+      return `${sourcePath}: a *-helpers.mjs module must stay free of I/O, but reaches it via ${trail.join(' -> ')}`;
+    })
+    .filter(Boolean)
     .sort();
 }
 

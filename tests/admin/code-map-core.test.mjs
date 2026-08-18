@@ -20,6 +20,7 @@ import {
   searchFileBodies,
   searchOutsideCodeIndex,
   validateAgentWorkflowMap,
+  validateHelperPurity,
   validateModuleOverviewCoverage,
 } from '../../scripts/code-map-core.mjs';
 
@@ -285,4 +286,47 @@ test('overview coverage names every undescribed module and only counts the map s
   );
   const after = validateModuleOverviewCoverage(buildCodeIndex({ repoRoot }));
   assert.ok(!after.some((entry) => entry.startsWith('lib/admin/payroll.mjs:')), 'adding the sentence clears the error');
+});
+
+test('helper purity is enforced through the import graph, not just direct imports', (t) => {
+  const repoRoot = makeFixtureRepo();
+  t.after(() => fs.rmSync(repoRoot, { recursive: true, force: true }));
+
+  assert.deepEqual(validateHelperPurity(buildCodeIndex({ repoRoot })), [], 'the fixture starts clean');
+
+  // sheets.mjs is the I/O boundary; payroll.mjs is one hop from it; the helper
+  // imports payroll.mjs and so pays the same cost as importing sheets directly.
+  fs.writeFileSync(
+    path.join(repoRoot, 'lib/admin/sheets.mjs'),
+    "/** @fileoverview Sheets client. */\nimport { google } from 'googleapis';\nexport function readRows() { return google; }\n",
+  );
+  fs.writeFileSync(
+    path.join(repoRoot, 'lib/admin/payroll.mjs'),
+    "/** @fileoverview Payroll orchestration. */\nimport { readRows } from './sheets.mjs';\nexport function preparePayroll() { return readRows(); }\n",
+  );
+  fs.writeFileSync(
+    path.join(repoRoot, 'lib/admin/wise-helpers.mjs'),
+    "/** @fileoverview Builds a Wise payout batch. */\nimport { preparePayroll } from './payroll.mjs';\nexport function buildWiseBatch() { return preparePayroll(); }\n",
+  );
+
+  const errors = validateHelperPurity(buildCodeIndex({ repoRoot }));
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /^lib\/admin\/wise-helpers\.mjs: a \*-helpers\.mjs module must stay free of I\/O/u);
+  assert.match(
+    errors[0],
+    /wise-helpers\.mjs -> lib\/admin\/payroll\.mjs -> lib\/admin\/sheets\.mjs/u,
+    'the message names the whole chain so the fix is obvious',
+  );
+});
+
+test('only the helper suffix carries the purity promise', (t) => {
+  const repoRoot = makeFixtureRepo();
+  t.after(() => fs.rmSync(repoRoot, { recursive: true, force: true }));
+
+  // A deliberate I/O boundary that is not named *-helpers.mjs must not be flagged.
+  fs.writeFileSync(
+    path.join(repoRoot, 'lib/admin/sheet-reader.mjs'),
+    "/** @fileoverview Deliberate Sheets boundary. */\nimport { google } from 'googleapis';\nexport function readRows() { return google; }\n",
+  );
+  assert.deepEqual(validateHelperPurity(buildCodeIndex({ repoRoot })), []);
 });
