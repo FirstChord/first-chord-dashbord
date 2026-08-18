@@ -6,6 +6,7 @@ import {
   buildOnboardingRecoveryGuidance,
   createOnboardingSteps,
   evaluateOnboardingDuplicateState,
+  findOnboardingCompletionBlockers,
   isOnboardingCoreOperationallyComplete,
   markOnboardingStep,
 } from '../../lib/admin/onboarding-helpers.mjs';
@@ -248,4 +249,23 @@ test('post-onboarding work waits for the lesson but not ancillary Free-slot clea
 
   steps = markOnboardingStep(steps, 'mmsFirstLesson', 'succeeded');
   assert.equal(isOnboardingCoreOperationallyComplete({ steps }), true);
+});
+
+test('completion is blocked until a Soundslice URL is present', () => {
+  const blockers = findOnboardingCompletionBlockers({ soundsliceUrl: '' });
+  assert.equal(blockers.length, 1);
+  assert.equal(blockers[0].field, 'soundsliceUrl');
+  assert.match(blockers[0].message, /Soundslice URL/u);
+
+  // Whitespace is the realistic miss: the field looks filled in the form.
+  assert.equal(findOnboardingCompletionBlockers({ soundsliceUrl: '   ' }).length, 1);
+  assert.equal(findOnboardingCompletionBlockers({}).length, 1);
+  assert.equal(findOnboardingCompletionBlockers().length, 1);
+});
+
+test('a Soundslice URL clears the only completion blocker', () => {
+  assert.deepEqual(
+    findOnboardingCompletionBlockers({ soundsliceUrl: 'https://www.soundslice.com/courses/16914/' }),
+    [],
+  );
 });

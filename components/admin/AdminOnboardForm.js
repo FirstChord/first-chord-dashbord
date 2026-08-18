@@ -3,6 +3,14 @@
 import { useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 
+import CopyButton from '@/components/admin/ui/CopyButton';
+import { findOnboardingCompletionBlockers } from '@/lib/admin/onboarding-helpers.mjs';
+
+// Onboarding without a Soundslice URL looks finished but leaves the student with
+// no practice link, and it is only noticed later when someone goes looking for
+// it. Blocking at the point of the mistake is cheaper than the follow-up.
+const SOUNDSLICE_FIELD_ID = 'onboard-soundslice-url';
+
 function deriveWeekday(dateValue) {
   if (!dateValue) return '';
   const parsed = new Date(`${dateValue}T12:00:00`);
@@ -40,11 +48,16 @@ function Field({ label, children, hint }) {
   );
 }
 
-function Input(props) {
+function Input({ invalid = false, ...props }) {
   return (
     <input
       {...props}
-      className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+      aria-invalid={invalid || undefined}
+      className={`mt-2 w-full rounded-lg border px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition ${
+        invalid
+          ? 'border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-200'
+          : 'border-slate-300 focus:border-slate-500 focus:ring-2 focus:ring-slate-200'
+      }`}
     />
   );
 }
@@ -123,6 +136,7 @@ export default function AdminOnboardForm({ initialData, tutorOptions, initialDup
   const [form, setForm] = useState(initialData);
   const [result, setResult] = useState(null);
   const [errorState, setErrorState] = useState(null);
+  const [validationError, setValidationError] = useState('');
   const [preflightState, setPreflightState] = useState(null);
   const [preflightError, setPreflightError] = useState('');
   const [isPending, startTransition] = useTransition();
@@ -223,6 +237,17 @@ export default function AdminOnboardForm({ initialData, tutorOptions, initialDup
   function handleSubmit(event) {
     event.preventDefault();
     setErrorState(null);
+    setValidationError('');
+
+    const blockers = findOnboardingCompletionBlockers(form);
+    if (blockers.length) {
+      setValidationError(blockers[0].message);
+      const field = document.getElementById(SOUNDSLICE_FIELD_ID);
+      field?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      field?.focus({ preventScroll: true });
+      return;
+    }
+
     setResult(null);
 
     startTransition(async () => {
@@ -383,8 +408,16 @@ export default function AdminOnboardForm({ initialData, tutorOptions, initialDup
               <Field label="Theta username">
                 <Input value={form.thetaUsername} onChange={(e) => updateField('thetaUsername', e.target.value)} />
               </Field>
-              <Field label="Soundslice URL">
-                <Input value={form.soundsliceUrl} onChange={(e) => updateField('soundsliceUrl', e.target.value)} />
+              <Field label="Soundslice URL" hint="Required to complete onboarding.">
+                <Input
+                  id={SOUNDSLICE_FIELD_ID}
+                  invalid={Boolean(validationError)}
+                  value={form.soundsliceUrl}
+                  onChange={(e) => {
+                    if (validationError) setValidationError('');
+                    updateField('soundsliceUrl', e.target.value);
+                  }}
+                />
               </Field>
               <Field label="Soundslice code">
                 <Input value={form.soundsliceCode} onChange={(e) => updateField('soundsliceCode', e.target.value)} />
@@ -474,7 +507,10 @@ export default function AdminOnboardForm({ initialData, tutorOptions, initialDup
         </section>
 
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h3 className="text-lg font-semibold text-slate-900">MMS sign-up note</h3>
+          <div className="flex items-start justify-between gap-4">
+            <h3 className="text-lg font-semibold text-slate-900">MMS sign-up note</h3>
+            {form.rawNote ? <CopyButton text={form.rawNote} title="Copy the MMS sign-up note" /> : null}
+          </div>
           <pre className="mt-4 overflow-x-auto whitespace-pre-wrap rounded-xl bg-slate-50 p-4 text-sm text-slate-700">
             {form.rawNote || 'No MMS note available'}
           </pre>
@@ -488,6 +524,9 @@ export default function AdminOnboardForm({ initialData, tutorOptions, initialDup
           >
             {isPending ? 'Onboarding…' : 'Complete onboarding'}
           </button>
+          {validationError ? (
+            <p role="alert" className="text-sm font-medium text-red-700">{validationError}</p>
+          ) : null}
           {errorState ? <p className="text-sm text-red-700">{errorState.message}</p> : null}
         </div>
       </form>
@@ -710,15 +749,24 @@ export default function AdminOnboardForm({ initialData, tutorOptions, initialDup
             </div>
           </details>
           <div className="rounded-xl border border-emerald-200 bg-white p-4">
-            <p className="text-sm font-semibold text-slate-900">WGCS label</p>
+            <div className="flex items-start justify-between gap-4">
+              <p className="text-sm font-semibold text-slate-900">WGCS label</p>
+              <CopyButton text={result.wgcs.whatsappGroupLabel} title="Copy the WhatsApp group label" />
+            </div>
             <p className="mt-2 text-sm text-slate-700">{result.wgcs.whatsappGroupLabel}</p>
           </div>
           <div className="rounded-xl border border-emerald-200 bg-white p-4">
-            <p className="text-sm font-semibold text-slate-900">Welcome message</p>
+            <div className="flex items-start justify-between gap-4">
+              <p className="text-sm font-semibold text-slate-900">Welcome message</p>
+              <CopyButton text={result.wgcs.welcomeMessage} title="Copy the welcome message" />
+            </div>
             <pre className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{result.wgcs.welcomeMessage}</pre>
           </div>
           <div className="rounded-xl border border-emerald-200 bg-white p-4">
-            <p className="text-sm font-semibold text-slate-900">Soundslice follow-up</p>
+            <div className="flex items-start justify-between gap-4">
+              <p className="text-sm font-semibold text-slate-900">Soundslice follow-up</p>
+              <CopyButton text={result.wgcs.soundsliceFollowup} title="Copy the Soundslice follow-up" />
+            </div>
             <pre className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{result.wgcs.soundsliceFollowup}</pre>
           </div>
         </section>
