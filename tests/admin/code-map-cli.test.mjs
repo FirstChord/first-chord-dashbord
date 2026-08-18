@@ -4,6 +4,13 @@ import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+// The body-text tier shells out to ripgrep, which is not everywhere. Asserting on
+// it unconditionally couples the suite to the machine it runs on — CI has no rg,
+// so these failed there while passing locally. The graceful-degradation path is
+// covered by an injected runner in code-map-core.test.mjs and needs no binary.
+const hasRipgrep = spawnSync('rg', ['--version'], { encoding: 'utf8' }).status === 0;
+const needsRipgrep = hasRipgrep ? {} : { skip: 'ripgrep is not installed on this machine' };
+
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 function runFind(...args) {
@@ -44,10 +51,15 @@ test('a genuine miss is explicit about all three searched layers', () => {
   assert.equal(result.status, 2, result.stderr);
   assert.match(result.stdout, /No primary-scope match\. This does not mean the code does not exist\./u);
   assert.match(result.stdout, /No path\/export match was found in the wider app, components, lib, scripts, or tests graph\./u);
-  assert.match(result.stdout, /no file body in app, components, lib, scripts, or tests contains these terms\./u);
+  assert.match(
+    result.stdout,
+    hasRipgrep
+      ? /no file body in app, components, lib, scripts, or tests contains these terms\./u
+      : /ripgrep is not installed, so file bodies were not scanned\./u,
+  );
 });
 
-test('a metadata miss falls back to a body-text scan instead of dead-ending', () => {
+test('a metadata miss falls back to a body-text scan instead of dead-ending', needsRipgrep, () => {
   const result = runFind('exponential backoff');
 
   assert.equal(result.status, 0, result.stderr);
@@ -57,7 +69,7 @@ test('a metadata miss falls back to a body-text scan instead of dead-ending', ()
   assert.match(result.stdout, /\(\d+ matches?, \d+\/2 terms\)/u);
 });
 
-test('the body scan stays off when metadata answers, and --body forces it on', () => {
+test('the body scan stays off when metadata answers, and --body forces it on', needsRipgrep, () => {
   const quiet = runFind('buildPayrollPreview');
   assert.equal(quiet.status, 0, quiet.stderr);
   assert.doesNotMatch(quiet.stdout, /Body-text/u);
@@ -67,7 +79,7 @@ test('the body scan stays off when metadata answers, and --body forces it on', (
   assert.match(forced.stdout, /Body-text matches \(ripgrep, forced by --body\)/u);
 });
 
-test('find JSON exposes the body tier and its declared contract', () => {
+test('find JSON exposes the body tier and its declared contract', needsRipgrep, () => {
   const miss = JSON.parse(runFind('exponential backoff', '--json').stdout);
   assert.equal(miss.scope.bodyTextFallback.reportsMatchingLines, false);
   assert.equal(miss.bodySearch.available, true);

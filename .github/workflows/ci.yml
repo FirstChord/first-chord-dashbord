@@ -34,6 +34,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # code-map:find's body-text fallback shells out to ripgrep, and the runner
+      # image does not ship it. Without this the tier degrades to "not installed"
+      # and CI silently stops covering it.
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ripgrep
+
       - name: Check documentation structure and links
         run: npm run docs:check
 
