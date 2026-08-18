@@ -1,3 +1,4 @@
+/** @fileoverview Student-portal unlock and lock endpoints exchanging an access code for a notes session cookie, rate-limited per client. */
 import { NextResponse } from 'next/server';
 import { getStudentPortalAccessRow } from '@/lib/admin/sheets';
 import {

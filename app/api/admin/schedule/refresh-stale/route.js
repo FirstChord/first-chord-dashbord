@@ -1,3 +1,4 @@
+/** @fileoverview Admin-triggered bulk refresh of stale schedule caches, sequential and capped per run to stay gentle on MMS. */
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import { getMmsStudentScheduleContext } from '@/lib/admin/mms';

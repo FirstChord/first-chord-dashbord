@@ -1,3 +1,4 @@
+/** @fileoverview Admin-gated endpoint saving a tutor cover-bank record keyed by tutor key or name. */
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import { saveCoverBankRecord } from '@/lib/admin/cover-bank';

@@ -1,3 +1,4 @@
+/** @fileoverview Scheduled endpoint composing the nightly Finance_Snapshot row from students, schedules, pay, expenses, and Stripe amounts. */
 import { getOperationalAdminStudents } from '@/lib/admin/students';
 import {
   getScheduleContextRows,

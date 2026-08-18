@@ -1,3 +1,4 @@
+/** @fileoverview Public, token-authenticated endpoint recording a tutor's confirmation or dispute of their pay statement; it never moves money. */
 import { verifyStatementToken } from '@/lib/admin/tutor-statement-helpers.mjs';
 import { recordTutorStatementResponse } from '@/lib/admin/tutor-statement';
 

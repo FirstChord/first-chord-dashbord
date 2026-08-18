@@ -1,3 +1,4 @@
+/** @fileoverview Tutor-authorized resync pulling the tutor's students from MMS with Soundslice links and notes tokens attached. */
 import mmsClient from '@/lib/mms-client-cached';
 import { enhanceStudentsWithSoundslice } from '@/lib/soundslice-mappings';
 import { addStudentNotesTokens } from '@/lib/tutor-surface-token.mjs';

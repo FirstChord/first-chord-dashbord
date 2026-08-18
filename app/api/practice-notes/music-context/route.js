@@ -1,3 +1,4 @@
+/** @fileoverview Read-only, best-effort endpoint giving Practice Chat the instrument and shelf songs a lesson is likely to mention, to prime transcription. */
 import { getSongAssignmentRows } from '@/lib/admin/sheets';
 import { buildPracticeChatMusicContext } from '@/lib/admin/practice-chat-music-context.mjs';
 import { authenticatePracticeChatRequest, corsHeaders } from '@/lib/admin/practice-chat-auth.mjs';

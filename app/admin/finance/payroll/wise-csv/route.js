@@ -1,3 +1,4 @@
+/** @fileoverview Admin-gated download that renders reviewed Payroll_Runs rows into the Wise batch-payment CSV a human then uploads. */
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import { getPayrollRunRows, getTutorWiseRows } from '@/lib/admin/sheets';

@@ -1,3 +1,4 @@
+/** @fileoverview Practice Chat evaluation telemetry sink writing only to Practice_Chat_Sessions; it measures the ritual and never affects it. */
 import { upsertPracticeChatSessionRow } from '@/lib/admin/sheets';
 import { normalisePracticeChatSessionPayload } from '@/lib/admin/practice-chat-session-helpers.mjs';
 import { authenticatePracticeChatRequest, corsHeaders } from '@/lib/admin/practice-chat-auth.mjs';

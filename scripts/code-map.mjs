@@ -10,8 +10,10 @@ import {
   CODE_MAP_SEARCH_SCOPE,
   renderCodeMap,
   searchCodeIndex,
+  searchFileBodies,
   searchOutsideCodeIndex,
   validateAgentWorkflowMap,
+  validateModuleOverviewCoverage,
 } from './code-map-core.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -20,10 +22,12 @@ function usage() {
   console.log(`Usage:
   npm run generate-code-map
   npm run code-map:check
-  npm run code-map:find -- "search terms" [--json]
+  npm run code-map:find -- "search terms" [--body] [--json]
   npm run code-map:impact -- [path ...] [--json]
 
-With no paths, code-map:impact uses the current git worktree diff.`);
+With no paths, code-map:impact uses the current git worktree diff.
+code-map:find searches symbol/path metadata. When that finds nothing it falls back
+to a ripgrep body-text scan; --body forces that scan even on a metadata hit.`);
 }
 
 function changedFiles() {
@@ -77,10 +81,11 @@ function printFindRecord({ record, reasons = [] }, query, position) {
   console.log(`   direct production consumers: ${compactList(record.directConsumers)}`);
 }
 
-function printFindResults(query, results, outsideScopeMatches) {
+function printFindResults(query, results, outsideScopeMatches, bodySearch, forcedBody) {
   console.log(`Primary code map matches for "${query}" (${results.length})`);
   console.log('Primary scope: lib/admin, lib/songs, and Next route files.');
-  console.log('Symbol/path metadata only — file bodies are not searched; use rg for implementation text or broad concepts.');
+  console.log('Symbol/path metadata only at this layer — file bodies are not indexed.');
+  console.log('A ripgrep body-text scan runs automatically when the metadata layers miss (--body forces it).');
   console.log('Static source evidence only; inspect current code before changing behavior.');
   if (!results.length) {
     console.log('\nNo primary-scope match. This does not mean the code does not exist.');
@@ -93,6 +98,29 @@ function printFindResults(query, results, outsideScopeMatches) {
     outsideScopeMatches.forEach((result, position) => printFindRecord(result, query, position + 1));
   } else if (!results.length) {
     console.log('\nNo path/export match was found in the wider app, components, lib, scripts, or tests graph.');
+  }
+
+  printBodySearchResults(bodySearch, { forced: forcedBody });
+}
+
+function printBodySearchResults(bodySearch, { forced }) {
+  if (!bodySearch) return;
+  const heading = forced ? 'Body-text matches (ripgrep, forced by --body)' : 'Body-text fallback (ripgrep)';
+  if (!bodySearch.available) {
+    console.log(`\n${heading}: ripgrep is not installed, so file bodies were not scanned.`);
+    if (bodySearch.command) console.log(`   run manually: ${bodySearch.command}`);
+    return;
+  }
+  console.log(`\n${heading} — ${bodySearch.results.length} file${bodySearch.results.length === 1 ? '' : 's'}${bodySearch.truncated ? ` (+${bodySearch.truncated} more not shown)` : ''}`);
+  console.log(`Searched terms: ${bodySearch.terms.join(', ')}. Ranked by distinct terms matched, then match count.`);
+  console.log('Text occurrences only — a hit is not evidence that the file owns the behavior.');
+  console.log(`Reproduce or widen: ${bodySearch.command}`);
+  if (!bodySearch.results.length) {
+    console.log('   no file body in app, components, lib, scripts, or tests contains these terms.');
+    return;
+  }
+  for (const entry of bodySearch.results) {
+    console.log(`   ${entry.path} (${entry.matches} match${entry.matches === 1 ? '' : 'es'}, ${entry.termsMatched}/${bodySearch.terms.length} terms)`);
   }
 }
 
@@ -125,7 +153,8 @@ if (!command || ['help', '--help', '-h'].includes(command)) {
 }
 
 const json = rawArgs.includes('--json');
-const args = rawArgs.filter((argument) => argument !== '--json');
+const forcedBody = rawArgs.includes('--body');
+const args = rawArgs.filter((argument) => !['--json', '--body'].includes(argument));
 const index = buildCodeIndex({ repoRoot });
 const rendered = renderCodeMap(index);
 const outputPath = path.join(repoRoot, CODE_MAP_RELATIVE_PATH);
@@ -138,6 +167,7 @@ if (command === 'generate') {
   if (!fs.existsSync(outputPath) || fs.readFileSync(outputPath, 'utf8') !== rendered) {
     errors.push(`${CODE_MAP_RELATIVE_PATH} is stale; run npm run generate-code-map`);
   }
+  errors.push(...validateModuleOverviewCoverage(index));
   errors.push(...validateAgentWorkflowMap({
     repoRoot,
     source: fs.readFileSync(path.join(repoRoot, 'AGENTS.md'), 'utf8'),
@@ -150,9 +180,14 @@ if (command === 'generate') {
   if (errors.length) {
     console.error(`Code map check failed with ${errors.length} issue${errors.length === 1 ? '' : 's'}:`);
     for (const error of errors) console.error(`- ${error}`);
+    if (errors.some((error) => error.includes('@fileoverview'))) {
+      console.error('\nAdd a one-line `/** @fileoverview ... */` at the top of each module above.');
+      console.error('It is what `code-map:find` searches, so an undescribed module is unfindable by concept.');
+    }
     process.exit(1);
   }
   console.log(`Code map and AGENTS Workflow Map are current (${index.records.length} modules, fingerprint ${index.fingerprint}).`);
+  console.log(`Module overview coverage: ${index.records.length}/${index.records.length}.`);
 } else if (command === 'find') {
   const query = args.join(' ').trim();
   if (!query) {
@@ -161,17 +196,21 @@ if (command === 'generate') {
   }
   const results = searchCodeIndex(index, query);
   const outsideScopeMatches = searchOutsideCodeIndex(index, query);
+  const bodySearch = (forcedBody || !results.length)
+    ? searchFileBodies({ repoRoot, query })
+    : null;
   if (json) {
     console.log(JSON.stringify({
       query,
       scope: CODE_MAP_SEARCH_SCOPE,
       results: results.map((result) => serialiseFindResult(result, query)),
       outsideScopeMatches: outsideScopeMatches.map((result) => serialiseFindResult(result, query)),
+      bodySearch,
     }, null, 2));
   } else {
-    printFindResults(query, results, outsideScopeMatches);
+    printFindResults(query, results, outsideScopeMatches, bodySearch, forcedBody);
   }
-  if (!results.length && !outsideScopeMatches.length) process.exitCode = 2;
+  if (!results.length && !outsideScopeMatches.length && !bodySearch?.results.length) process.exitCode = 2;
 } else if (command === 'impact') {
   const targets = args.length ? args : changedFiles();
   if (!targets.length) {

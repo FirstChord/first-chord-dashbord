@@ -1,3 +1,4 @@
+/** @fileoverview Admin-gated endpoint returning the deterministic explanation context for one queued issue. */
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import { assistantContextService } from '@/lib/admin/assistant-context-service.mjs';

@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -9,6 +10,16 @@ const MAPPED_ROOTS = ['lib/admin', 'lib/songs'];
 const GRAPH_ROOTS = ['app', 'components', 'lib', 'scripts', 'tests'];
 const MAX_MODULE_OVERVIEW_LENGTH = 220;
 const IGNORED_DIRECTORIES = new Set(['.git', '.next', 'backups', 'coverage', 'node_modules']);
+const MAX_BODY_SEARCH_TERMS = 4;
+const MIN_BODY_SEARCH_TERM_LENGTH = 3;
+// Natural-language concept queries carry filler that matches almost every file and
+// destroys the ranking, so it is dropped before ripgrep ever runs.
+const BODY_SEARCH_STOPWORDS = new Set([
+  'and', 'any', 'are', 'can', 'did', 'does', 'find', 'for', 'from', 'get', 'gets',
+  'has', 'have', 'how', 'into', 'not', 'the', 'their', 'then', 'this', 'that',
+  'was', 'were', 'what', 'when', 'where', 'which', 'why', 'with', 'you', 'your',
+]);
+const MAX_BODY_SEARCH_FILES = 15;
 
 export const CODE_MAP_SEARCH_SCOPE = Object.freeze({
   primary: Object.freeze(['lib/admin/**', 'lib/songs/**', 'app/**/route.{js,mjs,ts}']),
@@ -16,6 +27,15 @@ export const CODE_MAP_SEARCH_SCOPE = Object.freeze({
   primaryFields: Object.freeze(['path', 'export', 'explicit_module_overview', 'direct_test_path']),
   outsideScopeFallbackFields: Object.freeze(['path', 'export']),
   searchesFileBodies: false,
+  bodyTextFallback: Object.freeze({
+    tool: 'ripgrep',
+    scope: Object.freeze(GRAPH_ROOTS.map((root) => `${root}/**`)),
+    fields: Object.freeze(['file_body_text']),
+    ranking: 'distinct query terms matched, then total match count',
+    maxTerms: MAX_BODY_SEARCH_TERMS,
+    maxFiles: MAX_BODY_SEARCH_FILES,
+    reportsMatchingLines: false,
+  }),
 });
 
 function toPosix(value) {
@@ -374,9 +394,12 @@ export function renderCodeMap(index) {
     '`lib`, `scripts`, and `tests` supplies consumer/test evidence and a labelled',
     'path/export fallback for files outside the grid.',
     '',
-    '`code-map:find` is a symbol/path metadata search, not a file-body search.',
-    'Use `rg` for implementation text or broad concepts. A zero primary result',
-    'does not mean the code does not exist; inspect the outside-scope fallback.',
+    '`code-map:find` searches three tiers in order: symbol/path metadata over the',
+    'primary scope, a labelled path/export fallback across the wider graph, then a',
+    'ripgrep body-text scan that runs automatically when both metadata tiers miss',
+    '(`--body` forces it on a hit). Body-text results are ranked by distinct query',
+    'terms matched and are text occurrences only — a hit is not evidence that the',
+    'file owns the behavior. A zero primary result never means the code is absent.',
     '',
     'A **module overview** appears only when the source explicitly declares one with',
     '`@fileoverview`; ordinary comments attached to constants or implementation details',
@@ -472,6 +495,99 @@ export function searchOutsideCodeIndex(index, query, { limit = 8 } = {}) {
     .slice(0, limit);
 }
 
+export function buildBodySearchArgs(term) {
+  return [
+    '--count-matches',
+    '--no-messages',
+    '--ignore-case',
+    '--fixed-strings',
+    ...CODE_EXTENSIONS.flatMap((extension) => ['--glob', `*${extension}`]),
+    '--',
+    term,
+    ...GRAPH_ROOTS,
+  ];
+}
+
+export function formatBodySearchCommand(terms) {
+  const pattern = terms.map((term) => term.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')).join('|');
+  const globs = CODE_EXTENSIONS.map((extension) => `-g '*${extension}'`).join(' ');
+  return `rg -i ${globs} -e '${pattern}' ${GRAPH_ROOTS.join(' ')}`;
+}
+
+export function bodySearchTerms(query) {
+  const all = [...new Set(normaliseSearch(query).split(/\s+/u).filter(Boolean))];
+  const meaningful = all.filter((term) => (
+    term.length >= MIN_BODY_SEARCH_TERM_LENGTH && !BODY_SEARCH_STOPWORDS.has(term)
+  ));
+  // A query made entirely of filler still deserves an answer, so fall back to it verbatim.
+  return (meaningful.length ? meaningful : all).slice(0, MAX_BODY_SEARCH_TERMS);
+}
+
+function defaultBodySearchRunner(repoRoot, args) {
+  try {
+    return execFileSync('rg', args, { cwd: repoRoot, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 });
+  } catch (error) {
+    // ripgrep exits 1 when a term simply has no matches; anything else is a real failure.
+    if (error.status === 1) return '';
+    if (error.code === 'ENOENT') throw Object.assign(new Error('ripgrep not found'), { code: 'ENOENT' });
+    throw error;
+  }
+}
+
+function parseCountMatches(output) {
+  const counts = new Map();
+  for (const line of output.split(/\r?\n/u)) {
+    const separator = line.lastIndexOf(':');
+    if (separator === -1) continue;
+    const sourcePath = toPosix(line.slice(0, separator).replace(/^\.\//u, ''));
+    const count = Number.parseInt(line.slice(separator + 1), 10);
+    if (!sourcePath || !Number.isFinite(count)) continue;
+    counts.set(sourcePath, (counts.get(sourcePath) || 0) + count);
+  }
+  return counts;
+}
+
+export function searchFileBodies({
+  repoRoot,
+  query,
+  limit = MAX_BODY_SEARCH_FILES,
+  run = defaultBodySearchRunner,
+}) {
+  const terms = bodySearchTerms(query);
+  const command = terms.length ? formatBodySearchCommand(terms) : '';
+  if (!terms.length) return { available: true, terms, command, results: [], truncated: 0 };
+
+  const totals = new Map();
+  const coverage = new Map();
+  for (const term of terms) {
+    let counts;
+    try {
+      counts = parseCountMatches(run(repoRoot, buildBodySearchArgs(term)));
+    } catch (error) {
+      if (error.code === 'ENOENT') return { available: false, terms, command, results: [], truncated: 0 };
+      throw error;
+    }
+    for (const [sourcePath, count] of counts) {
+      totals.set(sourcePath, (totals.get(sourcePath) || 0) + count);
+      coverage.set(sourcePath, (coverage.get(sourcePath) || 0) + 1);
+    }
+  }
+
+  const ranked = [...totals.entries()]
+    .map(([sourcePath, matches]) => ({ path: sourcePath, matches, termsMatched: coverage.get(sourcePath) }))
+    .sort((left, right) => right.termsMatched - left.termsMatched
+      || right.matches - left.matches
+      || left.path.localeCompare(right.path));
+
+  return {
+    available: true,
+    terms,
+    command,
+    results: ranked.slice(0, limit),
+    truncated: Math.max(0, ranked.length - limit),
+  };
+}
+
 function collectReverseClosure(graph, targetPath) {
   const distances = new Map([[targetPath, 0]]);
   const queue = [targetPath];
@@ -524,6 +640,16 @@ export function buildImpactReport(index, targetPaths) {
         .map(([consumer, distance]) => ({ path: consumer, distance })),
     };
   });
+}
+
+// Coverage is a ratchet, not a suggestion: a module can only join the primary map
+// scope with a sentence saying what it is. Without this the column silently decays
+// back to the handful of overviews it started with, because nothing else notices.
+export function validateModuleOverviewCoverage(index) {
+  return index.records
+    .filter((record) => !record.moduleOverview.explicit)
+    .map((record) => `${record.path}: missing an explicit @fileoverview module description`)
+    .sort();
 }
 
 function globRegex(pattern) {

@@ -1,3 +1,4 @@
+/** @fileoverview Admin-gated proxy forwarding arbitrary GET and POST calls to the My Music Staff API with the stored bearer token. */
 // app/api/mms/[...path]/route.js
 import { cookies } from 'next/headers'
 import { getServerSession } from 'next-auth'

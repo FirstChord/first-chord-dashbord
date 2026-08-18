@@ -5,17 +5,22 @@ import path from 'node:path';
 import test from 'node:test';
 
 import {
+  bodySearchTerms,
+  buildBodySearchArgs,
   buildCodeIndex,
   buildImpactReport,
   CODE_MAP_SEARCH_SCOPE,
+  formatBodySearchCommand,
   extractExports,
   extractImportSpecifiers,
   extractModuleOverview,
   findUnsupportedExportLines,
   renderCodeMap,
   searchCodeIndex,
+  searchFileBodies,
   searchOutsideCodeIndex,
   validateAgentWorkflowMap,
+  validateModuleOverviewCoverage,
 } from '../../scripts/code-map-core.mjs';
 
 test('extractExports covers declarations, named re-exports, barrels, and defaults with lines', () => {
@@ -186,4 +191,98 @@ test('Workflow Map validation checks paths, globs, and focused test patterns', (
     validateAgentWorkflowMap({ repoRoot, source: source.replace('wise-batch-contract', 'missing-test') }),
     ['AGENTS.md Workflow Map: unmatched test pattern missing-test'],
   );
+});
+
+test('body search terms drop filler that would match nearly every file', () => {
+  assert.deepEqual(bodySearchTerms('how does the pause reconcile'), ['pause', 'reconcile']);
+  assert.deepEqual(bodySearchTerms('WHY  is   payroll  stale?'), ['payroll', 'stale']);
+  assert.deepEqual(
+    bodySearchTerms('one two three four five six'),
+    ['one', 'two', 'three', 'four'],
+    'term count is capped so a long sentence cannot fan out into many scans',
+  );
+  assert.deepEqual(bodySearchTerms('how the why'), ['how', 'the', 'why'], 'an all-filler query still gets searched');
+});
+
+test('body search scans only code files under the graph roots', () => {
+  const args = buildBodySearchArgs('payroll');
+  assert.ok(args.includes('--count-matches'), 'match counts keep the report small');
+  assert.ok(args.includes('--fixed-strings'), 'symbols must not be read as regex');
+  assert.ok(args.includes('--glob') && args.includes('*.mjs'));
+  assert.deepEqual(args.slice(-6), ['payroll', 'app', 'components', 'lib', 'scripts', 'tests']);
+  assert.match(formatBodySearchCommand(['pause', 'reconcile']), /^rg -i .* -e 'pause\|reconcile' app components lib scripts tests$/u);
+});
+
+test('body search ranks by term coverage before raw match volume', () => {
+  const responses = {
+    pause: 'lib/admin/pause-helpers.mjs:3\nlib/noise.mjs:99\n',
+    reconcile: 'lib/admin/pause-helpers.mjs:2\n',
+  };
+  const seen = [];
+  const result = searchFileBodies({
+    repoRoot: '/nowhere',
+    query: 'pause reconcile',
+    run: (repoRoot, args) => {
+      seen.push(args.at(-6));
+      return responses[args.at(-6)] || '';
+    },
+  });
+
+  assert.deepEqual(seen, ['pause', 'reconcile']);
+  assert.equal(result.available, true);
+  assert.deepEqual(result.results, [
+    { path: 'lib/admin/pause-helpers.mjs', matches: 5, termsMatched: 2 },
+    { path: 'lib/noise.mjs', matches: 99, termsMatched: 1 },
+  ], 'a file matching both terms outranks a file with far more hits on one');
+});
+
+test('body search caps the file list and reports what it withheld', () => {
+  const lines = Array.from({ length: 40 }, (unused, position) => `lib/file-${position}.mjs:1`).join('\n');
+  const result = searchFileBodies({ repoRoot: '/nowhere', query: 'payroll', limit: 5, run: () => lines });
+  assert.equal(result.results.length, 5);
+  assert.equal(result.truncated, 35);
+});
+
+test('a missing ripgrep degrades to an unavailable tier, not a crash', () => {
+  const result = searchFileBodies({
+    repoRoot: '/nowhere',
+    query: 'payroll',
+    run: () => { throw Object.assign(new Error('nope'), { code: 'ENOENT' }); },
+  });
+  assert.equal(result.available, false);
+  assert.deepEqual(result.results, []);
+  assert.match(result.command, /^rg -i /u, 'the caller can still hand the user a command to run');
+});
+
+test('the declared search scope still disclaims body indexing while naming the fallback', () => {
+  assert.equal(CODE_MAP_SEARCH_SCOPE.searchesFileBodies, false);
+  assert.equal(CODE_MAP_SEARCH_SCOPE.bodyTextFallback.tool, 'ripgrep');
+  assert.equal(CODE_MAP_SEARCH_SCOPE.bodyTextFallback.reportsMatchingLines, false);
+});
+
+test('overview coverage names every undescribed module and only counts the map scope', (t) => {
+  const repoRoot = makeFixtureRepo();
+  t.after(() => fs.rmSync(repoRoot, { recursive: true, force: true }));
+
+  const errors = validateModuleOverviewCoverage(buildCodeIndex({ repoRoot }));
+  assert.ok(errors.some((entry) => entry.startsWith('lib/admin/payroll.mjs:')));
+  assert.ok(
+    errors.some((entry) => entry.startsWith('lib/admin/misleading-cache.mjs:')),
+    'a stray comment is not a module description and must not satisfy coverage',
+  );
+  assert.ok(
+    !errors.some((entry) => entry.startsWith('lib/admin/wise-helpers.mjs:')),
+    'a declared @fileoverview satisfies coverage',
+  );
+  assert.ok(
+    !errors.some((entry) => entry.includes('components/admin/ui/ActionButton.js')),
+    'files outside the primary map scope are not held to the coverage rule',
+  );
+
+  fs.writeFileSync(
+    path.join(repoRoot, 'lib/admin/payroll.mjs'),
+    `/** @fileoverview Prepares a payroll run. */\n${fs.readFileSync(path.join(repoRoot, 'lib/admin/payroll.mjs'), 'utf8')}`,
+  );
+  const after = validateModuleOverviewCoverage(buildCodeIndex({ repoRoot }));
+  assert.ok(!after.some((entry) => entry.startsWith('lib/admin/payroll.mjs:')), 'adding the sentence clears the error');
 });

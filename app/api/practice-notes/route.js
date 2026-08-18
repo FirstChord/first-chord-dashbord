@@ -1,3 +1,4 @@
+/** @fileoverview Practice Chat note sink appending the practice-note log row and syncing any named songs onto the student's shelf. */
 import { appendPracticeNoteLogRow } from '@/lib/admin/sheets';
 import { normalisePracticeNotePayload } from '@/lib/admin/practice-notes-helpers.mjs';
 import {

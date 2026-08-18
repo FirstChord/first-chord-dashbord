@@ -1,3 +1,4 @@
+/** @fileoverview Admin-gated read of a tutor's offboarding context and save of their lifecycle state. */
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import { getTutorOffboardingContext, saveTutorLifecycle } from '@/lib/admin/tutor-lifecycle.mjs';

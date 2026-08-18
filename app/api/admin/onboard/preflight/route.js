@@ -1,3 +1,4 @@
+/** @fileoverview Admin-gated dry run reporting sheet, registry, MMS, and free-slot readiness before a student is onboarded. */
 import { getServerSession } from 'next-auth';
 
 import { authOptions } from '@/lib/admin/auth';

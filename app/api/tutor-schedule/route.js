@@ -1,3 +1,4 @@
+/** @fileoverview Tutor-authorized read of one tutor's MMS calendar events for a single day, shaped into a day schedule. */
 import { getMmsTutorCalendarEventsForDate } from '@/lib/admin/mms';
 import {
   buildTutorDaySchedule,

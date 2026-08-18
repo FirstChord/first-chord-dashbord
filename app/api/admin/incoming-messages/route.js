@@ -1,3 +1,4 @@
+/** @fileoverview Incoming-message inbox endpoint covering ingest, review, correction, snooze, planning conversion, and WhatsApp group sync. */
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import { buildBridgeMutationResponse } from '@/lib/admin/incoming-route-helpers.mjs';

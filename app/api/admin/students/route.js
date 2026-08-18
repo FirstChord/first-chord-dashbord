@@ -1,3 +1,4 @@
+/** @fileoverview Admin-gated list of operational admin students. */
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import { getOperationalAdminStudents } from '@/lib/admin/students';

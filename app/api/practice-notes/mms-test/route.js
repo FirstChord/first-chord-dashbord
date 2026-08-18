@@ -1,3 +1,4 @@
+/** @fileoverview Practice-note delivery endpoint previewing and executing the MMS write, gated by tutor rollout and delivery-key deduplication. */
 import {
   executePracticeNoteMmsTestWrite,
   previewPracticeNoteMmsTestWrite,

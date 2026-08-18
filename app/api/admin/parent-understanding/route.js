@@ -1,3 +1,4 @@
+/** @fileoverview Admin-gated endpoint saving a parent-understanding record for one student. */
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import { saveParentUnderstandingRecord } from '@/lib/admin/parent-understanding';

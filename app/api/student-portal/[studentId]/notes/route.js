@@ -1,3 +1,4 @@
+/** @fileoverview Student-portal read of the latest practice note, gated on a verified notes session cookie and served no-store. */
 import { getStudentPortalAccessRow } from '@/lib/admin/sheets';
 import {
   assertStudentNotesSecretConfigured,

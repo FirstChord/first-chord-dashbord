@@ -1,3 +1,4 @@
+/** @fileoverview Scheduled pause-expectation reconciliation, fail-closed behind its own PAUSE_SYNC_SECRET because it writes payment_expectation. */
 import { createPauseExpectationCronHandler } from '@/lib/admin/pause-expectation-cron.mjs';
 import { scanLiveStripeIssues } from '@/lib/admin/issues';
 import {

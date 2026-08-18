@@ -1,3 +1,4 @@
+/** @fileoverview Admin-gated endpoint toggling completion of a single holiday-workflow task. */
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import { setHolidayWorkflowTaskCompleted } from '@/lib/admin/holiday-workflow';

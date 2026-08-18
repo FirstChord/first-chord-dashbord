@@ -1,3 +1,4 @@
+/** @fileoverview Admin-gated refresh returning waiting students matched against freshly fetched free slots. */
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import { getWaitingStudentsWithCapacity } from '@/lib/admin/waiting-capacity';

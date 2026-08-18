@@ -1,3 +1,4 @@
+/** @fileoverview Admin-gated refresh of one student's MMS schedule context, recomputing pause coverage and payment value before caching it. */
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import { getMmsStudentScheduleContext } from '@/lib/admin/mms';

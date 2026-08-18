@@ -1,3 +1,4 @@
+/** @fileoverview Admin-gated read and patch of one admin student record, with payment and pause field changes written to the audit event log. */
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import { normaliseInstrument } from '@/lib/admin/fc';

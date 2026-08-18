@@ -1,3 +1,4 @@
+/** @fileoverview Scheduled Stripe actuals refresh rebuilding the amounts cache and appending collected and forecast monthly rows. */
 import { getOperationalAdminStudents } from '@/lib/admin/students';
 import {
   appendStripeForecastMonthlyRow,

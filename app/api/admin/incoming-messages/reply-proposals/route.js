@@ -1,3 +1,4 @@
+/** @fileoverview Human-triggered, feature-flagged reply-proposal lane that drafts and decides AI replies to incoming messages. */
 // Proposals-inbox reply lane (V1). Human-triggered only — there is no cron.
 // Feature-flagged: with ADMIN_AI_REPLY_DRAFT_ENABLED unset the GET reports
 // available:false and drafting returns 503; deciding an already-created

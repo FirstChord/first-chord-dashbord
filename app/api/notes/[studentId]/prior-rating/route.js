@@ -1,3 +1,4 @@
+/** @fileoverview Evaluation-only endpoint recording whether last week's practice note was useful, resolving the unrated session server-side so a double-tap is harmless. */
 import { authorizeNotesRequest, authorizeTutorSession } from '@/lib/admin/notes-route-auth.mjs';
 import { getPracticeChatSessionRows, upsertPracticeChatSessionRow } from '@/lib/admin/sheets';
 import { selectSessionForPriorRating } from '@/lib/admin/practice-chat-session-helpers.mjs';

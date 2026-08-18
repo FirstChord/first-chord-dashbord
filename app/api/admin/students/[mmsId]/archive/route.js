@@ -1,3 +1,4 @@
+/** @fileoverview Admin-gated student exit flow marking a student left, archiving the sheet row, clearing the registry, and logging each step. */
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import { buildPaymentFieldChangeEvent } from '@/lib/admin/payment-audit-helpers.mjs';

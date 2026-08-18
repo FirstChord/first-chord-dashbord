@@ -1,3 +1,4 @@
+/** @fileoverview Admin-gated live Stripe snapshot for a single student. */
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import { getAdminStudentByMmsId } from '@/lib/admin/students';

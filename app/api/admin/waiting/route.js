@@ -1,3 +1,4 @@
+/** @fileoverview Admin-gated read of the MMS waiting list. */
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import { getWaitingStudents } from '@/lib/admin/mms';

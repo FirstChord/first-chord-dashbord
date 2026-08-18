@@ -1,3 +1,4 @@
+/** @fileoverview Admin-gated endpoint marking a practice-note delivery follow-up handled and logging the event. */
 import { randomUUID } from 'node:crypto';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';

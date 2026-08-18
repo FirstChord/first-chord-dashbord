@@ -1,3 +1,4 @@
+/** @fileoverview Stores and clears the My Music Staff bearer token in an httpOnly cookie. */
 // app/api/auth/mms/route.js
 import { cookies } from 'next/headers'
 import { getMmsBearerToken } from '@/lib/mms-token'

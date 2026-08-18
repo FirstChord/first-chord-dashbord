@@ -1,3 +1,4 @@
+/** @fileoverview Admin-gated endpoint performing one student-notes access action during portal rollout. */
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import { performStudentNotesAccessAction } from '@/lib/admin/student-notes-access';

@@ -57,9 +57,13 @@ production consumers. An overview appears only when the file declares
 `@fileoverview`; ordinary implementation comments never influence navigation.
 Primary results cover `lib/admin`, `lib/songs`, and Next routes. Exact path or
 export matches elsewhere in `app`, `components`, `lib`, `scripts`, or `tests`
-appear in a labelled outside-scope fallback. Find does not search file bodies;
-use `rg` for implementation text or broad concepts, and never treat zero primary
-matches as proof that code does not exist.
+appear in a labelled outside-scope fallback. When both metadata layers miss, find
+falls back to a ripgrep body-text scan of `app`, `components`, `lib`, `scripts`,
+and `tests`, reporting per-file match counts ranked by how many query terms each
+file matched, plus the exact `rg` command to widen by hand; `--body` forces that
+scan even on a metadata hit. Body-text hits are text occurrences, not evidence
+that a file owns the behavior, and zero primary matches is never proof that code
+does not exist.
 `code-map:impact` walks outward from a target through the reverse static-import
 graph to related tests, scripts, and app entrypoints; with no path arguments it
 inspects the current git diff.
@@ -88,6 +92,10 @@ derived from the same index; regenerate it, never hand-edit it.
   for an upstream problem.
 - `docs/reference/code-map.md`: generated source/export/test lookup; regenerate
   with `npm run generate-code-map` and verify with `npm run code-map:check`.
+- Every module in the code map's primary scope (`lib/admin`, `lib/songs`, and
+  Next routes) must declare a one-line `/** @fileoverview ... */`. CI fails
+  without it, because that sentence is what `code-map:find` searches — an
+  undescribed module can only be found by a name someone already knows.
 
 ## Truth And State Boundaries
 

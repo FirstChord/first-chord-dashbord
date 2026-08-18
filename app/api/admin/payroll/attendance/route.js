@@ -1,3 +1,4 @@
+/** @fileoverview Admin-gated endpoint updating one MMS attendance status and revalidating the payroll page. */
 import { getServerSession } from 'next-auth';
 import { revalidatePath } from 'next/cache';
 import { authOptions } from '@/lib/admin/auth';

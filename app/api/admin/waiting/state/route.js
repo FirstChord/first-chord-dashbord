@@ -1,3 +1,4 @@
+/** @fileoverview Admin-gated endpoint updating one waiting-list workflow status with an event-log entry. */
 import { randomUUID } from 'node:crypto';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';

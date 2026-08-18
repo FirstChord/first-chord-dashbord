@@ -1,3 +1,4 @@
+/** @fileoverview Tutor-token endpoints reading, upserting, and patching song assignments, with status transitions logged best-effort as telemetry. */
 import { NextResponse } from 'next/server';
 import { appendSongStatusLogRows, getSongAssignmentRows, upsertSongAssignmentRow } from '@/lib/admin/sheets';
 import { buildAssignmentUpsert, buildAssignmentUpdate, buildPathAssignments } from '@/lib/songs/assignment-helpers.mjs';

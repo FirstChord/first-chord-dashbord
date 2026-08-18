@@ -1,3 +1,4 @@
+/** @fileoverview Admin-gated read and append endpoints for the parent communication log. */
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import { getCommunicationLog, logCommunication } from '@/lib/admin/communications';

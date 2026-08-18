@@ -1,3 +1,4 @@
+/** @fileoverview Tutor-token endpoint turning a Song Browser search miss into a new row in the Song_Requests curation queue. */
 import { NextResponse } from 'next/server';
 import { appendSongRequestRow } from '@/lib/admin/sheets';
 import { buildSongRequestRow } from '@/lib/songs/request-helpers.mjs';

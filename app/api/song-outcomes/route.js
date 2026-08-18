@@ -1,3 +1,4 @@
+/** @fileoverview Tutor-token append-only sink for the optional one-tap outcome when a song is finished or parked. */
 import { NextResponse } from 'next/server';
 import { appendSongOutcomeRow, getSongAssignmentRows } from '@/lib/admin/sheets';
 import { buildSongOutcomeRow } from '@/lib/songs/outcome-helpers.mjs';

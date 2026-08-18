@@ -1,3 +1,4 @@
+/** @fileoverview Admin-gated save, delete, and group-messaged marking for a tutor absence workflow. */
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import {

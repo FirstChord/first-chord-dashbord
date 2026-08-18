@@ -1,3 +1,4 @@
+/** @fileoverview Admin-gated bulk resolve for issues whose underlying source has already cleared. */
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import { buildIssueStateChange, isSourcePresent } from '@/lib/admin/issue-queue';

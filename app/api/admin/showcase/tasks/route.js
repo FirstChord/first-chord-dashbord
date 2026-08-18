@@ -1,3 +1,4 @@
+/** @fileoverview Admin-gated endpoint toggling completion of a single showcase-workflow task. */
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import { setShowcaseTaskCompleted } from '@/lib/admin/showcase';

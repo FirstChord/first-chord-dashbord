@@ -1,3 +1,4 @@
+/** @fileoverview Admin-gated preview and execution endpoints for pause-expectation reconciliation. */
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import {

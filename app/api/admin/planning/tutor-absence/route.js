@@ -1,3 +1,4 @@
+/** @fileoverview Admin-gated endpoint turning a tutor absence date range into planning cards and a schedule review, capped at a bounded number of dates. */
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import { getPlanningDashboard, savePlanningItem } from '@/lib/admin/planning';

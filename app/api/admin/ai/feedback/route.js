@@ -1,3 +1,4 @@
+/** @fileoverview Admin-gated endpoint recording helpful/not-helpful ratings and reason codes against an AI request id. */
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 

@@ -1,3 +1,4 @@
+/** @fileoverview Admin-gated planning dashboard read plus item save, status update, and progress append, syncing tutor-absence handoffs. */
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import {

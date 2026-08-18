@@ -1,3 +1,4 @@
+/** @fileoverview Admin-gated endpoint moving one issue-queue row to a new status with an event-log entry. */
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import { buildIssueStateChange } from '@/lib/admin/issue-queue';

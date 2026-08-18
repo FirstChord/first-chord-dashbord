@@ -1,3 +1,4 @@
+/** @fileoverview Secret-authenticated cadence refresh of student schedule caches in bounded sequential batches, reporting how many remain. */
 import { getMmsStudentScheduleContext } from '@/lib/admin/mms';
 import { getScheduleContextRows, upsertScheduleContextRow } from '@/lib/admin/sheets';
 import { getOperationalAdminStudents } from '@/lib/admin/students';

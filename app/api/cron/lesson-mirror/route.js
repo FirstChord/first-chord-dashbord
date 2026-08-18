@@ -1,3 +1,4 @@
+/** @fileoverview Scheduled lesson-mirror endpoint, outside admin middleware and fail-closed behind SCHEDULE_REFRESH_SECRET. */
 import { createLessonMirrorPostHandler } from '@/lib/admin/lesson-mirror-endpoint.mjs';
 
 // The route is outside admin-session middleware because GitHub Actions calls it.

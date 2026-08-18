@@ -1,3 +1,4 @@
+/** @fileoverview Admin-gated endpoint marking one tutor pay statement as sent, recording the acting admin. */
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import { recordTutorStatementSent } from '@/lib/admin/tutor-statement';

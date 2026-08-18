@@ -1,3 +1,4 @@
+/** @fileoverview Tutor-authorized read and write of a student's latest practice note, preferring the First Chord portal row and falling back to MMS. */
 import mmsClient from '@/lib/mms-client-cached';
 import { getPracticeNoteLogRows } from '@/lib/admin/sheets';
 import { selectLatestPortalPracticeNote } from '@/lib/admin/practice-notes-helpers.mjs';

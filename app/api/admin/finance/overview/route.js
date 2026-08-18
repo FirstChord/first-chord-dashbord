@@ -1,3 +1,4 @@
+/** @fileoverview Admin-gated endpoint assembling the finance overview: revenue, cost, coverage, trend, and forward outlook. */
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import { getOperationalAdminStudents } from '@/lib/admin/students';

@@ -1,3 +1,4 @@
+/** @fileoverview Tutor-authorized student list built straight from MMS, enriched with Soundslice links and per-student notes tokens. */
 import mmsClient from '@/lib/mms-client-cached';
 import { enhanceStudentsWithSoundslice } from '@/lib/soundslice-mappings';
 import { addStudentNotesTokens } from '@/lib/tutor-surface-token.mjs';

@@ -1,3 +1,4 @@
+/** @fileoverview NextAuth handler mounting the shared admin auth options on GET and POST. */
 import NextAuth from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 

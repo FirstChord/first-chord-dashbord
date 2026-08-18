@@ -1,3 +1,4 @@
+/** @fileoverview Tutor-token read composing a song's teaching history from assignments, outcomes, and practice-note rows. */
 import { NextResponse } from 'next/server';
 import {
   getPracticeNoteLogRows,

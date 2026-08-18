@@ -1,3 +1,4 @@
+/** @fileoverview Admin-gated student onboarding orchestrator that steps through sheet, registry, MMS, and billing setup with recovery guidance. */
 import { getServerSession } from 'next-auth';
 import crypto from 'node:crypto';
 

@@ -1,3 +1,4 @@
+/** @fileoverview Admin-gated trigger for a live Stripe issue scan. */
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import { scanLiveStripeIssues } from '@/lib/admin/issues';

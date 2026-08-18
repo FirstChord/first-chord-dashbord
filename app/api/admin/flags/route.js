@@ -1,3 +1,4 @@
+/** @fileoverview Admin-gated read of the Review_Flags sheet rows. */
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
 import { getReviewFlagsRows } from '@/lib/admin/sheets';

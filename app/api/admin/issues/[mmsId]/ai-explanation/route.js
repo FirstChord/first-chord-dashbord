@@ -1,3 +1,4 @@
+/** @fileoverview Rate-limited, admin-gated endpoint generating an AI briefing for a single queued issue. */
 import { randomUUID } from 'node:crypto';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/admin/auth';
